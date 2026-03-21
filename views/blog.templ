@@ -27,15 +27,27 @@ type RefPage struct {
 
 // Layer is a product layer with its primitives.
 type Layer struct {
-	Number      int
-	Name        string
-	Gap         string
-	Transition  string
-	Description string // rendered HTML from product-layers + derivation docs
-	Primitives  []Primitive
+	Number       int
+	Name         string
+	Gap          string
+	Transition   string
+	Description  string // rendered HTML from product-layers + derivation docs
+	Fundamentals []FundamentalPrimitive
+	Primitives   []Primitive // product primitives
 }
 
-// Primitive is an individual cognitive primitive.
+// FundamentalPrimitive is a derived ontological primitive from the mind emergence experiment.
+type FundamentalPrimitive struct {
+	Name       string
+	Slug       string
+	Layer      int
+	LayerName  string
+	Group      string
+	Definition string // what it is
+	Derivation string // why it must exist (gap from layer below)
+}
+
+// Primitive is a product-level primitive (software agent specification).
 type Primitive struct {
 	Name         string
 	Slug         string

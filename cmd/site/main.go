@@ -34,13 +34,14 @@ func main() {
 
 	layers := content.LoadLayers()
 	agentPrims := content.LoadAgentPrimitives()
-	log.Printf("loaded %d layers, %d agent primitives", len(layers), len(agentPrims))
 
 	// Build lookups for individual pages.
 	primsBySlug := map[string]views.Primitive{}
 	layersByNum := map[int]views.Layer{}
+	totalFundamentals := 0
 	for _, layer := range layers {
 		layersByNum[layer.Number] = layer
+		totalFundamentals += len(layer.Fundamentals)
 		for _, prim := range layer.Primitives {
 			primsBySlug[prim.Slug] = prim
 		}
@@ -48,7 +49,8 @@ func main() {
 	for _, prim := range agentPrims {
 		primsBySlug[prim.Slug] = prim
 	}
-	log.Printf("indexed %d primitives, %d layers", len(primsBySlug), len(layersByNum))
+	log.Printf("loaded %d layers, %d fundamental primitives, %d product primitives, %d agent primitives",
+		len(layers), totalFundamentals, len(primsBySlug)-len(agentPrims), len(agentPrims))
 
 	grammars, err := content.LoadGrammars()
 	if err != nil {
