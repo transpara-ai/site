@@ -6,7 +6,7 @@ import "fmt"
 
 templ ReferenceIndex(layers []Layer, agentPrims []Primitive) {
 	@Layout("Reference") {
-		<div class="space-y-10">
+		<div class="space-y-8">
 			<div>
 				<h1 class="text-3xl font-bold">Reference</h1>
 				<p class="text-gray-600 mt-2">201 cognitive primitives across 14 layers. Each layer derives from a gap in the layer below. 28 agent primitives define what an agent is and can do.</p>
@@ -14,65 +14,127 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive) {
 					<a href="/reference/grammars" class="text-brand hover:underline">Composition Grammars &rarr;</a>
 				</div>
 			</div>
-			for _, layer := range layers {
-				@layerSection(layer)
-			}
-			@agentPrimitivesSection(agentPrims)
+			<div class="space-y-3">
+				for _, layer := range layers {
+					<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", layer.Number)) } class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+						<div class="flex items-baseline gap-3">
+							<span class="text-sm font-mono text-gray-400">{ fmt.Sprintf("%d", layer.Number) }</span>
+							<div>
+								<h2 class="text-lg font-semibold">{ layer.Name }</h2>
+								if layer.Transition != "" {
+									<p class="text-sm text-gray-500">{ layer.Transition }</p>
+								}
+								if layer.Gap != "" {
+									<p class="text-gray-600 text-sm mt-1">{ layer.Gap }</p>
+								}
+								<p class="text-xs text-gray-400 mt-1">{ fmt.Sprintf("%d primitives", len(layer.Primitives)) }</p>
+							</div>
+						</div>
+					</a>
+				}
+				<a href="/reference/agents" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<div class="flex items-baseline gap-3">
+						<span class="text-sm font-mono text-gray-400">A</span>
+						<div>
+							<h2 class="text-lg font-semibold">Agent Primitives</h2>
+							<p class="text-sm text-gray-500">What an agent is and can do</p>
+							<p class="text-xs text-gray-400 mt-1">{ fmt.Sprintf("%d primitives", len(agentPrims)) }</p>
+						</div>
+					</div>
+				</a>
+			</div>
 		</div>
 	}
 }
 
-templ layerSection(layer Layer) {
-	<section>
-		<div class="flex items-baseline gap-3 mb-3">
-			<span class="text-sm font-mono text-gray-400">{ fmt.Sprintf("%d", layer.Number) }</span>
+// ── Layer Page ─────────────────────────────────────────────────
+
+templ LayerPage(layer Layer, layers []Layer) {
+	@Layout(fmt.Sprintf("Layer %d: %s", layer.Number, layer.Name)) {
+		<article class="space-y-6">
 			<div>
-				<h2 class="text-xl font-semibold">{ layer.Name }</h2>
+				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+			</div>
+			<header>
+				<span class="text-sm text-gray-400 font-mono">{ fmt.Sprintf("Layer %d", layer.Number) }</span>
+				<h1 class="text-3xl font-bold mt-1">{ layer.Name }</h1>
 				if layer.Transition != "" {
-					<p class="text-sm text-gray-500">{ layer.Transition }</p>
+					<p class="text-gray-500 mt-1">{ layer.Transition }</p>
 				}
-			</div>
-		</div>
-		if layer.Gap != "" {
-			<p class="text-gray-600 text-sm mb-3">{ layer.Gap }</p>
-		}
-		if layer.Description != "" {
-			<div class="prose prose-sm max-w-none mb-4 text-gray-600">
-				@templ.Raw(layer.Description)
-			</div>
-		}
-		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-			for _, prim := range layer.Primitives {
-				<a
-					href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
-					class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
-				>
-					<span class="font-medium">{ prim.Name }</span>
-					<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
-				</a>
+			</header>
+			if layer.Gap != "" {
+				<p class="text-gray-600">{ layer.Gap }</p>
 			}
-		</div>
-	</section>
+			if layer.Description != "" {
+				<div class="prose max-w-none">
+					@templ.Raw(layer.Description)
+				</div>
+			}
+			<div>
+				<h2 class="text-xl font-semibold mb-3">{ fmt.Sprintf("Primitives (%d)", len(layer.Primitives)) }</h2>
+				<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+					for _, prim := range layer.Primitives {
+						<a
+							href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
+							class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
+						>
+							<span class="font-medium">{ prim.Name }</span>
+							<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
+						</a>
+					}
+				</div>
+			</div>
+			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+				<div class="flex-1">
+					for _, l := range layers {
+						if l.Number == layer.Number - 1 {
+							<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", l.Number)) } class="group">
+								<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+								<span class="block text-brand font-medium group-hover:underline">{ fmt.Sprintf("Layer %d: %s", l.Number, l.Name) }</span>
+							</a>
+						}
+					}
+				</div>
+				<div class="flex-1 text-right">
+					for _, l := range layers {
+						if l.Number == layer.Number + 1 {
+							<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", l.Number)) } class="group">
+								<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+								<span class="block text-brand font-medium group-hover:underline">{ fmt.Sprintf("Layer %d: %s", l.Number, l.Name) }</span>
+							</a>
+						}
+					}
+				</div>
+			</nav>
+		</article>
+	}
 }
 
-templ agentPrimitivesSection(prims []Primitive) {
-	<section>
-		<div class="mb-3">
-			<h2 class="text-xl font-semibold">Agent Primitives</h2>
-			<p class="text-sm text-gray-500">28 primitives defining what an agent is and can do</p>
-		</div>
-		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-			for _, prim := range prims {
-				<a
-					href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
-					class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
-				>
-					<span class="font-medium">{ prim.Name }</span>
-					<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
-				</a>
-			}
-		</div>
-	</section>
+// ── Agent Primitives Page ──────────────────────────────────────
+
+templ AgentPrimitivesPage(prims []Primitive) {
+	@Layout("Agent Primitives") {
+		<article class="space-y-6">
+			<div>
+				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+			</div>
+			<header>
+				<h1 class="text-3xl font-bold">Agent Primitives</h1>
+				<p class="text-gray-500 mt-1">28 primitives defining what an agent is and can do</p>
+			</header>
+			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+				for _, prim := range prims {
+					<a
+						href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
+						class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
+					>
+						<span class="font-medium">{ prim.Name }</span>
+						<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
+					</a>
+				}
+			</div>
+		</article>
+	}
 }
 
 // ── Primitive Page ──────────────────────────────────────────────
@@ -81,7 +143,11 @@ templ PrimitivePage(prim Primitive) {
 	@Layout(prim.Name) {
 		<article class="space-y-6">
 			<div>
-				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+				if prim.Layer >= 0 {
+					<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", prim.Layer)) } class="text-sm text-brand hover:underline">{ fmt.Sprintf("← Layer %d: %s", prim.Layer, prim.LayerName) }</a>
+				} else {
+					<a href="/reference/agents" class="text-sm text-brand hover:underline">&larr; Agent Primitives</a>
+				}
 			</div>
 			<header>
 				if prim.Layer >= 0 {

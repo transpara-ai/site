@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/lovyou-ai/site/content"
 	"github.com/lovyou-ai/site/views"
@@ -35,9 +36,11 @@ func main() {
 	agentPrims := content.LoadAgentPrimitives()
 	log.Printf("loaded %d layers, %d agent primitives", len(layers), len(agentPrims))
 
-	// Build primitive lookup for individual pages.
+	// Build lookups for individual pages.
 	primsBySlug := map[string]views.Primitive{}
+	layersByNum := map[int]views.Layer{}
 	for _, layer := range layers {
+		layersByNum[layer.Number] = layer
 		for _, prim := range layer.Primitives {
 			primsBySlug[prim.Slug] = prim
 		}
@@ -45,7 +48,7 @@ func main() {
 	for _, prim := range agentPrims {
 		primsBySlug[prim.Slug] = prim
 	}
-	log.Printf("indexed %d primitives", len(primsBySlug))
+	log.Printf("indexed %d primitives, %d layers", len(primsBySlug), len(layersByNum))
 
 	grammars, err := content.LoadGrammars()
 	if err != nil {
@@ -69,6 +72,21 @@ func main() {
 	// Reference.
 	mux.HandleFunc("GET /reference", func(w http.ResponseWriter, r *http.Request) {
 		views.ReferenceIndex(layers, agentPrims).Render(r.Context(), w)
+	})
+	mux.HandleFunc("GET /reference/layers/{num}", func(w http.ResponseWriter, r *http.Request) {
+		num, err := strconv.Atoi(r.PathValue("num"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if layer, ok := layersByNum[num]; ok {
+			views.LayerPage(layer, layers).Render(r.Context(), w)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	mux.HandleFunc("GET /reference/agents", func(w http.ResponseWriter, r *http.Request) {
+		views.AgentPrimitivesPage(agentPrims).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/primitives/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
