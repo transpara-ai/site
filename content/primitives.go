@@ -13,9 +13,6 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
-//go:embed reference/primitives.md
-var primitivesRaw []byte
-
 //go:embed reference/agent-primitives.md
 var agentPrimitivesRaw []byte
 
@@ -32,47 +29,30 @@ var grammarsFS embed.FS
 var fundamentalsFS embed.FS
 
 var (
-	layerHeading = regexp.MustCompile(`^## Layer (\d+): (.+)`)
-	groupHeading = regexp.MustCompile(`^### Group \d+ — (.+)`)
-	primHeading  = regexp.MustCompile(`^#### (.+)`)
-	gapLine      = regexp.MustCompile(`^\*\*Gap from Layer \d+:\*\* (.+)`)
-	transLine    = regexp.MustCompile(`^\*\*Transition:\*\* (.+)`)
-	tableRow     = regexp.MustCompile(`^\| \*\*(.+?)\*\* \| (.+) \|$`)
-	primMD       = goldmark.New(goldmark.WithExtensions(extension.Table))
+	tableRow = regexp.MustCompile(`^\| \*\*(.+?)\*\* \| (.+) \|$`)
+	primMD   = goldmark.New(goldmark.WithExtensions(extension.Table))
 )
 
-// LoadLayers parses all layer data from multiple sources:
-// - Fundamental primitives from mind-zero layer files (the ontology)
-// - Product primitives from primitives.md (the software agents)
+// LoadLayers parses all layer data:
+// - Primitives from mind-zero layer files (layers 1-13)
+// - Layer 0 primitives from 00-foundation.md (the given foundations)
 // - Descriptions from product-layers.md and per-layer derivation docs
 func LoadLayers() []views.Layer {
-	// 1. Parse fundamental primitives from mind-zero files (the canonical derivation).
+	// 1. Parse primitives from mind-zero files (layers 0-13).
 	layers := parseFundamentals()
 
-	// 2. Parse product primitives from primitives.md and attach to layers.
-	productPrims := parsePrimitivesFile()
-	productByNum := map[int][]views.Primitive{}
-	for _, pl := range productPrims {
-		productByNum[pl.Number] = pl.Primitives
-	}
-	for i := range layers {
-		if prims, ok := productByNum[layers[i].Number]; ok {
-			layers[i].Primitives = prims
-		}
-	}
-
-	// 3. Parse Layer 0 product primitives from 00-foundation.md.
-	layer0Product := parseFoundationFile()
-	if layer0Product != nil {
+	// 2. For Layer 0, enrich with detailed specs from 00-foundation.md.
+	layer0Specs := parseFoundationFile()
+	if layer0Specs != nil {
 		for i := range layers {
 			if layers[i].Number == 0 {
-				layers[i].Primitives = layer0Product.Primitives
+				layers[i].Primitives = layer0Specs.Primitives
 				break
 			}
 		}
 	}
 
-	// 4. Enrich layer descriptions from product-layers.md.
+	// 3. Enrich layer descriptions from product-layers.md.
 	productDescs := parseProductLayers()
 	for i := range layers {
 		if desc, ok := productDescs[layers[i].Number]; ok {
@@ -80,7 +60,7 @@ func LoadLayers() []views.Layer {
 		}
 	}
 
-	// 5. Enrich layer descriptions from per-layer derivation docs.
+	// 4. Enrich layer descriptions from per-layer derivation docs.
 	for i := range layers {
 		if derivation := parseLayerDerivation(layers[i].Number); derivation != "" {
 			if layers[i].Description != "" {
@@ -200,13 +180,13 @@ func parseFundamentals() []views.Layer {
 			// Parse primitive rows (3-column: Name | Definition | Derivation).
 			if inPrimitives {
 				if m := fundRow.FindStringSubmatch(line); m != nil {
-					layer.Fundamentals = append(layer.Fundamentals, views.FundamentalPrimitive{
+					layer.Primitives = append(layer.Primitives, views.Primitive{
 						Name:       m[1],
 						Slug:       slugify(m[1]),
 						Layer:      f.num,
 						LayerName:  layer.Name,
 						Group:      curGroup,
-						Definition: strings.TrimSpace(m[2]),
+						Description: strings.TrimSpace(m[2]),
 						Derivation: strings.TrimSpace(m[3]),
 					})
 				}
@@ -251,122 +231,6 @@ func parseFundamentals() []views.Layer {
 		layers = append(layers, layer)
 	}
 
-	return layers
-}
-
-// parsePrimitivesFile extracts Layers 1-13 with full product primitive specs.
-func parsePrimitivesFile() []views.Layer {
-	lines := strings.Split(string(primitivesRaw), "\n")
-
-	var layers []views.Layer
-	var curLayer *views.Layer
-	var curGroup string
-	var curPrim *views.Primitive
-	var bodyLines []string
-	inPrimitive := false
-
-	flushPrimitive := func() {
-		if curPrim != nil && curLayer != nil {
-			// Collect any body text (notes after spec table) and render as HTML.
-			if len(bodyLines) > 0 {
-				md := strings.TrimSpace(strings.Join(bodyLines, "\n"))
-				var buf bytes.Buffer
-				primMD.Convert([]byte(md), &buf)
-				curPrim.Notes = buf.String()
-			}
-			curLayer.Primitives = append(curLayer.Primitives, *curPrim)
-			curPrim = nil
-		}
-		bodyLines = nil
-		inPrimitive = false
-	}
-
-	flushLayer := func() {
-		flushPrimitive()
-		if curLayer != nil {
-			layers = append(layers, *curLayer)
-			curLayer = nil
-		}
-	}
-
-	for _, line := range lines {
-		line = strings.TrimRight(line, "\r")
-
-		// Layer heading (skip Layer 0).
-		if m := layerHeading.FindStringSubmatch(line); m != nil {
-			flushLayer()
-			n, _ := strconv.Atoi(m[1])
-			if n == 0 {
-				continue
-			}
-			curLayer = &views.Layer{Number: n, Name: m[2]}
-			curGroup = ""
-			continue
-		}
-
-		if m := groupHeading.FindStringSubmatch(line); m != nil {
-			flushPrimitive()
-			curGroup = m[1]
-			continue
-		}
-
-		if m := primHeading.FindStringSubmatch(line); m != nil {
-			flushPrimitive()
-			inPrimitive = true
-			name := m[1]
-			curPrim = &views.Primitive{
-				Name:  name,
-				Slug:  slugify(name),
-				Group: curGroup,
-			}
-			if curLayer != nil {
-				curPrim.Layer = curLayer.Number
-				curPrim.LayerName = curLayer.Name
-			}
-			continue
-		}
-
-		if curLayer != nil && !inPrimitive {
-			if m := gapLine.FindStringSubmatch(line); m != nil {
-				curLayer.Gap = m[1]
-			}
-			if m := transLine.FindStringSubmatch(line); m != nil {
-				curLayer.Transition = m[1]
-			}
-		}
-
-		if curPrim != nil {
-			if m := tableRow.FindStringSubmatch(line); m != nil {
-				key := m[1]
-				val := strings.TrimSpace(m[2])
-				switch key {
-				case "Subscribes to":
-					curPrim.SubscribesTo = val
-				case "Emits":
-					curPrim.Emits = val
-				case "Depends on":
-					curPrim.DependsOn = val
-				case "State":
-					curPrim.State = val
-				case "Intelligent", "Mechanical", "Both":
-					curPrim.Intelligent = key + ": " + val
-				}
-				continue
-			}
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" || trimmed == "| | |" || trimmed == "|---|---|" {
-				continue
-			}
-			if !strings.HasPrefix(trimmed, "##") && !strings.HasPrefix(trimmed, "---") && !strings.HasPrefix(trimmed, "**Full specification") {
-				if curPrim.Description == "" {
-					curPrim.Description = trimmed
-				} else {
-					bodyLines = append(bodyLines, trimmed)
-				}
-			}
-		}
-	}
-	flushLayer()
 	return layers
 }
 

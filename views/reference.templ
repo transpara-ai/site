@@ -9,7 +9,7 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive) {
 		<div class="space-y-8">
 			<div>
 				<h1 class="text-3xl font-bold">Reference</h1>
-				<p class="text-gray-600 mt-2">200 fundamental primitives across 14 layers, each derived from gaps in the layer below. Product primitives specify the software agents that operationalize each layer. 28 agent primitives define what an agent is and can do.</p>
+				<p class="text-gray-600 mt-2">201 primitives across 14 layers — 45 given, 156 derived. Each layer emerges from gaps in the layer below. 28 agent primitives define what an agent is and can do.</p>
 				<div class="flex gap-4 mt-4 text-sm">
 					<a href="/reference/grammars" class="text-brand hover:underline">Composition Grammars &rarr;</a>
 				</div>
@@ -27,7 +27,7 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive) {
 								if layer.Gap != "" {
 									<p class="text-gray-600 text-sm mt-1">{ layer.Gap }</p>
 								}
-								<p class="text-xs text-gray-400 mt-1">{ fmt.Sprintf("%d fundamental, %d product primitives", len(layer.Fundamentals), len(layer.Primitives)) }</p>
+								<p class="text-xs text-gray-400 mt-1">{ fmt.Sprintf("%d primitives", len(layer.Primitives)) }</p>
 							</div>
 						</div>
 					</a>
@@ -70,39 +70,35 @@ templ LayerPage(layer Layer, layers []Layer) {
 					@templ.Raw(layer.Description)
 				</div>
 			}
-			if len(layer.Fundamentals) > 0 {
-				<div>
-					<h2 class="text-xl font-semibold mb-1">Fundamental Primitives</h2>
-					<p class="text-sm text-gray-500 mb-3">Ontological primitives derived from gaps in the layer below.</p>
-					<div class="space-y-4">
-						for _, fp := range layer.Fundamentals {
-							<div class="p-4 bg-white rounded-lg border border-gray-200" id={ fp.Slug }>
-								<div class="flex items-baseline gap-2 mb-1">
-									<h3 class="font-semibold text-lg">{ fp.Name }</h3>
-									<span class="text-xs text-gray-400">{ fp.Group }</span>
-								</div>
-								<p class="text-gray-700">{ fp.Definition }</p>
-								<p class="text-gray-500 text-sm mt-2">{ fp.Derivation }</p>
-							</div>
-						}
-					</div>
-				</div>
-			}
 			if len(layer.Primitives) > 0 {
 				<div>
-					<h2 class="text-xl font-semibold mb-1">Product Primitives</h2>
-					<p class="text-sm text-gray-500 mb-3">Software agent specifications for building products at this layer.</p>
-					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-						for _, prim := range layer.Primitives {
-							<a
-								href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
-								class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
-							>
-								<span class="font-medium">{ prim.Name }</span>
-								<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
-							</a>
-						}
-					</div>
+					<h2 class="text-xl font-semibold mb-3">{ fmt.Sprintf("Primitives (%d)", len(layer.Primitives)) }</h2>
+					if layer.Primitives[0].Derivation != "" {
+						<div class="space-y-4">
+							for _, prim := range layer.Primitives {
+								<div class="p-4 bg-white rounded-lg border border-gray-200" id={ prim.Slug }>
+									<div class="flex items-baseline gap-2 mb-1">
+										<h3 class="font-semibold text-lg">{ prim.Name }</h3>
+										<span class="text-xs text-gray-400">{ prim.Group }</span>
+									</div>
+									<p class="text-gray-700">{ prim.Description }</p>
+									<p class="text-gray-500 text-sm mt-2">{ prim.Derivation }</p>
+								</div>
+							}
+						</div>
+					} else {
+						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+							for _, prim := range layer.Primitives {
+								<a
+									href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
+									class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
+								>
+									<span class="font-medium">{ prim.Name }</span>
+									<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
+								</a>
+							}
+						</div>
+					}
 				</div>
 			}
 			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
@@ -184,40 +180,48 @@ templ PrimitivePage(prim Primitive) {
 			if prim.Description != "" {
 				<p class="text-gray-700 text-lg">{ prim.Description }</p>
 			}
-			<div class="overflow-x-auto">
-				<table class="w-full text-sm border border-gray-200 rounded">
-					if prim.SubscribesTo != "" {
-						<tr class="border-b border-gray-100">
-							<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "subscribes") }</td>
-							<td class="px-4 py-2 font-mono text-xs">{ prim.SubscribesTo }</td>
-						</tr>
-					}
-					if prim.Emits != "" {
-						<tr class="border-b border-gray-100">
-							<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "emits") }</td>
-							<td class="px-4 py-2 font-mono text-xs">{ prim.Emits }</td>
-						</tr>
-					}
-					if prim.DependsOn != "" {
-						<tr class="border-b border-gray-100">
-							<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "depends") }</td>
-							<td class="px-4 py-2 font-mono text-xs">{ prim.DependsOn }</td>
-						</tr>
-					}
-					if prim.State != "" {
-						<tr class="border-b border-gray-100">
-							<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "state") }</td>
-							<td class="px-4 py-2 font-mono text-xs">{ prim.State }</td>
-						</tr>
-					}
-					if prim.Intelligent != "" {
-						<tr>
-							<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "intelligent") }</td>
-							<td class="px-4 py-2">{ prim.Intelligent }</td>
-						</tr>
-					}
-				</table>
-			</div>
+			if prim.Derivation != "" {
+				<div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+					<h2 class="text-sm font-medium text-gray-500 mb-1">Derivation</h2>
+					<p class="text-gray-600">{ prim.Derivation }</p>
+				</div>
+			}
+			if prim.SubscribesTo != "" || prim.Emits != "" || prim.DependsOn != "" || prim.State != "" || prim.Intelligent != "" {
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm border border-gray-200 rounded">
+						if prim.SubscribesTo != "" {
+							<tr class="border-b border-gray-100">
+								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "subscribes") }</td>
+								<td class="px-4 py-2 font-mono text-xs">{ prim.SubscribesTo }</td>
+							</tr>
+						}
+						if prim.Emits != "" {
+							<tr class="border-b border-gray-100">
+								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "emits") }</td>
+								<td class="px-4 py-2 font-mono text-xs">{ prim.Emits }</td>
+							</tr>
+						}
+						if prim.DependsOn != "" {
+							<tr class="border-b border-gray-100">
+								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "depends") }</td>
+								<td class="px-4 py-2 font-mono text-xs">{ prim.DependsOn }</td>
+							</tr>
+						}
+						if prim.State != "" {
+							<tr class="border-b border-gray-100">
+								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "state") }</td>
+								<td class="px-4 py-2 font-mono text-xs">{ prim.State }</td>
+							</tr>
+						}
+						if prim.Intelligent != "" {
+							<tr>
+								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "intelligent") }</td>
+								<td class="px-4 py-2">{ prim.Intelligent }</td>
+							</tr>
+						}
+					</table>
+				</div>
+			}
 			if prim.Notes != "" {
 				<div class="prose prose-sm max-w-none text-gray-700">
 					@templ.Raw(prim.Notes)
