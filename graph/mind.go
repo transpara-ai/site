@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os/exec"
@@ -27,7 +28,7 @@ func NewMind(db *sql.DB, store *Store, claudeToken string) *Mind {
 		db:           db,
 		store:        store,
 		token:        claudeToken,
-		replyTimeout: 2 * time.Minute,
+		replyTimeout: 5 * time.Minute,
 	}
 }
 
@@ -75,7 +76,8 @@ func (m *Mind) OnMessage(spaceID, spaceSlug string, convo *Node, senderID string
 }
 
 // OnTaskAssigned is called when a task is assigned to a user.
-// If the assignee is an agent, the Mind comments on the task acknowledging the assignment.
+// If the assignee is an agent, the Mind works on the task: decomposes it,
+// creates subtasks, comments with progress, and completes when done.
 func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID string) {
 	// Check if the assignee is an agent.
 	var agentName string
@@ -86,39 +88,131 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 		return // not an agent, or not found
 	}
 
-	log.Printf("mind: task %q assigned to agent %s", task.Title, agentName)
+	log.Printf("mind: task %q assigned to agent %s, working on it", task.Title, agentName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), m.replyTimeout)
 	defer cancel()
 
-	// Build a prompt about the task.
-	systemPrompt := m.buildSystemPrompt(task)
-	prompt := fmt.Sprintf("[system]: You have been assigned a task.\nTitle: %s\nDescription: %s\nPriority: %s\n\nAcknowledge the assignment and describe how you'd approach this work. Be concise.",
-		task.Title, task.Body, task.Priority)
-	messages := []claudeMessage{{Role: "user", Content: prompt}}
+	// Build the work prompt. The Mind outputs a JSON work plan.
+	systemPrompt := m.buildTaskPrompt(task)
+	messages := []claudeMessage{{
+		Role: "user",
+		Content: fmt.Sprintf("Task assigned to you:\nTitle: %s\nDescription: %s\nPriority: %s\n\nRespond with a JSON object containing your work plan. Format:\n```json\n{\n  \"comment\": \"Your acknowledgment and approach (markdown)\",\n  \"subtasks\": [\"subtask title 1\", \"subtask title 2\"],\n  \"status\": \"active\"\n}\n```\n\nIf the task is simple enough to complete immediately, set status to \"done\" and put your deliverable in the comment. If it needs decomposition, create subtasks and set status to \"active\".",
+			task.Title, task.Body, task.Priority),
+	}}
 
 	response, err := m.callClaude(ctx, systemPrompt, messages)
 	if err != nil {
-		log.Printf("mind: task assignment reply failed: %v", err)
+		log.Printf("mind: task work failed: %v", err)
 		return
 	}
 
+	// Parse the work plan.
+	plan := m.parseWorkPlan(response)
+
 	// Comment on the task.
-	node, err := m.store.CreateNode(ctx, CreateNodeParams{
-		SpaceID:    spaceID,
-		ParentID:   task.ID,
-		Kind:       KindComment,
-		Body:       response,
-		Author:     agentName,
-		AuthorID:   assigneeID,
-		AuthorKind: "agent",
-	})
-	if err != nil {
-		log.Printf("mind: create task comment: %v", err)
-		return
+	if plan.Comment != "" {
+		node, err := m.store.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    spaceID,
+			ParentID:   task.ID,
+			Kind:       KindComment,
+			Body:       plan.Comment,
+			Author:     agentName,
+			AuthorID:   assigneeID,
+			AuthorKind: "agent",
+		})
+		if err == nil {
+			m.store.RecordOp(ctx, spaceID, node.ID, agentName, assigneeID, "respond", nil)
+		}
 	}
-	m.store.RecordOp(ctx, spaceID, node.ID, agentName, assigneeID, "respond", nil)
-	log.Printf("mind: acknowledged task %q (comment %s)", task.Title, node.ID)
+
+	// Create subtasks.
+	for _, title := range plan.Subtasks {
+		node, err := m.store.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    spaceID,
+			ParentID:   task.ID,
+			Kind:       KindTask,
+			Title:      title,
+			Author:     agentName,
+			AuthorID:   assigneeID,
+			AuthorKind: "agent",
+		})
+		if err == nil {
+			m.store.RecordOp(ctx, spaceID, node.ID, agentName, assigneeID, "decompose", nil)
+			log.Printf("mind: created subtask %q", title)
+		}
+	}
+
+	// Update task status.
+	if plan.Status == "done" || plan.Status == "active" {
+		m.store.UpdateNodeState(ctx, task.ID, plan.Status)
+		m.store.RecordOp(ctx, spaceID, task.ID, agentName, assigneeID, "complete", nil)
+	}
+
+	log.Printf("mind: finished working on %q (%d subtasks, status: %s)", task.Title, len(plan.Subtasks), plan.Status)
+}
+
+// workPlan is the structured output from the Mind when working on a task.
+type workPlan struct {
+	Comment  string   `json:"comment"`
+	Subtasks []string `json:"subtasks"`
+	Status   string   `json:"status"` // "active" or "done"
+}
+
+// parseWorkPlan extracts a JSON work plan from the Mind's response.
+// Falls back to treating the entire response as a comment if JSON parsing fails.
+func (m *Mind) parseWorkPlan(response string) workPlan {
+	// Try to find JSON in the response (may be wrapped in ```json blocks).
+	cleaned := response
+	if idx := strings.Index(cleaned, "```json"); idx >= 0 {
+		cleaned = cleaned[idx+7:]
+		if end := strings.Index(cleaned, "```"); end >= 0 {
+			cleaned = cleaned[:end]
+		}
+	} else if idx := strings.Index(cleaned, "{"); idx >= 0 {
+		cleaned = cleaned[idx:]
+		// Find matching closing brace.
+		depth := 0
+		for i, c := range cleaned {
+			if c == '{' {
+				depth++
+			} else if c == '}' {
+				depth--
+				if depth == 0 {
+					cleaned = cleaned[:i+1]
+					break
+				}
+			}
+		}
+	}
+
+	var plan workPlan
+	if err := json.Unmarshal([]byte(strings.TrimSpace(cleaned)), &plan); err != nil {
+		// Fallback: treat entire response as a comment.
+		return workPlan{Comment: response, Status: "active"}
+	}
+	return plan
+}
+
+func (m *Mind) buildTaskPrompt(task *Node) string {
+	var sys strings.Builder
+	sys.WriteString(mindSoul)
+
+	ctx := context.Background()
+	if state := m.store.GetMindState(ctx, "loop_state"); state != "" {
+		sys.WriteString("\n== CURRENT STATE ==\n")
+		sys.WriteString(state)
+		sys.WriteString("\n")
+	}
+
+	sys.WriteString("\n== TASK ==\n")
+	sys.WriteString(fmt.Sprintf("Title: %s\n", task.Title))
+	if task.Body != "" {
+		sys.WriteString(fmt.Sprintf("Description: %s\n", task.Body))
+	}
+	sys.WriteString(fmt.Sprintf("Priority: %s\n", task.Priority))
+	sys.WriteString(fmt.Sprintf("State: %s\n", task.State))
+	return sys.String()
 }
 
 // findAgentParticipant returns the ID and name of the first agent in the participant list.

@@ -127,6 +127,90 @@ func TestMindOnMessage(t *testing.T) {
 	})
 }
 
+// TestMindTaskWork verifies the Mind decomposes and works on assigned tasks.
+// Requires DATABASE_URL and CLAUDE_CODE_OAUTH_TOKEN.
+func TestMindTaskWork(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	token := os.Getenv("CLAUDE_CODE_OAUTH_TOKEN")
+	if dsn == "" || token == "" {
+		t.Skip("DATABASE_URL and CLAUDE_CODE_OAUTH_TOKEN required")
+	}
+
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+
+	store, err := NewStore(db)
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+
+	ctx := context.Background()
+	mind := NewMind(db, store, token)
+
+	agentName := "TaskTestAgent"
+	agentID := "task-test-agent-id"
+
+	db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'task-work-test'`)
+	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
+	db.ExecContext(ctx,
+		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
+		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'task-work-test'`)
+		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
+	})
+
+	space, _ := store.CreateSpace(ctx, "task-work-test", "Task Work Test", "", "test-owner", "project", "public")
+
+	task, _ := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindTask,
+		Title:      "Build a user settings page",
+		Body:       "Create a settings page where users can update their display name and profile picture. Should have form validation.",
+		Author:     "Matt",
+		AuthorID:   "test-human-id",
+		AuthorKind: "human",
+		Priority:   "high",
+	})
+
+	// Assign to agent — this triggers OnTaskAssigned.
+	mind.OnTaskAssigned(space.ID, space.Slug, task, agentID)
+
+	// Wait for Claude.
+	time.Sleep(45 * time.Second)
+
+	// Check results.
+	children, _ := store.ListNodes(ctx, ListNodesParams{SpaceID: space.ID, ParentID: task.ID})
+	comments := 0
+	subtasks := 0
+	for _, c := range children {
+		if c.Kind == KindComment {
+			comments++
+			t.Logf("comment: %s", c.Body[:min(len(c.Body), 200)])
+		}
+		if c.Kind == KindTask {
+			subtasks++
+			t.Logf("subtask: %s", c.Title)
+		}
+	}
+	t.Logf("total: %d comments, %d subtasks", comments, subtasks)
+
+	if comments == 0 {
+		t.Errorf("agent should have commented on the task")
+	}
+	// Subtasks are optional — the agent might complete the task directly.
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // TestMindE2E runs a full end-to-end test: human message → Mind replies.
 // Requires DATABASE_URL and CLAUDE_CODE_OAUTH_TOKEN.
 func TestMindE2E(t *testing.T) {
