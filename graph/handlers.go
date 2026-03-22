@@ -991,6 +991,13 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "claim", nil)
 
+		// Trigger Mind if an agent claimed the task.
+		if h.mind != nil && actorKind == "agent" {
+			if node, _ := h.store.GetNode(ctx, nodeID); node != nil {
+				go h.mind.OnTaskAssigned(space.ID, space.Slug, node, actorID)
+			}
+		}
+
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
 			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "claim"})
