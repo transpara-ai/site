@@ -553,6 +553,18 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userName string)
 	return nodes, rows.Err()
 }
 
+// HasAgentParticipant checks if any of the given names belong to an agent user.
+func (s *Store) HasAgentParticipant(ctx context.Context, names []string) (bool, error) {
+	if len(names) == 0 {
+		return false, nil
+	}
+	var exists bool
+	err := s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM users WHERE name = ANY($1) AND kind = 'agent')`,
+		pq.Array(names)).Scan(&exists)
+	return exists, err
+}
+
 // UpdateNodeState sets a node's state.
 func (s *Store) UpdateNodeState(ctx context.Context, id, state string) error {
 	res, err := s.db.ExecContext(ctx,

@@ -637,7 +637,7 @@ templ ConversationsView(space Space, spaces []Space, convos []Node, user ViewUse
 
 // ── Conversation detail view ────────────────────────────────────
 
-templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser) {
+templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, hasAgent bool) {
 	@appLayout(space, []Space{space}, "conversations", user) {
 		<div class="flex flex-col h-full">
 			<!-- Conversation header -->
@@ -670,6 +670,9 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 					id="message-list"
 					class="max-w-2xl mx-auto space-y-3"
 					data-last-ts={ lastMessageTS(messages) }
+					if hasAgent {
+						data-has-agent="true"
+					}
 				>
 					if len(messages) == 0 {
 						<p id="empty-state" class="text-center text-warm-faint py-12">No messages yet. Start the conversation!</p>
@@ -678,6 +681,26 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 						@chatMessage(msg, user.Name)
 					}
 				</div>
+				<!-- Thinking indicator (hidden by default) -->
+				if hasAgent {
+					<div id="thinking" class="max-w-2xl mx-auto mt-3 hidden">
+						<div class="flex gap-3">
+							<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0">
+								<svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="18" cy="12" r="2"></circle></svg>
+							</span>
+							<div class="bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-2.5">
+								<div class="flex items-center gap-1.5 mb-1">
+									<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">thinking</span>
+								</div>
+								<div class="flex gap-1 items-center h-5">
+									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0s"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.15s"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.3s"></span>
+								</div>
+							</div>
+						</div>
+					</div>
+				}
 				<!-- Poll for new messages every 3s -->
 				<div
 					id="poll"
@@ -686,7 +709,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 					hx-target="#message-list"
 					hx-swap="beforeend"
 					hx-vals="js:{after: document.getElementById('message-list').dataset.lastTs}"
-					hx-on::after-request="var ml=document.getElementById('message-list');var last=ml.querySelector('[data-ts]:last-child');if(last){var e=document.getElementById('empty-state');if(e)e.remove();ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');if(m.scrollHeight-m.scrollTop-m.clientHeight<100)m.scrollTop=m.scrollHeight;}"
+					hx-on::after-request="var ml=document.getElementById('message-list');var last=ml.querySelector('[data-ts]:last-child');if(last){var e=document.getElementById('empty-state');if(e)e.remove();ml.dataset.lastTs=last.dataset.ts;var t=document.getElementById('thinking');if(t)t.classList.add('hidden');var m=document.getElementById('messages');if(m.scrollHeight-m.scrollTop-m.clientHeight<100)m.scrollTop=m.scrollHeight;}"
 				></div>
 			</div>
 
@@ -700,17 +723,28 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 						hx-post={ "/app/" + space.Slug + "/op" }
 						hx-target="#message-list"
 						hx-swap="beforeend"
-						hx-on::after-request="if(event.detail.successful){this.reset();var ml=document.getElementById('message-list');var e=document.getElementById('empty-state');if(e)e.remove();var last=ml.querySelector('[data-ts]:last-child');if(last)ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}"
+						hx-on::after-request="if(event.detail.successful){this.reset();var ml=document.getElementById('message-list');var e=document.getElementById('empty-state');if(e)e.remove();var last=ml.querySelector('[data-ts]:last-child');if(last)ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');m.scrollTop=m.scrollHeight;if(ml.dataset.hasAgent){var t=document.getElementById('thinking');if(t){t.classList.remove('hidden');clearTimeout(window._thinkTO);window._thinkTO=setTimeout(function(){t.classList.add('hidden')},60000);}}}"
 					>
 						<input type="hidden" name="op" value="respond"/>
 						<input type="hidden" name="parent_id" value={ convo.ID }/>
-						<input type="text" name="body" placeholder="Write a message..." required autocomplete="off"
-							class="flex-1 px-4 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"/>
+						<input
+							type="text"
+							name="body"
+							placeholder="Write a message..."
+							required
+							autocomplete="off"
+							class="flex-1 px-4 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"
+							onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit();}"
+						/>
 						<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Send</button>
 					</form>
 				</div>
 			}
 		</div>
+		<!-- Scroll to bottom on load -->
+		<script>
+			(function(){var m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;})();
+		</script>
 	}
 }
 

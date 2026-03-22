@@ -606,8 +606,10 @@ func (h *Handlers) handleConversationDetail(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	hasAgent, _ := h.store.HasAgentParticipant(r.Context(), node.Tags)
+
 	user := h.viewUser(r)
-	ConversationDetailView(*space, *node, messages, user).Render(r.Context(), w)
+	ConversationDetailView(*space, *node, messages, user, hasAgent).Render(r.Context(), w)
 }
 
 // handleConversationMessages returns new messages since the given timestamp.
