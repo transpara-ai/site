@@ -948,7 +948,7 @@ func BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if isOwner {
+			if user.Name != "" && user.Name != "Anonymous" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<button onclick=\"document.getElementById('new-task-form').classList.toggle('hidden')\" class=\"flex items-center gap-1.5 px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium\"><svg class=\"w-3.5 h-3.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M12 4v16m8-8H4\"></path></svg> New task</button>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -959,7 +959,7 @@ func BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser
 				return templ_7745c5c3_Err
 			}
 			for _, col := range columns {
-				templ_7745c5c3_Err = boardColumn(space.Slug, col, isOwner).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = boardColumn(space.Slug, col, user.Name != "" && user.Name != "Anonymous").Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -978,7 +978,7 @@ func BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser
 	})
 }
 
-func boardColumn(spaceSlug string, col BoardColumn, isOwner bool) templ.Component {
+func boardColumn(spaceSlug string, col BoardColumn, canWrite bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -1055,7 +1055,7 @@ func boardColumn(spaceSlug string, col BoardColumn, isOwner bool) templ.Componen
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if col.State == StateOpen && isOwner {
+		if col.State == StateOpen && canWrite {
 			templ_7745c5c3_Err = newTaskInline(spaceSlug).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1353,7 +1353,7 @@ func FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if isOwner {
+			if user.Name != "" && user.Name != "Anonymous" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<!-- New post form --> <form hx-post=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -1608,7 +1608,7 @@ func ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isO
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if isOwner {
+			if user.Name != "" && user.Name != "Anonymous" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "<!-- New thread form --> <form action=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -3668,7 +3668,7 @@ func NodeDetailView(space Space, node Node, children []Node, ops []Op, user View
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				if isOwner {
+				if user.Name != "" && user.Name != "Anonymous" {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 304, "<form method=\"POST\" action=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err

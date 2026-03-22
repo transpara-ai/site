@@ -354,7 +354,7 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 						<p class="text-sm text-warm-faint hidden lg:block">{ space.Description }</p>
 					}
 				</div>
-				if isOwner {
+				if user.Name != "" && user.Name != "Anonymous" {
 					<button
 						onclick="document.getElementById('new-task-form').classList.toggle('hidden')"
 						class="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium"
@@ -368,14 +368,14 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 			</div>
 			<div class="flex gap-4 flex-1 overflow-x-auto pb-4">
 				for _, col := range columns {
-					@boardColumn(space.Slug, col, isOwner)
+					@boardColumn(space.Slug, col, user.Name != "" && user.Name != "Anonymous")
 				}
 			</div>
 		</div>
 	}
 }
 
-templ boardColumn(spaceSlug string, col BoardColumn, isOwner bool) {
+templ boardColumn(spaceSlug string, col BoardColumn, canWrite bool) {
 	<div class="w-[280px] flex-shrink-0 flex flex-col">
 		<div class="flex items-center gap-2 mb-3 px-1">
 			<span
@@ -391,7 +391,7 @@ templ boardColumn(spaceSlug string, col BoardColumn, isOwner bool) {
 			id={ col.State + "-column" }
 			class="flex-1 space-y-2 overflow-y-auto rounded-lg bg-elevated/60 p-2 min-h-[200px]"
 		>
-			if col.State == StateOpen && isOwner {
+			if col.State == StateOpen && canWrite {
 				@newTaskInline(spaceSlug)
 			}
 			for _, node := range col.Nodes {
@@ -478,7 +478,7 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 			<div class="flex items-center justify-between">
 				<h1 class="text-xl font-medium text-warm">Feed</h1>
 			</div>
-			if isOwner {
+			if user.Name != "" && user.Name != "Anonymous" {
 				<!-- New post form -->
 				<form
 					hx-post={ "/app/" + space.Slug + "/op" }
@@ -547,7 +547,7 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 			<div class="flex items-center justify-between">
 				<h1 class="text-xl font-medium text-warm">Threads</h1>
 			</div>
-			if isOwner {
+			if user.Name != "" && user.Name != "Anonymous" {
 				<!-- New thread form -->
 				<form action={ templ.SafeURL("/app/" + space.Slug + "/op") } method="POST" class="bg-surface rounded-lg border border-edge p-4 space-y-3">
 					<input type="hidden" name="op" value="discuss"/>
@@ -1167,7 +1167,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 							@CommentItem(child)
 						}
 					</div>
-					if isOwner {
+					if user.Name != "" && user.Name != "Anonymous" {
 						<form
 							method="POST"
 							action={ templ.SafeURL("/app/" + space.Slug + "/op") }
