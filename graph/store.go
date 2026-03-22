@@ -210,6 +210,16 @@ CREATE INDEX IF NOT EXISTS idx_ops_op ON ops(space_id, op);
 
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS author_kind TEXT NOT NULL DEFAULT 'human';
+
+CREATE TABLE IF NOT EXISTS users (
+    id         TEXT PRIMARY KEY,
+    google_id  TEXT UNIQUE NOT NULL,
+    email      TEXT UNIQUE NOT NULL,
+    name       TEXT NOT NULL,
+    picture    TEXT NOT NULL DEFAULT '',
+    kind       TEXT NOT NULL DEFAULT 'human',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `)
 	return err
 }
