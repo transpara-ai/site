@@ -493,8 +493,8 @@ func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ConversationsView(*space, spaces, convos, h.viewUser(r)).Render(r.Context(), w)
-
+	agents, _ := h.store.ListAgentNames(r.Context())
+	ConversationsView(*space, spaces, convos, h.viewUser(r), agents).Render(r.Context(), w)
 }
 
 func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {

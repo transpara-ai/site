@@ -585,7 +585,17 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 
 // ── Conversations view ──────────────────────────────────────────
 
-templ ConversationsView(space Space, spaces []Space, convos []ConversationSummary, user ViewUser) {
+script addParticipant(name string) {
+	var input = document.getElementById('participants-input');
+	var current = input.value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+	if (current.indexOf(name) === -1) {
+		current.push(name);
+	}
+	input.value = current.join(', ');
+	input.focus();
+}
+
+templ ConversationsView(space Space, spaces []Space, convos []ConversationSummary, user ViewUser, agents []string) {
 	@appLayout(space, spaces, "conversations", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
@@ -600,7 +610,23 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 				>
 					<input type="hidden" name="op" value="converse"/>
 					<input type="text" name="title" placeholder="Conversation name" required class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
-					<input type="text" name="participants" placeholder="Participants (comma-separated names)" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+					<div>
+						<input id="participants-input" type="text" name="participants" placeholder="Participants (comma-separated names)" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+						if len(agents) > 0 {
+							<div class="flex items-center gap-2 mt-2">
+								<span class="text-[10px] text-warm-faint">Add:</span>
+								for _, agent := range agents {
+									<button
+										type="button"
+										class="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
+										onclick={ addParticipant(agent) }
+									>
+										{ agent }
+									</button>
+								}
+							</div>
+						}
+					</div>
 					<div class="flex justify-end">
 						<button type="submit" class="px-4 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Start conversation</button>
 					</div>

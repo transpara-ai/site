@@ -591,6 +591,24 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userName string)
 	return convos, rows.Err()
 }
 
+// ListAgentNames returns names of all agent users.
+func (s *Store) ListAgentNames(ctx context.Context) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT name FROM users WHERE kind = 'agent' ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("list agent names: %w", err)
+	}
+	defer rows.Close()
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		names = append(names, name)
+	}
+	return names, rows.Err()
+}
+
 // HasAgentParticipant checks if any of the given names belong to an agent user.
 func (s *Store) HasAgentParticipant(ctx context.Context, names []string) (bool, error) {
 	if len(names) == 0 {
