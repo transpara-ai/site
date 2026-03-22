@@ -232,6 +232,15 @@ CREATE TABLE IF NOT EXISTS mind_state (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS space_members (
+    space_id   TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    user_id    TEXT NOT NULL,
+    user_name  TEXT NOT NULL DEFAULT '',
+    joined_at  TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (space_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_space_members_user ON space_members(user_id);
+
 -- users table is created by auth.Auth.migrate(). Graph queries JOIN on it.
 -- Creating here too (IF NOT EXISTS) ensures tests work without auth setup.
 CREATE TABLE IF NOT EXISTS users (
@@ -878,6 +887,43 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 // ────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────
+// Space Membership
+// ────────────────────────────────────────────────────────────────────
+
+// JoinSpace adds a user as a member of a space.
+func (s *Store) JoinSpace(ctx context.Context, spaceID, userID, userName string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO space_members (space_id, user_id, user_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+		spaceID, userID, userName)
+	return err
+}
+
+// LeaveSpace removes a user from a space.
+func (s *Store) LeaveSpace(ctx context.Context, spaceID, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM space_members WHERE space_id = $1 AND user_id = $2`,
+		spaceID, userID)
+	return err
+}
+
+// IsMember checks if a user is a member of a space.
+func (s *Store) IsMember(ctx context.Context, spaceID, userID string) bool {
+	var exists bool
+	s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM space_members WHERE space_id = $1 AND user_id = $2)`,
+		spaceID, userID).Scan(&exists)
+	return exists
+}
+
+// MemberCount returns the number of members in a space.
+func (s *Store) MemberCount(ctx context.Context, spaceID string) int {
+	var count int
+	s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM space_members WHERE space_id = $1`, spaceID).Scan(&count)
+	return count
+}
 
 // GetUserProfile returns a user by name (for public profiles).
 func (s *Store) GetUserProfile(ctx context.Context, name string) (*struct {

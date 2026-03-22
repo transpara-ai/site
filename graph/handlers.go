@@ -1079,6 +1079,30 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/conversation/%s", space.Slug, node.ID), http.StatusSeeOther)
 
+	case "join":
+		if err := h.store.JoinSpace(ctx, space.ID, actorID, actor); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, "", actor, actorID, "join", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "join", "status": "joined"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug, http.StatusSeeOther)
+
+	case "leave":
+		if err := h.store.LeaveSpace(ctx, space.ID, actorID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, "", actor, actorID, "leave", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "leave", "status": "left"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug, http.StatusSeeOther)
+
 	case "report":
 		nodeID := r.FormValue("node_id")
 		reason := strings.TrimSpace(r.FormValue("reason"))
