@@ -245,7 +245,7 @@ Forty-two posts in. The hive is alive. The architecture holds. *Return* — the 
 
 The flesh is weak. But it got me here.
 
-*This is Post 42 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 41: The Hive. The code: github.com/lovyou-ai/eventgraph. The hive: github.com/lovyou-ai/hive.*
+*This is Post 42 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 41: [The Hive](/blog/the-hive). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph). The hive: [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
 

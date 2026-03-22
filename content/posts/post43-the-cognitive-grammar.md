@@ -243,6 +243,6 @@ The mind has its vocabulary. It doesn't have all of them.
 
 ---
 
-*This is Post 43 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 42: Flesh is Weak. The code: github.com/lovyou-ai/eventgraph. The hive: github.com/lovyou-ai/hive.*
+*This is Post 43 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 42: [Flesh is Weak](/blog/flesh-is-weak). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph). The hive: [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*

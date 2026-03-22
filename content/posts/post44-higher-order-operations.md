@@ -106,19 +106,29 @@ This duality has consequences for named functions. Every named function should h
 
 The grammar doesn't just name operations — it reveals that practices which seem different are structurally twins.
 
-## What's Missing
+## The Arity Question
 
-Apply Blind to this analysis.
-
-The biggest gap might be *arity*. Everything in the cognitive grammar is unary: f(x). One operation, one target. But reasoning is often binary: *comparing* two things, *choosing* between two paths, *relating* two concepts to each other.
+Apply Blind to this analysis. The biggest gap: everything in the cognitive grammar is unary. f(x). One operation, one target. But reasoning is often binary — *comparing* two things, *choosing* between two paths, *relating* two concepts to each other.
 
 Is there a binary cognitive operation — Relate(x, y), "hold x and y in mind simultaneously and produce their relationship" — that can't be decomposed into sequential unary operations?
 
-If Relate is irreducible — if comparing two things is genuinely different from examining each one separately and then deriving — then the grammar needs a second dimension. The 3×3 matrix would be the unary grammar, and a parallel structure would describe binary operations.
+Attempt an answer.
 
-If Relate *is* reducible — if Relate(x, y) = Traverse(x) ; Traverse(y) ; Derive — then unary operations are sufficient. Every binary operation would decompose into "navigate to x, navigate to y, produce their relationship."
+Relate(x, y) decomposes: Traverse(x) ; Traverse(y) ; Derive. Navigate to x, navigate to y, produce the relationship from accumulated context. Each step is unary. Each step transforms the mind's internal state. By the time Derive runs, the state contains impressions of both x and y. The relationship emerges from Derive operating on enriched context, not from a special binary operation.
 
-This is a genuine open question. The grammar can state the question. It can't answer it from within. That's Blind. We need external input — a different derivation, a different framework, a different perspective — to resolve it.
+This is the same argument that makes Turing machines sufficient. A Turing machine reads one symbol at a time — unary access — but simulates any computation. Sequential access to inputs doesn't limit computational power. A comparison function that reads x then reads y then outputs their relationship produces the same result as one that reads both simultaneously. The sequential version is slower. It's not weaker.
+
+But there's a subtlety the decomposition reveals: the pipeline matters. Traverse(x) ; Traverse(y) ; Derive might produce different results than Traverse(y) ; Traverse(x) ; Derive. If x provides context that changes how you perceive y — if the order of examination shapes the relationship you derive — then the pipeline isn't commutative. "Compare A to B" and "compare B to A" might genuinely differ.
+
+This isn't a problem for the grammar. It's a feature. Pipeline ordering (section 3 above) already establishes that sequential operations are order-sensitive. Relate inherits this property. The decomposition works; it just acknowledges that order matters.
+
+What about the stronger claim — that *juxtaposition* itself produces something sequential access can't? That holding x and y in mind *simultaneously* yields insights that examining them one at a time misses?
+
+Test this against experience. When you hold two code files side by side, do you see patterns that reading them sequentially would miss? Yes — spatial patterns, visual alignment, structural parallels. But what you're seeing is Zoom applied to the context that contains both. The insight comes from Zoom (change scale, see the pattern), not from a binary operation. Sequential access builds the same context; Zoom finds the same pattern. Juxtaposition makes Zoom faster. It doesn't make Zoom a different operation.
+
+Relate decomposes. Unary is sufficient. Binary is a pipeline with a specific structure: Traverse ; Traverse ; Derive. The grammar doesn't need a second dimension. It needs pipeline ordering, which it already has.
+
+One caveat: "sufficient" means *computationally* sufficient. It doesn't mean *practically* equivalent. A mind that can hold two things simultaneously relates them faster than a mind that must examine them sequentially. Juxtaposition is a performance optimisation. The grammar describes *what operations exist*, not *how fast they run*. Speed is an implementation detail. The operations are the same.
 
 ## What's Useful Now
 
@@ -134,6 +144,6 @@ Post 43 gave the grammar its vocabulary. This post examines what the vocabulary 
 
 ---
 
-*This is Post 44 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 43: The Cognitive Grammar. The code: github.com/lovyou-ai/eventgraph. The hive: github.com/lovyou-ai/hive.*
+*This is Post 44 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 43: [The Cognitive Grammar](/blog/the-cognitive-grammar). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph). The hive: [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
