@@ -99,6 +99,7 @@ type Op struct {
 	SpaceID   string          `json:"space_id"`
 	NodeID    string          `json:"node_id,omitempty"`
 	Actor     string          `json:"actor"`
+	ActorKind string          `json:"actor_kind"` // "human" or "agent", resolved from users table
 	Op        string          `json:"op"`
 	Payload   json.RawMessage `json:"payload"`
 	CreatedAt time.Time       `json:"created_at"`
@@ -677,8 +678,11 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 		limit = 50
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, space_id, COALESCE(node_id, ''), actor, op, payload, created_at
-		 FROM ops WHERE space_id = $1 ORDER BY created_at DESC LIMIT $2`,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor,
+		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		 FROM ops o
+		 LEFT JOIN users u ON u.name = o.actor
+		 WHERE o.space_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
 		spaceID, limit,
 	)
 	if err != nil {
@@ -689,7 +693,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)
@@ -700,8 +704,11 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 // ListNodeOps returns operations for a specific node.
 func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, space_id, COALESCE(node_id, ''), actor, op, payload, created_at
-		 FROM ops WHERE node_id = $1 ORDER BY created_at`,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor,
+		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		 FROM ops o
+		 LEFT JOIN users u ON u.name = o.actor
+		 WHERE o.node_id = $1 ORDER BY o.created_at`,
 		nodeID,
 	)
 	if err != nil {
@@ -712,7 +719,7 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)

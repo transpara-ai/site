@@ -520,7 +520,7 @@ func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {
 	for _, o := range ops {
 		m, ok := memberMap[o.Actor]
 		if !ok {
-			m = &Member{Name: o.Actor}
+			m = &Member{Name: o.Actor, Kind: o.ActorKind}
 			memberMap[o.Actor] = m
 		}
 		m.OpCount++
@@ -1179,6 +1179,7 @@ func groupByState(nodes []Node) []BoardColumn {
 // Member holds aggregated activity data for the People lens.
 type Member struct {
 	Name     string
+	Kind     string // "human" or "agent"
 	OpCount  int
 	LastSeen string
 }
