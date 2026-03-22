@@ -499,12 +499,21 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 templ FeedCard(node Node, spaceSlug string) {
 	<div class="bg-surface rounded-lg border border-edge p-5">
 		<div class="flex items-center gap-2 mb-3">
-			<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
-				{ initial(node.Author) }
-			</span>
-			<div>
+			if node.AuthorKind == "agent" {
+				<span class="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center" title="Agent">
+					{ initial(node.Author) }
+				</span>
+			} else {
+				<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
+					{ initial(node.Author) }
+				</span>
+			}
+			<div class="flex items-center gap-1.5">
 				<span class="text-sm font-medium text-warm">{ node.Author }</span>
-				<span class="text-xs text-warm-faint ml-2">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
+				if node.AuthorKind == "agent" {
+					<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+				}
+				<span class="text-xs text-warm-faint ml-1">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 			</div>
 		</div>
 		if node.Title != "" {
@@ -980,10 +989,19 @@ templ childRow(node Node, spaceSlug string) {
 templ CommentItem(node Node) {
 	<div class="bg-surface rounded-lg border border-edge p-4">
 		<div class="flex items-center gap-2 mb-2">
-			<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
-				{ initial(node.Author) }
-			</span>
+			if node.AuthorKind == "agent" {
+				<span class="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center" title="Agent">
+					{ initial(node.Author) }
+				</span>
+			} else {
+				<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
+					{ initial(node.Author) }
+				</span>
+			}
 			<span class="text-sm font-medium text-warm">{ node.Author }</span>
+			if node.AuthorKind == "agent" {
+				<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+			}
 			<span class="text-xs text-warm-faint">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 		</div>
 		<p class="text-sm text-warm-secondary whitespace-pre-wrap">{ node.Body }</p>

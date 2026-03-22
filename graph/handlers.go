@@ -106,6 +106,14 @@ func (h *Handlers) userName(r *http.Request) string {
 	return u.Name
 }
 
+func (h *Handlers) userKind(r *http.Request) string {
+	u := auth.UserFromContext(r.Context())
+	if u == nil {
+		return "human"
+	}
+	return u.Kind
+}
+
 // spaceFromRequest returns a space only if the current user owns it (for writes).
 func (h *Handlers) spaceFromRequest(r *http.Request) (*Space, error) {
 	slug := r.PathValue("slug")
@@ -575,6 +583,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 	op := r.FormValue("op")
 	ctx := r.Context()
 	actor := h.userName(r)
+	actorKind := h.userKind(r)
 
 	switch op {
 	case "intend":
@@ -590,7 +599,8 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			Body:     strings.TrimSpace(r.FormValue("description")),
 			Priority: r.FormValue("priority"),
 			Assignee: strings.TrimSpace(r.FormValue("assignee")),
-			Author:   actor,
+			Author:     actor,
+			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -620,7 +630,8 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			ParentID: parentID,
 			Kind:     KindTask,
 			Title:    title,
-			Author:   actor,
+			Author:     actor,
+			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -646,7 +657,8 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			Kind:    KindPost,
 			Title:   title,
 			Body:    body,
-			Author:  actor,
+			Author:     actor,
+			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -676,7 +688,8 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			Kind:    KindThread,
 			Title:   title,
 			Body:    body,
-			Author:  actor,
+			Author:     actor,
+			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -702,7 +715,8 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			ParentID: parentID,
 			Kind:     KindComment,
 			Body:     body,
-			Author:   actor,
+			Author:     actor,
+			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

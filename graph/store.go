@@ -82,6 +82,7 @@ type Node struct {
 	Priority     string     `json:"priority"`
 	Assignee     string     `json:"assignee"`
 	Author       string     `json:"author"`
+	AuthorKind   string     `json:"author_kind"` // "human" or "agent"
 	Tags         []string   `json:"tags"`
 	DueDate      *time.Time `json:"due_date,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
@@ -108,17 +109,18 @@ type Op struct {
 
 // CreateNodeParams holds fields for creating a node.
 type CreateNodeParams struct {
-	SpaceID  string
-	ParentID string
-	Kind     string
-	Title    string
-	Body     string
-	State    string
-	Priority string
-	Assignee string
-	Author   string
-	Tags     []string
-	DueDate  *time.Time
+	SpaceID    string
+	ParentID   string
+	Kind       string
+	Title      string
+	Body       string
+	State      string
+	Priority   string
+	Assignee   string
+	Author     string
+	AuthorKind string // "human" or "agent"
+	Tags       []string
+	DueDate    *time.Time
 }
 
 // ListNodesParams controls filtering for node listing.
@@ -178,6 +180,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     priority    TEXT NOT NULL DEFAULT 'medium',
     assignee    TEXT NOT NULL DEFAULT '',
     author      TEXT NOT NULL DEFAULT '',
+    author_kind TEXT NOT NULL DEFAULT 'human',
     tags        TEXT[] NOT NULL DEFAULT '{}',
     due_date    TIMESTAMPTZ,
     created_at  TIMESTAMPTZ DEFAULT NOW(),
@@ -203,6 +206,7 @@ CREATE INDEX IF NOT EXISTS idx_ops_node ON ops(node_id);
 CREATE INDEX IF NOT EXISTS idx_ops_op ON ops(space_id, op);
 
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS author_kind TEXT NOT NULL DEFAULT 'human';
 `)
 	return err
 }
@@ -342,19 +346,25 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 		p.Tags = []string{}
 	}
 
+	authorKind := p.AuthorKind
+	if authorKind == "" {
+		authorKind = "human"
+	}
+
 	n := &Node{
-		ID:       newID(),
-		SpaceID:  p.SpaceID,
-		ParentID: p.ParentID,
-		Kind:     p.Kind,
-		Title:    p.Title,
-		Body:     p.Body,
-		State:    p.State,
-		Priority: p.Priority,
-		Assignee: p.Assignee,
-		Author:   p.Author,
-		Tags:     p.Tags,
-		DueDate:  p.DueDate,
+		ID:         newID(),
+		SpaceID:    p.SpaceID,
+		ParentID:   p.ParentID,
+		Kind:       p.Kind,
+		Title:      p.Title,
+		Body:       p.Body,
+		State:      p.State,
+		Priority:   p.Priority,
+		Assignee:   p.Assignee,
+		Author:     p.Author,
+		AuthorKind: authorKind,
+		Tags:       p.Tags,
+		DueDate:    p.DueDate,
 	}
 
 	var parentID *string
@@ -363,11 +373,11 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 	}
 
 	err := s.db.QueryRowContext(ctx,
-		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, author, tags, due_date)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, author, author_kind, tags, due_date)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		 RETURNING created_at, updated_at`,
 		n.ID, n.SpaceID, parentID, n.Kind, n.Title, n.Body, n.State, n.Priority,
-		n.Assignee, n.Author, pq.Array(n.Tags), n.DueDate,
+		n.Assignee, n.Author, n.AuthorKind, pq.Array(n.Tags), n.DueDate,
 	).Scan(&n.CreatedAt, &n.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create node: %w", err)
@@ -383,7 +393,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT n.id, n.space_id, n.parent_id, n.kind, n.title, n.body,
-		       n.state, n.priority, n.assignee, n.author, n.tags, n.due_date,
+		       n.state, n.priority, n.assignee, n.author, n.author_kind, n.tags, n.due_date,
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
@@ -391,7 +401,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 		FROM nodes n WHERE n.id = $1`, id,
 	).Scan(
 		&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
-		&n.State, &n.Priority, &n.Assignee, &n.Author, pq.Array(&n.Tags), &dueDate,
+		&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
 		&n.CreatedAt, &n.UpdatedAt,
 		&n.ChildCount, &n.ChildDone, &n.BlockerCount,
 	)
@@ -416,7 +426,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error) {
 	query := `
 		SELECT n.id, n.space_id, n.parent_id, n.kind, n.title, n.body,
-		       n.state, n.priority, n.assignee, n.author, n.tags, n.due_date,
+		       n.state, n.priority, n.assignee, n.author, n.author_kind, n.tags, n.due_date,
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
@@ -461,7 +471,7 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 
 		if err := rows.Scan(
 			&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
-			&n.State, &n.Priority, &n.Assignee, &n.Author, pq.Array(&n.Tags), &dueDate,
+			&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
 			&n.CreatedAt, &n.UpdatedAt,
 			&n.ChildCount, &n.ChildDone, &n.BlockerCount,
 		); err != nil {

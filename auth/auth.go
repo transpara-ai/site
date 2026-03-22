@@ -28,12 +28,13 @@ type APIKey struct {
 	CreatedAt time.Time
 }
 
-// User represents an authenticated user.
+// User represents an authenticated user (human or agent).
 type User struct {
 	ID      string
 	Email   string
 	Name    string
 	Picture string
+	Kind    string // "human" or "agent"
 }
 
 type contextKey struct{}
@@ -387,9 +388,9 @@ func (a *Auth) upsertUser(ctx context.Context, googleID, email, name, picture st
 			email = EXCLUDED.email,
 			name = EXCLUDED.name,
 			picture = EXCLUDED.picture
-		RETURNING id, email, name, picture`,
+		RETURNING id, email, name, picture, kind`,
 		newID(), googleID, email, name, picture,
-	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture)
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind)
 	return &u, err
 }
 
@@ -404,21 +405,21 @@ func (a *Auth) ensureAgentUser(ctx context.Context, agentName string) (*User, er
 		INSERT INTO users (id, google_id, email, name, kind)
 		VALUES ($1, $2, $3, $4, 'agent')
 		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
-		RETURNING id, email, name, picture`,
+		RETURNING id, email, name, picture, kind`,
 		newID(), syntheticGoogleID, syntheticEmail, agentName,
-	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture)
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind)
 	return &u, err
 }
 
 func (a *Auth) userBySession(ctx context.Context, sessionID string) (*User, error) {
 	var u User
 	err := a.db.QueryRowContext(ctx, `
-		SELECT u.id, u.email, u.name, u.picture
+		SELECT u.id, u.email, u.name, u.picture, u.kind
 		FROM users u
 		JOIN sessions s ON s.user_id = u.id
 		WHERE s.id = $1 AND s.expires_at > NOW()`,
 		sessionID,
-	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture)
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind)
 	if err != nil {
 		return nil, err
 	}
@@ -495,11 +496,11 @@ func (a *Auth) userByAPIKey(ctx context.Context, rawKey string) (*User, error) {
 	var u User
 	var agentID sql.NullString
 	err := a.db.QueryRowContext(ctx, `
-		SELECT u.id, u.email, u.name, u.picture, k.agent_id
+		SELECT u.id, u.email, u.name, u.picture, u.kind, k.agent_id
 		FROM users u
 		JOIN api_keys k ON k.user_id = u.id
 		WHERE k.key_hash = $1`, hash,
-	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &agentID)
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind, &agentID)
 	if err != nil {
 		return nil, err
 	}
@@ -508,9 +509,9 @@ func (a *Auth) userByAPIKey(ctx context.Context, rawKey string) (*User, error) {
 	if agentID.Valid {
 		var agent User
 		err := a.db.QueryRowContext(ctx, `
-			SELECT id, email, name, picture FROM users WHERE id = $1`,
+			SELECT id, email, name, picture, kind FROM users WHERE id = $1`,
 			agentID.String,
-		).Scan(&agent.ID, &agent.Email, &agent.Name, &agent.Picture)
+		).Scan(&agent.ID, &agent.Email, &agent.Name, &agent.Picture, &agent.Kind)
 		if err != nil {
 			return nil, fmt.Errorf("resolve agent user: %w", err)
 		}
