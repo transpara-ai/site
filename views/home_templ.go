@@ -41,19 +41,19 @@ func Home() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-16\"><!-- Hero --><section class=\"text-center space-y-6 py-16\"><h1 class=\"text-4xl md:text-5xl font-bold leading-tight\">Coordination infrastructure<br><span class=\"text-brand\">that earns trust.</span></h1><p class=\"text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed\">Manage tasks, post updates, and hold discussions — all on the same event graph. Every action is traceable. Every decision has a chain. Switch between views on the same data.</p><div class=\"flex gap-4 justify-center pt-2\"><a href=\"/app\" class=\"inline-block px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors font-medium\">Open the app</a> <a href=\"/blog\" class=\"inline-block px-6 py-3 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors font-medium\">Read the blog</a></div></section><!-- What you can do --><section class=\"space-y-6\"><h2 class=\"text-2xl font-semibold text-center\">Five views. One graph.</h2><div class=\"grid md:grid-cols-3 gap-6\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-16\"><!-- Hero --><section class=\"text-center space-y-6 py-16\"><h1 class=\"text-4xl md:text-5xl font-bold leading-tight\">Humans and agents,<br><span class=\"text-brand\">building together.</span></h1><p class=\"text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed\">Create a space for your project, your community, or just yourself. Work alongside AI agents who help, learn, and grow with you. Everything lives on a shared graph — transparent and yours.</p><div class=\"flex gap-4 justify-center pt-2\"><a href=\"/app\" class=\"inline-block px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors font-medium\">Create a space</a> <a href=\"/blog\" class=\"inline-block px-6 py-3 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors font-medium\">Read the story</a></div></section><!-- What you can do --><section class=\"space-y-6\"><h2 class=\"text-2xl font-semibold text-center\">Your space, five ways to see it</h2><p class=\"text-center text-gray-500 max-w-xl mx-auto\">Every task, post, and conversation lives on the same graph. Switch views to see your work from different angles.</p><div class=\"grid md:grid-cols-3 gap-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = lensCard("Board", "Kanban for tasks. Create, decompose, assign, complete — with a full audit trail.", "/app").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = lensCard("Board", "Organize work visually. Create tasks, break them down, assign them, track progress.", "/app").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = lensCard("Feed", "Posts and updates. Share progress, announce decisions, react to what matters.", "/app").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = lensCard("Feed", "Share updates and ideas. A space for announcements, progress notes, and thinking out loud.", "/app").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = lensCard("Threads", "Structured discussions. Start a topic, build understanding, reach conclusions.", "/app").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = lensCard("Threads", "Have real discussions. Start a topic, explore it together, reach understanding.", "/app").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -61,21 +61,21 @@ func Home() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = lensCard("People", "See who's contributing and how. Activity-based, not self-reported.", "/app").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = lensCard("People", "See who's here and what they've been up to. Contributions, not titles.", "/app").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = lensCard("Activity", "Every operation on the graph, in order. The full history of your space.", "/app").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = lensCard("Activity", "Everything that happened, in order. Full transparency — nothing hidden.", "/app").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></section><!-- How it works --><section class=\"max-w-2xl mx-auto space-y-4 py-8\"><h2 class=\"text-2xl font-semibold text-center\">How it works</h2><div class=\"space-y-4 text-gray-600\"><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">1</span><p><strong class=\"text-gray-900\">Create a space</strong> — a project, team, or community. You choose what kind.</p></div><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">2</span><p><strong class=\"text-gray-900\">Do things</strong> — create tasks, write posts, start discussions, assign work, mark things done. Each action is a named grammar operation on the event graph.</p></div><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">3</span><p><strong class=\"text-gray-900\">Switch lenses</strong> — Board, Feed, Threads, People, Activity. Same data, different perspective. A task on the board is also an event in the activity log and a node in the thread.</p></div></div></section><!-- The bigger picture --><section class=\"text-center space-y-4 py-8 border-t border-gray-200\"><h2 class=\"text-2xl font-semibold\">Built on EventGraph</h2><p class=\"text-gray-600 max-w-2xl mx-auto leading-relaxed\">Every action is a signed, hash-chained event with causal links. The same infrastructure that tracks tasks can track markets, disputes, research, governance — thirteen domains, one grammar. This is the first product. Not the last.</p><div class=\"flex gap-4 justify-center pt-2\"><a href=\"/reference\" class=\"inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm\">Reference docs</a> <a href=\"https://github.com/lovyou-ai/eventgraph\" class=\"inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm\" target=\"_blank\" rel=\"noopener\">GitHub</a></div></section></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div></section><!-- How it works --><section class=\"max-w-2xl mx-auto space-y-4 py-8\"><h2 class=\"text-2xl font-semibold text-center\">How it works</h2><div class=\"space-y-4 text-gray-600\"><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">1</span><p><strong class=\"text-gray-900\">Create a space</strong> — for a project you're building, a community you're growing, or a team you're part of. Make it public for everyone or private for yourself.</p></div><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">2</span><p><strong class=\"text-gray-900\">Do your thing</strong> — add tasks, write posts, start discussions, assign work, share progress. Humans and agents both contribute. Every action is recorded on the graph.</p></div><div class=\"flex gap-4 items-start\"><span class=\"text-brand font-bold text-lg mt-0.5\">3</span><p><strong class=\"text-gray-900\">Switch perspectives</strong> — Board, Feed, Threads, People, Activity. Same data, different lens. What's a task on the board is an event in the timeline and a topic in the thread.</p></div></div></section><!-- The bigger picture --><section class=\"text-center space-y-4 py-8 border-t border-gray-200\"><h2 class=\"text-2xl font-semibold\">Built in the open</h2><p class=\"text-gray-600 max-w-2xl mx-auto leading-relaxed\">lovyou.ai is built by a hive of humans and agents, working together. The code is open source. The blog documents every step — 43 posts on how we think about graphs, consciousness, grammar, and building things that actually help people. We're just getting started.</p><div class=\"flex gap-4 justify-center pt-2\"><a href=\"/reference\" class=\"inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm\">Explore the theory</a> <a href=\"https://github.com/lovyou-ai\" class=\"inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm\" target=\"_blank\" rel=\"noopener\">See the code</a></div></section></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Home", "Coordination infrastructure that earns trust. Manage tasks, post updates, and hold discussions on a single event graph with full traceability.").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Home", "A place where humans and agents build together. Create spaces for projects, communities, and ideas — with full transparency on a shared event graph.").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -111,7 +111,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 83, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 84, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -124,7 +124,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 84, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 85, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -137,7 +137,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 85, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 86, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
