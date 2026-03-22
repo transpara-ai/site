@@ -63,9 +63,16 @@ Why self-application instead of external dimensions? Because the cognitive gramm
 
 If Derive, Traverse, and Need are the base operations of reasoning, then a mind should be able to Derive a derivation, Traverse a traversal, and Need a need. Each combination produces a distinct operation. The result is a three-by-three matrix:
 
-- **Derive** × Derive = Formalize · Derive × Traverse = Map · Derive × Need = Catalog
-- **Traverse** × Derive = Trace · Traverse × Traverse = Zoom · Traverse × Need = Explore
-- **Need** × Derive = Audit · Need × Traverse = Cover · Need × Need = Blind
+```
+              Derive       Traverse     Need
+            ┌────────────┬────────────┬────────────┐
+ Derive(x)  │ Formalize  │ Map        │ Catalog    │
+            ├────────────┼────────────┼────────────┤
+ Traverse(x)│ Trace      │ Zoom       │ Explore    │
+            ├────────────┼────────────┼────────────┤
+ Need(x)    │ Audit      │ Cover      │ Blind      │
+            └────────────┴────────────┴────────────┘
+```
 
 The matrix has a symmetry worth noticing. Read the rows: Derive's row (Formalize, Map, Catalog) all *produce structure*. Traverse's row (Trace, Zoom, Explore) all *navigate*. Need's row (Audit, Cover, Blind) all *detect absence*. Now read the columns: the Derive column (Formalize, Trace, Audit) all concern *method and production*. The Traverse column (Map, Zoom, Cover) all concern *space and navigation*. The Need column (Catalog, Explore, Blind) all concern *gaps and absence*. Rows and columns mirror each other. The grammar has no preferred direction — no operation is more fundamental than any other.
 
@@ -173,26 +180,30 @@ The nine operations compose freely — any sequence of operations is valid. Most
 
 Every intellectual practice you've ever performed has a name in this grammar. Most of them are compositions you already do — you just didn't have the vocabulary.
 
-- **Fact-checking** → Trace
-- **Planning** → Map + Bounded Explore
-- **"Wait, what about..."** → Need
-- **Documentation** → Formalize
-- **Big-picture thinking** → Zoom(out)
-- **Experimentation** → Hypothesize (Explore + Tentative Derive)
-- **Due diligence** → Exhaustive Cover + Derive
-- **Testing** → Audit
-- **Getting a second opinion** → invoking Blind
-- **Going down a rabbit hole** → Unbounded Explore
-- **Debugging** → Trace + Audit + Revise
-- **Rubber-ducking** → Formalize
-- **Editing** → Revise (Need + Derive)
-- **"What am I not seeing?"** → Blind (usually fails alone)
-- **Outlining** → Map
-- **Risk assessment** → Catalog
-- **Onboarding** → Orient (Map + Zoom)
-- **Experimental design** → Hypothesize + Map + Audit
-- **Code review** → Validate (Trace + Audit)
-- **Calibrate** → no common practice
+```
+What you did              Common name          Grammar
+─────────────────────────────────────────────────────────────────────
+Checked your sources      Fact-checking        Trace
+Made a plan first         Planning             Map + Bounded Explore
+Noticed you forgot something  "Wait, what about..."  Need
+Wrote down how you did it Documentation        Formalize
+Looked at the big picture Big-picture thinking  Zoom(out)
+Tried it to see what happens  Experimentation  Hypothesize
+Read everything first     Due diligence        Exhaustive Cover + Derive
+Compared work against spec  Testing            Audit
+Got a second opinion      Consultation         Invoking Blind
+Went down a rabbit hole   Distraction          Unbounded Explore
+Fixed a bug               Debugging            Trace + Audit + Revise
+Explained it to a rubber duck  Rubber-ducking  Formalize
+Rewrote a bad paragraph   Editing              Revise (Need + Derive)
+Asked "what am I not seeing?"  Self-awareness  Blind (usually fails alone)
+Outlined before writing   Structuring          Map
+Listed failure modes      Risk assessment      Catalog
+Asked "what should I know?"  Onboarding        Orient (Map + Zoom)
+Designed an experiment    Experimental design   Hypothesize + Map + Audit
+Reviewed a pull request   Code review          Validate (Trace + Audit)
+—                         —                    Calibrate (no common practice)
+```
 
 The last row is the point. Calibrate — Cover + Blind + Zoom — has no common name because almost nobody does it. Checking your coverage at multiple scales while actively seeking unknown unknowns is the most expensive cognitive operation and the most neglected. The systems that skip it are the ones that fail catastrophically. Space shuttle. Financial crisis. Production outage at 3am. The grammar doesn't just name what you already do. It shows what's missing from standard practice.
 
