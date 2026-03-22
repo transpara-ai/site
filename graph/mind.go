@@ -156,10 +156,27 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 	// Update task status.
 	if plan.Status == "done" || plan.Status == "active" {
 		m.store.UpdateNodeState(ctx, task.ID, plan.Status)
-		m.store.RecordOp(ctx, spaceID, task.ID, agentName, assigneeID, "complete", nil)
+		if plan.Status == "done" {
+			m.store.RecordOp(ctx, spaceID, task.ID, agentName, assigneeID, "complete", nil)
+		}
 	}
 
 	log.Printf("mind: finished working on %q (%d subtasks, status: %s)", task.Title, len(plan.Subtasks), plan.Status)
+
+	// Auto-work on leaf subtasks (no dependencies) if within depth limit.
+	// This enables recursive decomposition: parent → subtasks → sub-subtasks.
+	depth := task.ChildCount // rough depth proxy — 0 for top-level tasks
+	if depth < 2 && len(plan.Subtasks) > 0 {
+		for i, item := range plan.Subtasks {
+			if len(item.DependsOn) == 0 && subtaskIDs[i] != "" {
+				subtask, _ := m.store.GetNode(ctx, subtaskIDs[i])
+				if subtask != nil {
+					log.Printf("mind: auto-working on subtask %q", subtask.Title)
+					m.OnTaskAssigned(spaceID, spaceSlug, subtask, assigneeID)
+				}
+			}
+		}
+	}
 }
 
 // workPlan is the structured output from the Mind when working on a task.
