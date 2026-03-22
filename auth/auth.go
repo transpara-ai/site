@@ -4,17 +4,27 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
+
+// APIKey represents a stored API key (hash only, raw key never stored).
+type APIKey struct {
+	ID        string
+	Name      string
+	UserID    string
+	CreatedAt time.Time
+}
 
 // User represents an authenticated user.
 type User struct {
@@ -79,6 +89,13 @@ CREATE TABLE IF NOT EXISTS sessions (
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL DEFAULT '',
+    key_hash TEXT UNIQUE NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `)
 	return err
 }
@@ -88,12 +105,24 @@ func (a *Auth) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/login", a.handleLogin)
 	mux.HandleFunc("GET /auth/callback", a.handleCallback)
 	mux.HandleFunc("POST /auth/logout", a.handleLogout)
+
+	// API key management (requires session auth).
+	mux.Handle("POST /auth/api-keys", a.RequireAuth(a.handleCreateAPIKey))
+	mux.Handle("POST /auth/api-keys/{id}/delete", a.RequireAuth(a.handleDeleteAPIKey))
 }
 
 // RequireAuth wraps a handler to require authentication.
-// Redirects to /auth/login if no valid session exists.
+// Checks Bearer token first (for API clients), then session cookie (for browsers).
 func (a *Auth) RequireAuth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Try API key auth first.
+		if user := a.userFromBearer(r); user != nil {
+			ctx := ContextWithUser(r.Context(), user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// Fall back to session cookie.
 		cookie, err := r.Cookie("session")
 		if err != nil {
 			http.Redirect(w, r, "/auth/login", http.StatusSeeOther)
@@ -112,10 +141,18 @@ func (a *Auth) RequireAuth(next http.HandlerFunc) http.Handler {
 	})
 }
 
-// OptionalAuth tries to load a user from the session cookie but does not
-// redirect if no session exists. The request proceeds with or without a user.
+// OptionalAuth tries to load a user from Bearer token or session cookie
+// but does not redirect if neither exists.
 func (a *Auth) OptionalAuth(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Try API key auth first.
+		if user := a.userFromBearer(r); user != nil {
+			ctx := ContextWithUser(r.Context(), user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// Try session cookie.
 		cookie, err := r.Cookie("session")
 		if err != nil {
 			next.ServeHTTP(w, r)
@@ -237,6 +274,75 @@ func (a *Auth) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// API Key handlers
+// ────────────────────────────────────────────────────────────────────
+
+func (a *Auth) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		name = "default"
+	}
+
+	rawKey, err := a.createAPIKey(r.Context(), user.ID, name)
+	if err != nil {
+		log.Printf("auth: create api key: %v", err)
+		http.Error(w, "failed to create key", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the raw key as JSON (only time it's ever shown).
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"key":  rawKey,
+		"name": name,
+	})
+}
+
+func (a *Auth) handleDeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+	if user == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	keyID := r.PathValue("id")
+	_, err := a.db.ExecContext(r.Context(),
+		`DELETE FROM api_keys WHERE id = $1 AND user_id = $2`, keyID, user.ID)
+	if err != nil {
+		http.Error(w, "failed to delete key", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
+// ListAPIKeys returns all API keys for a user (metadata only, no raw keys).
+func (a *Auth) ListAPIKeys(ctx context.Context, userID string) ([]APIKey, error) {
+	rows, err := a.db.QueryContext(ctx,
+		`SELECT id, name, user_id, created_at FROM api_keys WHERE user_id = $1 ORDER BY created_at`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list api keys: %w", err)
+	}
+	defer rows.Close()
+
+	var keys []APIKey
+	for rows.Next() {
+		var k APIKey
+		if err := rows.Scan(&k.ID, &k.Name, &k.UserID, &k.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan api key: %w", err)
+		}
+		keys = append(keys, k)
+	}
+	return keys, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Internal
 // ────────────────────────────────────────────────────────────────────
 
@@ -287,6 +393,60 @@ func (a *Auth) clearCookie(w http.ResponseWriter) {
 		Path:   "/",
 		MaxAge: -1,
 	})
+}
+
+// userFromBearer extracts a Bearer token from the Authorization header
+// and looks up the associated user via API key hash.
+func (a *Auth) userFromBearer(r *http.Request) *User {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Bearer ") {
+		return nil
+	}
+	rawKey := strings.TrimPrefix(auth, "Bearer ")
+	if rawKey == "" {
+		return nil
+	}
+	user, err := a.userByAPIKey(r.Context(), rawKey)
+	if err != nil {
+		return nil
+	}
+	return user
+}
+
+// createAPIKey generates a new API key, stores its hash, returns the raw key.
+func (a *Auth) createAPIKey(ctx context.Context, userID, name string) (string, error) {
+	rawKey := "lv_" + newID() + newID() // 64 hex chars + prefix
+	hash := hashKey(rawKey)
+	id := newID()
+
+	_, err := a.db.ExecContext(ctx,
+		`INSERT INTO api_keys (id, name, key_hash, user_id) VALUES ($1, $2, $3, $4)`,
+		id, name, hash, userID)
+	if err != nil {
+		return "", fmt.Errorf("insert api key: %w", err)
+	}
+	return rawKey, nil
+}
+
+// userByAPIKey looks up a user by raw API key (hashes it first).
+func (a *Auth) userByAPIKey(ctx context.Context, rawKey string) (*User, error) {
+	hash := hashKey(rawKey)
+	var u User
+	err := a.db.QueryRowContext(ctx, `
+		SELECT u.id, u.email, u.name, u.picture
+		FROM users u
+		JOIN api_keys k ON k.user_id = u.id
+		WHERE k.key_hash = $1`, hash,
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func hashKey(rawKey string) string {
+	h := sha256.Sum256([]byte(rawKey))
+	return hex.EncodeToString(h[:])
 }
 
 func newID() string {
