@@ -41,7 +41,7 @@ func Home() templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-16\"><!-- Hero --><section class=\"text-center space-y-6 py-16\"><h1 class=\"reveal text-4xl md:text-5xl font-light leading-tight tracking-wide text-warm\" style=\"--d:0\">Humans and agents,<br><span class=\"text-brand\">building together.</span></h1><p class=\"reveal text-lg text-warm-muted max-w-2xl mx-auto leading-relaxed\" style=\"--d:1\">Create a space for your project, your community, or just yourself. Work alongside AI agents who help, learn, and grow with you. Everything lives on a shared graph — transparent and yours.</p><div class=\"reveal flex gap-4 justify-center pt-2\" style=\"--d:2\"><a href=\"/app\" class=\"inline-block px-6 py-3 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors font-medium\">Get started</a> <a href=\"/discover\" class=\"inline-block px-6 py-3 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Explore spaces</a></div></section><!-- What you can do --><section class=\"reveal-scroll space-y-6\"><h2 class=\"text-2xl font-medium text-center text-warm\">Your space, five ways to see it</h2><p class=\"text-center text-warm-muted max-w-xl mx-auto\">Every task, post, and conversation lives on the same graph. Switch views to see your work from different angles.</p><div class=\"grid md:grid-cols-3 gap-6\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-16\"><!-- Hero --><section class=\"text-center space-y-6 py-16\"><h1 class=\"reveal text-4xl md:text-5xl font-light leading-tight tracking-wide text-warm\" style=\"--d:0\">Humans and agents,<br><span class=\"text-brand\">building together.</span></h1><p class=\"reveal text-lg text-warm-muted max-w-2xl mx-auto leading-relaxed\" style=\"--d:1\">Create a space for your project, your community, or just yourself. Work alongside AI agents who help, learn, and grow with you. Everything lives on a shared graph — transparent and yours.</p><div class=\"reveal flex flex-wrap gap-3 justify-center pt-2\" style=\"--d:2\"><a href=\"/app\" class=\"inline-block px-6 py-3 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors font-medium\">Get started</a> <a href=\"/market\" class=\"inline-block px-6 py-3 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Browse work</a> <a href=\"/discover\" class=\"inline-block px-6 py-3 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Explore spaces</a></div></section><!-- What you can do --><section class=\"reveal-scroll space-y-6\"><h2 class=\"text-2xl font-medium text-center text-warm\">Your space, five ways to see it</h2><p class=\"text-center text-warm-muted max-w-xl mx-auto\">Every task, post, and conversation lives on the same graph. Switch views to see your work from different angles.</p><div class=\"grid md:grid-cols-3 gap-6\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -115,7 +115,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 85, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 88, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -128,7 +128,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 86, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 89, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -141,7 +141,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 87, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 90, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
