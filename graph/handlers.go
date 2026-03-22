@@ -1079,6 +1079,25 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/conversation/%s", space.Slug, node.ID), http.StatusSeeOther)
 
+	case "report":
+		nodeID := r.FormValue("node_id")
+		reason := strings.TrimSpace(r.FormValue("reason"))
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if reason == "" {
+			reason = "flagged by user"
+		}
+		payload, _ := json.Marshal(map[string]string{"reason": reason})
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "report", payload)
+
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "report", "status": "recorded"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
 	case "depend":
 		nodeID := r.FormValue("node_id")
 		dependsOn := r.FormValue("depends_on")
