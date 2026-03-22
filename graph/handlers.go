@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/lovyou-ai/site/auth"
 )
@@ -69,6 +70,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Conversation detail (optional auth).
 	mux.Handle("GET /app/{slug}/conversation/{id}", h.readWrap(h.handleConversationDetail))
+	mux.Handle("GET /app/{slug}/conversation/{id}/messages", h.readWrap(h.handleConversationMessages))
 
 	// Node detail (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}/node/{id}", h.readWrap(h.handleNodeDetail))
@@ -606,6 +608,54 @@ func (h *Handlers) handleConversationDetail(w http.ResponseWriter, r *http.Reque
 
 	user := h.viewUser(r)
 	ConversationDetailView(*space, *node, messages, user).Render(r.Context(), w)
+}
+
+// handleConversationMessages returns new messages since the given timestamp.
+// Used by HTMX polling: GET /app/{slug}/conversation/{id}/messages?after=RFC3339
+func (h *Handlers) handleConversationMessages(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodeID := r.PathValue("id")
+	afterStr := r.URL.Query().Get("after")
+	if afterStr == "" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	after, err := time.Parse(time.RFC3339Nano, afterStr)
+	if err != nil {
+		http.Error(w, "invalid after timestamp", http.StatusBadRequest)
+		return
+	}
+
+	messages, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		ParentID: nodeID,
+		After:    &after,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"messages": messages})
+		return
+	}
+
+	// Return chatMessage fragments for HTMX polling.
+	user := h.viewUser(r)
+	for _, msg := range messages {
+		chatMessage(msg, user.Name).Render(r.Context(), w)
+	}
 }
 
 func (h *Handlers) handleNodeDetail(w http.ResponseWriter, r *http.Request) {

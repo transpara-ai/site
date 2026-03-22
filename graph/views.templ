@@ -1,6 +1,9 @@
 package graph
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // ── Theme block (shared across app layouts) ─────────────────────
 
@@ -663,14 +666,28 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 
 			<!-- Messages -->
 			<div id="messages" class="flex-1 overflow-y-auto px-6 py-4">
-				<div class="max-w-2xl mx-auto space-y-3">
+				<div
+					id="message-list"
+					class="max-w-2xl mx-auto space-y-3"
+					data-last-ts={ lastMessageTS(messages) }
+				>
 					if len(messages) == 0 {
-						<p class="text-center text-warm-faint py-12">No messages yet. Start the conversation!</p>
+						<p id="empty-state" class="text-center text-warm-faint py-12">No messages yet. Start the conversation!</p>
 					}
 					for _, msg := range messages {
 						@chatMessage(msg, user.Name)
 					}
 				</div>
+				<!-- Poll for new messages every 3s -->
+				<div
+					id="poll"
+					hx-get={ "/app/" + space.Slug + "/conversation/" + convo.ID + "/messages" }
+					hx-trigger="every 3s"
+					hx-target="#message-list"
+					hx-swap="beforeend"
+					hx-vals="js:{after: document.getElementById('message-list').dataset.lastTs}"
+					hx-on::after-request="var ml=document.getElementById('message-list');var last=ml.querySelector('[data-ts]:last-child');if(last){var e=document.getElementById('empty-state');if(e)e.remove();ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');if(m.scrollHeight-m.scrollTop-m.clientHeight<100)m.scrollTop=m.scrollHeight;}"
+				></div>
 			</div>
 
 			<!-- Message input -->
@@ -681,9 +698,9 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 						method="POST"
 						action={ templ.SafeURL("/app/" + space.Slug + "/op") }
 						hx-post={ "/app/" + space.Slug + "/op" }
-						hx-target="#messages .max-w-2xl"
+						hx-target="#message-list"
 						hx-swap="beforeend"
-						hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight; }"
+						hx-on::after-request="if(event.detail.successful){this.reset();var ml=document.getElementById('message-list');var e=document.getElementById('empty-state');if(e)e.remove();var last=ml.querySelector('[data-ts]:last-child');if(last)ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');m.scrollTop=m.scrollHeight;}"
 					>
 						<input type="hidden" name="op" value="respond"/>
 						<input type="hidden" name="parent_id" value={ convo.ID }/>
@@ -698,7 +715,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 }
 
 templ chatMessage(msg Node, currentUser string) {
-	<div class={ "flex gap-3", templ.KV("flex-row-reverse", msg.Author == currentUser) }>
+	<div class={ "flex gap-3", templ.KV("flex-row-reverse", msg.Author == currentUser) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
 		if msg.AuthorKind == "agent" {
 			<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0" title="Agent">
 				{ initial(msg.Author) }
@@ -1436,4 +1453,11 @@ func countDone(nodes []Node) int {
 		}
 	}
 	return n
+}
+
+func lastMessageTS(messages []Node) string {
+	if len(messages) == 0 {
+		return time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	return messages[len(messages)-1].CreatedAt.Format(time.RFC3339Nano)
 }

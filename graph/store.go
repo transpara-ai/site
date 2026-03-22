@@ -127,9 +127,10 @@ type CreateNodeParams struct {
 // ListNodesParams controls filtering for node listing.
 type ListNodesParams struct {
 	SpaceID  string
-	Kind     string // filter by kind, empty = all
-	State    string // filter by state, empty = all
-	ParentID string // "root" = top-level only, ID = children, empty = all
+	Kind     string     // filter by kind, empty = all
+	State    string     // filter by state, empty = all
+	ParentID string     // "root" = top-level only, ID = children, empty = all
+	After    *time.Time // only nodes created after this time, nil = all
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -471,6 +472,11 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 	} else if p.ParentID != "" {
 		query += fmt.Sprintf(" AND n.parent_id = $%d", argN)
 		args = append(args, p.ParentID)
+		argN++
+	}
+	if p.After != nil {
+		query += fmt.Sprintf(" AND n.created_at > $%d", argN)
+		args = append(args, *p.After)
 		argN++
 	}
 
