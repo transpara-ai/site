@@ -262,6 +262,31 @@ func main() {
 		views.DiscoverPage(ds).Render(r.Context(), w)
 	})
 
+	// Global activity — transparent audit trail (Layer 7).
+	mux.HandleFunc("GET /activity", func(w http.ResponseWriter, r *http.Request) {
+		if graphStore == nil {
+			views.GlobalActivityPage(nil).Render(r.Context(), w)
+			return
+		}
+		ops, err := graphStore.ListPublicActivity(r.Context(), 100)
+		if err != nil {
+			log.Printf("activity: %v", err)
+		}
+		var items []views.ActivityItem
+		for _, o := range ops {
+			spaceName, spaceSlug := "", ""
+			if sp, _ := graphStore.GetSpaceByID(r.Context(), o.SpaceID); sp != nil {
+				spaceName = sp.Name
+				spaceSlug = sp.Slug
+			}
+			items = append(items, views.ActivityItem{
+				Actor: o.Actor, ActorKind: o.ActorKind, Op: o.Op,
+				SpaceName: spaceName, SpaceSlug: spaceSlug, CreatedAt: o.CreatedAt,
+			})
+		}
+		views.GlobalActivityPage(items).Render(r.Context(), w)
+	})
+
 	// Market — available tasks across public spaces.
 	mux.HandleFunc("GET /market", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
