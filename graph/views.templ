@@ -1170,7 +1170,11 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 							<div class="bg-brand rounded-full h-1.5 transition-all" style={ childProgressSlice(children) }></div>
 						</div>
 					}
-					<div id="children" class="space-y-2">
+					<div id="children" class="space-y-2"
+					hx-get={ fmt.Sprintf("/app/%s/node/%s/children", space.Slug, node.ID) }
+					hx-trigger="every 5s"
+					hx-swap="innerHTML"
+				>
 						for _, child := range children {
 							if child.Kind == KindComment {
 								@CommentItem(child)

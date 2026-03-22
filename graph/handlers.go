@@ -85,6 +85,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Mind state (requires auth — used by cmd/post to sync loop state).
 	mux.Handle("PUT /api/mind-state", h.writeWrap(h.handleSetMindState))
 
+	// Node children (for HTMX polling).
+	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
+
 	// Node mutations (requires auth).
 	mux.Handle("POST /app/{slug}/node/{id}/state", h.writeWrap(h.handleNodeState))
 	mux.Handle("POST /app/{slug}/node/{id}/update", h.writeWrap(h.handleNodeUpdate))
@@ -1264,6 +1267,43 @@ type Member struct {
 	Kind     string // "human" or "agent"
 	OpCount  int
 	LastSeen string
+}
+
+// handleNodeChildren returns child nodes for HTMX polling.
+func (h *Handlers) handleNodeChildren(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodeID := r.PathValue("id")
+	children, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		ParentID: nodeID,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"children": children})
+		return
+	}
+
+	// Render children as HTML fragments for HTMX.
+	for _, child := range children {
+		if child.Kind == KindComment {
+			CommentItem(child).Render(r.Context(), w)
+		} else {
+			childRow(child, space.Slug).Render(r.Context(), w)
+		}
+	}
 }
 
 // handleSetMindState sets a key-value pair for the Mind's context.
