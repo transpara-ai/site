@@ -21,6 +21,25 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 				<h2 class="text-xl font-semibold mb-1">Grammar</h2>
 				<p class="text-gray-500 text-sm mb-4">The operational heart. What you can do, at every level.</p>
 				<div class="space-y-3">
+					<a href="/reference/cognitive-grammar" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+						<div class="flex items-baseline gap-3">
+							<span class="text-sm font-mono text-gray-400">C</span>
+							<div>
+								<h3 class="text-lg font-semibold">Cognitive Grammar</h3>
+								<p class="text-sm text-gray-500">The grammar that produces grammars — 3 base operations, 9 compositions</p>
+								<p class="text-gray-600 text-sm mt-2">
+									A mind relates to knowledge in exactly three ways: Derive (produce new knowledge),
+									Traverse (navigate existing knowledge), and Need (detect absent knowledge). Self-application —
+									applying each operation to each operation — produces nine compositions: Formalize, Map,
+									Catalog, Trace, Zoom, Explore, Audit, Cover, and Blind. The nine are a fixed point: no
+									further self-application produces a tenth. Three modifiers (Tentative, Exhaustive, Bounded)
+									and six named functions (Revise, Hypothesize, Validate, Orient, Learn, Calibrate) complete
+									the meta-grammar. Every derivation in the framework uses these operations. The thirteen
+									layer grammars and the graph grammar itself are outputs of the cognitive grammar.
+								</p>
+							</div>
+						</div>
+					</a>
 					<a href="/reference/grammar" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
 						<div class="flex items-baseline gap-3">
 							<span class="text-sm font-mono text-gray-400">G</span>
@@ -132,11 +151,47 @@ templ BaseGrammarPage(body string) {
 			<div class="prose max-w-none">
 				@templ.Raw(body)
 			</div>
+			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+				<div class="flex-1">
+					<a href="/reference/cognitive-grammar" class="group">
+						<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+						<span class="block text-brand font-medium group-hover:underline">Cognitive Grammar</span>
+					</a>
+				</div>
+				<div class="flex-1 text-right">
+					<a href="/reference/grammars" class="group">
+						<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+						<span class="block text-brand font-medium group-hover:underline">Layer Grammars</span>
+					</a>
+				</div>
+			</nav>
+		</article>
+	}
+}
+
+// ── Cognitive Grammar Page ──────────────────────────────────────
+
+templ CognitiveGrammarPage(body string) {
+	@Layout("Cognitive Grammar") {
+		<article class="space-y-6">
+			<div>
+				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+			</div>
+			<header>
+				<span class="text-sm text-gray-400 font-mono">Meta Grammar</span>
+				<h1 class="text-3xl font-bold mt-1">Cognitive Grammar</h1>
+				<p class="text-gray-500 mt-1">The grammar that produces grammars — 3 base operations, 9 compositions</p>
+			</header>
+			<div class="prose max-w-none">
+				@templ.Raw(body)
+			</div>
 			<nav class="border-t border-gray-200 pt-6 mt-8">
-				<a href="/reference/grammars" class="group">
-					<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
-					<span class="block text-brand font-medium group-hover:underline">Layer Grammars</span>
-				</a>
+				<div class="text-right">
+					<a href="/reference/grammar" class="group">
+						<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+						<span class="block text-brand font-medium group-hover:underline">Graph Grammar</span>
+					</a>
+				</div>
 			</nav>
 		</article>
 	}

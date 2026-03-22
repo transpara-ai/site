@@ -31,6 +31,9 @@ var fundamentalsFS embed.FS
 //go:embed reference/grammar.md
 var baseGrammarRaw []byte
 
+//go:embed reference/cognitive-grammar.md
+var cognitiveGrammarRaw []byte
+
 var (
 	tableRow = regexp.MustCompile(`^\| \*\*(.+?)\*\* \| (.+) \|$`)
 	primMD   = goldmark.New(goldmark.WithExtensions(extension.Table))
@@ -458,5 +461,12 @@ func LoadGrammars() ([]views.RefPage, error) {
 func LoadBaseGrammar() string {
 	var buf bytes.Buffer
 	primMD.Convert(baseGrammarRaw, &buf)
+	return buf.String()
+}
+
+// LoadCognitiveGrammar renders the cognitive grammar markdown to HTML.
+func LoadCognitiveGrammar() string {
+	var buf bytes.Buffer
+	primMD.Convert(cognitiveGrammarRaw, &buf)
 	return buf.String()
 }
