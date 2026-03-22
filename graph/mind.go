@@ -230,14 +230,7 @@ func (m *Mind) parseWorkPlan(response string) workPlan {
 func (m *Mind) buildTaskPrompt(task *Node) string {
 	var sys strings.Builder
 	sys.WriteString(mindSoul)
-
-	ctx := context.Background()
-	if state := m.store.GetMindState(ctx, "loop_state"); state != "" {
-		sys.WriteString("\n== CURRENT STATE ==\n")
-		sys.WriteString(state)
-		sys.WriteString("\n")
-	}
-
+	// Skip loop state for task work — keeps prompt small for 256MB machines.
 	sys.WriteString("\n== TASK ==\n")
 	sys.WriteString(fmt.Sprintf("Title: %s\n", task.Title))
 	if task.Body != "" {
