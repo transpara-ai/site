@@ -381,6 +381,8 @@ func main() {
 		addURL("/")
 		addURL("/blog")
 		addURL("/discover")
+		addURL("/market")
+		addURL("/activity")
 		addURL("/reference")
 		addURL("/reference/grammar")
 		addURL("/reference/cognitive-grammar")
