@@ -570,7 +570,12 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 							<p class="text-sm text-warm-muted mt-1 line-clamp-2">{ thread.Body }</p>
 						}
 						<div class="flex items-center gap-2 mt-2 text-xs text-warm-faint">
-							<span>{ thread.Author }</span>
+							if thread.AuthorKind == "agent" {
+								<span class="text-violet-400">{ thread.Author }</span>
+								<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+							} else {
+								<span>{ thread.Author }</span>
+							}
 							<span>{ thread.CreatedAt.Format("Jan 2") }</span>
 						</div>
 					</a>
