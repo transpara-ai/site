@@ -236,7 +236,8 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(spaces) == 0 {
-		SpaceOnboarding(h.viewUser(r)).Render(r.Context(), w)
+		// New users: redirect to discover so they see existing spaces first.
+		http.Redirect(w, r, "/discover", http.StatusSeeOther)
 		return
 	}
 
