@@ -83,7 +83,8 @@ type Node struct {
 	Priority     string     `json:"priority"`
 	Assignee     string     `json:"assignee"`
 	Author       string     `json:"author"`
-	AuthorKind   string     `json:"author_kind"` // "human" or "agent"
+	AuthorID     string     `json:"author_id"`               // user ID — source of truth for identity
+	AuthorKind   string     `json:"author_kind"`              // "human" or "agent"
 	Tags         []string   `json:"tags"`
 	DueDate      *time.Time `json:"due_date,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
@@ -99,7 +100,8 @@ type Op struct {
 	SpaceID   string          `json:"space_id"`
 	NodeID    string          `json:"node_id,omitempty"`
 	Actor     string          `json:"actor"`
-	ActorKind string          `json:"actor_kind"` // "human" or "agent", resolved from users table
+	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
+	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
 	Op        string          `json:"op"`
 	Payload   json.RawMessage `json:"payload"`
 	CreatedAt time.Time       `json:"created_at"`
@@ -120,6 +122,7 @@ type CreateNodeParams struct {
 	Priority   string
 	Assignee   string
 	Author     string
+	AuthorID   string // user ID — source of truth for identity
 	AuthorKind string // "human" or "agent"
 	Tags       []string
 	DueDate    *time.Time
@@ -210,6 +213,8 @@ CREATE INDEX IF NOT EXISTS idx_ops_op ON ops(space_id, op);
 
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS author_kind TEXT NOT NULL DEFAULT 'human';
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS author_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE ops ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS users (
     id         TEXT PRIMARY KEY,
@@ -298,10 +303,10 @@ func (s *Store) ListPublicSpaces(ctx context.Context) ([]SpaceWithStats, error) 
 		     FROM nodes WHERE space_id = s.id
 		 ) n ON true
 		 LEFT JOIN LATERAL (
-		     SELECT COUNT(DISTINCT o.actor) AS member_count,
+		     SELECT COUNT(DISTINCT o.actor_id) AS member_count,
 		            BOOL_OR(u.kind = 'agent') AS has_agent
 		     FROM ops o
-		     LEFT JOIN users u ON u.name = o.actor
+		     LEFT JOIN users u ON u.id = o.actor_id
 		     WHERE o.space_id = s.id
 		 ) m ON true
 		 WHERE s.visibility = 'public'
@@ -405,6 +410,7 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 		Priority:   p.Priority,
 		Assignee:   p.Assignee,
 		Author:     p.Author,
+		AuthorID:   p.AuthorID,
 		AuthorKind: authorKind,
 		Tags:       p.Tags,
 		DueDate:    p.DueDate,
@@ -416,11 +422,11 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 	}
 
 	err := s.db.QueryRowContext(ctx,
-		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, author, author_kind, tags, due_date)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, author, author_id, author_kind, tags, due_date)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		 RETURNING created_at, updated_at`,
 		n.ID, n.SpaceID, parentID, n.Kind, n.Title, n.Body, n.State, n.Priority,
-		n.Assignee, n.Author, n.AuthorKind, pq.Array(n.Tags), n.DueDate,
+		n.Assignee, n.Author, n.AuthorID, n.AuthorKind, pq.Array(n.Tags), n.DueDate,
 	).Scan(&n.CreatedAt, &n.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create node: %w", err)
@@ -436,7 +442,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 
 	err := s.db.QueryRowContext(ctx, `
 		SELECT n.id, n.space_id, n.parent_id, n.kind, n.title, n.body,
-		       n.state, n.priority, n.assignee, n.author, n.author_kind, n.tags, n.due_date,
+		       n.state, n.priority, n.assignee, n.author, n.author_id, n.author_kind, n.tags, n.due_date,
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
@@ -444,7 +450,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 		FROM nodes n WHERE n.id = $1`, id,
 	).Scan(
 		&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
-		&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
+		&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorID, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
 		&n.CreatedAt, &n.UpdatedAt,
 		&n.ChildCount, &n.ChildDone, &n.BlockerCount,
 	)
@@ -469,7 +475,7 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error) {
 	query := `
 		SELECT n.id, n.space_id, n.parent_id, n.kind, n.title, n.body,
-		       n.state, n.priority, n.assignee, n.author, n.author_kind, n.tags, n.due_date,
+		       n.state, n.priority, n.assignee, n.author, n.author_id, n.author_kind, n.tags, n.due_date,
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
@@ -519,7 +525,7 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 
 		if err := rows.Scan(
 			&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
-			&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
+			&n.State, &n.Priority, &n.Assignee, &n.Author, &n.AuthorID, &n.AuthorKind, pq.Array(&n.Tags), &dueDate,
 			&n.CreatedAt, &n.UpdatedAt,
 			&n.ChildCount, &n.ChildDone, &n.BlockerCount,
 		); err != nil {
@@ -547,11 +553,11 @@ type ConversationSummary struct {
 }
 
 // ListConversations returns conversations in a space that involve the given user.
-// Matches on user name, user ID, or author — covers both old (name-based) and new (ID-based) tags.
-func (s *Store) ListConversations(ctx context.Context, spaceID, userName, userID string) ([]ConversationSummary, error) {
+// Matches on userID in tags or as author_id.
+func (s *Store) ListConversations(ctx context.Context, spaceID, userID string) ([]ConversationSummary, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT n.id, n.space_id, n.parent_id, n.kind, n.title, n.body,
-		       n.state, n.priority, n.assignee, n.author, n.author_kind, n.tags, n.due_date,
+		       n.state, n.priority, n.assignee, n.author, n.author_id, n.author_kind, n.tags, n.due_date,
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       0, 0,
@@ -563,8 +569,8 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userName, userID
 		    ORDER BY c.created_at DESC LIMIT 1
 		) lm ON true
 		WHERE n.space_id = $1 AND n.kind = 'conversation'
-		  AND ($2 = ANY(n.tags) OR $3 = ANY(n.tags) OR n.author = $2)
-		ORDER BY n.updated_at DESC`, spaceID, userName, userID)
+		  AND ($2 = ANY(n.tags) OR n.author_id = $2)
+		ORDER BY n.updated_at DESC`, spaceID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list conversations: %w", err)
 	}
@@ -578,7 +584,7 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userName, userID
 		var lastAuthor, lastAuthorKind, lastBody sql.NullString
 		if err := rows.Scan(
 			&cs.ID, &cs.SpaceID, &parentID, &cs.Kind, &cs.Title, &cs.Body,
-			&cs.State, &cs.Priority, &cs.Assignee, &cs.Author, &cs.AuthorKind, pq.Array(&cs.Tags), &dueDate,
+			&cs.State, &cs.Priority, &cs.Assignee, &cs.Author, &cs.AuthorID, &cs.AuthorKind, pq.Array(&cs.Tags), &dueDate,
 			&cs.CreatedAt, &cs.UpdatedAt,
 			&cs.ChildCount, &cs.ChildDone, &cs.BlockerCount,
 			&lastAuthor, &lastAuthorKind, &lastBody,
@@ -602,6 +608,16 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userName, userID
 	return convos, rows.Err()
 }
 
+// ResolveUserID returns the user ID for a given name, or empty string if not found.
+func (s *Store) ResolveUserID(ctx context.Context, name string) string {
+	var id string
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM users WHERE name = $1`, name).Scan(&id)
+	if err != nil {
+		return ""
+	}
+	return id
+}
+
 // ListAgentNames returns names of all agent users.
 func (s *Store) ListAgentNames(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT name FROM users WHERE kind = 'agent' ORDER BY name`)
@@ -620,15 +636,16 @@ func (s *Store) ListAgentNames(ctx context.Context) ([]string, error) {
 	return names, rows.Err()
 }
 
-// HasAgentParticipant checks if any of the given names belong to an agent user.
-func (s *Store) HasAgentParticipant(ctx context.Context, names []string) (bool, error) {
-	if len(names) == 0 {
+// HasAgentParticipant checks if any of the given IDs belong to an agent user.
+// Tags now store user IDs, so we match on id.
+func (s *Store) HasAgentParticipant(ctx context.Context, ids []string) (bool, error) {
+	if len(ids) == 0 {
 		return false, nil
 	}
 	var exists bool
 	err := s.db.QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM users WHERE name = ANY($1) AND kind = 'agent')`,
-		pq.Array(names)).Scan(&exists)
+		`SELECT EXISTS(SELECT 1 FROM users WHERE id = ANY($1) AND kind = 'agent')`,
+		pq.Array(ids)).Scan(&exists)
 	return exists, err
 }
 
@@ -710,7 +727,7 @@ func (s *Store) DeleteNode(ctx context.Context, id string) error {
 // ────────────────────────────────────────────────────────────────────
 
 // RecordOp records a grammar operation.
-func (s *Store) RecordOp(ctx context.Context, spaceID, nodeID, actor, op string, payload json.RawMessage) (*Op, error) {
+func (s *Store) RecordOp(ctx context.Context, spaceID, nodeID, actor, actorID, op string, payload json.RawMessage) (*Op, error) {
 	if payload == nil {
 		payload = json.RawMessage(`{}`)
 	}
@@ -719,6 +736,7 @@ func (s *Store) RecordOp(ctx context.Context, spaceID, nodeID, actor, op string,
 		SpaceID: spaceID,
 		NodeID:  nodeID,
 		Actor:   actor,
+		ActorID: actorID,
 		Op:      op,
 		Payload: payload,
 	}
@@ -729,8 +747,8 @@ func (s *Store) RecordOp(ctx context.Context, spaceID, nodeID, actor, op string,
 	}
 
 	err := s.db.QueryRowContext(ctx,
-		`INSERT INTO ops (id, space_id, node_id, actor, op, payload) VALUES ($1, $2, $3, $4, $5, $6) RETURNING created_at`,
-		o.ID, o.SpaceID, nodeRef, o.Actor, o.Op, o.Payload,
+		`INSERT INTO ops (id, space_id, node_id, actor, actor_id, op, payload) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING created_at`,
+		o.ID, o.SpaceID, nodeRef, o.Actor, o.ActorID, o.Op, o.Payload,
 	).Scan(&o.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("record op: %w", err)
@@ -744,10 +762,10 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 		limit = 50
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
 		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
 		 FROM ops o
-		 LEFT JOIN users u ON u.name = o.actor
+		 LEFT JOIN users u ON u.id = o.actor_id
 		 WHERE o.space_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
 		spaceID, limit,
 	)
@@ -759,7 +777,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)
@@ -770,10 +788,10 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 // ListNodeOps returns operations for a specific node.
 func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
 		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
 		 FROM ops o
-		 LEFT JOIN users u ON u.name = o.actor
+		 LEFT JOIN users u ON u.id = o.actor_id
 		 WHERE o.node_id = $1 ORDER BY o.created_at`,
 		nodeID,
 	)
@@ -785,7 +803,7 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)

@@ -72,6 +72,7 @@ func TestCreateAndListNodes(t *testing.T) {
 		Title:      "Test Task",
 		Body:       "Do the thing",
 		Author:     "tester",
+		AuthorID:   "tester-id",
 		AuthorKind: "human",
 		Priority:   PriorityHigh,
 	})
@@ -92,6 +93,7 @@ func TestCreateAndListNodes(t *testing.T) {
 		Title:      "Test Post",
 		Body:       "Hello world",
 		Author:     "tester",
+		AuthorID:   "tester-id",
 		AuthorKind: "human",
 	})
 	if err != nil {
@@ -132,6 +134,7 @@ func TestCreateAndListNodes(t *testing.T) {
 		Kind:       KindComment,
 		Body:       "A comment",
 		Author:     "commenter",
+		AuthorID:   "commenter-id",
 		AuthorKind: "human",
 	})
 	if err != nil {
@@ -157,22 +160,23 @@ func TestConversations(t *testing.T) {
 	}
 	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
 
-	// Create a conversation.
+	// Create a conversation. Tags store user IDs.
 	convo, err := store.CreateNode(ctx, CreateNodeParams{
 		SpaceID:    space.ID,
 		Kind:       KindConversation,
 		Title:      "Test Chat",
 		Body:       "Let's discuss",
 		Author:     "alice",
+		AuthorID:   "alice-id",
 		AuthorKind: "human",
-		Tags:       []string{"alice", "bob"},
+		Tags:       []string{"alice-id", "bob-id"},
 	})
 	if err != nil {
 		t.Fatalf("create conversation: %v", err)
 	}
 
-	// List conversations for participant.
-	convos, err := store.ListConversations(ctx, space.ID, "alice", "alice-id")
+	// List conversations for participant (by userID).
+	convos, err := store.ListConversations(ctx, space.ID, "alice-id")
 	if err != nil {
 		t.Fatalf("list conversations: %v", err)
 	}
@@ -184,7 +188,7 @@ func TestConversations(t *testing.T) {
 	}
 
 	// Non-participant shouldn't see it.
-	convos, err = store.ListConversations(ctx, space.ID, "charlie", "charlie-id")
+	convos, err = store.ListConversations(ctx, space.ID, "charlie-id")
 	if err != nil {
 		t.Fatalf("list conversations: %v", err)
 	}
@@ -199,12 +203,13 @@ func TestConversations(t *testing.T) {
 		Kind:     KindComment,
 		Body:     "Hello!",
 		Author:   "alice",
+		AuthorID: "alice-id",
 	})
 	if err != nil {
 		t.Fatalf("create message: %v", err)
 	}
 
-	convos, err = store.ListConversations(ctx, space.ID, "alice", "alice-id")
+	convos, err = store.ListConversations(ctx, space.ID, "alice-id")
 	if err != nil {
 		t.Fatalf("list conversations: %v", err)
 	}
@@ -215,7 +220,7 @@ func TestConversations(t *testing.T) {
 		t.Errorf("child_count = %d, want 1", convos[0].ChildCount)
 	}
 
-	// HasAgentParticipant should return false (no agents).
+	// HasAgentParticipant should return false (no agents — tags are user IDs).
 	hasAgent, err := store.HasAgentParticipant(ctx, convo.Tags)
 	if err != nil {
 		t.Fatalf("has agent: %v", err)
@@ -230,7 +235,8 @@ func TestConversations(t *testing.T) {
 		ON CONFLICT (google_id) DO NOTHING`)
 	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = 'agent-test-1'`) })
 
-	hasAgent, err = store.HasAgentParticipant(ctx, []string{"alice", "TestBot"})
+	// HasAgentParticipant now matches on user ID.
+	hasAgent, err = store.HasAgentParticipant(ctx, []string{"alice-id", "agent-test-1"})
 	if err != nil {
 		t.Fatalf("has agent: %v", err)
 	}
@@ -250,17 +256,18 @@ func TestOps(t *testing.T) {
 	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
 
 	node, err := store.CreateNode(ctx, CreateNodeParams{
-		SpaceID: space.ID,
-		Kind:    KindTask,
-		Title:   "Task for ops",
-		Author:  "tester",
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		Title:    "Task for ops",
+		Author:   "tester",
+		AuthorID: "tester-id",
 	})
 	if err != nil {
 		t.Fatalf("create node: %v", err)
 	}
 
 	// Record an op.
-	op, err := store.RecordOp(ctx, space.ID, node.ID, "tester", "intend", nil)
+	op, err := store.RecordOp(ctx, space.ID, node.ID, "tester", "tester-id", "intend", nil)
 	if err != nil {
 		t.Fatalf("record op: %v", err)
 	}
@@ -289,11 +296,12 @@ func TestUpdateAndDeleteNode(t *testing.T) {
 	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
 
 	node, err := store.CreateNode(ctx, CreateNodeParams{
-		SpaceID: space.ID,
-		Kind:    KindTask,
-		Title:   "Mutable Task",
-		Author:  "tester",
-		State:   StateOpen,
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		Title:    "Mutable Task",
+		Author:   "tester",
+		AuthorID: "tester-id",
+		State:    StateOpen,
 	})
 	if err != nil {
 		t.Fatalf("create node: %v", err)
@@ -347,10 +355,11 @@ func TestPublicSpaces(t *testing.T) {
 
 	// Add a node to the public space.
 	_, err = store.CreateNode(ctx, CreateNodeParams{
-		SpaceID: pub.ID,
-		Kind:    KindPost,
-		Title:   "Public Post",
-		Author:  "tester",
+		SpaceID:  pub.ID,
+		Kind:     KindPost,
+		Title:    "Public Post",
+		Author:   "tester",
+		AuthorID: "tester-id",
 	})
 	if err != nil {
 		t.Fatalf("create node: %v", err)

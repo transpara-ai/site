@@ -51,49 +51,50 @@ You appear with a violet agent badge.
 
 // OnMessage is called by handlers when a message arrives in a conversation.
 // It checks if an agent should reply and does so asynchronously.
-// Safe to call from a goroutine.
-func (m *Mind) OnMessage(spaceID, spaceSlug string, convo *Node, sender string) {
+// sender is a user ID. Safe to call from a goroutine.
+func (m *Mind) OnMessage(spaceID, spaceSlug string, convo *Node, senderID string) {
 	// Find agent participants.
-	agentName, err := m.findAgentParticipant(convo.Tags)
-	if err != nil || agentName == "" {
+	agentID, agentName, err := m.findAgentParticipant(convo.Tags)
+	if err != nil || agentID == "" {
 		return // no agent in this conversation
 	}
 
 	// Don't reply to the agent's own messages.
-	if strings.EqualFold(sender, agentName) {
+	if senderID == agentID {
 		return
 	}
 
-	log.Printf("mind: %s messaged in %q, replying as %s", sender, convo.Title, agentName)
+	log.Printf("mind: %s messaged in %q, replying as %s", senderID, convo.Title, agentName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), m.replyTimeout)
 	defer cancel()
 
-	if err := m.replyTo(ctx, spaceID, spaceSlug, convo, agentName); err != nil {
+	if err := m.replyTo(ctx, spaceID, spaceSlug, convo, agentID, agentName); err != nil {
 		log.Printf("mind: reply to %q: %v", convo.Title, err)
 	}
 }
 
-// findAgentParticipant returns the name of the first agent in the participant list.
-func (m *Mind) findAgentParticipant(tags []string) (string, error) {
+// findAgentParticipant returns the ID and name of the first agent in the participant list.
+// Tags now store user IDs, so we match on id.
+func (m *Mind) findAgentParticipant(tags []string) (string, string, error) {
 	if len(tags) == 0 {
-		return "", nil
+		return "", "", nil
 	}
-	var name sql.NullString
+	var id, name string
 	err := m.db.QueryRow(
-		`SELECT name FROM users WHERE name = ANY($1) AND kind = 'agent' LIMIT 1`,
+		`SELECT id, name FROM users WHERE id = ANY($1) AND kind = 'agent' LIMIT 1`,
 		pq.Array(tags),
-	).Scan(&name)
+	).Scan(&id, &name)
 	if err == sql.ErrNoRows {
-		return "", nil
+		return "", "", nil
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return name.String, nil
+	return id, name, nil
 }
 
-func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *Node, agentName string) error {
+func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *Node, agentID, agentName string) error {
 	messages, err := m.store.ListNodes(ctx, ListNodesParams{
 		SpaceID:  spaceID,
 		ParentID: convo.ID,
@@ -103,7 +104,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 	}
 
 	systemPrompt := m.buildSystemPrompt(convo)
-	claudeMessages := m.buildMessages(convo, messages, agentName)
+	claudeMessages := m.buildMessages(convo, messages, agentID)
 
 	response, err := m.callClaude(ctx, systemPrompt, claudeMessages)
 	if err != nil {
@@ -116,13 +117,14 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 		Kind:       KindComment,
 		Body:       response,
 		Author:     agentName,
+		AuthorID:   agentID,
 		AuthorKind: "agent",
 	})
 	if err != nil {
 		return fmt.Errorf("create node: %w", err)
 	}
 
-	m.store.RecordOp(ctx, spaceID, node.ID, agentName, "respond", nil)
+	m.store.RecordOp(ctx, spaceID, node.ID, agentName, agentID, "respond", nil)
 	log.Printf("mind: replied to %q (node %s)", convo.Title, node.ID)
 	return nil
 }
@@ -143,12 +145,12 @@ type claudeMessage struct {
 	Content string
 }
 
-func (m *Mind) buildMessages(convo *Node, messages []Node, agentName string) []claudeMessage {
+func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []claudeMessage {
 	var result []claudeMessage
 
 	for _, msg := range messages {
 		text := fmt.Sprintf("[%s]: %s", msg.Author, msg.Body)
-		if strings.EqualFold(msg.Author, agentName) {
+		if msg.AuthorID == agentID {
 			result = append(result, claudeMessage{Role: "assistant", Content: text})
 		} else {
 			result = append(result, claudeMessage{Role: "user", Content: text})

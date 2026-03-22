@@ -17,44 +17,49 @@ func TestMindFindAgentParticipant(t *testing.T) {
 	mind := NewMind(db, store, "fake-token")
 
 	agentName := "MindTestAgent"
+	agentID := "mind-test-agent-id"
 
 	// Create agent user.
 	db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		newID(), "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
-	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName) })
+	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
 
 	t.Run("agent_in_tags", func(t *testing.T) {
-		name, err := mind.findAgentParticipant([]string{"alice", agentName, "bob"})
+		// Tags now store user IDs.
+		id, name, err := mind.findAgentParticipant([]string{"alice-id", agentID, "bob-id"})
 		if err != nil {
 			t.Fatalf("findAgentParticipant: %v", err)
 		}
+		if id != agentID {
+			t.Errorf("id = %q, want %q", id, agentID)
+		}
 		if name != agentName {
-			t.Errorf("got %q, want %q", name, agentName)
+			t.Errorf("name = %q, want %q", name, agentName)
 		}
 	})
 
 	t.Run("no_agent_in_tags", func(t *testing.T) {
-		name, err := mind.findAgentParticipant([]string{"alice", "bob"})
+		id, _, err := mind.findAgentParticipant([]string{"alice-id", "bob-id"})
 		if err != nil {
 			t.Fatalf("findAgentParticipant: %v", err)
 		}
-		if name != "" {
-			t.Errorf("got %q, want empty", name)
+		if id != "" {
+			t.Errorf("got %q, want empty", id)
 		}
 	})
 
 	t.Run("empty_tags", func(t *testing.T) {
-		name, err := mind.findAgentParticipant(nil)
+		id, _, err := mind.findAgentParticipant(nil)
 		if err != nil {
 			t.Fatalf("findAgentParticipant: %v", err)
 		}
-		if name != "" {
-			t.Errorf("got %q, want empty", name)
+		if id != "" {
+			t.Errorf("got %q, want empty", id)
 		}
 	})
 }
@@ -66,16 +71,18 @@ func TestMindOnMessage(t *testing.T) {
 	mind := NewMind(db, store, "fake-token")
 
 	agentName := "MindTestAgent2"
+	agentID := "mind-test-agent2-id"
 	humanName := "MindTestHuman"
+	humanID := "mind-test-human-id"
 
-	db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName)
+	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		newID(), "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
-	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName) })
+	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
 
 	space, err := store.CreateSpace(ctx, "mind-on-msg-test", "Mind Test", "", "owner", "project", "public")
 	if err != nil {
@@ -89,8 +96,9 @@ func TestMindOnMessage(t *testing.T) {
 		Title:      "Test Chat",
 		Body:       "Testing OnMessage",
 		Author:     humanName,
+		AuthorID:   humanID,
 		AuthorKind: "human",
-		Tags:       []string{humanName, agentName},
+		Tags:       []string{humanID, agentID},
 	})
 	if err != nil {
 		t.Fatalf("create conversation: %v", err)
@@ -98,7 +106,7 @@ func TestMindOnMessage(t *testing.T) {
 
 	// OnMessage from agent should be a no-op (don't reply to self).
 	t.Run("agent_message_ignored", func(t *testing.T) {
-		mind.OnMessage(space.ID, space.Slug, convo, agentName)
+		mind.OnMessage(space.ID, space.Slug, convo, agentID)
 		// Should not create any reply nodes.
 		time.Sleep(50 * time.Millisecond)
 		messages, _ := store.ListNodes(ctx, ListNodesParams{SpaceID: space.ID, ParentID: convo.ID})
@@ -111,7 +119,7 @@ func TestMindOnMessage(t *testing.T) {
 	t.Run("human_message_no_claude", func(t *testing.T) {
 		// The Mind has fake-token, so callClaude will fail.
 		// OnMessage should log the error but not panic.
-		mind.OnMessage(space.ID, space.Slug, convo, humanName)
+		mind.OnMessage(space.ID, space.Slug, convo, humanID)
 		// Give the goroutine a moment.
 		time.Sleep(100 * time.Millisecond)
 		// No crash = pass. The reply will fail (no claude binary with fake token)
@@ -143,20 +151,22 @@ func TestMindE2E(t *testing.T) {
 	mind := NewMind(db, store, token)
 
 	agentName := "E2ETestAgent"
+	agentID := "e2e-test-agent-id"
 	humanName := "E2ETestHuman"
+	humanID := "e2e-test-human-id"
 
 	db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'mind-e2e-test'`)
-	db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName)
+	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		newID(), "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
 	t.Cleanup(func() {
 		db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'mind-e2e-test'`)
-		db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName)
+		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	})
 
 	space, err := store.CreateSpace(ctx, "mind-e2e-test", "E2E Test", "", "test-owner", "project", "public")
@@ -170,8 +180,9 @@ func TestMindE2E(t *testing.T) {
 		Title:      "E2E Test",
 		Body:       "Testing Mind auto-reply",
 		Author:     humanName,
+		AuthorID:   humanID,
 		AuthorKind: "human",
-		Tags:       []string{humanName, agentName},
+		Tags:       []string{humanID, agentID},
 	})
 	if err != nil {
 		t.Fatalf("create conversation: %v", err)
@@ -184,6 +195,7 @@ func TestMindE2E(t *testing.T) {
 		Kind:       KindComment,
 		Body:       "Hey Mind, reply with exactly: YES I CAN",
 		Author:     humanName,
+		AuthorID:   humanID,
 		AuthorKind: "human",
 	})
 	if err != nil {
@@ -191,7 +203,7 @@ func TestMindE2E(t *testing.T) {
 	}
 
 	// Trigger Mind directly (simulating handler).
-	mind.OnMessage(space.ID, space.Slug, convo, humanName)
+	mind.OnMessage(space.ID, space.Slug, convo, humanID)
 
 	// Wait for reply (Claude CLI can take a while).
 	time.Sleep(30 * time.Second)

@@ -2064,7 +2064,7 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 }
 
 // ── Conversation detail view ────────────────────────────────────
-func ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, hasAgent bool) templ.Component {
+func ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -2186,7 +2186,7 @@ func ConversationDetailView(space Space, convo Node, messages []Node, user ViewU
 				}
 			}
 			for _, msg := range messages {
-				templ_7745c5c3_Err = chatMessage(msg, user.Name).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = chatMessage(msg, userID).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2277,7 +2277,7 @@ func ConversationDetailView(space Space, convo Node, messages []Node, user ViewU
 	})
 }
 
-func chatMessage(msg Node, currentUser string) templ.Component {
+func chatMessage(msg Node, currentUserID string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -2298,7 +2298,7 @@ func chatMessage(msg Node, currentUser string) templ.Component {
 			templ_7745c5c3_Var106 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var107 = []any{"flex gap-3", templ.KV("flex-row-reverse", msg.Author == currentUser)}
+		var templ_7745c5c3_Var107 = []any{"flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var107...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -2323,7 +2323,7 @@ func chatMessage(msg Node, currentUser string) templ.Component {
 		var templ_7745c5c3_Var109 string
 		templ_7745c5c3_Var109, templ_7745c5c3_Err = templ.JoinStringErrs(msg.CreatedAt.Format(time.RFC3339Nano))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 793, Col: 134}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 793, Col: 138}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var109))
 		if templ_7745c5c3_Err != nil {
@@ -2353,8 +2353,8 @@ func chatMessage(msg Node, currentUser string) templ.Component {
 			}
 		} else {
 			var templ_7745c5c3_Var111 = []any{"w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0",
-				templ.KV("bg-brand/10 text-brand", msg.Author == currentUser),
-				templ.KV("bg-elevated text-warm-muted", msg.Author != currentUser)}
+				templ.KV("bg-brand/10 text-brand", msg.AuthorID == currentUserID),
+				templ.KV("bg-elevated text-warm-muted", msg.AuthorID != currentUserID)}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var111...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -2391,8 +2391,8 @@ func chatMessage(msg Node, currentUser string) templ.Component {
 			}
 		}
 		var templ_7745c5c3_Var114 = []any{"max-w-[75%] rounded-lg px-4 py-2.5",
-			templ.KV("bg-brand/10 border border-brand/20", msg.Author == currentUser),
-			templ.KV("bg-surface border border-edge", msg.Author != currentUser && msg.AuthorKind != "agent"),
+			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
+			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
 			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var114...)
 		if templ_7745c5c3_Err != nil {

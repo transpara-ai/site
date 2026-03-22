@@ -484,16 +484,15 @@ func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-	actor := h.userName(r)
 
-	convos, err := h.store.ListConversations(r.Context(), space.ID, actor, h.userID(r))
+	convos, err := h.store.ListConversations(r.Context(), space.ID, h.userID(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if wantsJSON(r) {
-		writeJSON(w, http.StatusOK, map[string]any{"space": space, "conversations": convos, "me": actor})
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "conversations": convos, "me": h.userName(r)})
 		return
 	}
 
@@ -614,7 +613,7 @@ func (h *Handlers) handleConversationDetail(w http.ResponseWriter, r *http.Reque
 	hasAgent, _ := h.store.HasAgentParticipant(r.Context(), node.Tags)
 
 	user := h.viewUser(r)
-	ConversationDetailView(*space, *node, messages, user, hasAgent).Render(r.Context(), w)
+	ConversationDetailView(*space, *node, messages, user, h.userID(r), hasAgent).Render(r.Context(), w)
 }
 
 // handleConversationMessages returns new messages since the given timestamp.
@@ -659,9 +658,9 @@ func (h *Handlers) handleConversationMessages(w http.ResponseWriter, r *http.Req
 	}
 
 	// Return chatMessage fragments for HTMX polling.
-	user := h.viewUser(r)
+	uid := h.userID(r)
 	for _, msg := range messages {
-		chatMessage(msg, user.Name).Render(r.Context(), w)
+		chatMessage(msg, uid).Render(r.Context(), w)
 	}
 }
 
@@ -730,6 +729,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 	op := r.FormValue("op")
 	ctx := r.Context()
 	actor := h.userName(r)
+	actorID := h.userID(r)
 	actorKind := h.userKind(r)
 
 	switch op {
@@ -740,20 +740,21 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
-			SpaceID:  space.ID,
-			Kind:     KindTask,
-			Title:    title,
-			Body:     strings.TrimSpace(r.FormValue("description")),
-			Priority: r.FormValue("priority"),
-			Assignee: strings.TrimSpace(r.FormValue("assignee")),
+			SpaceID:    space.ID,
+			Kind:       KindTask,
+			Title:      title,
+			Body:       strings.TrimSpace(r.FormValue("description")),
+			Priority:   r.FormValue("priority"),
+			Assignee:   strings.TrimSpace(r.FormValue("assignee")),
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "intend", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "intend", nil)
 
 		if wantsJSON(r) {
 			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "intend"})
@@ -773,18 +774,19 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
-			SpaceID:  space.ID,
-			ParentID: parentID,
-			Kind:     KindTask,
-			Title:    title,
+			SpaceID:    space.ID,
+			ParentID:   parentID,
+			Kind:       KindTask,
+			Title:      title,
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "decompose", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "decompose", nil)
 
 		if wantsJSON(r) {
 			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "decompose"})
@@ -800,18 +802,19 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
-			SpaceID: space.ID,
-			Kind:    KindPost,
-			Title:   title,
-			Body:    body,
+			SpaceID:    space.ID,
+			Kind:       KindPost,
+			Title:      title,
+			Body:       body,
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "express", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "express", nil)
 
 		if wantsJSON(r) {
 			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "express"})
@@ -831,18 +834,19 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
-			SpaceID: space.ID,
-			Kind:    KindThread,
-			Title:   title,
-			Body:    body,
+			SpaceID:    space.ID,
+			Kind:       KindThread,
+			Title:      title,
+			Body:       body,
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "discuss", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "discuss", nil)
 
 		if wantsJSON(r) {
 			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "discuss"})
@@ -858,23 +862,24 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
-			SpaceID:  space.ID,
-			ParentID: parentID,
-			Kind:     KindComment,
-			Body:     body,
+			SpaceID:    space.ID,
+			ParentID:   parentID,
+			Kind:       KindComment,
+			Body:       body,
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "respond", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "respond", nil)
 
 		// Trigger Mind auto-reply if a non-agent messaged in a conversation.
 		if h.mind != nil && actorKind != "agent" {
 			if parent, _ := h.store.GetNode(ctx, parentID); parent != nil && parent.Kind == KindConversation {
-				go h.mind.OnMessage(space.ID, space.Slug, parent, actor)
+				go h.mind.OnMessage(space.ID, space.Slug, parent, actorID)
 			}
 		}
 
@@ -885,7 +890,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		if isHTMX(r) {
 			parent, _ := h.store.GetNode(ctx, parentID)
 			if parent != nil && parent.Kind == KindConversation {
-				chatMessage(*node, actor).Render(ctx, w)
+				chatMessage(*node, actorID).Render(ctx, w)
 			} else {
 				CommentItem(*node).Render(ctx, w)
 			}
@@ -907,7 +912,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, nodeID, actor, "complete", nil)
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "complete", nil)
 
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
@@ -933,7 +938,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, nodeID, actor, "assign", nil)
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "assign", nil)
 
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
@@ -952,7 +957,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, nodeID, actor, "claim", nil)
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "claim", nil)
 
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
@@ -972,7 +977,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, nodeID, actor, "prioritize", nil)
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "prioritize", nil)
 
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
@@ -987,17 +992,23 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "title required", http.StatusBadRequest)
 			return
 		}
-		// Participants: actor name + ID + anyone listed in "participants" (comma-separated).
-		// Store both name and ID so conversations can be found by either.
-		actorID := h.userID(r)
-		participants := []string{actor}
-		if actorID != actor {
-			participants = append(participants, actorID)
-		}
+		// Participants: store ONLY user IDs in tags.
+		// Resolve participant names to IDs via lookup.
+		participants := []string{actorID}
 		if p := strings.TrimSpace(r.FormValue("participants")); p != "" {
 			for _, name := range strings.Split(p, ",") {
 				name = strings.TrimSpace(name)
-				if name != "" && name != actor && name != actorID {
+				if name == "" || name == actor || name == actorID {
+					continue
+				}
+				// Try to resolve name to user ID.
+				resolved := h.store.ResolveUserID(ctx, name)
+				if resolved != "" {
+					if resolved != actorID {
+						participants = append(participants, resolved)
+					}
+				} else {
+					// Fallback: store raw string for invited users who don't exist yet.
 					participants = append(participants, name)
 				}
 			}
@@ -1008,6 +1019,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			Title:      title,
 			Body:       strings.TrimSpace(r.FormValue("body")),
 			Author:     actor,
+			AuthorID:   actorID,
 			AuthorKind: actorKind,
 			Tags:       participants,
 		})
@@ -1015,11 +1027,11 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.store.RecordOp(ctx, space.ID, node.ID, actor, "converse", nil)
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "converse", nil)
 
 		// Trigger Mind if a human created a conversation with an agent.
 		if h.mind != nil && actorKind != "agent" {
-			go h.mind.OnMessage(space.ID, space.Slug, node, actor)
+			go h.mind.OnMessage(space.ID, space.Slug, node, actorID)
 		}
 
 		if wantsJSON(r) {
@@ -1074,7 +1086,7 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 	} else if newState == StateReview {
 		opName = "review"
 	}
-	h.store.RecordOp(r.Context(), space.ID, nodeID, h.userName(r), opName, nil)
+	h.store.RecordOp(r.Context(), space.ID, nodeID, h.userName(r), h.userID(r), opName, nil)
 
 	node, _ = h.store.GetNode(r.Context(), nodeID)
 	if wantsJSON(r) {

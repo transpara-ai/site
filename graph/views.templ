@@ -678,7 +678,7 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 
 // ── Conversation detail view ────────────────────────────────────
 
-templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, hasAgent bool) {
+templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool) {
 	@appLayout(space, []Space{space}, "conversations", user) {
 		<div class="flex flex-col h-full">
 			<!-- Conversation header -->
@@ -719,7 +719,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 						<p id="empty-state" class="text-center text-warm-faint py-12">No messages yet. Start the conversation!</p>
 					}
 					for _, msg := range messages {
-						@chatMessage(msg, user.Name)
+						@chatMessage(msg, userID)
 					}
 				</div>
 				<!-- Thinking indicator (hidden by default) -->
@@ -789,22 +789,22 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 	}
 }
 
-templ chatMessage(msg Node, currentUser string) {
-	<div class={ "flex gap-3", templ.KV("flex-row-reverse", msg.Author == currentUser) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
+templ chatMessage(msg Node, currentUserID string) {
+	<div class={ "flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
 		if msg.AuthorKind == "agent" {
 			<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0" title="Agent">
 				{ initial(msg.Author) }
 			</span>
 		} else {
 			<span class={ "w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0",
-				templ.KV("bg-brand/10 text-brand", msg.Author == currentUser),
-				templ.KV("bg-elevated text-warm-muted", msg.Author != currentUser) }>
+				templ.KV("bg-brand/10 text-brand", msg.AuthorID == currentUserID),
+				templ.KV("bg-elevated text-warm-muted", msg.AuthorID != currentUserID) }>
 				{ initial(msg.Author) }
 			</span>
 		}
 		<div class={ "max-w-[75%] rounded-lg px-4 py-2.5",
-			templ.KV("bg-brand/10 border border-brand/20", msg.Author == currentUser),
-			templ.KV("bg-surface border border-edge", msg.Author != currentUser && msg.AuthorKind != "agent"),
+			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
+			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
 			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
 			<div class="flex items-center gap-1.5 mb-1">
 				<span class="text-xs font-medium text-warm">{ msg.Author }</span>

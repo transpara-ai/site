@@ -75,7 +75,10 @@ func TestHandlerOp(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	// Create a space first.
+	// Create a space first (clean up stale data from prior runs).
+	if old, _ := store.GetSpaceBySlug(t.Context(), "handler-op-test"); old != nil {
+		store.DeleteSpace(t.Context(), old.ID)
+	}
 	space, err := store.CreateSpace(t.Context(), "handler-op-test", "Op Test", "", "test-user-1", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
@@ -144,7 +147,7 @@ func TestHandlerOp(t *testing.T) {
 	t.Run("respond_json", func(t *testing.T) {
 		// Create a parent first.
 		parent, _ := store.CreateNode(t.Context(), CreateNodeParams{
-			SpaceID: space.ID, Kind: KindThread, Title: "Parent", Author: "Tester",
+			SpaceID: space.ID, Kind: KindThread, Title: "Parent", Author: "Tester", AuthorID: "test-user-1",
 		})
 
 		body := `{"op":"respond","parent_id":"` + parent.ID + `","body":"A reply"}`
@@ -179,6 +182,9 @@ func TestHandlerConversationDetail(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
+	if old, _ := store.GetSpaceBySlug(t.Context(), "handler-convo-test"); old != nil {
+		store.DeleteSpace(t.Context(), old.ID)
+	}
 	space, err := store.CreateSpace(t.Context(), "handler-convo-test", "Convo Test", "", "test-user-1", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
@@ -187,7 +193,7 @@ func TestHandlerConversationDetail(t *testing.T) {
 
 	convo, err := store.CreateNode(t.Context(), CreateNodeParams{
 		SpaceID: space.ID, Kind: KindConversation, Title: "Test Convo",
-		Author: "Tester", Tags: []string{"Tester"},
+		Author: "Tester", AuthorID: "test-user-1", Tags: []string{"test-user-1"},
 	})
 	if err != nil {
 		t.Fatalf("create convo: %v", err)
@@ -196,7 +202,7 @@ func TestHandlerConversationDetail(t *testing.T) {
 	// Add a message.
 	store.CreateNode(t.Context(), CreateNodeParams{
 		SpaceID: space.ID, ParentID: convo.ID, Kind: KindComment,
-		Body: "Hello!", Author: "Tester",
+		Body: "Hello!", Author: "Tester", AuthorID: "test-user-1",
 	})
 
 	// GET conversation detail as JSON.
