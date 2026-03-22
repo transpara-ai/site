@@ -50,6 +50,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 					</div>
 					<div class="flex items-center gap-6 text-sm text-warm-muted">
 						<a href="/" class="hover:text-brand transition-colors">Home</a>
+						<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
 						<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
 						<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
 						if user.Name != "" && user.Name != "Anonymous" {
@@ -873,6 +874,7 @@ templ simpleHeader(user ViewUser) {
 			<div class="flex items-center gap-6 text-sm text-warm-muted">
 				<a href="/" class="hover:text-brand transition-colors">Home</a>
 				<a href="/app" class="hover:text-brand transition-colors">App</a>
+				<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
 				<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
 				<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
 				if user.Name != "" && user.Name != "Anonymous" {

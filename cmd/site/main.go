@@ -126,6 +126,9 @@ func main() {
 		http.NotFound(w, r)
 	})
 
+	// Discover page (public spaces) — registered after DB setup below.
+	var graphStore *graph.Store
+
 	// Unified product with auth.
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn != "" {
@@ -172,7 +175,7 @@ func main() {
 			log.Println("auth disabled (no GOOGLE_CLIENT_ID) — anonymous mode")
 		}
 
-		graphStore, err := graph.NewStore(db)
+		graphStore, err = graph.NewStore(db)
 		if err != nil {
 			log.Fatalf("graph store: %v", err)
 		}
@@ -193,6 +196,31 @@ func main() {
 			http.Redirect(w, r, "/app", http.StatusMovedPermanently)
 		})
 	}
+
+	// Discover page — list public spaces (no auth required).
+	mux.HandleFunc("GET /discover", func(w http.ResponseWriter, r *http.Request) {
+		if graphStore == nil {
+			views.DiscoverPage(nil).Render(r.Context(), w)
+			return
+		}
+		spaces, err := graphStore.ListPublicSpaces(r.Context())
+		if err != nil {
+			log.Printf("discover: %v", err)
+			views.DiscoverPage(nil).Render(r.Context(), w)
+			return
+		}
+		ds := make([]views.DiscoverSpace, len(spaces))
+		for i, sp := range spaces {
+			ds[i] = views.DiscoverSpace{
+				Slug:        sp.Slug,
+				Name:        sp.Name,
+				Description: sp.Description,
+				Kind:        sp.Kind,
+				CreatedAt:   sp.CreatedAt,
+			}
+		}
+		views.DiscoverPage(ds).Render(r.Context(), w)
+	})
 
 	// Health check for Fly.io.
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +248,7 @@ func main() {
 		// Static pages.
 		addURL("/")
 		addURL("/blog")
+		addURL("/discover")
 		addURL("/reference")
 		addURL("/reference/grammar")
 		addURL("/reference/cognitive-grammar")

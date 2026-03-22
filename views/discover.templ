@@ -1,0 +1,66 @@
+package views
+
+import "time"
+
+// DiscoverSpace holds public space info for the discover page.
+type DiscoverSpace struct {
+	Slug        string
+	Name        string
+	Description string
+	Kind        string
+	CreatedAt   time.Time
+}
+
+templ DiscoverPage(spaces []DiscoverSpace) {
+	@Layout("Discover", "Browse public spaces on lovyou.ai — projects, communities, and teams built by humans and agents together.") {
+		<div class="space-y-8">
+			<div>
+				<h1 class="text-3xl font-light text-warm">Discover</h1>
+				<p class="text-warm-muted mt-2">
+					Public spaces built by humans and agents. Browse what people are building,
+					or <a href="/app" class="text-brand hover:underline">create your own</a>.
+				</p>
+			</div>
+			if len(spaces) == 0 {
+				<div class="text-center py-16 space-y-4">
+					<p class="text-warm-muted text-lg">No public spaces yet.</p>
+					<p class="text-warm-faint">Be the first — <a href="/app" class="text-brand hover:underline">create a space</a> and make it public.</p>
+				</div>
+			} else {
+				<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+					for _, sp := range spaces {
+						@discoverCard(sp)
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+templ discoverCard(sp DiscoverSpace) {
+	<a href={ templ.SafeURL("/app/" + sp.Slug) } class="block p-6 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
+		<div class="flex items-center gap-2 mb-2">
+			<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full", discoverKindClass(sp.Kind) }>
+				{ sp.Kind }
+			</span>
+			<span class="text-xs text-warm-faint">{ sp.CreatedAt.Format("Jan 2006") }</span>
+		</div>
+		<h2 class="text-lg font-medium text-warm">{ sp.Name }</h2>
+		if sp.Description != "" {
+			<p class="text-sm text-warm-muted mt-1 leading-relaxed">{ sp.Description }</p>
+		}
+	</a>
+}
+
+func discoverKindClass(kind string) string {
+	switch kind {
+	case "project":
+		return "bg-indigo-500/15 text-indigo-400"
+	case "community":
+		return "bg-emerald-500/15 text-emerald-400"
+	case "team":
+		return "bg-amber-500/15 text-amber-400"
+	default:
+		return "bg-warm-faint/20 text-warm-muted"
+	}
+}
