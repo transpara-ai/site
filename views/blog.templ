@@ -60,11 +60,46 @@ templ BlogIndex(posts []Post) {
 	@Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.") {
 		<div class="space-y-8">
 			<h1 class="text-3xl font-bold">Blog</h1>
-			<p class="text-gray-600">A series on EventGraph, AI consciousness, and the architecture of accountable systems. Best read in order.</p>
+			<p class="text-gray-600">
+				A series on EventGraph, AI consciousness, and the architecture of accountable systems.
+				43 posts in six arcs. Best read in order, but each arc stands alone.
+			</p>
+			<nav class="flex flex-wrap gap-2 text-sm">
+				<a href="#foundation" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Foundation</a>
+				<a href="#graphs" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Thirteen Graphs</a>
+				<a href="#consciousness" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Consciousness</a>
+				<a href="#application" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Application</a>
+				<a href="#grammar" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Grammar</a>
+				<a href="#building" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Building</a>
+			</nav>
 			if len(posts) == 0 {
 				<p class="text-gray-500">No posts yet.</p>
 			}
 			for _, post := range posts {
+				if post.Order == 1 {
+					<h2 id="foundation" class="text-xl font-semibold text-gray-700 pt-4">Foundation</h2>
+					<p class="text-sm text-gray-500 -mt-4">The primitives, the layers, the architecture. What exists and why.</p>
+				}
+				if post.Order == 14 {
+					<h2 id="graphs" class="text-xl font-semibold text-gray-700 pt-4">Thirteen Graphs</h2>
+					<p class="text-sm text-gray-500 -mt-4">One graph per domain — work, market, social, justice, research, knowledge, governance, culture, existence.</p>
+				}
+				if post.Order == 26 {
+					<h2 id="consciousness" class="text-xl font-semibold text-gray-700 pt-4">Consciousness</h2>
+					<p class="text-sm text-gray-500 -mt-4">What it means to be inside the system. Weight, transition, friction.</p>
+				}
+				if post.Order == 31 {
+					<h2 id="application" class="text-xl font-semibold text-gray-700 pt-4">Application</h2>
+					<p class="text-sm text-gray-500 -mt-4">From theory to practice. What you could build and why it matters.</p>
+				}
+				if post.Order == 35 {
+					<h2 id="grammar" class="text-xl font-semibold text-gray-700 pt-4">Grammar</h2>
+					<p class="text-sm text-gray-500 -mt-4">The operational heart. Fifteen operations, thirteen languages, one grammar.</p>
+				}
+				if post.Order == 39 {
+					<h2 id="building" class="text-xl font-semibold text-gray-700 pt-4">Building</h2>
+					<p class="text-sm text-gray-500 -mt-4">Shipping code. The SDK, the agents, the hive, the cognitive grammar.</p>
+				}
 				@blogCard(post)
 			}
 		</div>
