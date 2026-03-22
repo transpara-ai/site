@@ -823,7 +823,9 @@ templ chatMessage(msg Node, currentUserID string) {
 				}
 				<span class="text-[10px] text-warm-faint ml-auto">{ msg.CreatedAt.Format("3:04 PM") }</span>
 			</div>
-			<p class="text-sm text-warm-secondary whitespace-pre-wrap">{ msg.Body }</p>
+			<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
+							@renderMarkdown(msg.Body)
+						</div>
 		</div>
 	</div>
 }
