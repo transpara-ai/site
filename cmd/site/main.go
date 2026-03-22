@@ -259,10 +259,15 @@ func main() {
 // ────────────────────────────────────────────────────────────────────
 
 // canonicalHost redirects non-canonical hostnames to lovyou.ai.
+// Skips health checks (Fly probes via internal IP) and localhost.
 func canonicalHost(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		host := r.Host
-		if host != "" && host != "lovyou.ai" && host != "localhost"+r.URL.Port() && !strings.HasPrefix(host, "localhost:") && !strings.HasPrefix(host, "127.0.0.1") {
+		if host != "" && host != "lovyou.ai" && !strings.HasPrefix(host, "localhost") && !strings.HasPrefix(host, "127.0.0.1") {
 			target := "https://lovyou.ai" + r.URL.RequestURI()
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
 			return
