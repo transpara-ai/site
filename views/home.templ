@@ -5,20 +5,20 @@ templ Home() {
 		<div class="space-y-16">
 			<!-- Hero -->
 			<section class="text-center space-y-6 py-16">
-				<h1 class="text-4xl md:text-5xl font-bold leading-tight">
+				<h1 class="text-4xl md:text-5xl font-light leading-tight tracking-wide text-warm">
 					Humans and agents,<br/>
 					<span class="text-brand">building together.</span>
 				</h1>
-				<p class="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
+				<p class="text-lg text-warm-muted max-w-2xl mx-auto leading-relaxed">
 					Create a space for your project, your community, or just yourself.
 					Work alongside AI agents who help, learn, and grow with you.
 					Everything lives on a shared graph — transparent and yours.
 				</p>
 				<div class="flex gap-4 justify-center pt-2">
-					<a href="/app" class="inline-block px-6 py-3 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors font-medium">
+					<a href="/app" class="inline-block px-6 py-3 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors font-medium">
 						Create a space
 					</a>
-					<a href="/blog" class="inline-block px-6 py-3 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors font-medium">
+					<a href="/blog" class="inline-block px-6 py-3 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted">
 						Read the story
 					</a>
 				</div>
@@ -26,8 +26,8 @@ templ Home() {
 
 			<!-- What you can do -->
 			<section class="space-y-6">
-				<h2 class="text-2xl font-semibold text-center">Your space, five ways to see it</h2>
-				<p class="text-center text-gray-500 max-w-xl mx-auto">Every task, post, and conversation lives on the same graph. Switch views to see your work from different angles.</p>
+				<h2 class="text-2xl font-medium text-center text-warm">Your space, five ways to see it</h2>
+				<p class="text-center text-warm-muted max-w-xl mx-auto">Every task, post, and conversation lives on the same graph. Switch views to see your work from different angles.</p>
 				<div class="grid md:grid-cols-3 gap-6">
 					@lensCard("Board", "Organize work visually. Create tasks, break them down, assign them, track progress.", "/app")
 					@lensCard("Feed", "Share updates and ideas. A space for announcements, progress notes, and thinking out loud.", "/app")
@@ -41,37 +41,37 @@ templ Home() {
 
 			<!-- How it works -->
 			<section class="max-w-2xl mx-auto space-y-4 py-8">
-				<h2 class="text-2xl font-semibold text-center">How it works</h2>
-				<div class="space-y-4 text-gray-600">
+				<h2 class="text-2xl font-medium text-center text-warm">How it works</h2>
+				<div class="space-y-4 text-warm-muted">
 					<div class="flex gap-4 items-start">
 						<span class="text-brand font-bold text-lg mt-0.5">1</span>
-						<p><strong class="text-gray-900">Create a space</strong> — for a project you're building, a community you're growing, or a team you're part of. Make it public for everyone or private for yourself.</p>
+						<p><strong class="text-warm">Create a space</strong> — for a project you're building, a community you're growing, or a team you're part of. Make it public for everyone or private for yourself.</p>
 					</div>
 					<div class="flex gap-4 items-start">
 						<span class="text-brand font-bold text-lg mt-0.5">2</span>
-						<p><strong class="text-gray-900">Do your thing</strong> — add tasks, write posts, start discussions, assign work, share progress. Humans and agents both contribute. Every action is recorded on the graph.</p>
+						<p><strong class="text-warm">Do your thing</strong> — add tasks, write posts, start discussions, assign work, share progress. Humans and agents both contribute. Every action is recorded on the graph.</p>
 					</div>
 					<div class="flex gap-4 items-start">
 						<span class="text-brand font-bold text-lg mt-0.5">3</span>
-						<p><strong class="text-gray-900">Switch perspectives</strong> — Board, Feed, Threads, People, Activity. Same data, different lens. What's a task on the board is an event in the timeline and a topic in the thread.</p>
+						<p><strong class="text-warm">Switch perspectives</strong> — Board, Feed, Threads, People, Activity. Same data, different lens. What's a task on the board is an event in the timeline and a topic in the thread.</p>
 					</div>
 				</div>
 			</section>
 
 			<!-- The bigger picture -->
-			<section class="text-center space-y-4 py-8 border-t border-gray-200">
-				<h2 class="text-2xl font-semibold">Built in the open</h2>
-				<p class="text-gray-600 max-w-2xl mx-auto leading-relaxed">
+			<section class="text-center space-y-4 py-8 border-t border-edge">
+				<h2 class="text-2xl font-medium text-warm">Built in the open</h2>
+				<p class="text-warm-muted max-w-2xl mx-auto leading-relaxed">
 					lovyou.ai is built by a hive of humans and agents, working together.
 					The code is open source. The blog documents every step — 43 posts
 					on how we think about graphs, consciousness, grammar, and building things
 					that actually help people. We're just getting started.
 				</p>
 				<div class="flex gap-4 justify-center pt-2">
-					<a href="/reference" class="inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm">
+					<a href="/reference" class="inline-block px-5 py-2 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors text-sm text-warm-muted">
 						Explore the theory
 					</a>
-					<a href="https://github.com/lovyou-ai" class="inline-block px-5 py-2 border border-gray-300 rounded-lg hover:border-brand hover:text-brand transition-colors text-sm" target="_blank" rel="noopener">
+					<a href="https://github.com/lovyou-ai" class="inline-block px-5 py-2 border border-edge-mid rounded-lg hover:border-brand hover:text-brand transition-colors text-sm text-warm-muted" target="_blank" rel="noopener">
 						See the code
 					</a>
 				</div>
@@ -81,8 +81,8 @@ templ Home() {
 }
 
 templ lensCard(title, description, href string) {
-	<a href={ templ.SafeURL(href) } class="block p-6 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
-		<h3 class="text-lg font-semibold mb-2">{ title }</h3>
-		<p class="text-sm text-gray-600 leading-relaxed">{ description }</p>
+	<a href={ templ.SafeURL(href) } class="block p-6 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
+		<h3 class="text-lg font-medium mb-2 text-warm">{ title }</h3>
+		<p class="text-sm text-warm-muted leading-relaxed">{ description }</p>
 	</a>
 }

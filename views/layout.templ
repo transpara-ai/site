@@ -23,51 +23,61 @@ templ Layout(title, description string) {
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 			<style type="text/tailwindcss">
 				@theme {
-					--color-brand: #6366f1;
-					--color-brand-dark: #4f46e5;
+					--color-brand: #e8a0b8;
+					--color-brand-dark: #d4899f;
+					--color-void: #09090b;
+					--color-surface: #111113;
+					--color-elevated: #18181b;
+					--color-edge: #1e1e22;
+					--color-edge-mid: #2a2a2e;
+					--color-edge-strong: #3a3a3f;
+					--color-warm: #f0ede8;
+					--color-warm-secondary: #c8c4bc;
+					--color-warm-muted: #78756e;
+					--color-warm-faint: #4a4844;
 				}
 			</style>
 			<style>
-				.prose { line-height: 1.75; }
+				.prose { line-height: 1.75; color: #c8c4bc; }
 				.prose p { margin-bottom: 1.25em; }
-				.prose h2 { font-size: 1.5em; font-weight: 700; margin-top: 2em; margin-bottom: 0.75em; }
-				.prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
+				.prose h2 { font-size: 1.5em; font-weight: 700; margin-top: 2em; margin-bottom: 0.75em; color: #f0ede8; }
+				.prose h3 { font-size: 1.25em; font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: #f0ede8; }
 				.prose ul, .prose ol { margin: 1em 0; padding-left: 1.5em; }
 				.prose li { margin-bottom: 0.5em; }
 				.prose ul { list-style-type: disc; }
 				.prose ol { list-style-type: decimal; }
-				.prose blockquote { border-left: 3px solid #6366f1; padding-left: 1em; margin: 1.5em 0; color: #4b5563; font-style: italic; }
-				.prose code { background: #f3f4f6; padding: 0.15em 0.4em; border-radius: 0.25em; font-size: 0.9em; }
-				.prose pre { background: #1f2937; color: #e5e7eb; padding: 1em; border-radius: 0.5em; overflow-x: auto; margin: 1.5em 0; }
+				.prose blockquote { border-left: 3px solid #e8a0b8; padding-left: 1em; margin: 1.5em 0; color: #78756e; font-style: italic; }
+				.prose code { background: #18181b; padding: 0.15em 0.4em; border-radius: 0.25em; font-size: 0.9em; color: #f0ede8; }
+				.prose pre { background: #09090b; color: #c8c4bc; padding: 1em; border-radius: 0.5em; overflow-x: auto; margin: 1.5em 0; border: 1px solid #1e1e22; }
 				.prose pre code { background: none; padding: 0; color: inherit; }
-				.prose a { color: #6366f1; text-decoration: underline; }
-				.prose a:hover { color: #4f46e5; }
-				.prose hr { border: none; border-top: 1px solid #e5e7eb; margin: 2em 0; }
+				.prose a { color: #e8a0b8; text-decoration: underline; }
+				.prose a:hover { color: #d4899f; }
+				.prose hr { border: none; border-top: 1px solid #1e1e22; margin: 2em 0; }
 				.prose table { width: 100%; border-collapse: collapse; margin: 1.5em 0; }
-				.prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5em 0.75em; text-align: left; }
-				.prose th { background: #f9fafb; font-weight: 600; }
+				.prose th, .prose td { border: 1px solid #1e1e22; padding: 0.5em 0.75em; text-align: left; }
+				.prose th { background: #111113; font-weight: 600; color: #f0ede8; }
 				.prose em { font-style: italic; }
-				.prose strong { font-weight: 700; }
+				.prose strong { font-weight: 700; color: #f0ede8; }
 				.prose img { max-width: 100%; margin: 1.5em 0; border-radius: 0.5em; }
 			</style>
 		</head>
-		<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
-			<header class="border-b border-gray-200 bg-white">
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
+			<header class="border-b border-edge bg-surface">
 				<nav class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
 					<a href="/" class="text-xl font-bold text-brand">lovyou.ai</a>
-					<div class="flex gap-6 text-sm">
-						<a href="/" class="hover:text-brand">Home</a>
-						<a href="/app" class="hover:text-brand">App</a>
-						<a href="/blog" class="hover:text-brand">Blog</a>
-						<a href="/reference" class="hover:text-brand">Reference</a>
+					<div class="flex gap-6 text-sm text-warm-muted">
+						<a href="/" class="hover:text-brand transition-colors">Home</a>
+						<a href="/app" class="hover:text-brand transition-colors">App</a>
+						<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
+						<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
 					</div>
 				</nav>
 			</header>
 			<main class="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
 				{ children... }
 			</main>
-			<footer class="border-t border-gray-200 bg-white">
-				<div class="max-w-4xl mx-auto px-6 py-6 text-sm text-gray-500 flex items-center justify-between">
+			<footer class="border-t border-edge bg-surface">
+				<div class="max-w-4xl mx-auto px-6 py-6 text-sm text-warm-muted flex items-center justify-between">
 					<span>lovyou.ai — humans and agents, building together</span>
 					<div class="flex gap-4 items-center">
 						<a href="mailto:matt@lovyou.ai" class="hover:text-brand transition-colors">matt@lovyou.ai</a>

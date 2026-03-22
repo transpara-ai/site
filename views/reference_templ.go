@@ -44,20 +44,20 @@ func ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) 
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><div><h1 class=\"text-3xl font-bold\">Reference</h1><p class=\"text-gray-600 mt-2\">Three base operations generate every grammar. Fifteen graph operations compose into domain-specific vocabularies. 201 primitives across 14 layers define what exists. 28 agent primitives define who acts.</p></div><!-- Section 1: Grammar --><section><h2 class=\"text-xl font-semibold mb-1\">Grammar</h2><p class=\"text-gray-500 text-sm mb-4\">The operational heart. What you can do, at every level.</p><div class=\"space-y-3\"><a href=\"/reference/cognitive-grammar\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">C</span><div><h3 class=\"text-lg font-semibold\">Cognitive Grammar</h3><p class=\"text-sm text-gray-500\">The grammar that produces grammars — 3 base operations, 9 compositions</p><p class=\"text-gray-600 text-sm mt-2\">A mind relates to knowledge in exactly three ways: Derive (produce new knowledge), Traverse (navigate existing knowledge), and Need (detect absent knowledge). Self-application — applying each operation to each operation — produces nine compositions: Formalize, Map, Catalog, Trace, Zoom, Explore, Audit, Cover, and Blind. The nine are a fixed point: no further self-application produces a tenth. Three modifiers (Tentative, Exhaustive, Bounded) and six named functions (Revise, Hypothesize, Validate, Orient, Learn, Calibrate) complete the meta-grammar. Every derivation in the framework uses these operations. The thirteen layer grammars and the graph grammar itself are outputs of the cognitive grammar.</p></div></div></a> <a href=\"/reference/grammar\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">G</span><div><h3 class=\"text-lg font-semibold\">Graph Grammar</h3><p class=\"text-sm text-gray-500\">The universal vocabulary — 15 operations, 3 modifiers, 8 named functions</p><p class=\"text-gray-600 text-sm mt-2\">Social interactions are operations on a graph. Six semantic dimensions — causality, content, temporality, visibility, direction, authorship — extend graph theory into the social domain, producing 15 irreducible operations: Emit, Respond, Derive, Extend, Retract, Annotate, Acknowledge, Propagate, Endorse, Subscribe, Channel, Delegate, Consent, Sever, and Merge. Every domain grammar is a composition of these base operations. Three modifiers (Transient, Nascent, Conditional) and eight named functions (Recommend, Challenge, Curate, Collaborate, Forgive, Invite, Memorial, Transfer) complete the vocabulary.</p></div></div></a> <a href=\"/reference/grammars\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">1-13</span><div><h3 class=\"text-lg font-semibold\">Layer Grammars</h3><p class=\"text-sm text-gray-500\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><div><h1 class=\"text-3xl font-light text-warm\">Reference</h1><p class=\"text-warm-muted mt-2\">Three base operations generate every grammar. Fifteen graph operations compose into domain-specific vocabularies. 201 primitives across 14 layers define what exists. 28 agent primitives define who acts.</p></div><!-- Section 1: Grammar --><section><h2 class=\"text-xl font-medium mb-1 text-warm\">Grammar</h2><p class=\"text-warm-muted text-sm mb-4\">The operational heart. What you can do, at every level.</p><div class=\"space-y-3\"><a href=\"/reference/cognitive-grammar\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">C</span><div><h3 class=\"text-lg font-medium text-warm\">Cognitive Grammar</h3><p class=\"text-sm text-warm-muted\">The grammar that produces grammars — 3 base operations, 9 compositions</p><p class=\"text-warm-muted text-sm mt-2\">A mind relates to knowledge in exactly three ways: Derive (produce new knowledge), Traverse (navigate existing knowledge), and Need (detect absent knowledge). Self-application — applying each operation to each operation — produces nine compositions: Formalize, Map, Catalog, Trace, Zoom, Explore, Audit, Cover, and Blind. The nine are a fixed point: no further self-application produces a tenth. Three modifiers (Tentative, Exhaustive, Bounded) and six named functions (Revise, Hypothesize, Validate, Orient, Learn, Calibrate) complete the meta-grammar. Every derivation in the framework uses these operations. The thirteen layer grammars and the graph grammar itself are outputs of the cognitive grammar.</p></div></div></a> <a href=\"/reference/grammar\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">G</span><div><h3 class=\"text-lg font-medium text-warm\">Graph Grammar</h3><p class=\"text-sm text-warm-muted\">The universal vocabulary — 15 operations, 3 modifiers, 8 named functions</p><p class=\"text-warm-muted text-sm mt-2\">Social interactions are operations on a graph. Six semantic dimensions — causality, content, temporality, visibility, direction, authorship — extend graph theory into the social domain, producing 15 irreducible operations: Emit, Respond, Derive, Extend, Retract, Annotate, Acknowledge, Propagate, Endorse, Subscribe, Channel, Delegate, Consent, Sever, and Merge. Every domain grammar is a composition of these base operations. Three modifiers (Transient, Nascent, Conditional) and eight named functions (Recommend, Challenge, Curate, Collaborate, Forgive, Invite, Memorial, Transfer) complete the vocabulary.</p></div></div></a> <a href=\"/reference/grammars\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">1-13</span><div><h3 class=\"text-lg font-medium text-warm\">Layer Grammars</h3><p class=\"text-sm text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d domain-specific grammars", len(grammars)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 66, Col: 100}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 66, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</p><p class=\"text-gray-600 text-sm mt-2\">Each layer above Foundation has its own grammar — a domain-specific composition of the graph grammar's 15 base operations, with additional operations, modifiers, and named functions tuned to that domain. Work grammar adds Intend, Decompose, and Complete for task management. Market grammar adds Offer, Bid, and Escrow for exchange. Social grammar adds Norm, Moderate, and Elect for governance. The same pattern continues through Justice, Build, Knowledge, Alignment, Identity, Bond, Belonging, Meaning, Evolution, and Being — each grammar extending the base vocabulary with the concepts its layer needs.</p></div></div></a></div></section><!-- Section 2: Ontology --><section><h2 class=\"text-xl font-semibold mb-1\">Ontology</h2><p class=\"text-gray-500 text-sm mb-4\">What exists. 201 primitives across 14 layers. Each layer emerges from gaps in the one below — something the lower layer can represent but cannot reason about. The framework is circular: Layer 13 is presupposed by Layer 0.</p><div class=\"space-y-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</p><p class=\"text-warm-muted text-sm mt-2\">Each layer above Foundation has its own grammar — a domain-specific composition of the graph grammar's 15 base operations, with additional operations, modifiers, and named functions tuned to that domain. Work grammar adds Intend, Decompose, and Complete for task management. Market grammar adds Offer, Bid, and Escrow for exchange. Social grammar adds Norm, Moderate, and Elect for governance. The same pattern continues through Justice, Build, Knowledge, Alignment, Identity, Bond, Belonging, Meaning, Evolution, and Being — each grammar extending the base vocabulary with the concepts its layer needs.</p></div></div></a></div></section><!-- Section 2: Ontology --><section><h2 class=\"text-xl font-medium mb-1 text-warm\">Ontology</h2><p class=\"text-warm-muted text-sm mb-4\">What exists. 201 primitives across 14 layers. Each layer emerges from gaps in the one below — something the lower layer can represent but cannot reason about. The framework is circular: Layer 13 is presupposed by Layer 0.</p><div class=\"space-y-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -75,27 +75,27 @@ func ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", layer.Number))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 94, Col: 87}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 94, Col: 89}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</span><div><h3 class=\"text-lg font-semibold\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</span><div><h3 class=\"text-lg font-medium text-warm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(layer.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 96, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 96, Col: 63}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -106,14 +106,14 @@ func ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) 
 					return templ_7745c5c3_Err
 				}
 				if layer.Transition != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-sm text-gray-500\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-sm text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(layer.Transition)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 98, Col: 61}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 98, Col: 63}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 					if templ_7745c5c3_Err != nil {
@@ -124,27 +124,27 @@ func ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) 
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-gray-600 text-sm mt-2\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<p class=\"text-warm-muted text-sm mt-2\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(layerDescription(layer.Number))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 100, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 100, Col: 81}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p><p class=\"text-xs text-gray-400 mt-1\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p><p class=\"text-xs text-warm-faint mt-1\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d primitives", len(layer.Primitives)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 101, Col: 100}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 101, Col: 102}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -155,20 +155,20 @@ func ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) 
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></section><!-- Section 3: Agent --><section><h2 class=\"text-xl font-semibold mb-1\">Agent</h2><p class=\"text-gray-500 text-sm mb-4\">What agents are and can do. The interface between ontology and grammar.</p><div class=\"space-y-3\"><a href=\"/reference/agents\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">A</span><div><h3 class=\"text-lg font-semibold\">Agent Primitives</h3><p class=\"text-sm text-gray-500\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div></section><!-- Section 3: Agent --><section><h2 class=\"text-xl font-medium mb-1 text-warm\">Agent</h2><p class=\"text-warm-muted text-sm mb-4\">What agents are and can do. The interface between ontology and grammar.</p><div class=\"space-y-3\"><a href=\"/reference/agents\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">A</span><div><h3 class=\"text-lg font-medium text-warm\">Agent Primitives</h3><p class=\"text-sm text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d primitives across 4 categories", len(agentPrims)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 119, Col: 108}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 119, Col: 110}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</p><p class=\"text-gray-600 text-sm mt-2\">Agents are participants in the graph — humans and AI alike. 28 primitives define what an agent is and can do, derived by dimensional analysis across direction, timing, mutability, agency, and awareness. Structural primitives (Identity, Soul, Model, Memory, Authority, Trust, Budget) define what an agent IS. Operational primitives (Observe, Evaluate, Decide, Act, Delegate, Learn, Introspect) define what an agent DOES. Relational primitives (Consent, Channel, Composition) define how agents CONNECT. Modal primitives (Attenuation) define how agents CONSTRAIN themselves.</p></div></div></a></div></section></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</p><p class=\"text-warm-muted text-sm mt-2\">Agents are participants in the graph — humans and AI alike. 28 primitives define what an agent is and can do, derived by dimensional analysis across direction, timing, mutability, agency, and awareness. Structural primitives (Identity, Soul, Model, Memory, Authority, Trust, Budget) define what an agent IS. Operational primitives (Observe, Evaluate, Decide, Act, Delegate, Learn, Introspect) define what an agent DOES. Relational primitives (Consent, Channel, Composition) define how agents CONNECT. Modal primitives (Attenuation) define how agents CONSTRAIN themselves.</p></div></div></a></div></section></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -216,7 +216,7 @@ func BaseGrammarPage(body string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-gray-400 font-mono\">Base Grammar</span><h1 class=\"text-3xl font-bold mt-1\">Graph Grammar</h1><p class=\"text-gray-500 mt-1\">The universal vocabulary — 15 operations on the event graph</p></header><div class=\"prose max-w-none\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-warm-faint font-mono\">Base Grammar</span><h1 class=\"text-3xl font-light mt-1 text-warm\">Graph Grammar</h1><p class=\"text-warm-muted mt-1\">The universal vocabulary — 15 operations on the event graph</p></header><div class=\"prose max-w-none\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -224,7 +224,7 @@ func BaseGrammarPage(body string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div><nav class=\"border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\"><a href=\"/reference/cognitive-grammar\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">Cognitive Grammar</span></a></div><div class=\"flex-1 text-right\"><a href=\"/reference/grammars\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">Layer Grammars</span></a></div></nav></article>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div><nav class=\"border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\"><a href=\"/reference/cognitive-grammar\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">Cognitive Grammar</span></a></div><div class=\"flex-1 text-right\"><a href=\"/reference/grammars\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">Layer Grammars</span></a></div></nav></article>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -272,7 +272,7 @@ func CognitiveGrammarPage(body string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-gray-400 font-mono\">Meta Grammar</span><h1 class=\"text-3xl font-bold mt-1\">Cognitive Grammar</h1><p class=\"text-gray-500 mt-1\">The grammar that produces grammars — 3 base operations, 9 compositions</p></header><div class=\"prose max-w-none\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-warm-faint font-mono\">Meta Grammar</span><h1 class=\"text-3xl font-light mt-1 text-warm\">Cognitive Grammar</h1><p class=\"text-warm-muted mt-1\">The grammar that produces grammars — 3 base operations, 9 compositions</p></header><div class=\"prose max-w-none\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -280,7 +280,7 @@ func CognitiveGrammarPage(body string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div><nav class=\"border-t border-gray-200 pt-6 mt-8\"><div class=\"text-right\"><a href=\"/reference/grammar\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">Graph Grammar</span></a></div></nav></article>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div><nav class=\"border-t border-edge pt-6 mt-8\"><div class=\"text-right\"><a href=\"/reference/grammar\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">Graph Grammar</span></a></div></nav></article>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -328,27 +328,27 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-gray-400 font-mono\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><span class=\"text-sm text-warm-faint font-mono\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("Layer %d", layer.Number))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 209, Col: 89}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 209, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</span><h1 class=\"text-3xl font-bold mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</span><h1 class=\"text-3xl font-light mt-1 text-warm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(layer.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 210, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 210, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -359,14 +359,14 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if layer.Transition != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<p class=\"text-gray-500 mt-1\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<p class=\"text-warm-muted mt-1\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(layer.Transition)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 212, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 212, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -382,14 +382,14 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if layer.Gap != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<p class=\"text-gray-600\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<p class=\"text-warm-secondary\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(layer.Gap)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 216, Col: 40}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 216, Col: 46}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
@@ -415,14 +415,14 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 				}
 			}
 			if len(layer.Primitives) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div><h2 class=\"text-xl font-semibold mb-3\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div><h2 class=\"text-xl font-medium mb-3 text-warm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("Primitives (%d)", len(layer.Primitives)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 225, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 225, Col: 107}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -438,66 +438,66 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					for _, prim := range layer.Primitives {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"p-4 bg-white rounded-lg border border-gray-200\" id=\"")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"p-4 bg-surface rounded-lg border border-edge\" id=\"")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var22 string
 						templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Slug)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 229, Col: 82}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 229, Col: 80}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><div class=\"flex items-baseline gap-2 mb-1\"><h3 class=\"font-semibold text-lg\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "\"><div class=\"flex items-baseline gap-2 mb-1\"><h3 class=\"font-medium text-lg text-warm\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var23 string
 						templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 231, Col: 55}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 231, Col: 63}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</h3><span class=\"text-xs text-gray-400\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "</h3><span class=\"text-xs text-warm-faint\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var24 string
 						templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Group)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 232, Col: 58}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 232, Col: 60}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span></div><p class=\"text-gray-700\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span></div><p class=\"text-warm-secondary\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var25 string
 						templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Description)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 234, Col: 52}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 234, Col: 58}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</p><p class=\"text-gray-500 text-sm mt-2\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</p><p class=\"text-warm-muted text-sm mt-2\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var26 string
 						templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Derivation)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 235, Col: 64}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 235, Col: 66}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 						if templ_7745c5c3_Err != nil {
@@ -531,27 +531,27 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\" class=\"block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm\"><span class=\"font-medium\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\" class=\"block px-3 py-2 bg-surface rounded border border-edge hover:border-brand hover:shadow-sm hover:shadow-brand/5 transition-all text-sm\"><span class=\"font-medium text-warm\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var28 string
 						templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 246, Col: 46}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 246, Col: 56}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span> <span class=\"block text-xs text-gray-400 mt-0.5\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</span> <span class=\"block text-xs text-warm-faint mt-0.5\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var29 string
 						templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Group)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 247, Col: 70}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 247, Col: 72}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 						if templ_7745c5c3_Err != nil {
@@ -572,7 +572,7 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<nav class=\"border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<nav class=\"border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -591,7 +591,7 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -629,7 +629,7 @@ func LayerPage(layer Layer, layers []Layer) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -696,7 +696,7 @@ func AgentPrimitivesPage(prims []Primitive) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><h1 class=\"text-3xl font-bold\">Agent Primitives</h1><p class=\"text-gray-500 mt-1\">28 primitives defining what an agent is and can do</p></header><div class=\"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<article class=\"space-y-6\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a></div><header><h1 class=\"text-3xl font-light text-warm\">Agent Primitives</h1><p class=\"text-warm-muted mt-1\">28 primitives defining what an agent is and can do</p></header><div class=\"grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -714,27 +714,27 @@ func AgentPrimitivesPage(prims []Primitive) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "\" class=\"block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm\"><span class=\"font-medium\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "\" class=\"block px-3 py-2 bg-surface rounded border border-edge hover:border-brand hover:shadow-sm hover:shadow-brand/5 transition-all text-sm\"><span class=\"font-medium text-warm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var37 string
 				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 298, Col: 43}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 298, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "</span> <span class=\"block text-xs text-gray-400 mt-0.5\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "</span> <span class=\"block text-xs text-warm-faint mt-0.5\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var38 string
 				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Group)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 299, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 299, Col: 69}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 				if templ_7745c5c3_Err != nil {
@@ -839,14 +839,14 @@ func PrimitivePage(prim Primitive) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if prim.Layer >= 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<span class=\"text-sm text-gray-400 font-mono\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<span class=\"text-sm text-warm-faint font-mono\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var43 string
 				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("Layer %d: %s", prim.Layer, prim.LayerName))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 321, Col: 108}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 321, Col: 110}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 				if templ_7745c5c3_Err != nil {
@@ -857,19 +857,19 @@ func PrimitivePage(prim Primitive) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<span class=\"text-sm text-gray-400 font-mono\">Agent Primitive</span>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<span class=\"text-sm text-warm-faint font-mono\">Agent Primitive</span>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "<h1 class=\"text-3xl font-bold mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "<h1 class=\"text-3xl font-light mt-1 text-warm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 325, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 325, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -880,14 +880,14 @@ func PrimitivePage(prim Primitive) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if prim.Group != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<span class=\"text-sm text-gray-500\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<span class=\"text-sm text-warm-muted\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Group)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 327, Col: 53}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 327, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 				if templ_7745c5c3_Err != nil {
@@ -903,14 +903,14 @@ func PrimitivePage(prim Primitive) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if prim.Description != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "<p class=\"text-gray-700 text-lg\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "<p class=\"text-warm-secondary text-lg\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var46 string
 				templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 331, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 331, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 				if templ_7745c5c3_Err != nil {
@@ -922,14 +922,14 @@ func PrimitivePage(prim Primitive) templ.Component {
 				}
 			}
 			if prim.Derivation != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "<div class=\"bg-gray-50 rounded-lg p-4 border border-gray-200\"><h2 class=\"text-sm font-medium text-gray-500 mb-1\">Derivation</h2><p class=\"text-gray-600\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "<div class=\"bg-surface rounded-lg p-4 border border-edge\"><h2 class=\"text-sm font-medium text-warm-muted mb-1\">Derivation</h2><p class=\"text-warm-secondary\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var47 string
 				templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Derivation)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 336, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 336, Col: 53}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 				if templ_7745c5c3_Err != nil {
@@ -941,32 +941,32 @@ func PrimitivePage(prim Primitive) templ.Component {
 				}
 			}
 			if prim.SubscribesTo != "" || prim.Emits != "" || prim.DependsOn != "" || prim.State != "" || prim.Intelligent != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "<div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-gray-200 rounded\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "<div class=\"overflow-x-auto\"><table class=\"w-full text-sm border border-edge rounded\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if prim.SubscribesTo != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "<tr class=\"border-b border-gray-100\"><td class=\"px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "<tr class=\"border-b border-edge\"><td class=\"px-4 py-2 font-medium text-warm-muted bg-surface w-36\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var48 string
 					templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(specLabel(prim, "subscribes"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 344, Col: 103}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 344, Col: 105}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</td><td class=\"px-4 py-2 font-mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</td><td class=\"px-4 py-2 font-mono text-xs text-warm-secondary\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var49 string
 					templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(prim.SubscribesTo)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 345, Col: 67}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 345, Col: 87}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 					if templ_7745c5c3_Err != nil {
@@ -978,27 +978,27 @@ func PrimitivePage(prim Primitive) templ.Component {
 					}
 				}
 				if prim.Emits != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<tr class=\"border-b border-gray-100\"><td class=\"px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<tr class=\"border-b border-edge\"><td class=\"px-4 py-2 font-medium text-warm-muted bg-surface w-36\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(specLabel(prim, "emits"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 350, Col: 98}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 350, Col: 100}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "</td><td class=\"px-4 py-2 font-mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "</td><td class=\"px-4 py-2 font-mono text-xs text-warm-secondary\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var51 string
 					templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Emits)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 351, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 351, Col: 80}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 					if templ_7745c5c3_Err != nil {
@@ -1010,27 +1010,27 @@ func PrimitivePage(prim Primitive) templ.Component {
 					}
 				}
 				if prim.DependsOn != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<tr class=\"border-b border-gray-100\"><td class=\"px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<tr class=\"border-b border-edge\"><td class=\"px-4 py-2 font-medium text-warm-muted bg-surface w-36\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var52 string
 					templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(specLabel(prim, "depends"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 356, Col: 100}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 356, Col: 102}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</td><td class=\"px-4 py-2 font-mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</td><td class=\"px-4 py-2 font-mono text-xs text-warm-secondary\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var53 string
 					templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(prim.DependsOn)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 357, Col: 64}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 357, Col: 84}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 					if templ_7745c5c3_Err != nil {
@@ -1042,27 +1042,27 @@ func PrimitivePage(prim Primitive) templ.Component {
 					}
 				}
 				if prim.State != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<tr class=\"border-b border-gray-100\"><td class=\"px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<tr class=\"border-b border-edge\"><td class=\"px-4 py-2 font-medium text-warm-muted bg-surface w-36\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var54 string
 					templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(specLabel(prim, "state"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 362, Col: 98}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 362, Col: 100}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "</td><td class=\"px-4 py-2 font-mono text-xs\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "</td><td class=\"px-4 py-2 font-mono text-xs text-warm-secondary\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var55 string
 					templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(prim.State)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 363, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 363, Col: 80}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 					if templ_7745c5c3_Err != nil {
@@ -1074,27 +1074,27 @@ func PrimitivePage(prim Primitive) templ.Component {
 					}
 				}
 				if prim.Intelligent != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "<tr><td class=\"px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "<tr><td class=\"px-4 py-2 font-medium text-warm-muted bg-surface w-36\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var56 string
 					templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(specLabel(prim, "intelligent"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 368, Col: 104}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 368, Col: 106}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 92, "</td><td class=\"px-4 py-2\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 92, "</td><td class=\"px-4 py-2 text-warm-secondary\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var57 string
 					templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(prim.Intelligent)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 369, Col: 48}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 369, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 					if templ_7745c5c3_Err != nil {
@@ -1111,7 +1111,7 @@ func PrimitivePage(prim Primitive) templ.Component {
 				}
 			}
 			if prim.Notes != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "<div class=\"prose prose-sm max-w-none text-gray-700\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "<div class=\"prose prose-sm max-w-none\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1237,7 +1237,7 @@ func GrammarIndex(grammars []RefPage) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "<div class=\"space-y-8\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a><h1 class=\"text-3xl font-bold mt-2\">Layer Grammars</h1><p class=\"text-gray-600 mt-2\">Each layer has its own grammar — domain-specific compositions of the <a href=\"/reference/grammar\" class=\"text-brand hover:underline\">graph grammar</a>'s 15 base operations. Operations, modifiers, and named functions.</p></div><div class=\"space-y-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "<div class=\"space-y-8\"><div><a href=\"/reference\" class=\"text-sm text-brand hover:underline\">&larr; Reference</a><h1 class=\"text-3xl font-light mt-2 text-warm\">Layer Grammars</h1><p class=\"text-warm-muted mt-2\">Each layer has its own grammar — domain-specific compositions of the <a href=\"/reference/grammar\" class=\"text-brand hover:underline\">graph grammar</a>'s 15 base operations. Operations, modifiers, and named functions.</p></div><div class=\"space-y-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1255,40 +1255,40 @@ func GrammarIndex(grammars []RefPage) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 100, "\" class=\"block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-gray-400\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 100, "\" class=\"block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all\"><div class=\"flex items-baseline gap-3\"><span class=\"text-sm font-mono text-warm-faint\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var61 string
 				templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", g.Order))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 467, Col: 81}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 467, Col: 83}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 101, "</span><div><h3 class=\"text-lg font-semibold\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 101, "</span><div><h3 class=\"text-lg font-medium text-warm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var62 string
 				templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(g.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 469, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 469, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 102, "</h3><p class=\"text-gray-600 text-sm mt-1\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 102, "</h3><p class=\"text-warm-muted text-sm mt-1\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var63 string
 				templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(g.Summary)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 470, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 470, Col: 59}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 				if templ_7745c5c3_Err != nil {
@@ -1346,27 +1346,27 @@ func GrammarPage(page RefPage, grammars []RefPage) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 105, "<article class=\"space-y-6\"><div><a href=\"/reference/grammars\" class=\"text-sm text-brand hover:underline\">&larr; All grammars</a></div><header><span class=\"text-sm text-gray-400 font-mono\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 105, "<article class=\"space-y-6\"><div><a href=\"/reference/grammars\" class=\"text-sm text-brand hover:underline\">&larr; All grammars</a></div><header><span class=\"text-sm text-warm-faint font-mono\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("Layer %d", page.Order))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 487, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 487, Col: 89}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "</span><h1 class=\"text-3xl font-bold mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "</span><h1 class=\"text-3xl font-light mt-1 text-warm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var67 string
 			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(page.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 488, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/reference.templ`, Line: 488, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 			if templ_7745c5c3_Err != nil {
@@ -1380,7 +1380,7 @@ func GrammarPage(page RefPage, grammars []RefPage) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 108, "</div><nav class=\"border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 108, "</div><nav class=\"border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4\"><div class=\"flex-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1399,7 +1399,7 @@ func GrammarPage(page RefPage, grammars []RefPage) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">&larr; Previous</span> <span class=\"block text-brand font-medium group-hover:underline\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -1437,7 +1437,7 @@ func GrammarPage(page RefPage, grammars []RefPage) templ.Component {
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "\" class=\"group\"><span class=\"text-sm text-gray-400 group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "\" class=\"group\"><span class=\"text-sm text-warm-faint group-hover:text-brand\">Next &rarr;</span> <span class=\"block text-brand font-medium group-hover:underline\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

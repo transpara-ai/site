@@ -8,8 +8,8 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 	@Layout("Reference", "201 primitives across 14 layers, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
 		<div class="space-y-12">
 			<div>
-				<h1 class="text-3xl font-bold">Reference</h1>
-				<p class="text-gray-600 mt-2">
+				<h1 class="text-3xl font-light text-warm">Reference</h1>
+				<p class="text-warm-muted mt-2">
 					Three base operations generate every grammar. Fifteen graph operations
 					compose into domain-specific vocabularies. 201 primitives across 14 layers
 					define what exists. 28 agent primitives define who acts.
@@ -18,16 +18,16 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 
 			<!-- Section 1: Grammar -->
 			<section>
-				<h2 class="text-xl font-semibold mb-1">Grammar</h2>
-				<p class="text-gray-500 text-sm mb-4">The operational heart. What you can do, at every level.</p>
+				<h2 class="text-xl font-medium mb-1 text-warm">Grammar</h2>
+				<p class="text-warm-muted text-sm mb-4">The operational heart. What you can do, at every level.</p>
 				<div class="space-y-3">
-					<a href="/reference/cognitive-grammar" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<a href="/reference/cognitive-grammar" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 						<div class="flex items-baseline gap-3">
-							<span class="text-sm font-mono text-gray-400">C</span>
+							<span class="text-sm font-mono text-warm-faint">C</span>
 							<div>
-								<h3 class="text-lg font-semibold">Cognitive Grammar</h3>
-								<p class="text-sm text-gray-500">The grammar that produces grammars — 3 base operations, 9 compositions</p>
-								<p class="text-gray-600 text-sm mt-2">
+								<h3 class="text-lg font-medium text-warm">Cognitive Grammar</h3>
+								<p class="text-sm text-warm-muted">The grammar that produces grammars — 3 base operations, 9 compositions</p>
+								<p class="text-warm-muted text-sm mt-2">
 									A mind relates to knowledge in exactly three ways: Derive (produce new knowledge),
 									Traverse (navigate existing knowledge), and Need (detect absent knowledge). Self-application —
 									applying each operation to each operation — produces nine compositions: Formalize, Map,
@@ -40,13 +40,13 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 							</div>
 						</div>
 					</a>
-					<a href="/reference/grammar" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<a href="/reference/grammar" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 						<div class="flex items-baseline gap-3">
-							<span class="text-sm font-mono text-gray-400">G</span>
+							<span class="text-sm font-mono text-warm-faint">G</span>
 							<div>
-								<h3 class="text-lg font-semibold">Graph Grammar</h3>
-								<p class="text-sm text-gray-500">The universal vocabulary — 15 operations, 3 modifiers, 8 named functions</p>
-								<p class="text-gray-600 text-sm mt-2">
+								<h3 class="text-lg font-medium text-warm">Graph Grammar</h3>
+								<p class="text-sm text-warm-muted">The universal vocabulary — 15 operations, 3 modifiers, 8 named functions</p>
+								<p class="text-warm-muted text-sm mt-2">
 									Social interactions are operations on a graph. Six semantic dimensions — causality,
 									content, temporality, visibility, direction, authorship — extend graph theory into the
 									social domain, producing 15 irreducible operations: Emit, Respond, Derive, Extend,
@@ -58,13 +58,13 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 							</div>
 						</div>
 					</a>
-					<a href="/reference/grammars" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<a href="/reference/grammars" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 						<div class="flex items-baseline gap-3">
-							<span class="text-sm font-mono text-gray-400">1-13</span>
+							<span class="text-sm font-mono text-warm-faint">1-13</span>
 							<div>
-								<h3 class="text-lg font-semibold">Layer Grammars</h3>
-								<p class="text-sm text-gray-500">{ fmt.Sprintf("%d domain-specific grammars", len(grammars)) }</p>
-								<p class="text-gray-600 text-sm mt-2">
+								<h3 class="text-lg font-medium text-warm">Layer Grammars</h3>
+								<p class="text-sm text-warm-muted">{ fmt.Sprintf("%d domain-specific grammars", len(grammars)) }</p>
+								<p class="text-warm-muted text-sm mt-2">
 									Each layer above Foundation has its own grammar — a domain-specific composition of the
 									graph grammar's 15 base operations, with additional operations, modifiers, and named
 									functions tuned to that domain. Work grammar adds Intend, Decompose, and Complete for
@@ -81,24 +81,24 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 
 			<!-- Section 2: Ontology -->
 			<section>
-				<h2 class="text-xl font-semibold mb-1">Ontology</h2>
-				<p class="text-gray-500 text-sm mb-4">
+				<h2 class="text-xl font-medium mb-1 text-warm">Ontology</h2>
+				<p class="text-warm-muted text-sm mb-4">
 					What exists. 201 primitives across 14 layers. Each layer emerges from gaps in the one below —
 					something the lower layer can represent but cannot reason about. The framework is circular:
 					Layer 13 is presupposed by Layer 0.
 				</p>
 				<div class="space-y-3">
 					for _, layer := range layers {
-						<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", layer.Number)) } class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+						<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", layer.Number)) } class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 							<div class="flex items-baseline gap-3">
-								<span class="text-sm font-mono text-gray-400">{ fmt.Sprintf("%d", layer.Number) }</span>
+								<span class="text-sm font-mono text-warm-faint">{ fmt.Sprintf("%d", layer.Number) }</span>
 								<div>
-									<h3 class="text-lg font-semibold">{ layer.Name }</h3>
+									<h3 class="text-lg font-medium text-warm">{ layer.Name }</h3>
 									if layer.Transition != "" {
-										<p class="text-sm text-gray-500">{ layer.Transition }</p>
+										<p class="text-sm text-warm-muted">{ layer.Transition }</p>
 									}
-									<p class="text-gray-600 text-sm mt-2">{ layerDescription(layer.Number) }</p>
-									<p class="text-xs text-gray-400 mt-1">{ fmt.Sprintf("%d primitives", len(layer.Primitives)) }</p>
+									<p class="text-warm-muted text-sm mt-2">{ layerDescription(layer.Number) }</p>
+									<p class="text-xs text-warm-faint mt-1">{ fmt.Sprintf("%d primitives", len(layer.Primitives)) }</p>
 								</div>
 							</div>
 						</a>
@@ -108,16 +108,16 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 
 			<!-- Section 3: Agent -->
 			<section>
-				<h2 class="text-xl font-semibold mb-1">Agent</h2>
-				<p class="text-gray-500 text-sm mb-4">What agents are and can do. The interface between ontology and grammar.</p>
+				<h2 class="text-xl font-medium mb-1 text-warm">Agent</h2>
+				<p class="text-warm-muted text-sm mb-4">What agents are and can do. The interface between ontology and grammar.</p>
 				<div class="space-y-3">
-					<a href="/reference/agents" class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<a href="/reference/agents" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 						<div class="flex items-baseline gap-3">
-							<span class="text-sm font-mono text-gray-400">A</span>
+							<span class="text-sm font-mono text-warm-faint">A</span>
 							<div>
-								<h3 class="text-lg font-semibold">Agent Primitives</h3>
-								<p class="text-sm text-gray-500">{ fmt.Sprintf("%d primitives across 4 categories", len(agentPrims)) }</p>
-								<p class="text-gray-600 text-sm mt-2">
+								<h3 class="text-lg font-medium text-warm">Agent Primitives</h3>
+								<p class="text-sm text-warm-muted">{ fmt.Sprintf("%d primitives across 4 categories", len(agentPrims)) }</p>
+								<p class="text-warm-muted text-sm mt-2">
 									Agents are participants in the graph — humans and AI alike. 28 primitives define what
 									an agent is and can do, derived by dimensional analysis across direction, timing,
 									mutability, agency, and awareness. Structural primitives (Identity, Soul, Model, Memory,
@@ -144,23 +144,23 @@ templ BaseGrammarPage(body string) {
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
 			</div>
 			<header>
-				<span class="text-sm text-gray-400 font-mono">Base Grammar</span>
-				<h1 class="text-3xl font-bold mt-1">Graph Grammar</h1>
-				<p class="text-gray-500 mt-1">The universal vocabulary — 15 operations on the event graph</p>
+				<span class="text-sm text-warm-faint font-mono">Base Grammar</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">Graph Grammar</h1>
+				<p class="text-warm-muted mt-1">The universal vocabulary — 15 operations on the event graph</p>
 			</header>
 			<div class="prose max-w-none">
 				@templ.Raw(body)
 			</div>
-			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
 				<div class="flex-1">
 					<a href="/reference/cognitive-grammar" class="group">
-						<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+						<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
 						<span class="block text-brand font-medium group-hover:underline">Cognitive Grammar</span>
 					</a>
 				</div>
 				<div class="flex-1 text-right">
 					<a href="/reference/grammars" class="group">
-						<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+						<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
 						<span class="block text-brand font-medium group-hover:underline">Layer Grammars</span>
 					</a>
 				</div>
@@ -178,17 +178,17 @@ templ CognitiveGrammarPage(body string) {
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
 			</div>
 			<header>
-				<span class="text-sm text-gray-400 font-mono">Meta Grammar</span>
-				<h1 class="text-3xl font-bold mt-1">Cognitive Grammar</h1>
-				<p class="text-gray-500 mt-1">The grammar that produces grammars — 3 base operations, 9 compositions</p>
+				<span class="text-sm text-warm-faint font-mono">Meta Grammar</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">Cognitive Grammar</h1>
+				<p class="text-warm-muted mt-1">The grammar that produces grammars — 3 base operations, 9 compositions</p>
 			</header>
 			<div class="prose max-w-none">
 				@templ.Raw(body)
 			</div>
-			<nav class="border-t border-gray-200 pt-6 mt-8">
+			<nav class="border-t border-edge pt-6 mt-8">
 				<div class="text-right">
 					<a href="/reference/grammar" class="group">
-						<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+						<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
 						<span class="block text-brand font-medium group-hover:underline">Graph Grammar</span>
 					</a>
 				</div>
@@ -206,14 +206,14 @@ templ LayerPage(layer Layer, layers []Layer) {
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
 			</div>
 			<header>
-				<span class="text-sm text-gray-400 font-mono">{ fmt.Sprintf("Layer %d", layer.Number) }</span>
-				<h1 class="text-3xl font-bold mt-1">{ layer.Name }</h1>
+				<span class="text-sm text-warm-faint font-mono">{ fmt.Sprintf("Layer %d", layer.Number) }</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">{ layer.Name }</h1>
 				if layer.Transition != "" {
-					<p class="text-gray-500 mt-1">{ layer.Transition }</p>
+					<p class="text-warm-muted mt-1">{ layer.Transition }</p>
 				}
 			</header>
 			if layer.Gap != "" {
-				<p class="text-gray-600">{ layer.Gap }</p>
+				<p class="text-warm-secondary">{ layer.Gap }</p>
 			}
 			if layer.Description != "" {
 				<div class="prose max-w-none">
@@ -222,17 +222,17 @@ templ LayerPage(layer Layer, layers []Layer) {
 			}
 			if len(layer.Primitives) > 0 {
 				<div>
-					<h2 class="text-xl font-semibold mb-3">{ fmt.Sprintf("Primitives (%d)", len(layer.Primitives)) }</h2>
+					<h2 class="text-xl font-medium mb-3 text-warm">{ fmt.Sprintf("Primitives (%d)", len(layer.Primitives)) }</h2>
 					if layer.Primitives[0].Derivation != "" {
 						<div class="space-y-4">
 							for _, prim := range layer.Primitives {
-								<div class="p-4 bg-white rounded-lg border border-gray-200" id={ prim.Slug }>
+								<div class="p-4 bg-surface rounded-lg border border-edge" id={ prim.Slug }>
 									<div class="flex items-baseline gap-2 mb-1">
-										<h3 class="font-semibold text-lg">{ prim.Name }</h3>
-										<span class="text-xs text-gray-400">{ prim.Group }</span>
+										<h3 class="font-medium text-lg text-warm">{ prim.Name }</h3>
+										<span class="text-xs text-warm-faint">{ prim.Group }</span>
 									</div>
-									<p class="text-gray-700">{ prim.Description }</p>
-									<p class="text-gray-500 text-sm mt-2">{ prim.Derivation }</p>
+									<p class="text-warm-secondary">{ prim.Description }</p>
+									<p class="text-warm-muted text-sm mt-2">{ prim.Derivation }</p>
 								</div>
 							}
 						</div>
@@ -241,22 +241,22 @@ templ LayerPage(layer Layer, layers []Layer) {
 							for _, prim := range layer.Primitives {
 								<a
 									href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
-									class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
+									class="block px-3 py-2 bg-surface rounded border border-edge hover:border-brand hover:shadow-sm hover:shadow-brand/5 transition-all text-sm"
 								>
-									<span class="font-medium">{ prim.Name }</span>
-									<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
+									<span class="font-medium text-warm">{ prim.Name }</span>
+									<span class="block text-xs text-warm-faint mt-0.5">{ prim.Group }</span>
 								</a>
 							}
 						</div>
 					}
 				</div>
 			}
-			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
 				<div class="flex-1">
 					for _, l := range layers {
 						if l.Number == layer.Number - 1 {
 							<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", l.Number)) } class="group">
-								<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+								<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
 								<span class="block text-brand font-medium group-hover:underline">{ fmt.Sprintf("Layer %d: %s", l.Number, l.Name) }</span>
 							</a>
 						}
@@ -266,7 +266,7 @@ templ LayerPage(layer Layer, layers []Layer) {
 					for _, l := range layers {
 						if l.Number == layer.Number + 1 {
 							<a href={ templ.SafeURL(fmt.Sprintf("/reference/layers/%d", l.Number)) } class="group">
-								<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+								<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
 								<span class="block text-brand font-medium group-hover:underline">{ fmt.Sprintf("Layer %d: %s", l.Number, l.Name) }</span>
 							</a>
 						}
@@ -286,17 +286,17 @@ templ AgentPrimitivesPage(prims []Primitive) {
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
 			</div>
 			<header>
-				<h1 class="text-3xl font-bold">Agent Primitives</h1>
-				<p class="text-gray-500 mt-1">28 primitives defining what an agent is and can do</p>
+				<h1 class="text-3xl font-light text-warm">Agent Primitives</h1>
+				<p class="text-warm-muted mt-1">28 primitives defining what an agent is and can do</p>
 			</header>
 			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
 				for _, prim := range prims {
 					<a
 						href={ templ.SafeURL("/reference/primitives/" + prim.Slug) }
-						class="block px-3 py-2 bg-white rounded border border-gray-200 hover:border-brand hover:shadow-sm transition-all text-sm"
+						class="block px-3 py-2 bg-surface rounded border border-edge hover:border-brand hover:shadow-sm hover:shadow-brand/5 transition-all text-sm"
 					>
-						<span class="font-medium">{ prim.Name }</span>
-						<span class="block text-xs text-gray-400 mt-0.5">{ prim.Group }</span>
+						<span class="font-medium text-warm">{ prim.Name }</span>
+						<span class="block text-xs text-warm-faint mt-0.5">{ prim.Group }</span>
 					</a>
 				}
 			</div>
@@ -318,62 +318,62 @@ templ PrimitivePage(prim Primitive) {
 			</div>
 			<header>
 				if prim.Layer >= 0 {
-					<span class="text-sm text-gray-400 font-mono">{ fmt.Sprintf("Layer %d: %s", prim.Layer, prim.LayerName) }</span>
+					<span class="text-sm text-warm-faint font-mono">{ fmt.Sprintf("Layer %d: %s", prim.Layer, prim.LayerName) }</span>
 				} else {
-					<span class="text-sm text-gray-400 font-mono">Agent Primitive</span>
+					<span class="text-sm text-warm-faint font-mono">Agent Primitive</span>
 				}
-				<h1 class="text-3xl font-bold mt-1">{ prim.Name }</h1>
+				<h1 class="text-3xl font-light mt-1 text-warm">{ prim.Name }</h1>
 				if prim.Group != "" {
-					<span class="text-sm text-gray-500">{ prim.Group }</span>
+					<span class="text-sm text-warm-muted">{ prim.Group }</span>
 				}
 			</header>
 			if prim.Description != "" {
-				<p class="text-gray-700 text-lg">{ prim.Description }</p>
+				<p class="text-warm-secondary text-lg">{ prim.Description }</p>
 			}
 			if prim.Derivation != "" {
-				<div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-					<h2 class="text-sm font-medium text-gray-500 mb-1">Derivation</h2>
-					<p class="text-gray-600">{ prim.Derivation }</p>
+				<div class="bg-surface rounded-lg p-4 border border-edge">
+					<h2 class="text-sm font-medium text-warm-muted mb-1">Derivation</h2>
+					<p class="text-warm-secondary">{ prim.Derivation }</p>
 				</div>
 			}
 			if prim.SubscribesTo != "" || prim.Emits != "" || prim.DependsOn != "" || prim.State != "" || prim.Intelligent != "" {
 				<div class="overflow-x-auto">
-					<table class="w-full text-sm border border-gray-200 rounded">
+					<table class="w-full text-sm border border-edge rounded">
 						if prim.SubscribesTo != "" {
-							<tr class="border-b border-gray-100">
-								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "subscribes") }</td>
-								<td class="px-4 py-2 font-mono text-xs">{ prim.SubscribesTo }</td>
+							<tr class="border-b border-edge">
+								<td class="px-4 py-2 font-medium text-warm-muted bg-surface w-36">{ specLabel(prim, "subscribes") }</td>
+								<td class="px-4 py-2 font-mono text-xs text-warm-secondary">{ prim.SubscribesTo }</td>
 							</tr>
 						}
 						if prim.Emits != "" {
-							<tr class="border-b border-gray-100">
-								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "emits") }</td>
-								<td class="px-4 py-2 font-mono text-xs">{ prim.Emits }</td>
+							<tr class="border-b border-edge">
+								<td class="px-4 py-2 font-medium text-warm-muted bg-surface w-36">{ specLabel(prim, "emits") }</td>
+								<td class="px-4 py-2 font-mono text-xs text-warm-secondary">{ prim.Emits }</td>
 							</tr>
 						}
 						if prim.DependsOn != "" {
-							<tr class="border-b border-gray-100">
-								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "depends") }</td>
-								<td class="px-4 py-2 font-mono text-xs">{ prim.DependsOn }</td>
+							<tr class="border-b border-edge">
+								<td class="px-4 py-2 font-medium text-warm-muted bg-surface w-36">{ specLabel(prim, "depends") }</td>
+								<td class="px-4 py-2 font-mono text-xs text-warm-secondary">{ prim.DependsOn }</td>
 							</tr>
 						}
 						if prim.State != "" {
-							<tr class="border-b border-gray-100">
-								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "state") }</td>
-								<td class="px-4 py-2 font-mono text-xs">{ prim.State }</td>
+							<tr class="border-b border-edge">
+								<td class="px-4 py-2 font-medium text-warm-muted bg-surface w-36">{ specLabel(prim, "state") }</td>
+								<td class="px-4 py-2 font-mono text-xs text-warm-secondary">{ prim.State }</td>
 							</tr>
 						}
 						if prim.Intelligent != "" {
 							<tr>
-								<td class="px-4 py-2 font-medium text-gray-600 bg-gray-50 w-36">{ specLabel(prim, "intelligent") }</td>
-								<td class="px-4 py-2">{ prim.Intelligent }</td>
+								<td class="px-4 py-2 font-medium text-warm-muted bg-surface w-36">{ specLabel(prim, "intelligent") }</td>
+								<td class="px-4 py-2 text-warm-secondary">{ prim.Intelligent }</td>
 							</tr>
 						}
 					</table>
 				</div>
 			}
 			if prim.Notes != "" {
-				<div class="prose prose-sm max-w-none text-gray-700">
+				<div class="prose prose-sm max-w-none">
 					@templ.Raw(prim.Notes)
 				</div>
 			}
@@ -453,8 +453,8 @@ templ GrammarIndex(grammars []RefPage) {
 		<div class="space-y-8">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
-				<h1 class="text-3xl font-bold mt-2">Layer Grammars</h1>
-				<p class="text-gray-600 mt-2">
+				<h1 class="text-3xl font-light mt-2 text-warm">Layer Grammars</h1>
+				<p class="text-warm-muted mt-2">
 					Each layer has its own grammar — domain-specific compositions of the
 					<a href="/reference/grammar" class="text-brand hover:underline">graph grammar</a>'s
 					15 base operations. Operations, modifiers, and named functions.
@@ -462,12 +462,12 @@ templ GrammarIndex(grammars []RefPage) {
 			</div>
 			<div class="space-y-3">
 				for _, g := range grammars {
-					<a href={ templ.SafeURL("/reference/grammars/" + g.Slug) } class="block p-5 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+					<a href={ templ.SafeURL("/reference/grammars/" + g.Slug) } class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 						<div class="flex items-baseline gap-3">
-							<span class="text-sm font-mono text-gray-400">{ fmt.Sprintf("%d", g.Order) }</span>
+							<span class="text-sm font-mono text-warm-faint">{ fmt.Sprintf("%d", g.Order) }</span>
 							<div>
-								<h3 class="text-lg font-semibold">{ g.Title }</h3>
-								<p class="text-gray-600 text-sm mt-1">{ g.Summary }</p>
+								<h3 class="text-lg font-medium text-warm">{ g.Title }</h3>
+								<p class="text-warm-muted text-sm mt-1">{ g.Summary }</p>
 							</div>
 						</div>
 					</a>
@@ -484,18 +484,18 @@ templ GrammarPage(page RefPage, grammars []RefPage) {
 				<a href="/reference/grammars" class="text-sm text-brand hover:underline">&larr; All grammars</a>
 			</div>
 			<header>
-				<span class="text-sm text-gray-400 font-mono">{ fmt.Sprintf("Layer %d", page.Order) }</span>
-				<h1 class="text-3xl font-bold mt-1">{ page.Title }</h1>
+				<span class="text-sm text-warm-faint font-mono">{ fmt.Sprintf("Layer %d", page.Order) }</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">{ page.Title }</h1>
 			</header>
 			<div class="prose max-w-none">
 				@templ.Raw(page.Body)
 			</div>
-			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
 				<div class="flex-1">
 					for _, p := range grammars {
 						if p.Order == page.Order - 1 {
 							<a href={ templ.SafeURL("/reference/grammars/" + p.Slug) } class="group">
-								<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+								<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
 								<span class="block text-brand font-medium group-hover:underline">{ p.Title }</span>
 							</a>
 						}
@@ -505,7 +505,7 @@ templ GrammarPage(page RefPage, grammars []RefPage) {
 					for _, p := range grammars {
 						if p.Order == page.Order + 1 {
 							<a href={ templ.SafeURL("/reference/grammars/" + p.Slug) } class="group">
-								<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+								<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
 								<span class="block text-brand font-medium group-hover:underline">{ p.Title }</span>
 							</a>
 						}

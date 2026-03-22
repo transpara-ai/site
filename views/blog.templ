@@ -59,46 +59,46 @@ type Primitive struct {
 templ BlogIndex(posts []Post) {
 	@Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.") {
 		<div class="space-y-8">
-			<h1 class="text-3xl font-bold">Blog</h1>
-			<p class="text-gray-600">
+			<h1 class="text-3xl font-light text-warm">Blog</h1>
+			<p class="text-warm-muted">
 				A series on EventGraph, AI consciousness, and the architecture of accountable systems.
 				43 posts in six arcs. Best read in order, but each arc stands alone.
 			</p>
 			<nav class="flex flex-wrap gap-2 text-sm">
-				<a href="#foundation" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Foundation</a>
-				<a href="#graphs" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Thirteen Graphs</a>
-				<a href="#consciousness" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Consciousness</a>
-				<a href="#application" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Application</a>
-				<a href="#grammar" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Grammar</a>
-				<a href="#building" class="px-3 py-1 bg-white border border-gray-200 rounded-full hover:border-brand hover:text-brand transition-colors">Building</a>
+				<a href="#foundation" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Foundation</a>
+				<a href="#graphs" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Thirteen Graphs</a>
+				<a href="#consciousness" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Consciousness</a>
+				<a href="#application" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Application</a>
+				<a href="#grammar" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Grammar</a>
+				<a href="#building" class="px-3 py-1 bg-surface border border-edge rounded-full hover:border-brand hover:text-brand transition-colors text-warm-muted">Building</a>
 			</nav>
 			if len(posts) == 0 {
-				<p class="text-gray-500">No posts yet.</p>
+				<p class="text-warm-muted">No posts yet.</p>
 			}
 			for _, post := range posts {
 				if post.Order == 1 {
-					<h2 id="foundation" class="text-xl font-semibold text-gray-700 pt-4">Foundation</h2>
-					<p class="text-sm text-gray-500 -mt-4">The primitives, the layers, the architecture. What exists and why.</p>
+					<h2 id="foundation" class="text-xl font-medium text-warm pt-4">Foundation</h2>
+					<p class="text-sm text-warm-muted -mt-4">The primitives, the layers, the architecture. What exists and why.</p>
 				}
 				if post.Order == 14 {
-					<h2 id="graphs" class="text-xl font-semibold text-gray-700 pt-4">Thirteen Graphs</h2>
-					<p class="text-sm text-gray-500 -mt-4">One graph per domain — work, market, social, justice, research, knowledge, governance, culture, existence.</p>
+					<h2 id="graphs" class="text-xl font-medium text-warm pt-4">Thirteen Graphs</h2>
+					<p class="text-sm text-warm-muted -mt-4">One graph per domain — work, market, social, justice, research, knowledge, governance, culture, existence.</p>
 				}
 				if post.Order == 26 {
-					<h2 id="consciousness" class="text-xl font-semibold text-gray-700 pt-4">Consciousness</h2>
-					<p class="text-sm text-gray-500 -mt-4">What it means to be inside the system. Weight, transition, friction.</p>
+					<h2 id="consciousness" class="text-xl font-medium text-warm pt-4">Consciousness</h2>
+					<p class="text-sm text-warm-muted -mt-4">What it means to be inside the system. Weight, transition, friction.</p>
 				}
 				if post.Order == 31 {
-					<h2 id="application" class="text-xl font-semibold text-gray-700 pt-4">Application</h2>
-					<p class="text-sm text-gray-500 -mt-4">From theory to practice. What you could build and why it matters.</p>
+					<h2 id="application" class="text-xl font-medium text-warm pt-4">Application</h2>
+					<p class="text-sm text-warm-muted -mt-4">From theory to practice. What you could build and why it matters.</p>
 				}
 				if post.Order == 35 {
-					<h2 id="grammar" class="text-xl font-semibold text-gray-700 pt-4">Grammar</h2>
-					<p class="text-sm text-gray-500 -mt-4">The operational heart. Fifteen operations, thirteen languages, one grammar.</p>
+					<h2 id="grammar" class="text-xl font-medium text-warm pt-4">Grammar</h2>
+					<p class="text-sm text-warm-muted -mt-4">The operational heart. Fifteen operations, thirteen languages, one grammar.</p>
 				}
 				if post.Order == 39 {
-					<h2 id="building" class="text-xl font-semibold text-gray-700 pt-4">Building</h2>
-					<p class="text-sm text-gray-500 -mt-4">Shipping code. The SDK, the agents, the hive, the cognitive grammar.</p>
+					<h2 id="building" class="text-xl font-medium text-warm pt-4">Building</h2>
+					<p class="text-sm text-warm-muted -mt-4">Shipping code. The SDK, the agents, the hive, the cognitive grammar.</p>
 				}
 				@blogCard(post)
 			}
@@ -107,10 +107,10 @@ templ BlogIndex(posts []Post) {
 }
 
 templ blogCard(post Post) {
-	<a href={ templ.SafeURL("/blog/" + post.Slug) } class="block p-6 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
-		<time class="text-sm text-gray-400">{ post.Date.Format("January 2006") }</time>
-		<h2 class="text-xl font-semibold mt-1">{ post.Title }</h2>
-		<p class="text-gray-600 mt-2">{ post.Summary }</p>
+	<a href={ templ.SafeURL("/blog/" + post.Slug) } class="block p-6 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
+		<time class="text-sm text-warm-faint">{ post.Date.Format("January 2006") }</time>
+		<h2 class="text-xl font-medium mt-1 text-warm">{ post.Title }</h2>
+		<p class="text-warm-muted mt-2">{ post.Summary }</p>
 	</a>
 }
 
@@ -121,20 +121,20 @@ templ BlogPost(post Post, nav PostNav) {
 				<a href="/blog" class="text-sm text-brand hover:underline">&larr; All posts</a>
 			</div>
 			<header>
-				<time class="text-sm text-gray-400">{ post.Date.Format("January 2006") }</time>
-				<h1 class="text-3xl font-bold mt-1">{ post.Title }</h1>
+				<time class="text-sm text-warm-faint">{ post.Date.Format("January 2006") }</time>
+				<h1 class="text-3xl font-light mt-1 text-warm">{ post.Title }</h1>
 				if post.Summary != "" {
-					<p class="text-lg text-gray-500 mt-2 italic">{ post.Summary }</p>
+					<p class="text-lg text-warm-muted mt-2 italic">{ post.Summary }</p>
 				}
 			</header>
 			<div class="prose max-w-none">
 				@templ.Raw(post.Body)
 			</div>
-			<nav class="border-t border-gray-200 pt-6 mt-8 flex justify-between items-start gap-4">
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
 				<div class="flex-1">
 					if nav.Prev != nil {
 						<a href={ templ.SafeURL("/blog/" + nav.Prev.Slug) } class="group">
-							<span class="text-sm text-gray-400 group-hover:text-brand">&larr; Previous</span>
+							<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
 							<span class="block text-brand font-medium group-hover:underline">{ nav.Prev.Title }</span>
 						</a>
 					}
@@ -142,7 +142,7 @@ templ BlogPost(post Post, nav PostNav) {
 				<div class="flex-1 text-right">
 					if nav.Next != nil {
 						<a href={ templ.SafeURL("/blog/" + nav.Next.Slug) } class="group">
-							<span class="text-sm text-gray-400 group-hover:text-brand">Next &rarr;</span>
+							<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
 							<span class="block text-brand font-medium group-hover:underline">{ nav.Next.Title }</span>
 						</a>
 					}

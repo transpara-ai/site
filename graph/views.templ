@@ -2,6 +2,27 @@ package graph
 
 import "fmt"
 
+// ── Theme block (shared across app layouts) ─────────────────────
+
+templ themeBlock() {
+	<style type="text/tailwindcss">
+		@theme {
+			--color-brand: #e8a0b8;
+			--color-brand-dark: #d4899f;
+			--color-void: #09090b;
+			--color-surface: #111113;
+			--color-elevated: #18181b;
+			--color-edge: #1e1e22;
+			--color-edge-mid: #2a2a2e;
+			--color-edge-strong: #3a3a3f;
+			--color-warm: #f0ede8;
+			--color-warm-secondary: #c8c4bc;
+			--color-warm-muted: #78756e;
+			--color-warm-faint: #4a4844;
+		}
+	</style>
+}
+
 // ── AppLayout ───────────────────────────────────────────────────
 //
 // Two-column layout: sidebar (spaces + lens nav) + main content.
@@ -15,29 +36,24 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 			<title>{ space.Name } — lovyou.ai</title>
 			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-			<style type="text/tailwindcss">
-				@theme {
-					--color-brand: #6366f1;
-					--color-brand-dark: #4f46e5;
-				}
-			</style>
+			@themeBlock()
 		</head>
-		<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
-			<header class="border-b border-gray-200 bg-white flex-shrink-0">
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
+			<header class="border-b border-edge bg-surface flex-shrink-0">
 				<nav class="px-6 py-3 flex items-center justify-between">
 					<div class="flex items-center gap-4">
 						<a href="/" class="text-xl font-bold text-brand">lovyou.ai</a>
-						<span class="text-gray-300">/</span>
-						<a href="/app" class="text-sm font-medium hover:text-brand transition-colors">App</a>
-						<span class="text-gray-300">/</span>
-						<span class="text-sm text-gray-600">{ space.Name }</span>
+						<span class="text-warm-faint">/</span>
+						<a href="/app" class="text-sm font-medium hover:text-brand transition-colors text-warm-muted">App</a>
+						<span class="text-warm-faint">/</span>
+						<span class="text-sm text-warm-secondary">{ space.Name }</span>
 					</div>
-					<div class="flex items-center gap-6 text-sm">
-						<a href="/" class="hover:text-brand">Home</a>
-						<a href="/blog" class="hover:text-brand">Blog</a>
-						<a href="/reference" class="hover:text-brand">Reference</a>
+					<div class="flex items-center gap-6 text-sm text-warm-muted">
+						<a href="/" class="hover:text-brand transition-colors">Home</a>
+						<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
+						<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
 						if user.Name != "" && user.Name != "Anonymous" {
-							<div class="flex items-center gap-2 ml-2 pl-4 border-l border-gray-200">
+							<div class="flex items-center gap-2 ml-2 pl-4 border-l border-edge">
 								if user.Picture != "" {
 									<img src={ user.Picture } class="w-6 h-6 rounded-full" alt={ user.Name } referrerpolicy="no-referrer"/>
 								} else {
@@ -45,9 +61,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 										{ initial(user.Name) }
 									</span>
 								}
-								<span class="text-gray-600 text-xs">{ user.Name }</span>
+								<span class="text-warm-muted text-xs">{ user.Name }</span>
 								<form method="POST" action="/auth/logout">
-									<button type="submit" class="text-xs text-gray-400 hover:text-red-500 transition-colors">Logout</button>
+									<button type="submit" class="text-xs text-warm-faint hover:text-red-400 transition-colors">Logout</button>
 								</form>
 							</div>
 						}
@@ -56,11 +72,11 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 			</header>
 			<div class="flex flex-1 overflow-hidden">
 				<!-- Sidebar -->
-				<aside class="w-60 border-r border-gray-200 bg-white flex-shrink-0 overflow-y-auto hidden md:block">
+				<aside class="w-60 border-r border-edge bg-surface flex-shrink-0 overflow-y-auto hidden md:block">
 					<div class="p-4 space-y-6">
 						<!-- Lenses -->
 						<div>
-							<h2 class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Views</h2>
+							<h2 class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider mb-2">Views</h2>
 							<nav class="space-y-0.5">
 								@lensLink(space.Slug, "board", "Board", activeLens, boardIcon())
 								@lensLink(space.Slug, "feed", "Feed", activeLens, feedIcon())
@@ -71,14 +87,14 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 						</div>
 						<!-- Spaces -->
 						<div>
-							<h2 class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Spaces</h2>
+							<h2 class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider mb-2">Spaces</h2>
 							<nav class="space-y-0.5">
 								for _, sp := range spaces {
 									<a
 										href={ templ.SafeURL("/app/" + sp.Slug) }
 										class={ "flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md transition-colors",
 											templ.KV("bg-brand/10 text-brand font-medium", sp.ID == space.ID),
-											templ.KV("hover:bg-gray-100 text-gray-700", sp.ID != space.ID) }
+											templ.KV("hover:bg-elevated text-warm-muted", sp.ID != space.ID) }
 									>
 										<span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>
 										{ sp.Name }
@@ -87,7 +103,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 							</nav>
 							<a
 								href="/app"
-								class="flex items-center gap-2 px-2.5 py-1.5 mt-1 text-sm text-gray-400 hover:text-brand rounded-md hover:bg-gray-100 w-full transition-colors"
+								class="flex items-center gap-2 px-2.5 py-1.5 mt-1 text-sm text-warm-faint hover:text-brand rounded-md hover:bg-elevated w-full transition-colors"
 							>
 								<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -111,7 +127,7 @@ templ lensLink(spaceSlug, lens, label, activeLens string, icon templ.Component) 
 		href={ templ.SafeURL("/app/" + spaceSlug + "/" + lens) }
 		class={ "flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md transition-colors",
 			templ.KV("bg-brand/10 text-brand font-medium", lens == activeLens),
-			templ.KV("hover:bg-gray-100 text-gray-700", lens != activeLens) }
+			templ.KV("hover:bg-elevated text-warm-muted", lens != activeLens) }
 	>
 		@icon
 		{ label }
@@ -121,31 +137,31 @@ templ lensLink(spaceSlug, lens, label, activeLens string, icon templ.Component) 
 // ── Icons ───────────────────────────────────────────────────────
 
 templ boardIcon() {
-	<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
 	</svg>
 }
 
 templ feedIcon() {
-	<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2"></path>
 	</svg>
 }
 
 templ threadsIcon() {
-	<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
 	</svg>
 }
 
 templ peopleIcon() {
-	<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
 	</svg>
 }
 
 templ activityIcon() {
-	<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
 	</svg>
 }
@@ -160,51 +176,46 @@ templ SpaceIndex(spaces []Space, user ViewUser) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Spaces — lovyou.ai</title>
 			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-			<style type="text/tailwindcss">
-				@theme {
-					--color-brand: #6366f1;
-					--color-brand-dark: #4f46e5;
-				}
-			</style>
+			@themeBlock()
 		</head>
-		<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			@simpleHeader(user)
 			<main class="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
 				<div class="flex items-center justify-between mb-8">
-					<h1 class="text-2xl font-bold">Your Spaces</h1>
+					<h1 class="text-2xl font-light text-warm">Your Spaces</h1>
 				</div>
 				<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					for _, sp := range spaces {
-						<a href={ templ.SafeURL("/app/" + sp.Slug) } class="block p-6 bg-white rounded-lg border border-gray-200 hover:border-brand hover:shadow-md transition-all">
+						<a href={ templ.SafeURL("/app/" + sp.Slug) } class="block p-6 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
 							<div class="flex items-center gap-2 mb-2">
 								<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full", kindBadgeClass(sp.Kind) }>
 									{ sp.Kind }
 								</span>
 							</div>
-							<h2 class="text-lg font-semibold">{ sp.Name }</h2>
+							<h2 class="text-lg font-medium text-warm">{ sp.Name }</h2>
 							if sp.Description != "" {
-								<p class="text-sm text-gray-500 mt-1">{ sp.Description }</p>
+								<p class="text-sm text-warm-muted mt-1">{ sp.Description }</p>
 							}
 						</a>
 					}
 					<!-- New space card -->
-					<div class="p-6 bg-white rounded-lg border-2 border-dashed border-gray-200 hover:border-brand transition-all">
-						<h3 class="text-sm font-semibold text-gray-500 mb-3">Create new space</h3>
+					<div class="p-6 bg-surface rounded-lg border-2 border-dashed border-edge-mid hover:border-brand transition-all">
+						<h3 class="text-sm font-medium text-warm-muted mb-3">Create new space</h3>
 						<form action="/app/new" method="POST" class="space-y-3">
 							<input type="text" name="name" placeholder="Space name" required
-								class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+								class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
 							<textarea name="description" placeholder="Description (optional)" rows="2"
-								class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"></textarea>
-							<select name="kind" class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+								class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
+							<select name="kind" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
 								<option value="project">Project</option>
 								<option value="community">Community</option>
 								<option value="team">Team</option>
 							</select>
-							<select name="visibility" class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+							<select name="visibility" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
 								<option value="private">Private</option>
 								<option value="public">Public</option>
 							</select>
-							<button type="submit" class="w-full px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+							<button type="submit" class="w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
 								Create
 							</button>
 						</form>
@@ -226,53 +237,48 @@ templ SpaceOnboarding(user ViewUser) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>Get Started — lovyou.ai</title>
 			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-			<style type="text/tailwindcss">
-				@theme {
-					--color-brand: #6366f1;
-					--color-brand-dark: #4f46e5;
-				}
-			</style>
+			@themeBlock()
 		</head>
-		<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col">
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			@simpleHeader(user)
 			<main class="flex-1 flex items-center justify-center px-6 py-12">
-				<div class="max-w-md w-full bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center space-y-6">
+				<div class="max-w-md w-full bg-surface rounded-xl border border-edge shadow-sm p-8 text-center space-y-6">
 					<div>
 						<div class="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-4">
 							<svg class="w-6 h-6 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
 							</svg>
 						</div>
-						<h1 class="text-2xl font-bold">Welcome</h1>
-						<p class="text-gray-500 mt-2">Create your first space to get started. A space can be a project, community, or team.</p>
+						<h1 class="text-2xl font-light text-warm">Welcome</h1>
+						<p class="text-warm-muted mt-2">Create your first space to get started. A space can be a project, community, or team.</p>
 					</div>
 					<form action="/app/new" method="POST" class="space-y-4 text-left">
 						<div>
-							<label for="name" class="block text-sm font-medium text-gray-700 mb-1">Space name</label>
+							<label for="name" class="block text-sm font-medium text-warm-muted mb-1">Space name</label>
 							<input type="text" id="name" name="name" placeholder="e.g. lovyou.ai" required autofocus
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"/>
+								class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"/>
 						</div>
 						<div>
-							<label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+							<label for="description" class="block text-sm font-medium text-warm-muted mb-1">Description</label>
 							<textarea id="description" name="description" rows="2" placeholder="What is this space about?"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"></textarea>
+								class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"></textarea>
 						</div>
 						<div>
-							<label for="kind" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-							<select id="kind" name="kind" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand bg-white text-sm">
+							<label for="kind" class="block text-sm font-medium text-warm-muted mb-1">Type</label>
+							<select id="kind" name="kind" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary">
 								<option value="project">Project — tasks, board, deadlines</option>
 								<option value="community">Community — posts, discussions, people</option>
 								<option value="team">Team — all of the above</option>
 							</select>
 						</div>
 						<div>
-							<label for="visibility" class="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
-							<select id="visibility" name="visibility" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand bg-white text-sm">
+							<label for="visibility" class="block text-sm font-medium text-warm-muted mb-1">Visibility</label>
+							<select id="visibility" name="visibility" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary">
 								<option value="private">Private — only you can see</option>
 								<option value="public">Public — anyone can view</option>
 							</select>
 						</div>
-						<button type="submit" class="w-full px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+						<button type="submit" class="w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
 							Create space
 						</button>
 					</form>
@@ -290,15 +296,15 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 		<div class="p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-6">
 				<div class="flex items-center gap-4">
-					<h1 class="text-xl font-bold">{ space.Name }</h1>
+					<h1 class="text-xl font-medium text-warm">{ space.Name }</h1>
 					if space.Description != "" {
-						<p class="text-sm text-gray-400 hidden lg:block">{ space.Description }</p>
+						<p class="text-sm text-warm-faint hidden lg:block">{ space.Description }</p>
 					}
 				</div>
 				if isOwner {
 					<button
 						onclick="document.getElementById('new-task-form').classList.toggle('hidden')"
-						class="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium"
+						class="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium"
 					>
 						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -323,14 +329,14 @@ templ boardColumn(spaceSlug string, col BoardColumn, isOwner bool) {
 				class="w-2 h-2 rounded-full flex-shrink-0"
 				style={ fmt.Sprintf("background-color: %s", stateColorHex(col.State)) }
 			></span>
-			<h2 class="text-sm font-semibold text-gray-600">{ col.Label }</h2>
-			<span class="text-xs text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
+			<h2 class="text-sm font-medium text-warm-muted">{ col.Label }</h2>
+			<span class="text-xs text-warm-faint bg-elevated rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
 				{ fmt.Sprintf("%d", len(col.Nodes)) }
 			</span>
 		</div>
 		<div
 			id={ col.State + "-column" }
-			class="flex-1 space-y-2 overflow-y-auto rounded-lg bg-gray-100/60 p-2 min-h-[200px]"
+			class="flex-1 space-y-2 overflow-y-auto rounded-lg bg-elevated/60 p-2 min-h-[200px]"
 		>
 			if col.State == StateOpen && isOwner {
 				@newTaskInline(spaceSlug)
@@ -349,21 +355,21 @@ templ newTaskInline(spaceSlug string) {
 			hx-target={ "#" + StateOpen + "-column" }
 			hx-swap="afterbegin"
 			hx-on::after-request="if(event.detail.successful) { this.reset(); document.getElementById('new-task-form').classList.add('hidden'); }"
-			class="bg-white rounded-lg border border-gray-200 shadow-sm p-3 space-y-2"
+			class="bg-surface rounded-lg border border-edge shadow-sm p-3 space-y-2"
 		>
 			<input type="hidden" name="op" value="intend"/>
 			<input type="text" name="title" placeholder="Task title" required
-				class="w-full text-sm px-2 py-1.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+				class="w-full text-sm px-2 py-1.5 bg-elevated border border-edge rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
 			<div class="flex items-center gap-2">
-				<select name="priority" class="text-xs px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-brand bg-white text-gray-600">
+				<select name="priority" class="text-xs px-2 py-1 bg-elevated border border-edge rounded-md focus:outline-none focus:ring-2 focus:ring-brand text-warm-muted">
 					<option value="medium">Medium</option>
 					<option value="low">Low</option>
 					<option value="high">High</option>
 					<option value="urgent">Urgent</option>
 				</select>
 				<div class="flex-1"></div>
-				<button type="button" onclick="document.getElementById('new-task-form').classList.add('hidden')" class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1">Cancel</button>
-				<button type="submit" class="text-xs px-3 py-1 bg-brand text-white rounded-md hover:bg-brand-dark transition-colors font-medium">Create</button>
+				<button type="button" onclick="document.getElementById('new-task-form').classList.add('hidden')" class="text-xs text-warm-faint hover:text-warm-muted px-2 py-1">Cancel</button>
+				<button type="submit" class="text-xs px-3 py-1 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium">Create</button>
 			</div>
 		</form>
 	</div>
@@ -373,7 +379,7 @@ templ TaskCard(node Node, spaceSlug string) {
 	<a
 		href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID)) }
 		id={ "node-" + node.ID }
-		class="block bg-white rounded-lg border border-gray-200 shadow-sm p-3 hover:border-brand/40 hover:shadow transition-all cursor-pointer"
+		class="block bg-surface rounded-lg border border-edge shadow-sm p-3 hover:border-brand/40 hover:shadow transition-all cursor-pointer"
 	>
 		<div class="flex items-start gap-2">
 			<span
@@ -381,17 +387,17 @@ templ TaskCard(node Node, spaceSlug string) {
 				style={ fmt.Sprintf("background-color: %s", priorityDotHex(node.Priority)) }
 				title={ node.Priority }
 			></span>
-			<span class="text-sm font-medium text-gray-900 leading-snug">{ node.Title }</span>
+			<span class="text-sm font-medium text-warm leading-snug">{ node.Title }</span>
 		</div>
 		if node.ChildCount > 0 {
 			<div class="mt-2 ml-4">
-				<div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+				<div class="flex items-center gap-1.5 text-[10px] text-warm-faint">
 					<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
 					</svg>
 					{ fmt.Sprintf("%d/%d", node.ChildDone, node.ChildCount) }
 				</div>
-				<div class="w-full bg-gray-100 rounded-full h-1 mt-1">
+				<div class="w-full bg-elevated rounded-full h-1 mt-1">
 					<div class="bg-brand rounded-full h-1 transition-all" style={ childProgress(node) }></div>
 				</div>
 			</div>
@@ -404,7 +410,7 @@ templ TaskCard(node Node, spaceSlug string) {
 					</span>
 				}
 				if node.DueDate != nil {
-					<span class="text-[10px] text-gray-400">{ node.DueDate.Format("Jan 2") }</span>
+					<span class="text-[10px] text-warm-faint">{ node.DueDate.Format("Jan 2") }</span>
 				}
 			</div>
 		</div>
@@ -417,7 +423,7 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 	@appLayout(space, spaces, "feed", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="text-xl font-bold">Feed</h1>
+				<h1 class="text-xl font-medium text-warm">Feed</h1>
 			</div>
 			if isOwner {
 				<!-- New post form -->
@@ -426,13 +432,13 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 					hx-target="#feed-items"
 					hx-swap="afterbegin"
 					hx-on::after-request="if(event.detail.successful) this.reset()"
-					class="bg-white rounded-lg border border-gray-200 p-4 space-y-3"
+					class="bg-surface rounded-lg border border-edge p-4 space-y-3"
 				>
 					<input type="hidden" name="op" value="express"/>
-					<input type="text" name="title" placeholder="Title (optional)" class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
-					<textarea name="body" placeholder="What's on your mind?" rows="3" required class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"></textarea>
+					<input type="text" name="title" placeholder="Title (optional)" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+					<textarea name="body" placeholder="What's on your mind?" rows="3" required class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
 					<div class="flex justify-end">
-						<button type="submit" class="px-4 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Post</button>
+						<button type="submit" class="px-4 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Post</button>
 					</div>
 				</form>
 			}
@@ -441,7 +447,7 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 					@FeedCard(post, space.Slug)
 				}
 				if len(posts) == 0 {
-					<p class="text-center text-gray-400 py-8">No posts yet. Share something!</p>
+					<p class="text-center text-warm-faint py-8">No posts yet. Share something!</p>
 				}
 			</div>
 		</div>
@@ -449,21 +455,21 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 }
 
 templ FeedCard(node Node, spaceSlug string) {
-	<div class="bg-white rounded-lg border border-gray-200 p-5">
+	<div class="bg-surface rounded-lg border border-edge p-5">
 		<div class="flex items-center gap-2 mb-3">
 			<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
 				{ initial(node.Author) }
 			</span>
 			<div>
-				<span class="text-sm font-medium text-gray-900">{ node.Author }</span>
-				<span class="text-xs text-gray-400 ml-2">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
+				<span class="text-sm font-medium text-warm">{ node.Author }</span>
+				<span class="text-xs text-warm-faint ml-2">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 			</div>
 		</div>
 		if node.Title != "" {
-			<h3 class="font-semibold text-gray-900 mb-1">{ node.Title }</h3>
+			<h3 class="font-medium text-warm mb-1">{ node.Title }</h3>
 		}
-		<p class="text-sm text-gray-700 whitespace-pre-wrap">{ node.Body }</p>
-		<div class="mt-3 flex items-center gap-4 text-xs text-gray-400">
+		<p class="text-sm text-warm-secondary whitespace-pre-wrap">{ node.Body }</p>
+		<div class="mt-3 flex items-center gap-4 text-xs text-warm-faint">
 			<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID)) } class="hover:text-brand transition-colors">
 				{ fmt.Sprintf("%d replies", node.ChildCount) }
 			</a>
@@ -477,38 +483,38 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 	@appLayout(space, spaces, "threads", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="text-xl font-bold">Threads</h1>
+				<h1 class="text-xl font-medium text-warm">Threads</h1>
 			</div>
 			if isOwner {
 				<!-- New thread form -->
-				<form action={ templ.SafeURL("/app/" + space.Slug + "/op") } method="POST" class="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+				<form action={ templ.SafeURL("/app/" + space.Slug + "/op") } method="POST" class="bg-surface rounded-lg border border-edge p-4 space-y-3">
 					<input type="hidden" name="op" value="discuss"/>
-					<input type="text" name="title" placeholder="Discussion topic" required class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
-					<textarea name="body" placeholder="Start the conversation..." rows="3" class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"></textarea>
+					<input type="text" name="title" placeholder="Discussion topic" required class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+					<textarea name="body" placeholder="Start the conversation..." rows="3" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
 					<div class="flex justify-end">
-						<button type="submit" class="px-4 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Start thread</button>
+						<button type="submit" class="px-4 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Start thread</button>
 					</div>
 				</form>
 			}
 			<div class="space-y-2">
 				for _, thread := range threads {
 					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, thread.ID)) }
-						class="block bg-white rounded-lg border border-gray-200 p-4 hover:border-brand/40 hover:shadow transition-all">
+						class="block bg-surface rounded-lg border border-edge p-4 hover:border-brand/40 hover:shadow transition-all">
 						<div class="flex items-center justify-between">
-							<h3 class="font-medium text-gray-900">{ thread.Title }</h3>
-							<span class="text-xs text-gray-400">{ fmt.Sprintf("%d replies", thread.ChildCount) }</span>
+							<h3 class="font-medium text-warm">{ thread.Title }</h3>
+							<span class="text-xs text-warm-faint">{ fmt.Sprintf("%d replies", thread.ChildCount) }</span>
 						</div>
 						if thread.Body != "" {
-							<p class="text-sm text-gray-500 mt-1 line-clamp-2">{ thread.Body }</p>
+							<p class="text-sm text-warm-muted mt-1 line-clamp-2">{ thread.Body }</p>
 						}
-						<div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
+						<div class="flex items-center gap-2 mt-2 text-xs text-warm-faint">
 							<span>{ thread.Author }</span>
 							<span>{ thread.CreatedAt.Format("Jan 2") }</span>
 						</div>
 					</a>
 				}
 				if len(threads) == 0 {
-					<p class="text-center text-gray-400 py-8">No threads yet. Start a discussion!</p>
+					<p class="text-center text-warm-faint py-8">No threads yet. Start a discussion!</p>
 				}
 			</div>
 		</div>
@@ -520,26 +526,26 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser) {
 	@appLayout(space, spaces, "people", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
-			<h1 class="text-xl font-bold">People</h1>
-			<div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
-				<div class="grid grid-cols-[1fr_5rem_5rem] gap-3 px-4 py-2.5 border-b border-gray-200 bg-gray-50/80 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+			<h1 class="text-xl font-medium text-warm">People</h1>
+			<div class="bg-surface rounded-lg border border-edge overflow-hidden">
+				<div class="grid grid-cols-[1fr_5rem_5rem] gap-3 px-4 py-2.5 border-b border-edge bg-elevated/80 text-[10px] font-semibold text-warm-faint uppercase tracking-wider">
 					<div>Member</div>
 					<div>Actions</div>
 					<div>Last seen</div>
 				</div>
 				if len(members) == 0 {
-					<div class="px-4 py-12 text-center text-sm text-gray-400">No activity yet.</div>
+					<div class="px-4 py-12 text-center text-sm text-warm-faint">No activity yet.</div>
 				}
 				for _, m := range members {
-					<div class="grid grid-cols-[1fr_5rem_5rem] gap-3 px-4 py-3 border-b border-gray-100 last:border-b-0 items-center">
+					<div class="grid grid-cols-[1fr_5rem_5rem] gap-3 px-4 py-3 border-b border-edge last:border-b-0 items-center">
 						<div class="flex items-center gap-2">
 							<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
 								{ initial(m.Name) }
 							</span>
-							<span class="text-sm font-medium">{ m.Name }</span>
+							<span class="text-sm font-medium text-warm">{ m.Name }</span>
 						</div>
-						<div class="text-sm text-gray-500">{ fmt.Sprintf("%d", m.OpCount) }</div>
-						<div class="text-xs text-gray-400">{ m.LastSeen }</div>
+						<div class="text-sm text-warm-muted">{ fmt.Sprintf("%d", m.OpCount) }</div>
+						<div class="text-xs text-warm-faint">{ m.LastSeen }</div>
 					</div>
 				}
 			</div>
@@ -552,13 +558,13 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser) {
 templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser) {
 	@appLayout(space, spaces, "activity", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
-			<h1 class="text-xl font-bold">Activity</h1>
+			<h1 class="text-xl font-medium text-warm">Activity</h1>
 			<div class="space-y-2">
 				for _, o := range ops {
 					@opItem(o)
 				}
 				if len(ops) == 0 {
-					<p class="text-center text-gray-400 py-8">No activity yet.</p>
+					<p class="text-center text-warm-faint py-8">No activity yet.</p>
 				}
 			</div>
 		</div>
@@ -566,16 +572,16 @@ templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser) {
 }
 
 templ opItem(o Op) {
-	<div class="flex items-start gap-3 bg-white rounded-lg border border-gray-200 px-4 py-3">
+	<div class="flex items-start gap-3 bg-surface rounded-lg border border-edge px-4 py-3">
 		<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center mt-0.5 flex-shrink-0">
 			{ initial(o.Actor) }
 		</span>
 		<div class="flex-1 min-w-0">
 			<div class="text-sm">
-				<span class="font-medium text-gray-900">{ o.Actor }</span>
-				<span class="text-gray-500 ml-1">{ o.Op }</span>
+				<span class="font-medium text-warm">{ o.Actor }</span>
+				<span class="text-warm-muted ml-1">{ o.Op }</span>
 			</div>
-			<div class="text-xs text-gray-400 mt-0.5">{ o.CreatedAt.Format("Jan 2, 3:04 PM") }</div>
+			<div class="text-xs text-warm-faint mt-0.5">{ o.CreatedAt.Format("Jan 2, 3:04 PM") }</div>
 		</div>
 		<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0", opBadgeClass(o.Op) }>
 			{ o.Op }
@@ -590,11 +596,11 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 		<div class="max-w-3xl mx-auto p-6 space-y-8">
 			<!-- Breadcrumb -->
 			<div class="text-sm">
-				<a href={ templ.SafeURL("/app/" + space.Slug) } class="text-gray-400 hover:text-brand transition-colors">
+				<a href={ templ.SafeURL("/app/" + space.Slug) } class="text-warm-faint hover:text-brand transition-colors">
 					{ space.Name }
 				</a>
-				<span class="text-gray-300 mx-1.5">/</span>
-				<span class="text-gray-600">
+				<span class="text-warm-faint mx-1.5">/</span>
+				<span class="text-warm-secondary">
 					if node.Title != "" {
 						{ node.Title }
 					} else {
@@ -606,9 +612,9 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			<!-- Title -->
 			<div>
 				if node.Title != "" {
-					<h1 class="text-2xl font-bold leading-tight">{ node.Title }</h1>
+					<h1 class="text-2xl font-light leading-tight text-warm">{ node.Title }</h1>
 				}
-				<div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+				<div class="flex items-center gap-3 mt-2 text-xs text-warm-faint">
 					<span class={ "font-medium px-2 py-0.5 rounded-full", kindBadgeClass(node.Kind) }>{ node.Kind }</span>
 					<span>by { node.Author }</span>
 					<span>{ node.CreatedAt.Format("Jan 2, 2006 3:04 PM") }</span>
@@ -620,14 +626,14 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 				<div class="flex flex-wrap gap-6">
 					<!-- Status buttons -->
 					<div class="space-y-1.5">
-						<label class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</label>
+						<label class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider">Status</label>
 						if isOwner {
 							<div class="flex gap-1">
 								for _, s := range []string{StateOpen, StateActive, StateReview, StateDone} {
 									<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s/state", space.Slug, node.ID)) }>
 										<input type="hidden" name="state" value={ s }/>
 										<button type="submit" class={ "px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
-											templ.KV("ring-2 ring-offset-1 ring-brand", s == node.State),
+											templ.KV("ring-2 ring-offset-1 ring-brand ring-offset-void", s == node.State),
 											stateBgClass(s) }>
 											{ stateLabel(s) }
 										</button>
@@ -640,18 +646,18 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 					</div>
 					<!-- Priority -->
 					<div class="space-y-1.5">
-						<label class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Priority</label>
-						<div class="flex items-center gap-1.5 text-sm">
+						<label class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider">Priority</label>
+						<div class="flex items-center gap-1.5 text-sm text-warm-secondary">
 							<span class="w-2 h-2 rounded-full" style={ fmt.Sprintf("background-color: %s", priorityDotHex(node.Priority)) }></span>
 							<span class="capitalize">{ node.Priority }</span>
 						</div>
 					</div>
 					<!-- Assignee -->
 					<div class="space-y-1.5">
-						<label class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Assignee</label>
+						<label class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider">Assignee</label>
 						<div class="text-sm">
 							if node.Assignee != "" {
-								<div class="flex items-center gap-1.5">
+								<div class="flex items-center gap-1.5 text-warm-secondary">
 									<span class="w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center">{ initial(node.Assignee) }</span>
 									{ node.Assignee }
 								</div>
@@ -662,14 +668,14 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 									<button type="submit" class="text-brand hover:underline text-sm">Claim</button>
 								</form>
 							} else {
-								<span class="text-gray-400 text-sm">Unassigned</span>
+								<span class="text-warm-faint text-sm">Unassigned</span>
 							}
 						</div>
 					</div>
 					if node.DueDate != nil {
 						<div class="space-y-1.5">
-							<label class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Due</label>
-							<div class="text-sm">{ node.DueDate.Format("Jan 2, 2006") }</div>
+							<label class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider">Due</label>
+							<div class="text-sm text-warm-secondary">{ node.DueDate.Format("Jan 2, 2006") }</div>
 						</div>
 					}
 				</div>
@@ -677,8 +683,8 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 
 			<!-- Body -->
 			if node.Body != "" {
-				<div class="bg-white rounded-lg border border-gray-200 p-4">
-					<p class="text-sm text-gray-700 whitespace-pre-wrap">{ node.Body }</p>
+				<div class="bg-surface rounded-lg border border-edge p-4">
+					<p class="text-sm text-warm-secondary whitespace-pre-wrap">{ node.Body }</p>
 				</div>
 			}
 
@@ -686,19 +692,19 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			if node.Kind == KindTask && isOwner {
 				<div>
 					<button onclick="document.getElementById('edit-form').classList.toggle('hidden')" class="text-sm text-brand hover:underline">Edit</button>
-					<form id="edit-form" method="POST" action={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s/update", space.Slug, node.ID)) } class="hidden mt-3 bg-white rounded-lg border border-gray-200 p-4 space-y-3">
+					<form id="edit-form" method="POST" action={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s/update", space.Slug, node.ID)) } class="hidden mt-3 bg-surface rounded-lg border border-edge p-4 space-y-3">
 						<div>
-							<label class="block text-xs font-medium text-gray-500 mb-1">Title</label>
-							<input type="text" name="title" value={ node.Title } class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"/>
+							<label class="block text-xs font-medium text-warm-muted mb-1">Title</label>
+							<input type="text" name="title" value={ node.Title } class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm"/>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-gray-500 mb-1">Description</label>
-							<textarea name="body" rows="4" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm">{ node.Body }</textarea>
+							<label class="block text-xs font-medium text-warm-muted mb-1">Description</label>
+							<textarea name="body" rows="4" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm">{ node.Body }</textarea>
 						</div>
 						<div class="grid grid-cols-2 gap-3">
 							<div>
-								<label class="block text-xs font-medium text-gray-500 mb-1">Priority</label>
-								<select name="priority" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+								<label class="block text-xs font-medium text-warm-muted mb-1">Priority</label>
+								<select name="priority" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
 									<option value="low" selected?={ node.Priority == PriorityLow }>Low</option>
 									<option value="medium" selected?={ node.Priority == PriorityMedium }>Medium</option>
 									<option value="high" selected?={ node.Priority == PriorityHigh }>High</option>
@@ -706,11 +712,11 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 								</select>
 							</div>
 							<div>
-								<label class="block text-xs font-medium text-gray-500 mb-1">Assignee</label>
-								<input type="text" name="assignee" value={ node.Assignee } class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm" placeholder="Unassigned"/>
+								<label class="block text-xs font-medium text-warm-muted mb-1">Assignee</label>
+								<input type="text" name="assignee" value={ node.Assignee } class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm" placeholder="Unassigned"/>
 							</div>
 						</div>
-						<button type="submit" class="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Save changes</button>
+						<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Save changes</button>
 					</form>
 				</div>
 			}
@@ -718,7 +724,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			<!-- Children (subtasks / replies) -->
 			if len(children) > 0 {
 				<div class="space-y-3">
-					<h2 class="text-sm font-semibold text-gray-700">
+					<h2 class="text-sm font-medium text-warm-muted">
 						if node.Kind == KindTask {
 							{ fmt.Sprintf("Subtasks (%d/%d)", countDone(children), len(children)) }
 						} else {
@@ -726,7 +732,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 						}
 					</h2>
 					if node.Kind == KindTask {
-						<div class="w-full bg-gray-200 rounded-full h-1.5">
+						<div class="w-full bg-elevated rounded-full h-1.5">
 							<div class="bg-brand rounded-full h-1.5 transition-all" style={ childProgressSlice(children) }></div>
 						</div>
 					}
@@ -744,14 +750,14 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 
 			<!-- Add child -->
 			if node.Kind == KindTask && isOwner {
-				<div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
-					<h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Add subtask</h3>
+				<div class="bg-elevated rounded-lg border border-edge p-4">
+					<h3 class="text-xs font-semibold text-warm-faint uppercase tracking-wider mb-2">Add subtask</h3>
 					<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="flex gap-2">
 						<input type="hidden" name="op" value="decompose"/>
 						<input type="hidden" name="parent_id" value={ node.ID }/>
 						<input type="text" name="title" required placeholder="Subtask title..."
-							class="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm"/>
-						<button type="submit" class="px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Add</button>
+							class="flex-1 px-3 py-1.5 bg-surface border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"/>
+						<button type="submit" class="px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Add</button>
 					</form>
 				</div>
 			}
@@ -759,7 +765,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			<!-- Reply form (for posts and threads) -->
 			if node.Kind == KindPost || node.Kind == KindThread {
 				<div class="space-y-3">
-					<h2 class="text-sm font-semibold text-gray-700">
+					<h2 class="text-sm font-medium text-warm-muted">
 						{ fmt.Sprintf("Replies (%d)", len(children)) }
 					</h2>
 					<div id="children" class="space-y-2">
@@ -780,9 +786,9 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 							<input type="hidden" name="op" value="respond"/>
 							<input type="hidden" name="parent_id" value={ node.ID }/>
 							<textarea name="body" placeholder="Write a reply..." required rows="3"
-								class="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"></textarea>
+								class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
 							<div class="flex justify-end">
-								<button type="submit" class="px-3 py-1.5 bg-brand text-white rounded-md hover:bg-brand-dark transition-colors text-sm font-medium">Reply</button>
+								<button type="submit" class="px-3 py-1.5 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors text-sm font-medium">Reply</button>
 							</div>
 						</form>
 					}
@@ -792,11 +798,11 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			<!-- Activity on this node -->
 			if len(ops) > 0 {
 				<div class="space-y-3">
-					<h2 class="text-sm font-semibold text-gray-700">Activity</h2>
+					<h2 class="text-sm font-medium text-warm-muted">Activity</h2>
 					<div class="space-y-1">
 						for _, o := range ops {
-							<div class="flex items-center gap-2 text-xs text-gray-400 py-1">
-								<span class="font-medium text-gray-600">{ o.Actor }</span>
+							<div class="flex items-center gap-2 text-xs text-warm-faint py-1">
+								<span class="font-medium text-warm-secondary">{ o.Actor }</span>
 								<span class={ "font-medium px-1.5 py-0.5 rounded-full", opBadgeClass(o.Op) }>{ o.Op }</span>
 								<span>{ o.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 							</div>
@@ -806,8 +812,8 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 			}
 
 			<!-- Timestamps + delete -->
-			<div class="flex items-center justify-between border-t border-gray-200 pt-4">
-				<div class="flex gap-4 text-xs text-gray-400">
+			<div class="flex items-center justify-between border-t border-edge pt-4">
+				<div class="flex gap-4 text-xs text-warm-faint">
 					<span>Created { node.CreatedAt.Format("Jan 2, 2006 3:04 PM") }</span>
 					<span>Updated { node.UpdatedAt.Format("Jan 2, 2006 3:04 PM") }</span>
 				</div>
@@ -815,7 +821,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 					<button type="button"
 						hx-delete={ fmt.Sprintf("/app/%s/node/%s", space.Slug, node.ID) }
 						hx-confirm="Delete this? This cannot be undone."
-						class="text-xs text-red-500 hover:text-red-700 transition-colors">
+						class="text-xs text-red-400 hover:text-red-300 transition-colors">
 						Delete
 					</button>
 				}
@@ -827,16 +833,16 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 templ childRow(node Node, spaceSlug string) {
 	<a
 		href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID)) }
-		class="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-100 transition-colors"
+		class="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-elevated transition-colors"
 	>
 		if node.State == StateDone {
-			<svg class="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+			<svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
 				<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
 			</svg>
 		} else {
-			<div class="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0"></div>
+			<div class="w-4 h-4 rounded-full border-2 border-edge-strong flex-shrink-0"></div>
 		}
-		<span class={ "text-sm flex-1", templ.KV("line-through text-gray-400", node.State == StateDone) }>
+		<span class={ "text-sm flex-1", templ.KV("line-through text-warm-faint", node.State == StateDone), templ.KV("text-warm", node.State != StateDone) }>
 			{ node.Title }
 		</span>
 		<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full", stateBgClass(node.State) }>
@@ -846,35 +852,35 @@ templ childRow(node Node, spaceSlug string) {
 }
 
 templ CommentItem(node Node) {
-	<div class="bg-white rounded-lg border border-gray-200 p-4">
+	<div class="bg-surface rounded-lg border border-edge p-4">
 		<div class="flex items-center gap-2 mb-2">
 			<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
 				{ initial(node.Author) }
 			</span>
-			<span class="text-sm font-medium text-gray-900">{ node.Author }</span>
-			<span class="text-xs text-gray-400">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
+			<span class="text-sm font-medium text-warm">{ node.Author }</span>
+			<span class="text-xs text-warm-faint">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 		</div>
-		<p class="text-sm text-gray-700 whitespace-pre-wrap">{ node.Body }</p>
+		<p class="text-sm text-warm-secondary whitespace-pre-wrap">{ node.Body }</p>
 	</div>
 }
 
 // ── Shared components ───────────────────────────────────────────
 
 templ simpleHeader(user ViewUser) {
-	<header class="border-b border-gray-200 bg-white">
+	<header class="border-b border-edge bg-surface">
 		<nav class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
 			<a href="/" class="text-xl font-bold text-brand">lovyou.ai</a>
-			<div class="flex items-center gap-6 text-sm">
-				<a href="/" class="hover:text-brand">Home</a>
-				<a href="/app" class="hover:text-brand">App</a>
-				<a href="/blog" class="hover:text-brand">Blog</a>
-				<a href="/reference" class="hover:text-brand">Reference</a>
+			<div class="flex items-center gap-6 text-sm text-warm-muted">
+				<a href="/" class="hover:text-brand transition-colors">Home</a>
+				<a href="/app" class="hover:text-brand transition-colors">App</a>
+				<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
+				<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
 				if user.Name != "" && user.Name != "Anonymous" {
-					<div class="flex items-center gap-2 ml-2 pl-4 border-l border-gray-200">
+					<div class="flex items-center gap-2 ml-2 pl-4 border-l border-edge">
 						if user.Picture != "" {
 							<img src={ user.Picture } class="w-6 h-6 rounded-full" alt={ user.Name } referrerpolicy="no-referrer"/>
 						}
-						<span class="text-gray-600 text-xs">{ user.Name }</span>
+						<span class="text-warm-muted text-xs">{ user.Name }</span>
 					</div>
 				}
 			</div>
@@ -883,9 +889,9 @@ templ simpleHeader(user ViewUser) {
 }
 
 templ simpleFooter() {
-	<footer class="border-t border-gray-200 bg-white">
-		<div class="max-w-4xl mx-auto px-6 py-6 text-sm text-gray-500 flex items-center justify-between">
-			<span>lovyou.ai — trust earned, not assumed</span>
+	<footer class="border-t border-edge bg-surface">
+		<div class="max-w-4xl mx-auto px-6 py-6 text-sm text-warm-muted flex items-center justify-between">
+			<span>lovyou.ai — humans and agents, building together</span>
 			<div class="flex gap-4 items-center">
 				<a href="mailto:matt@lovyou.ai" class="hover:text-brand transition-colors">matt@lovyou.ai</a>
 				<a href="https://github.com/lovyou-ai" class="hover:text-brand transition-colors" target="_blank" rel="noopener">GitHub</a>
@@ -916,87 +922,87 @@ func stateLabel(state string) string {
 func stateBgClass(state string) string {
 	switch state {
 	case StateOpen:
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	case StateActive:
-		return "bg-indigo-100 text-indigo-700"
+		return "bg-indigo-500/15 text-indigo-400"
 	case StateReview:
-		return "bg-amber-100 text-amber-700"
+		return "bg-amber-500/15 text-amber-400"
 	case StateDone:
-		return "bg-emerald-100 text-emerald-700"
+		return "bg-emerald-500/15 text-emerald-400"
 	case StateClosed:
-		return "bg-slate-100 text-slate-600"
+		return "bg-warm-faint/20 text-warm-faint"
 	default:
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	}
 }
 
 func stateColorHex(state string) string {
 	switch state {
 	case StateOpen:
-		return "#6B7280"
+		return "#78756e"
 	case StateActive:
-		return "#6366F1"
+		return "#818cf8"
 	case StateReview:
-		return "#F59E0B"
+		return "#fbbf24"
 	case StateDone:
-		return "#10B981"
+		return "#6ec89b"
 	case StateClosed:
-		return "#94A3B8"
+		return "#4a4844"
 	default:
-		return "#6B7280"
+		return "#78756e"
 	}
 }
 
 func priorityDotHex(priority string) string {
 	switch priority {
 	case PriorityUrgent:
-		return "#EF4444"
+		return "#e07070"
 	case PriorityHigh:
-		return "#F59E0B"
+		return "#fbbf24"
 	case PriorityMedium:
-		return "#6366F1"
+		return "#e8a0b8"
 	case PriorityLow:
-		return "#9CA3AF"
+		return "#78756e"
 	default:
-		return "#9CA3AF"
+		return "#78756e"
 	}
 }
 
 func kindBadgeClass(kind string) string {
 	switch kind {
 	case KindTask, SpaceProject:
-		return "bg-indigo-100 text-indigo-700"
+		return "bg-indigo-500/15 text-indigo-400"
 	case KindPost, SpaceCommunity:
-		return "bg-emerald-100 text-emerald-700"
+		return "bg-emerald-500/15 text-emerald-400"
 	case KindThread, SpaceTeam:
-		return "bg-amber-100 text-amber-700"
+		return "bg-amber-500/15 text-amber-400"
 	case KindComment:
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	default:
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	}
 }
 
 func opBadgeClass(op string) string {
 	switch op {
 	case "intend", "decompose":
-		return "bg-indigo-100 text-indigo-700"
+		return "bg-indigo-500/15 text-indigo-400"
 	case "express", "discuss":
-		return "bg-emerald-100 text-emerald-700"
+		return "bg-emerald-500/15 text-emerald-400"
 	case "respond":
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	case "complete":
-		return "bg-emerald-100 text-emerald-700"
+		return "bg-emerald-500/15 text-emerald-400"
 	case "claim", "assign":
-		return "bg-amber-100 text-amber-700"
+		return "bg-amber-500/15 text-amber-400"
 	case "prioritize":
-		return "bg-purple-100 text-purple-700"
+		return "bg-purple-500/15 text-purple-400"
 	case "review":
-		return "bg-amber-100 text-amber-700"
+		return "bg-amber-500/15 text-amber-400"
 	case "progress":
-		return "bg-blue-100 text-blue-700"
+		return "bg-blue-500/15 text-blue-400"
 	default:
-		return "bg-gray-100 text-gray-600"
+		return "bg-warm-faint/20 text-warm-muted"
 	}
 }
 
