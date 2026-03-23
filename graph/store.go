@@ -1422,20 +1422,28 @@ type ProposalWithVotes struct {
 }
 
 // ListProposals returns proposals in a space with vote counts.
-func (s *Store) ListProposals(ctx context.Context, spaceID string, limit int) ([]ProposalWithVotes, error) {
+func (s *Store) ListProposals(ctx context.Context, spaceID, stateFilter string, limit int) ([]ProposalWithVotes, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	q := `
 		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
 		       n.state, n.priority, n.assignee, n.assignee_id, n.author, n.author_id, n.author_kind,
 		       n.tags, n.pinned, n.due_date, n.created_at, n.updated_at, 0, 0, 0,
 		       COALESCE((SELECT COUNT(*) FROM ops o WHERE o.node_id = n.id AND o.op = 'vote' AND o.payload->>'vote' = 'yes'), 0),
 		       COALESCE((SELECT COUNT(*) FROM ops o WHERE o.node_id = n.id AND o.op = 'vote' AND o.payload->>'vote' = 'no'), 0)
 		FROM nodes n
-		WHERE n.space_id = $1 AND n.kind = 'proposal'
-		ORDER BY n.state = 'open' DESC, n.created_at DESC
-		LIMIT $2`, spaceID, limit)
+		WHERE n.space_id = $1 AND n.kind = 'proposal'`
+	args := []any{spaceID}
+	if stateFilter != "" {
+		q += ` AND n.state = $3`
+		args = append(args, limit, stateFilter)
+		q += ` ORDER BY n.created_at DESC LIMIT $2`
+	} else {
+		args = append(args, limit)
+		q += ` ORDER BY n.state = 'open' DESC, n.created_at DESC LIMIT $2`
+	}
+	rows, err := s.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list proposals: %w", err)
 	}

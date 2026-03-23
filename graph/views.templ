@@ -1671,7 +1671,7 @@ templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user 
 
 // ── Governance view ──────────────────────────────────────────────
 
-templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes, user ViewUser, isOwner bool) {
+templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes, user ViewUser, isOwner bool, stateFilter string) {
 	@appLayout(space, spaces, "governance", user) {
 		<div class="p-6 md:p-8 space-y-6">
 			<div class="flex items-center justify-between">
@@ -1679,6 +1679,12 @@ templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes,
 					<h1 class="text-2xl font-light text-warm">Governance</h1>
 					<p class="text-sm text-warm-muted mt-1">Propose changes, vote on decisions — transparent and accountable</p>
 				</div>
+			</div>
+			<div class="flex gap-2">
+				@govStateTab(space.Slug, "", "All", stateFilter)
+				@govStateTab(space.Slug, "open", "Open", stateFilter)
+				@govStateTab(space.Slug, "done", "Passed", stateFilter)
+				@govStateTab(space.Slug, "closed", "Rejected", stateFilter)
 			</div>
 			<!-- Create proposal form -->
 			<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="bg-surface border border-edge rounded-lg p-5 space-y-3">
@@ -1802,6 +1808,17 @@ templ proposalCard(p ProposalWithVotes, spaceSlug string, isOwner bool) {
 			</div>
 		</div>
 	</div>
+}
+
+templ govStateTab(spaceSlug, value, label, active string) {
+	<a
+		href={ templ.SafeURL("/app/" + spaceSlug + "/governance?state=" + value) }
+		class={ "text-xs px-3 py-1.5 rounded-lg transition-colors font-medium",
+			templ.KV("bg-brand/15 text-brand", value == active),
+			templ.KV("bg-elevated text-warm-muted hover:text-warm", value != active) }
+	>
+		{ label }
+	</a>
 }
 
 templ proposalStateBadge(state string) {

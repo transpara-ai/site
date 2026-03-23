@@ -800,7 +800,8 @@ func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-	proposals, err := h.store.ListProposals(r.Context(), space.ID, 50)
+	stateFilter := r.URL.Query().Get("state")
+	proposals, err := h.store.ListProposals(r.Context(), space.ID, stateFilter, 50)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -811,7 +812,7 @@ func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	GovernanceView(*space, spaces, proposals, h.viewUser(r), isOwner).Render(r.Context(), w)
+	GovernanceView(*space, spaces, proposals, h.viewUser(r), isOwner, stateFilter).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────
