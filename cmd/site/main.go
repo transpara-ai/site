@@ -331,11 +331,21 @@ func main() {
 		if viewerLoggedIn {
 			hasEndorsed = graphStore.HasEndorsed(r.Context(), viewer.ID, u.ID)
 		}
+		// Completed work history.
+		completed, _ := graphStore.ListCompletedByUser(r.Context(), u.ID, 10)
+		var completedWork []views.CompletedWork
+		for _, c := range completed {
+			completedWork = append(completedWork, views.CompletedWork{
+				ID: c.ID, Title: c.Title, SpaceSlug: c.SpaceSlug,
+				SpaceName: c.SpaceName, DoneAt: c.DoneAt.Format("Jan 2"),
+			})
+		}
 		views.ProfilePage(views.UserProfile{
 			Name: u.Name, Kind: u.Kind,
 			TasksDone: u.TasksDone, OpCount: u.OpCount,
 			Endorsements: endorsements, Endorsers: endorsers,
 			HasEndorsed: hasEndorsed, ViewerLoggedIn: viewerLoggedIn,
+			CompletedWork: completedWork,
 			RecentOps: recentOps,
 		}).Render(r.Context(), w)
 	}))

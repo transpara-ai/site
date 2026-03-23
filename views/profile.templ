@@ -2,6 +2,15 @@ package views
 
 import "fmt"
 
+// CompletedWork is a task someone finished, shown on their profile.
+type CompletedWork struct {
+	ID        string
+	Title     string
+	SpaceSlug string
+	SpaceName string
+	DoneAt    string // formatted
+}
+
 // UserProfile holds data for the public profile page.
 type UserProfile struct {
 	Name            string
@@ -12,6 +21,7 @@ type UserProfile struct {
 	Endorsers       []string // names of people who endorsed this user
 	HasEndorsed     bool     // whether the current viewer has endorsed this user
 	ViewerLoggedIn  bool     // whether there's a logged-in viewer
+	CompletedWork   []CompletedWork
 	RecentOps       []ActivityItem
 }
 
@@ -73,6 +83,23 @@ templ ProfilePage(profile UserProfile) {
 					</div>
 				}
 			</div>
+			if len(profile.CompletedWork) > 0 {
+				<div class="reveal-scroll">
+					<h2 class="text-lg font-medium text-warm mb-4">Completed work</h2>
+					<div class="space-y-2">
+						for _, w := range profile.CompletedWork {
+							<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", w.SpaceSlug, w.ID)) } class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:border-brand/40 transition-all">
+								<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
+								<div class="flex-1 min-w-0">
+									<span class="text-sm text-warm truncate block">{ w.Title }</span>
+									<span class="text-[10px] text-warm-faint">{ w.SpaceName }</span>
+								</div>
+								<span class="text-[10px] text-warm-faint flex-shrink-0">{ w.DoneAt }</span>
+							</a>
+						}
+					</div>
+				</div>
+			}
 			if len(profile.RecentOps) > 0 {
 				<div class="reveal-scroll">
 					<h2 class="text-lg font-medium text-warm mb-4">Recent activity</h2>

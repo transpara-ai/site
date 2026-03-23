@@ -1108,6 +1108,48 @@ func (s *Store) ListAvailableTasks(ctx context.Context, query string, limit int)
 }
 
 // ────────────────────────────────────────────────────────────────────
+// User work history
+// ────────────────────────────────────────────────────────────────────
+
+// CompletedTask is a task completed by a user, with space context.
+type CompletedTask struct {
+	ID        string    `json:"id"`
+	Title     string    `json:"title"`
+	SpaceSlug string    `json:"space_slug"`
+	SpaceName string    `json:"space_name"`
+	DoneAt    time.Time `json:"done_at"`
+}
+
+// ListCompletedByUser returns tasks completed by a user (via complete op) in public spaces.
+func (s *Store) ListCompletedByUser(ctx context.Context, userID string, limit int) ([]CompletedTask, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT n.id, n.title, s.slug, s.name, o.created_at
+		FROM ops o
+		JOIN nodes n ON n.id = o.node_id AND n.kind = 'task' AND n.state = 'done'
+		JOIN spaces s ON s.id = o.space_id AND s.visibility = 'public'
+		WHERE o.actor_id = $1 AND o.op = 'complete'
+		ORDER BY o.created_at DESC
+		LIMIT $2`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list completed by user: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []CompletedTask
+	for rows.Next() {
+		var t CompletedTask
+		if err := rows.Scan(&t.ID, &t.Title, &t.SpaceSlug, &t.SpaceName, &t.DoneAt); err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+	}
+	return tasks, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Notifications
 // ────────────────────────────────────────────────────────────────────
 
