@@ -72,6 +72,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /app/{slug}/people", h.readWrap(h.handlePeople))
 	mux.Handle("GET /app/{slug}/activity", h.readWrap(h.handleActivity))
 	mux.Handle("GET /app/{slug}/knowledge", h.readWrap(h.handleKnowledge))
+	mux.Handle("GET /app/{slug}/governance", h.readWrap(h.handleGovernance))
 
 	// Conversation detail (optional auth).
 	mux.Handle("GET /app/{slug}/conversation/{id}", h.readWrap(h.handleConversationDetail))
@@ -631,6 +632,32 @@ func (h *Handlers) handleKnowledge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	KnowledgeView(*space, spaces, claims, challengeCounts, h.viewUser(r)).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	proposals, err := h.store.ListProposals(r.Context(), space.ID, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "proposals": proposals})
+		return
+	}
+
+	GovernanceView(*space, spaces, proposals, h.viewUser(r)).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -1286,6 +1313,69 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
+	case "propose":
+		title := strings.TrimSpace(r.FormValue("title"))
+		if title == "" {
+			http.Error(w, "title required", http.StatusBadRequest)
+			return
+		}
+		node, err := h.store.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    space.ID,
+			Kind:       KindProposal,
+			Title:      title,
+			Body:       strings.TrimSpace(r.FormValue("description")),
+			State:      ProposalOpen,
+			Author:     actor,
+			AuthorID:   actorID,
+			AuthorKind: actorKind,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "propose", nil)
+
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "propose"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/governance", http.StatusSeeOther)
+
+	case "vote":
+		nodeID := r.FormValue("node_id")
+		vote := r.FormValue("vote") // "yes" or "no"
+		if nodeID == "" || (vote != "yes" && vote != "no") {
+			http.Error(w, "node_id and vote (yes/no) required", http.StatusBadRequest)
+			return
+		}
+		// Only proposals can be voted on.
+		node, err := h.store.GetNode(ctx, nodeID)
+		if err != nil || node == nil {
+			http.NotFound(w, r)
+			return
+		}
+		if node.Kind != KindProposal {
+			http.Error(w, "can only vote on proposals", http.StatusBadRequest)
+			return
+		}
+		if node.State != ProposalOpen {
+			http.Error(w, "proposal is no longer open", http.StatusBadRequest)
+			return
+		}
+		// One vote per user per proposal.
+		if h.store.HasVoted(ctx, nodeID, actorID) {
+			http.Error(w, "already voted", http.StatusConflict)
+			return
+		}
+		payload, _ := json.Marshal(map[string]string{"vote": vote})
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "vote", payload)
+
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "vote", "vote": vote})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/governance", http.StatusSeeOther)
 
 	default:
 		http.Error(w, fmt.Sprintf("unknown op: %s", op), http.StatusBadRequest)

@@ -96,6 +96,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 					@mobileLensTab(space.Slug, "conversations", "Chat", activeLens)
 					@mobileLensTab(space.Slug, "people", "People", activeLens)
 					@mobileLensTab(space.Slug, "knowledge", "Knowledge", activeLens)
+					@mobileLensTab(space.Slug, "governance", "Governance", activeLens)
 					@mobileLensTab(space.Slug, "activity", "Activity", activeLens)
 					@mobileLensTab(space.Slug, "settings", "Settings", activeLens)
 				</div>
@@ -114,6 +115,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 								@lensLink(space.Slug, "conversations", "Chat", activeLens, conversationsIcon())
 								@lensLink(space.Slug, "people", "People", activeLens, peopleIcon())
 								@lensLink(space.Slug, "knowledge", "Knowledge", activeLens, knowledgeIcon())
+								@lensLink(space.Slug, "governance", "Governance", activeLens, governanceIcon())
 								@lensLink(space.Slug, "activity", "Activity", activeLens, activityIcon())
 								@lensLink(space.Slug, "settings", "Settings", activeLens, settingsIcon())
 							</nav>
@@ -226,6 +228,12 @@ templ settingsIcon() {
 templ knowledgeIcon() {
 	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+	</svg>
+}
+
+templ governanceIcon() {
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
 	</svg>
 }
 
@@ -1211,6 +1219,118 @@ templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser,
 				</form>
 			</div>
 		</div>
+	}
+}
+
+// ── Governance view ──────────────────────────────────────────────
+
+templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes, user ViewUser) {
+	@appLayout(space, spaces, "governance", user) {
+		<div class="p-6 md:p-8 space-y-6">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-2xl font-light text-warm">Governance</h1>
+					<p class="text-sm text-warm-muted mt-1">Propose changes, vote on decisions — transparent and accountable</p>
+				</div>
+			</div>
+			<!-- Create proposal form -->
+			<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="bg-surface border border-edge rounded-lg p-5 space-y-3">
+				<input type="hidden" name="op" value="propose"/>
+				<input
+					type="text"
+					name="title"
+					placeholder="What do you propose?"
+					required
+					class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+				/>
+				<textarea
+					name="description"
+					placeholder="Details and reasoning (optional)"
+					rows="2"
+					class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
+				></textarea>
+				<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+					Submit proposal
+				</button>
+			</form>
+			if len(proposals) == 0 {
+				<div class="text-center py-12">
+					<p class="text-warm-muted text-lg">No proposals yet</p>
+					<p class="text-warm-faint text-sm mt-2">Be the first to propose a change in this space</p>
+				</div>
+			} else {
+				<div class="space-y-3">
+					for _, p := range proposals {
+						@proposalCard(p, space.Slug)
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+templ proposalCard(p ProposalWithVotes, spaceSlug string) {
+	<div class="p-5 bg-surface rounded-lg border border-edge hover:border-brand/30 transition-all">
+		<div class="flex items-start justify-between gap-3">
+			<div class="flex-1 min-w-0">
+				<div class="flex items-center gap-2 mb-1">
+					@proposalStateBadge(p.State)
+					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, p.ID)) } class="text-sm font-medium text-warm hover:text-brand transition-colors">
+						{ p.Title }
+					</a>
+				</div>
+				if p.Body != "" {
+					<p class="text-xs text-warm-muted mt-1 line-clamp-2">{ truncate(p.Body, 200) }</p>
+				}
+				<div class="flex items-center gap-3 mt-2 text-xs text-warm-faint">
+					if p.AuthorKind == "agent" {
+						<span class="w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center">{ initial(p.Author) }</span>
+					}
+					<span>{ p.Author }</span>
+					<span>{ p.CreatedAt.Format("Jan 2") }</span>
+				</div>
+			</div>
+			<div class="flex items-center gap-2 flex-shrink-0">
+				<!-- Vote counts -->
+				<div class="flex items-center gap-1 text-sm">
+					<span class="text-emerald-400 font-medium">{ fmt.Sprintf("%d", p.VotesYes) }</span>
+					<span class="text-warm-faint">/</span>
+					<span class="text-red-400 font-medium">{ fmt.Sprintf("%d", p.VotesNo) }</span>
+				</div>
+				if p.State == ProposalOpen {
+					<!-- Vote buttons -->
+					<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") } class="inline">
+						<input type="hidden" name="op" value="vote"/>
+						<input type="hidden" name="node_id" value={ p.ID }/>
+						<input type="hidden" name="vote" value="yes"/>
+						<button type="submit" class="px-2 py-1 text-xs bg-emerald-500/15 text-emerald-400 rounded hover:bg-emerald-500/25 transition-colors" title="Vote yes">
+							Yes
+						</button>
+					</form>
+					<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") } class="inline">
+						<input type="hidden" name="op" value="vote"/>
+						<input type="hidden" name="node_id" value={ p.ID }/>
+						<input type="hidden" name="vote" value="no"/>
+						<button type="submit" class="px-2 py-1 text-xs bg-red-500/15 text-red-400 rounded hover:bg-red-500/25 transition-colors" title="Vote no">
+							No
+						</button>
+					</form>
+				}
+			</div>
+		</div>
+	</div>
+}
+
+templ proposalStateBadge(state string) {
+	switch state {
+		case ProposalOpen:
+			<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400">open</span>
+		case ProposalPassed:
+			<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">passed</span>
+		case ProposalFailed:
+			<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400">rejected</span>
+		default:
+			<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warm-faint/20 text-warm-muted">{ state }</span>
 	}
 }
 

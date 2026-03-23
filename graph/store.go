@@ -45,12 +45,20 @@ const (
 	KindComment      = "comment"
 	KindConversation = "conversation"
 	KindClaim        = "claim"
+	KindProposal     = "proposal"
 )
 
 // Claim epistemic states.
 const (
 	ClaimClaimed    = "claimed"
 	ClaimChallenged = "challenged"
+)
+
+// Proposal states.
+const (
+	ProposalOpen   = "open"
+	ProposalPassed = "done"    // reuse "done" for passed proposals
+	ProposalFailed = "closed"  // reuse "closed" for failed/rejected
 )
 
 // Space kinds.
@@ -1078,6 +1086,68 @@ func (s *Store) ListAvailableTasks(ctx context.Context, query string, limit int)
 		tasks = append(tasks, n)
 	}
 	return tasks, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Governance (Layer 11)
+// ────────────────────────────────────────────────────────────────────
+
+// ProposalWithVotes is a proposal node with vote tallies.
+type ProposalWithVotes struct {
+	Node
+	VotesYes int `json:"votes_yes"`
+	VotesNo  int `json:"votes_no"`
+}
+
+// ListProposals returns proposals in a space with vote counts.
+func (s *Store) ListProposals(ctx context.Context, spaceID string, limit int) ([]ProposalWithVotes, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
+		       n.state, n.priority, n.assignee, n.assignee_id, n.author, n.author_id, n.author_kind,
+		       n.tags, n.due_date, n.created_at, n.updated_at, 0, 0, 0,
+		       COALESCE((SELECT COUNT(*) FROM ops o WHERE o.node_id = n.id AND o.op = 'vote' AND o.payload->>'vote' = 'yes'), 0),
+		       COALESCE((SELECT COUNT(*) FROM ops o WHERE o.node_id = n.id AND o.op = 'vote' AND o.payload->>'vote' = 'no'), 0)
+		FROM nodes n
+		WHERE n.space_id = $1 AND n.kind = 'proposal'
+		ORDER BY n.state = 'open' DESC, n.created_at DESC
+		LIMIT $2`, spaceID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list proposals: %w", err)
+	}
+	defer rows.Close()
+
+	var proposals []ProposalWithVotes
+	for rows.Next() {
+		var p ProposalWithVotes
+		var parentID sql.NullString
+		var dueDate sql.NullTime
+		if err := rows.Scan(
+			&p.ID, &p.SpaceID, &parentID, &p.Kind, &p.Title, &p.Body,
+			&p.State, &p.Priority, &p.Assignee, &p.AssigneeID, &p.Author, &p.AuthorID, &p.AuthorKind,
+			pq.Array(&p.Tags), &dueDate, &p.CreatedAt, &p.UpdatedAt,
+			&p.ChildCount, &p.ChildDone, &p.BlockerCount,
+			&p.VotesYes, &p.VotesNo,
+		); err != nil {
+			return nil, fmt.Errorf("scan proposal: %w", err)
+		}
+		if parentID.Valid {
+			p.ParentID = parentID.String
+		}
+		proposals = append(proposals, p)
+	}
+	return proposals, rows.Err()
+}
+
+// HasVoted checks if a user has already voted on a proposal.
+func (s *Store) HasVoted(ctx context.Context, nodeID, actorID string) bool {
+	var exists bool
+	s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM ops WHERE node_id = $1 AND actor_id = $2 AND op = 'vote')`,
+		nodeID, actorID).Scan(&exists)
+	return exists
 }
 
 // ────────────────────────────────────────────────────────────────────
