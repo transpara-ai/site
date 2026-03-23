@@ -1066,6 +1066,59 @@ func (s *Store) ListAvailableTasks(ctx context.Context, query string, limit int)
 }
 
 // ────────────────────────────────────────────────────────────────────
+// Reports
+// ────────────────────────────────────────────────────────────────────
+
+// Report is a report op with the associated node info.
+type Report struct {
+	Op
+	NodeTitle string `json:"node_title"`
+	NodeKind  string `json:"node_kind"`
+	Reason    string `json:"reason"`
+}
+
+// ListReports returns unresolved report ops for a space. A report is "unresolved"
+// if no resolve op exists for the same node_id.
+func (s *Store) ListReports(ctx context.Context, spaceID string) ([]Report, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
+		       COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		       COALESCE(n.title, ''), COALESCE(n.kind, '')
+		FROM ops o
+		LEFT JOIN users u ON u.id = o.actor_id
+		LEFT JOIN nodes n ON n.id = o.node_id
+		WHERE o.space_id = $1 AND o.op = 'report'
+		  AND NOT EXISTS (
+		      SELECT 1 FROM ops r WHERE r.space_id = $1 AND r.op = 'resolve' AND r.node_id = o.node_id
+		  )
+		ORDER BY o.created_at DESC
+		LIMIT 50`, spaceID)
+	if err != nil {
+		return nil, fmt.Errorf("list reports: %w", err)
+	}
+	defer rows.Close()
+
+	var reports []Report
+	for rows.Next() {
+		var r Report
+		if err := rows.Scan(
+			&r.ID, &r.SpaceID, &r.NodeID, &r.Actor, &r.ActorID,
+			&r.ActorKind, &r.Op, &r.Payload, &r.CreatedAt,
+			&r.NodeTitle, &r.NodeKind,
+		); err != nil {
+			return nil, fmt.Errorf("scan report: %w", err)
+		}
+		// Extract reason from payload.
+		var payload map[string]string
+		if json.Unmarshal(r.Payload, &payload) == nil {
+			r.Reason = payload["reason"]
+		}
+		reports = append(reports, r)
+	}
+	return reports, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Dashboard (cross-space queries)
 // ────────────────────────────────────────────────────────────────────
 

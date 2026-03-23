@@ -1077,7 +1077,7 @@ templ opItem(o Op) {
 
 // ── Settings ────────────────────────────────────────────────────
 
-templ SettingsView(space Space, spaces []Space, user ViewUser, errMsg string) {
+templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser, errMsg string) {
 	@appLayout(space, spaces, "settings", user) {
 		<div class="max-w-xl mx-auto p-6 space-y-8">
 			<h1 class="text-xl font-medium text-warm">Settings</h1>
@@ -1126,6 +1126,53 @@ templ SettingsView(space Space, spaces []Space, user ViewUser, errMsg string) {
 					Save changes
 				</button>
 			</form>
+			<!-- Reports -->
+			if len(reports) > 0 {
+				<div class="border border-amber-500/30 rounded-lg p-5 space-y-4">
+					<h2 class="text-lg font-medium text-amber-400">Reports ({ fmt.Sprintf("%d", len(reports)) })</h2>
+					<p class="text-sm text-warm-muted">Flagged content that needs your review.</p>
+					<div class="space-y-3">
+						for _, rpt := range reports {
+							<div class="bg-elevated rounded-lg p-4 border border-edge">
+								<div class="flex items-center justify-between mb-2">
+									<div class="flex items-center gap-2">
+										<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", kindBadgeClass(rpt.NodeKind) }>{ rpt.NodeKind }</span>
+										<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, rpt.NodeID)) } class="text-sm font-medium text-warm hover:text-brand transition-colors">
+											if rpt.NodeTitle != "" {
+												{ rpt.NodeTitle }
+											} else {
+												{ rpt.NodeID }
+											}
+										</a>
+									</div>
+									<span class="text-[10px] text-warm-faint">{ dashRelativeTime(rpt.CreatedAt) }</span>
+								</div>
+								<p class="text-xs text-warm-muted mb-3">
+									Reported by <span class="text-warm">{ rpt.Actor }</span>: { rpt.Reason }
+								</p>
+								<div class="flex gap-2">
+									<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") }>
+										<input type="hidden" name="op" value="resolve"/>
+										<input type="hidden" name="node_id" value={ rpt.NodeID }/>
+										<input type="hidden" name="action" value="dismiss"/>
+										<button type="submit" class="text-xs px-3 py-1.5 bg-warm-faint/20 text-warm-muted rounded-lg hover:bg-warm-faint/30 transition-colors">
+											Dismiss
+										</button>
+									</form>
+									<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") }>
+										<input type="hidden" name="op" value="resolve"/>
+										<input type="hidden" name="node_id" value={ rpt.NodeID }/>
+										<input type="hidden" name="action" value="remove"/>
+										<button type="submit" class="text-xs px-3 py-1.5 bg-red-500/15 text-red-400 rounded-lg hover:bg-red-500/25 transition-colors">
+											Remove content
+										</button>
+									</form>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			}
 			<!-- Danger zone -->
 			<div class="border border-red-500/30 rounded-lg p-5 space-y-4">
 				<h2 class="text-lg font-medium text-red-400">Danger zone</h2>

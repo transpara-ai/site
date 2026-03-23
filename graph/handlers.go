@@ -303,7 +303,8 @@ func (h *Handlers) handleSpaceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-	SettingsView(*space, spaces, h.viewUser(r), "").Render(r.Context(), w)
+	reports, _ := h.store.ListReports(r.Context(), space.ID)
+	SettingsView(*space, spaces, reports, h.viewUser(r), "").Render(r.Context(), w)
 }
 
 func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +321,8 @@ func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-		SettingsView(*space, spaces, h.viewUser(r), "Name cannot be empty.").Render(r.Context(), w)
+		reports, _ := h.store.ListReports(r.Context(), space.ID)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Name cannot be empty.").Render(r.Context(), w)
 		return
 	}
 
@@ -352,7 +354,8 @@ func (h *Handlers) handleDeleteSpace(w http.ResponseWriter, r *http.Request) {
 	confirm := strings.TrimSpace(r.FormValue("confirm"))
 	if confirm != space.Name {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-		SettingsView(*space, spaces, h.viewUser(r), "Type the space name to confirm deletion.").Render(r.Context(), w)
+		reports, _ := h.store.ListReports(r.Context(), space.ID)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Type the space name to confirm deletion.").Render(r.Context(), w)
 		return
 	}
 
@@ -1132,6 +1135,31 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
+	case "resolve":
+		nodeID := r.FormValue("node_id")
+		action := r.FormValue("action") // "dismiss" or "remove"
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		// Only space owner can resolve reports.
+		if space.OwnerID != actorID {
+			http.Error(w, "only space owner can resolve reports", http.StatusForbidden)
+			return
+		}
+		payload, _ := json.Marshal(map[string]string{"action": action})
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "resolve", payload)
+
+		if action == "remove" {
+			h.store.DeleteNode(ctx, nodeID)
+		}
+
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "resolve", "action": action})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/settings", http.StatusSeeOther)
 
 	case "depend":
 		nodeID := r.FormValue("node_id")
