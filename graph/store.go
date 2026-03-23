@@ -127,6 +127,13 @@ type Op struct {
 	CreatedAt time.Time       `json:"created_at"`
 }
 
+// Reaction is a single emoji reaction on a node.
+type Reaction struct {
+	Emoji string `json:"emoji"`
+	Count int    `json:"count"`
+	Users []string `json:"users"` // user IDs who reacted with this emoji
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Params
 // ────────────────────────────────────────────────────────────────────
@@ -296,6 +303,15 @@ CREATE TABLE IF NOT EXISTS invites (
     created_by TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS reactions (
+    node_id    TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    user_id    TEXT NOT NULL,
+    emoji      TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (node_id, user_id, emoji)
+);
+CREATE INDEX IF NOT EXISTS idx_reactions_node ON reactions(node_id);
 
 -- users table is created by auth.Auth.migrate(). Graph queries JOIN on it.
 -- Creating here too (IF NOT EXISTS) ensures tests work without auth setup.
@@ -1656,6 +1672,76 @@ func (s *Store) ListEndorsers(ctx context.Context, userID string, limit int) ([]
 		}
 	}
 	return names, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Reactions
+// ────────────────────────────────────────────────────────────────────
+
+// ToggleReaction adds or removes a reaction. Returns true if added, false if removed.
+func (s *Store) ToggleReaction(ctx context.Context, nodeID, userID, emoji string) (bool, error) {
+	var exists bool
+	s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM reactions WHERE node_id=$1 AND user_id=$2 AND emoji=$3)`,
+		nodeID, userID, emoji).Scan(&exists)
+	if exists {
+		_, err := s.db.ExecContext(ctx,
+			`DELETE FROM reactions WHERE node_id=$1 AND user_id=$2 AND emoji=$3`,
+			nodeID, userID, emoji)
+		return false, err
+	}
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO reactions (node_id, user_id, emoji) VALUES ($1, $2, $3)`,
+		nodeID, userID, emoji)
+	return true, err
+}
+
+// GetNodeReactions returns aggregated reactions for a single node.
+func (s *Store) GetNodeReactions(ctx context.Context, nodeID string) []Reaction {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT emoji, COUNT(*) as cnt, ARRAY_AGG(user_id) as users
+		 FROM reactions WHERE node_id = $1
+		 GROUP BY emoji ORDER BY MIN(created_at)`, nodeID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var reactions []Reaction
+	for rows.Next() {
+		var r Reaction
+		var users []string
+		if err := rows.Scan(&r.Emoji, &r.Count, pq.Array(&users)); err == nil {
+			r.Users = users
+			reactions = append(reactions, r)
+		}
+	}
+	return reactions
+}
+
+// GetBulkReactions returns reactions for multiple nodes. Returns map[nodeID][]Reaction.
+func (s *Store) GetBulkReactions(ctx context.Context, nodeIDs []string) map[string][]Reaction {
+	result := make(map[string][]Reaction)
+	if len(nodeIDs) == 0 {
+		return result
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT node_id, emoji, COUNT(*) as cnt, ARRAY_AGG(user_id) as users
+		 FROM reactions WHERE node_id = ANY($1)
+		 GROUP BY node_id, emoji ORDER BY node_id, MIN(created_at)`, pq.Array(nodeIDs))
+	if err != nil {
+		return result
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var nodeID string
+		var r Reaction
+		var users []string
+		if err := rows.Scan(&nodeID, &r.Emoji, &r.Count, pq.Array(&users)); err == nil {
+			r.Users = users
+			result[nodeID] = append(result[nodeID], r)
+		}
+	}
+	return result
 }
 
 // ────────────────────────────────────────────────────────────────────

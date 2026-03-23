@@ -1543,7 +1543,7 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 
 // ── Conversation detail view ────────────────────────────────────
 
-templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool, nameMap map[string]string) {
+templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool, nameMap map[string]string, rxnMap map[string][]Reaction) {
 	@appLayout(space, []Space{space}, "conversations", user) {
 		<div class="flex flex-col h-full">
 			<!-- Conversation header -->
@@ -1585,9 +1585,9 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 					}
 					for i, msg := range messages {
 						if i > 0 && messages[i-1].AuthorID == msg.AuthorID && msg.CreatedAt.Sub(messages[i-1].CreatedAt) < 5*time.Minute {
-							@chatMessageCompact(msg, userID)
+							@chatMessageCompact(msg, userID, space.Slug, rxnMap[msg.ID])
 						} else {
-							@chatMessage(msg, userID)
+							@chatMessage(msg, userID, space.Slug, rxnMap[msg.ID])
 						}
 					}
 				</div>
@@ -1669,7 +1669,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 	}
 }
 
-templ chatMessage(msg Node, currentUserID string) {
+templ chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []Reaction) {
 	<div class={ "group flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
 		if msg.AuthorKind == "agent" {
 			<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0" title="Agent">
@@ -1682,37 +1682,104 @@ templ chatMessage(msg Node, currentUserID string) {
 				{ initial(msg.Author) }
 			</span>
 		}
-		<div class={ "max-w-[75%] rounded-lg px-4 py-2.5",
-			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
-			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
-			<div class="flex items-center gap-1.5 mb-1">
-				<span class="text-xs font-medium text-warm">{ msg.Author }</span>
-				if msg.AuthorKind == "agent" {
-					<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
-				}
-				<span class="text-[10px] text-warm-faint ml-auto">{ msg.CreatedAt.Format("3:04 PM") }</span>
-				<button type="button" class="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-warm-faint hover:text-brand ml-1 cursor-pointer"
-					onclick={ replyTo(msg.Author, truncate(msg.Body, 80)) }>reply</button>
+		<div class="max-w-[75%]">
+			<div class={ "rounded-lg px-4 py-2.5 relative",
+				templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
+				templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
+				templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
+				<div class="flex items-center gap-1.5 mb-1">
+					<span class="text-xs font-medium text-warm">{ msg.Author }</span>
+					if msg.AuthorKind == "agent" {
+						<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+					}
+					<span class="text-[10px] text-warm-faint ml-auto">{ msg.CreatedAt.Format("3:04 PM") }</span>
+					<!-- Hover actions: reply + react -->
+					<div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1">
+						<button type="button" class="text-[10px] text-warm-faint hover:text-brand cursor-pointer"
+							onclick={ replyTo(msg.Author, truncate(msg.Body, 80)) }>reply</button>
+						@quickReactButtons(msg.ID, spaceSlug)
+					</div>
+				</div>
+				<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
+								@renderMarkdown(msg.Body)
+							</div>
 			</div>
-			<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
-							@renderMarkdown(msg.Body)
-						</div>
+			if len(reactions) > 0 {
+				<div id={ "rxn-" + msg.ID }>
+					@reactionBar(msg.ID, spaceSlug, reactions, currentUserID)
+				</div>
+			} else {
+				<div id={ "rxn-" + msg.ID }></div>
+			}
 		</div>
 	</div>
 }
 
-templ chatMessageCompact(msg Node, currentUserID string) {
-	<div class={ "flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
+templ chatMessageCompact(msg Node, currentUserID string, spaceSlug string, reactions []Reaction) {
+	<div class={ "group flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
 		<div class="w-8 flex-shrink-0"></div>
-		<div class={ "max-w-[75%] rounded-lg px-4 py-1",
-			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
-			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
-			<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
-							@renderMarkdown(msg.Body)
-						</div>
+		<div class="max-w-[75%]">
+			<div class={ "rounded-lg px-4 py-1 relative",
+				templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
+				templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
+				templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
+				<!-- Hover actions -->
+				<div class="absolute -top-2.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-elevated border border-edge rounded px-1 py-0.5 shadow-sm">
+					<button type="button" class="text-[10px] text-warm-faint hover:text-brand cursor-pointer"
+						onclick={ replyTo(msg.Author, truncate(msg.Body, 80)) }>reply</button>
+					@quickReactButtons(msg.ID, spaceSlug)
+				</div>
+				<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
+								@renderMarkdown(msg.Body)
+							</div>
+			</div>
+			if len(reactions) > 0 {
+				<div id={ "rxn-" + msg.ID }>
+					@reactionBar(msg.ID, spaceSlug, reactions, currentUserID)
+				</div>
+			} else {
+				<div id={ "rxn-" + msg.ID }></div>
+			}
 		</div>
+	</div>
+}
+
+// ── Reaction components ─────────────────────────────────────────
+
+// quickReactButtons renders the 6 quick emoji reaction buttons on hover.
+templ quickReactButtons(nodeID string, spaceSlug string) {
+	for _, emoji := range []string{"👍", "❤️", "🔥", "👀", "✅", "😂"} {
+		<button
+			type="button"
+			class="text-xs hover:scale-125 transition-transform cursor-pointer px-0.5 leading-none"
+			hx-post={ "/app/" + spaceSlug + "/op" }
+			hx-vals={ `{"op":"react","node_id":"` + nodeID + `","emoji":"` + emoji + `"}` }
+			hx-target={ "#rxn-" + nodeID }
+			hx-swap="innerHTML"
+		>
+			{ emoji }
+		</button>
+	}
+}
+
+// reactionBar renders the aggregated reaction badges below a message.
+templ reactionBar(nodeID string, spaceSlug string, reactions []Reaction, currentUserID string) {
+	<div class="flex flex-wrap gap-1 mt-1">
+		for _, r := range reactions {
+			<button
+				type="button"
+				class={ "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors cursor-pointer border",
+					templ.KV("bg-brand/10 border-brand/30 text-warm", containsStr(r.Users, currentUserID)),
+					templ.KV("bg-elevated border-edge text-warm-muted hover:border-brand/30", !containsStr(r.Users, currentUserID)) }
+				hx-post={ "/app/" + spaceSlug + "/op" }
+				hx-vals={ `{"op":"react","node_id":"` + nodeID + `","emoji":"` + r.Emoji + `"}` }
+				hx-target={ "#rxn-" + nodeID }
+				hx-swap="innerHTML"
+			>
+				<span>{ r.Emoji }</span>
+				<span>{ fmt.Sprintf("%d", r.Count) }</span>
+			</button>
+		}
 	</div>
 }
 
@@ -3084,6 +3151,15 @@ func truncate(s string, max int) string {
 		return s
 	}
 	return s[:max] + "…"
+}
+
+func containsStr(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 func lastMessageTS(messages []Node) string {

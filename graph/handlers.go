@@ -911,9 +911,16 @@ func (h *Handlers) handleConversationDetail(w http.ResponseWriter, r *http.Reque
 
 	hasAgent, _ := h.store.HasAgentParticipant(r.Context(), node.Tags)
 
+	// Load reactions for all messages.
+	var msgIDs []string
+	for _, m := range messages {
+		msgIDs = append(msgIDs, m.ID)
+	}
+	rxnMap := h.store.GetBulkReactions(r.Context(), msgIDs)
+
 	user := h.viewUser(r)
 	nameMap := h.store.ResolveUserNames(r.Context(), node.Tags)
-	ConversationDetailView(*space, *node, messages, user, h.userID(r), hasAgent, nameMap).Render(r.Context(), w)
+	ConversationDetailView(*space, *node, messages, user, h.userID(r), hasAgent, nameMap, rxnMap).Render(r.Context(), w)
 }
 
 // handleConversationMessages returns new messages since the given timestamp.
@@ -959,8 +966,13 @@ func (h *Handlers) handleConversationMessages(w http.ResponseWriter, r *http.Req
 
 	// Return chatMessage fragments for HTMX polling.
 	uid := h.userID(r)
+	var msgIDs []string
+	for _, m := range messages {
+		msgIDs = append(msgIDs, m.ID)
+	}
+	rxnMap := h.store.GetBulkReactions(r.Context(), msgIDs)
 	for _, msg := range messages {
-		chatMessage(msg, uid).Render(r.Context(), w)
+		chatMessage(msg, uid, space.Slug, rxnMap[msg.ID]).Render(r.Context(), w)
 	}
 }
 
@@ -1267,7 +1279,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		if isHTMX(r) {
 			parent, _ := h.store.GetNode(ctx, parentID)
 			if parent != nil && parent.Kind == KindConversation {
-				chatMessage(*node, actorID).Render(ctx, w)
+				chatMessage(*node, actorID, space.Slug, nil).Render(ctx, w)
 			} else {
 				CommentItem(*node).Render(ctx, w)
 			}
@@ -1746,6 +1758,32 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Redirect(w, r, "/app/"+space.Slug+"/feed", http.StatusSeeOther)
+
+	case "react":
+		nodeID := r.FormValue("node_id")
+		emoji := r.FormValue("emoji")
+		if nodeID == "" || emoji == "" {
+			http.Error(w, "node_id and emoji required", http.StatusBadRequest)
+			return
+		}
+		added, err := h.store.ToggleReaction(ctx, nodeID, actorID, emoji)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if added {
+			h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "react", json.RawMessage(`{"emoji":"`+emoji+`"}`))
+		}
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]any{"op": "react", "added": added, "emoji": emoji})
+			return
+		}
+		if isHTMX(r) {
+			reactions := h.store.GetNodeReactions(ctx, nodeID)
+			reactionBar(nodeID, space.Slug, reactions, actorID).Render(ctx, w)
+			return
+		}
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 
 	case "pin":
 		nodeID := r.FormValue("node_id")
