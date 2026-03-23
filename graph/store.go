@@ -118,6 +118,7 @@ type Op struct {
 	ID        string          `json:"id"`
 	SpaceID   string          `json:"space_id"`
 	NodeID    string          `json:"node_id,omitempty"`
+	NodeTitle string          `json:"node_title,omitempty"` // resolved from nodes table when available
 	Actor     string          `json:"actor"`
 	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
 	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
@@ -898,10 +899,11 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 		limit = 50
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
-		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
 		 FROM ops o
 		 LEFT JOIN users u ON u.id = o.actor_id
+		 LEFT JOIN nodes n ON n.id = o.node_id
 		 WHERE o.space_id = $1 ORDER BY o.created_at DESC LIMIT $2`,
 		spaceID, limit,
 	)
@@ -913,7 +915,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)
@@ -1791,12 +1793,13 @@ func (s *Store) ListUserAgentActivity(ctx context.Context, userID string, limit 
 		limit = 20
 	}
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
-		       COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		       o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
 		       s.slug, s.name
 		FROM ops o
 		JOIN users u ON u.id = o.actor_id AND u.kind = 'agent'
 		JOIN spaces s ON s.id = o.space_id
+		LEFT JOIN nodes n ON n.id = o.node_id
 		WHERE s.owner_id = $1
 		   OR EXISTS(SELECT 1 FROM space_members sm WHERE sm.space_id = s.id AND sm.user_id = $1)
 		ORDER BY o.created_at DESC
@@ -1810,7 +1813,7 @@ func (s *Store) ListUserAgentActivity(ctx context.Context, userID string, limit 
 	for rows.Next() {
 		var do DashboardOp
 		if err := rows.Scan(
-			&do.ID, &do.SpaceID, &do.NodeID, &do.Actor, &do.ActorID,
+			&do.ID, &do.SpaceID, &do.NodeID, &do.NodeTitle, &do.Actor, &do.ActorID,
 			&do.ActorKind, &do.Op, &do.Payload, &do.CreatedAt,
 			&do.SpaceSlug, &do.SpaceName,
 		); err != nil {

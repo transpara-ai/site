@@ -485,7 +485,11 @@ templ dashboardAgentRow(item DashboardOp) {
 			{ initial(item.Actor) }
 		</span>
 		<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", opBadgeClass(item.Op.Op) }>{ item.Op.Op }</span>
-		<a href={ templ.SafeURL("/app/" + item.SpaceSlug) } class="text-warm-faint hover:text-brand transition-colors truncate">{ item.SpaceName }</a>
+		if item.NodeTitle != "" && item.NodeID != "" {
+			<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", item.SpaceSlug, item.NodeID)) } class="text-warm-secondary hover:text-brand transition-colors truncate">{ truncate(item.NodeTitle, 30) }</a>
+		} else {
+			<a href={ templ.SafeURL("/app/" + item.SpaceSlug) } class="text-warm-faint hover:text-brand transition-colors truncate">{ item.SpaceName }</a>
+		}
 		<span class="ml-auto text-warm-faint flex-shrink-0">{ dashRelativeTime(item.CreatedAt) }</span>
 	</div>
 }
@@ -1415,6 +1419,9 @@ templ opItem(o Op, spaceSlug string) {
 				}
 				if o.NodeID != "" {
 					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, o.NodeID)) } class="text-warm-muted hover:text-brand transition-colors ml-1">{ o.Op }</a>
+					if o.NodeTitle != "" {
+						<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, o.NodeID)) } class="text-warm-secondary hover:text-brand transition-colors ml-1 truncate">{ truncate(o.NodeTitle, 60) }</a>
+					}
 				} else {
 					<span class="text-warm-muted ml-1">{ o.Op }</span>
 				}
