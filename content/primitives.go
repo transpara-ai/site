@@ -37,6 +37,9 @@ var cognitiveGrammarRaw []byte
 //go:embed reference/code-graph.md
 var codeGraphRaw []byte
 
+//go:embed reference/higher-order-ops.md
+var higherOrderOpsRaw []byte
+
 var (
 	tableRow = regexp.MustCompile(`^\| \*\*(.+?)\*\* \| (.+) \|$`)
 	primMD   = goldmark.New(goldmark.WithExtensions(extension.Table))
@@ -478,5 +481,12 @@ func LoadCognitiveGrammar() string {
 func LoadCodeGraph() string {
 	var buf bytes.Buffer
 	primMD.Convert(codeGraphRaw, &buf)
+	return buf.String()
+}
+
+// LoadHigherOrderOps renders the higher-order operations markdown to HTML.
+func LoadHigherOrderOps() string {
+	var buf bytes.Buffer
+	primMD.Convert(higherOrderOpsRaw, &buf)
 	return buf.String()
 }

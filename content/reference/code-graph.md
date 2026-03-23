@@ -1,4 +1,4 @@
-# Code Graph: 65 Primitives for Describing Any Application
+# Code Graph: 66 Primitives for Describing Any Application
 
 **Matt Searles (+Claude) · March 2026**
 
@@ -8,7 +8,7 @@
 
 The Code Graph is the layer that sits between the agent layer (28 primitives) and the products humans actually use. It answers the question: what are the irreducible atoms of software — code and UI — such that any application can be described as a composition of those atoms and then translated into any target technology?
 
-The derivation follows the same method used throughout the eventgraph architecture: identify base operations, identify differentiating dimensions, fill the matrix, name the compositions. The method that produced 15 social grammar operations, 13 domain grammars, ~145 domain operations, and 28 agent primitives produces 65 code graph primitives here.
+The derivation follows the same method used throughout the eventgraph architecture: identify base operations, identify differentiating dimensions, fill the matrix, name the compositions. The method that produced 15 social grammar operations, 13 domain grammars, ~145 domain operations, and 28 agent primitives produces 66 code graph primitives here.
 
 **Why this matters:** Agents don't think in TypeScript or React. They think in intent. The code graph gives agents — and humans — a semantic layer to describe applications in terms of what they mean, not how they're implemented. Translation to React, SwiftUI, terminal UI, or any other target is mechanical. The semantic description is the source of truth, and it lives on the event graph — meaning every product decision is signed, causally linked, and auditable.
 
@@ -886,6 +886,28 @@ Consequence Preview(command: Command(delete, Sprint),
 
 ---
 
+## Category 11: Audio Primitive (1)
+
+*What humans hear. The non-visual modality with unique dimensional properties.*
+
+Surfaced by applying Blind (Need(Need)) to the spec: Sound has dimensions — modality, timing, spatiality, frequency, amplitude — not expressible by any composition of visual primitives. If the Code Graph claims "any application," non-visual output must be representable.
+
+### Sound
+Audio output. A notification chime, a message-received tone, a voice channel audio stream, spatial audio positioning in a collaborative space, text-to-speech, a background ambient drone. Sound exists on dimensions no visual primitive covers: frequency (pitch), amplitude (volume), spatial position (stereo/3D), waveform (tone vs noise), and duration pattern (instant/sustained/looping).
+
+Sound is distinct from Display (visual output) in modality, from Alert (notification) in that Alert is a routing decision while Sound is the medium, and from Feedback (response to action) in that Sound can be ambient/environmental, not just reactive.
+
+```
+Sound(type: notification, tone: chime, volume: 0.6)
+Sound(type: ambient, source: voice_channel, spatial: true)
+Sound(type: tts, text: "Task completed", voice: system)
+Sound(type: alert, tone: urgent, pattern: repeat(3))
+```
+
+**This brings the Code Graph to 66 primitives across 11 categories.**
+
+---
+
 ## Named Compositions: Product Patterns
 
 *How primitives compose into the products humans actually use.*
@@ -1011,6 +1033,106 @@ Wizard(name: CreateProject, steps: Sequence([
   navigation: Layout(row, [Action("Back"), Display(progress), Action("Next")]))
 ```
 
+### Permission
+Who can do what to which things. Not a primitive — it decomposes into Relation + Collection + Authorize. But it recurs across every application.
+
+```
+Permission(actor: Role(admin),
+  actions: [Command(create), Command(delete), Command(transition)],
+  scope: Scope(type: tenant, boundary: organization_id))
+
+Permission(actor: Role(member),
+  actions: [Command(create), Query, Command(transition, from: [todo, doing])],
+  scope: Scope(type: space, boundary: space_id))
+```
+
+### Notification
+A directed delivery with urgency-based routing. Alert is the UI; Notification is the mechanism that decides *how* to deliver. Decomposes into Trigger + Condition + Alert + Interop.
+
+```
+Notification(event: Task.assigned,
+  recipient: task.assignee,
+  urgency: Condition(
+    task.priority == urgent, then: push,
+    task.priority == high, then: in_app,
+    else: badge_only),
+  template: "{actor} assigned you: {task.title}",
+  action: Navigation(route: task_detail))
+```
+
+### Error
+A structured representation of what went wrong, why, and how to recover. Decomposes into Event(type: error) + State + Feedback + Retry/Fallback. But error handling recurs universally.
+
+```
+Error(type: validation, target: Form(create_task),
+  fields: [
+    { field: title, message: "Required", severity: blocking },
+    { field: due, message: "Must be in the future", severity: warning }
+  ],
+  recovery: Focus(field: title))
+
+Error(type: network, command: Command(create, Task),
+  message: "Connection lost",
+  recovery: Sequence([
+    Retry(attempts: 3, backoff: exponential),
+    Fallback(show: Offline(queue: command))
+  ]))
+```
+
+---
+
+## Convergence Analysis
+
+*Applying the cognitive grammar (Post 43) to the Code Graph itself.*
+
+The spec was subjected to the full cognitive grammar method: Need row (Audit, Cover, Blind), then Traverse row (Trace, Zoom, Explore), then Derive row (Formalize, Map, Catalog). Pipeline ordering per Post 44.
+
+### What Audit found (Need(Derive))
+
+The derivation claims 4 fundamental concerns → 10 categories → 65 primitives. The path from 4 concerns to 10 categories was implicit. Made explicit:
+
+| Concern | Categories | Primitives |
+|---------|-----------|-----------|
+| **Data** | Data | 6 |
+| **Logic** | Logic | 6 |
+| **Interface** | IO + UI | 6 + 19 = 25 |
+| **Quality** | Aesthetic + Accessibility + Temporal + Resilience + Structural + Social + Audio | 7 + 4 + 3 + 4 + 3 + 3 + 1 = 25 |
+
+Quality decomposes into 7 sub-concerns, matching the 7 aspects of the question "what makes software good?": beautiful (Aesthetic), accessible (Accessibility), timely (Temporal), resilient (Resilience), structured (Structural), social (Social), and audible (Audio).
+
+### What Cover found (Need(Traverse))
+
+- **Sound** — genuine primitive gap. Unique modality with dimensions (frequency, amplitude, spatiality) not expressible by visual primitives. Added as Category 11. (1 primitive)
+- **Permission, Notification, Error** — recurrent compositions, not primitives. Added as Named Compositions. (0 new primitives)
+- **Security** (authentication, encryption, sanitization) — decomposes into Authorize + Constraint + Scope + Interop. Not primitives.
+- **Internationalization** — decomposes into Format + Transform + Condition. Not a primitive.
+- **Collaboration** (conflict resolution, operational transforms) — decomposes into Subscribe + Command + Liveness + Presence. Not primitives at this layer.
+
+### What Blind found (Need(Need))
+
+The spec is web-application-centric in examples, not in primitives. The primitives are abstract enough for CLI (Display = text output, Input = keyboard input), embedded (Entity + State + Trigger), and audio (Sound now covered). The gap was real: Sound was absent. With Sound added, the modality coverage is: visual (Display, Layout, etc.) + textual (Format) + audio (Sound). Tactile (haptic) is not covered — but decomposes into Feedback(type: haptic) + a hardware Interop. Not a primitive.
+
+### What Trace confirmed (Traverse(Derive))
+
+The UI category (19 primitives) has 5 implicit sub-groups. Making them explicit:
+
+| Sub-group | Primitives | Pattern |
+|-----------|-----------|---------|
+| **Output/Input** | Display, Input | Read/write duality |
+| **Composition** | Layout, List, Form, View | Increasing scope: arrange → collection → structured input → full page |
+| **Intent** | Action, Navigation | Human triggers: do something, go somewhere |
+| **System response** | Feedback, Alert, Thread | System communicates: in response, proactively, persistently |
+| **Interaction** | Avatar, Audit, Drag, Selection, Confirmation, Empty, Loading, Pagination | Identity, accountability, manipulation, batch, consent, states |
+
+### Fixpoint check
+
+Pass 2 of Need (Audit, Cover, Blind) on the updated spec:
+- **Audit:** 4 concerns → 11 categories → 66 primitives. Derivation path now explicit. No new gaps.
+- **Cover:** All modalities represented (visual, textual, audio). All interface concerns covered. No new territory.
+- **Blind:** Invited external perspectives (game dev, data scientist, accessibility, legal, performance). All decompose into existing primitives or the new Named Compositions.
+
+**Convergence reached at pass 2.** The grammar found one genuine primitive (Sound), three Named Compositions (Permission, Notification, Error), and structural clarification (Quality decomposition, UI sub-groups). No further passes produce new primitives.
+
 ---
 
 ## The Full Stack
@@ -1023,8 +1145,8 @@ From hash chain to pixel, the complete primitive inventory:
 | Social Grammar | Emit, Respond, Derive, Extend, Retract, Annotate, Acknowledge, Propagate, Endorse, Subscribe, Channel, Delegate, Consent, Sever, Merge | 15 |
 | Domain Grammars | ~145 operations across 13 domains | ~145 |
 | Agent Layer | Identity, Soul, Model, Memory, State, Authority, Trust, Budget, Role, Lifespan, Goal, Observe, Probe, Evaluate, Decide, Act, Delegate, Escalate, Refuse, Learn, Introspect, Communicate, Repair, Expect, Consent, Channel, Composition, Attenuation | 28 |
-| Code Graph | Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social | 65 |
-| **Total** | | **~253 + infrastructure** |
+| Code Graph | Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social, Audio | 66 |
+| **Total** | | **~254 + infrastructure** |
 
 One method. One graph. Primitives all the way down. Compositions all the way up.
 

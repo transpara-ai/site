@@ -5,7 +5,7 @@ import "fmt"
 // ── Reference Index ─────────────────────────────────────────────
 
 templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) {
-	@Layout("Reference", "201 primitives across 14 layers, 65 code graph primitives, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
+	@Layout("Reference", "201 primitives across 14 layers, 66 code graph primitives, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
 		<div class="space-y-12">
 			<div>
 				<h1 class="font-display text-3xl font-light text-warm">Reference</h1>
@@ -36,6 +36,23 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 									and six named functions (Revise, Hypothesize, Validate, Orient, Learn, Calibrate) complete
 									the meta-grammar. Every derivation in the framework uses these operations. The thirteen
 									layer grammars and the graph grammar itself are outputs of the cognitive grammar.
+								</p>
+							</div>
+						</div>
+					</a>
+					<a href="/reference/higher-order-ops" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand/50 hover:shadow-lg hover:shadow-brand/10 hover:-translate-y-0.5 transition-all duration-200">
+						<div class="flex items-baseline gap-3">
+							<span class="text-sm font-mono text-warm-faint">H</span>
+							<div>
+								<h3 class="text-lg font-medium text-warm">Higher-Order Operations</h3>
+								<p class="text-sm text-warm-muted">The algebra of the nine — 6 operations on operations</p>
+								<p class="text-warm-muted text-sm mt-2">
+									Composition gave the cognitive grammar its nine operations. But what else can
+									you do with functions? Iteration (depth), Product (parallel application),
+									Pipeline (ordered state transformation), Inverse (irreversibility proof),
+									Fixpoint (terminal states: tautology, circularity, completeness), and
+									Duality (Derive/Need as complements, TDD as the dual of Revise). These
+									aren't new operations — they're the structure of the space the nine inhabit.
 								</p>
 							</div>
 						</div>
@@ -109,22 +126,22 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 			<!-- Section 3: Code Graph -->
 			<section>
 				<h2 class="text-xl font-medium mb-1 text-warm">Code Graph</h2>
-				<p class="text-warm-muted text-sm mb-4">The bridge between agents and products. 65 primitives for describing any application as semantic atoms.</p>
+				<p class="text-warm-muted text-sm mb-4">The bridge between agents and products. 66 primitives for describing any application as semantic atoms.</p>
 				<div class="space-y-3">
 					<a href="/reference/code-graph" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand/50 hover:shadow-lg hover:shadow-brand/10 hover:-translate-y-0.5 transition-all duration-200">
 						<div class="flex items-baseline gap-3">
 							<span class="text-sm font-mono text-warm-faint">65</span>
 							<div>
 								<h3 class="text-lg font-medium text-warm">Code Graph Primitives</h3>
-								<p class="text-sm text-warm-muted">65 primitives across 10 categories — the irreducible atoms of software</p>
+								<p class="text-sm text-warm-muted">66 primitives across 11 categories — the irreducible atoms of software</p>
 								<p class="text-warm-muted text-sm mt-2">
 									Agents don't think in TypeScript or React. They think in intent. The Code Graph
 									gives agents — and humans — a semantic layer to describe applications in terms of
 									what they mean, not how they're implemented. Data (6), Logic (6), IO (6), UI (19),
 									Aesthetic (7), Accessibility (4), Temporal (3), Resilience (4), Structural (3),
-									Social (3). Plus named compositions: Board, Detail, Feed, Dashboard, Inbox, Wizard.
-									Translation to any target technology is mechanical. The semantic description is the
-									source of truth, and it lives on the event graph.
+									Social (3), Audio (1). Plus named compositions: Board, Detail, Feed, Dashboard,
+									Inbox, Wizard, Permission, Notification, Error. Iterated to convergence via the
+									cognitive grammar. Translation to any target technology is mechanical.
 								</p>
 							</div>
 						</div>
@@ -161,10 +178,44 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 	}
 }
 
+// ── Higher-Order Operations Page ────────────────────────────────
+
+templ HigherOrderOpsPage(body string) {
+	@Layout("Higher-Order Operations", "Six operations on operations — iteration, product, pipeline, inverse, fixpoint, duality. The algebra of the cognitive grammar.") {
+		<article class="space-y-6">
+			<div>
+				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+			</div>
+			<header>
+				<span class="text-sm text-warm-faint font-mono">Meta Grammar</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">Higher-Order Operations</h1>
+				<p class="text-warm-muted mt-1">The operations on operations — the algebra of the cognitive grammar's nine functions</p>
+			</header>
+			<div class="prose max-w-none">
+				@templ.Raw(body)
+			</div>
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
+				<div class="flex-1">
+					<a href="/reference/cognitive-grammar" class="group">
+						<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
+						<span class="block text-brand font-medium group-hover:underline">Cognitive Grammar</span>
+					</a>
+				</div>
+				<div class="flex-1 text-right">
+					<a href="/reference/grammar" class="group">
+						<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
+						<span class="block text-brand font-medium group-hover:underline">Graph Grammar</span>
+					</a>
+				</div>
+			</nav>
+		</article>
+	}
+}
+
 // ── Code Graph Page ─────────────────────────────────────────────
 
 templ CodeGraphPage(body string) {
-	@Layout("Code Graph", "65 primitives for describing any application as semantic atoms — Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social.") {
+	@Layout("Code Graph", "66 primitives for describing any application as semantic atoms — Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social, Audio.") {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -247,9 +298,9 @@ templ CognitiveGrammarPage(body string) {
 			</div>
 			<nav class="border-t border-edge pt-6 mt-8">
 				<div class="text-right">
-					<a href="/reference/grammar" class="group">
+					<a href="/reference/higher-order-ops" class="group">
 						<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
-						<span class="block text-brand font-medium group-hover:underline">Graph Grammar</span>
+						<span class="block text-brand font-medium group-hover:underline">Higher-Order Operations</span>
 					</a>
 				</div>
 			</nav>

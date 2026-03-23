@@ -65,7 +65,8 @@ func main() {
 	baseGrammar := content.LoadBaseGrammar()
 	cognitiveGrammar := content.LoadCognitiveGrammar()
 	codeGraph := content.LoadCodeGraph()
-	log.Printf("loaded %d grammars + base grammar + cognitive grammar + code graph", len(grammars))
+	higherOrderOps := content.LoadHigherOrderOps()
+	log.Printf("loaded %d grammars + base grammar + cognitive grammar + code graph + higher-order ops", len(grammars))
 
 	// Blog handlers.
 	handleHome, handleBlogIndex, handleBlogPost := makeHandlers(posts)
@@ -88,6 +89,9 @@ func main() {
 	})
 	mux.HandleFunc("GET /reference/cognitive-grammar", func(w http.ResponseWriter, r *http.Request) {
 		views.CognitiveGrammarPage(cognitiveGrammar).Render(r.Context(), w)
+	})
+	mux.HandleFunc("GET /reference/higher-order-ops", func(w http.ResponseWriter, r *http.Request) {
+		views.HigherOrderOpsPage(higherOrderOps).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/code-graph", func(w http.ResponseWriter, r *http.Request) {
 		views.CodeGraphPage(codeGraph).Render(r.Context(), w)
@@ -581,6 +585,7 @@ func main() {
 		addURL("/reference/cognitive-grammar")
 		addURL("/reference/grammars")
 		addURL("/reference/agents")
+		addURL("/reference/higher-order-ops")
 		addURL("/reference/code-graph")
 		// Blog posts.
 		for _, post := range posts {
