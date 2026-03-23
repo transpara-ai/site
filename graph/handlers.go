@@ -1259,6 +1259,16 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "node_id required", http.StatusBadRequest)
 			return
 		}
+		// Only claims can be challenged.
+		node, err := h.store.GetNode(ctx, nodeID)
+		if err != nil || node == nil {
+			http.NotFound(w, r)
+			return
+		}
+		if node.Kind != KindClaim {
+			http.Error(w, "can only challenge claims", http.StatusBadRequest)
+			return
+		}
 		if reason == "" {
 			reason = "challenged"
 		}
@@ -1266,7 +1276,10 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "challenge", payload)
 
 		// Update claim state to challenged.
-		h.store.UpdateNodeState(ctx, nodeID, ClaimChallenged)
+		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimChallenged); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		if wantsJSON(r) {
 			writeJSON(w, http.StatusOK, map[string]string{"op": "challenge", "status": "recorded"})
