@@ -466,6 +466,23 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Apply filters from query params.
+	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	assigneeFilter := strings.TrimSpace(r.URL.Query().Get("assignee"))
+	if q != "" || assigneeFilter != "" {
+		var filtered []Node
+		for _, t := range tasks {
+			if q != "" && !strings.Contains(strings.ToLower(t.Title), q) && !strings.Contains(strings.ToLower(t.Body), q) {
+				continue
+			}
+			if assigneeFilter != "" && t.Assignee != assigneeFilter {
+				continue
+			}
+			filtered = append(filtered, t)
+		}
+		tasks = filtered
+	}
+
 	if wantsJSON(r) {
 		writeJSON(w, http.StatusOK, map[string]any{"space": space, "nodes": tasks})
 		return
@@ -473,7 +490,7 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 
 	columns := groupByState(tasks)
 	agents, _ := h.store.ListAgentNames(r.Context())
-	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents).Render(r.Context(), w)
+	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleFeed(w http.ResponseWriter, r *http.Request) {

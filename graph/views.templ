@@ -641,7 +641,7 @@ templ NotificationsView(notifs []Notification, user ViewUser) {
 
 // ── Board view (kanban) ─────────────────────────────────────────
 
-templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []string) {
+templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []string, searchQuery string, assigneeFilter string) {
 	@appLayout(space, spaces, "board", user) {
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
@@ -663,7 +663,27 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 					</button>
 				}
 			</div>
-			if boardEmpty(columns) && user.Name != "" && user.Name != "Anonymous" {
+			<!-- Filters -->
+			<form action={ templ.SafeURL("/app/" + space.Slug + "/board") } method="GET" class="flex gap-2 mb-3 flex-shrink-0">
+				<input
+					type="text"
+					name="q"
+					value={ searchQuery }
+					placeholder="Search tasks..."
+					class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"
+				/>
+				<select name="assignee" class="px-2 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm-secondary focus:outline-none focus:ring-1 focus:ring-brand"
+					onchange="this.form.submit()">
+					<option value="">All assignees</option>
+					for _, a := range agents {
+						<option value={ a } selected?={ a == assigneeFilter }>{ a }</option>
+					}
+				</select>
+				if searchQuery != "" || assigneeFilter != "" {
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/board") } class="px-2 py-1.5 text-xs text-warm-faint hover:text-brand transition-colors flex items-center">Clear</a>
+				}
+			</form>
+			if boardEmpty(columns) && user.Name != "" && user.Name != "Anonymous" && searchQuery == "" && assigneeFilter == "" {
 				@boardOnboarding(space.Slug, agents)
 			} else {
 				<div class="flex gap-4 flex-1 overflow-x-auto pb-4">
