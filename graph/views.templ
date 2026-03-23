@@ -703,7 +703,11 @@ templ NotificationsView(notifs []Notification, user ViewUser) {
 								} else {
 									<span class="w-2 h-2 flex-shrink-0"></span>
 								}
-								<span class="flex-1">{ n.Message }</span>
+								if n.NodeID != "" && n.SpaceSlug != "" {
+									<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", n.SpaceSlug, n.NodeID)) } class="flex-1 hover:text-brand transition-colors">{ n.Message }</a>
+								} else {
+									<span class="flex-1">{ n.Message }</span>
+								}
 								if n.SpaceSlug != "" {
 									<a href={ templ.SafeURL("/app/" + n.SpaceSlug) } class="text-xs text-warm-faint hover:text-brand transition-colors flex-shrink-0">{ n.SpaceName }</a>
 								}

@@ -1271,6 +1271,7 @@ type Notification struct {
 	UserID    string    `json:"user_id"`
 	OpID      string    `json:"op_id"`
 	SpaceID   string    `json:"space_id"`
+	NodeID    string    `json:"node_id,omitempty"` // resolved from ops table
 	Message   string    `json:"message"`
 	Read      bool      `json:"read"`
 	CreatedAt time.Time `json:"created_at"`
@@ -1293,10 +1294,11 @@ func (s *Store) ListNotifications(ctx context.Context, userID string, limit int)
 		limit = 50
 	}
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT n.id, n.user_id, n.op_id, n.space_id, n.message, n.read, n.created_at,
+		SELECT n.id, n.user_id, n.op_id, n.space_id, COALESCE(o.node_id, ''), n.message, n.read, n.created_at,
 		       COALESCE(s.slug, ''), COALESCE(s.name, '')
 		FROM notifications n
 		LEFT JOIN spaces s ON s.id = n.space_id
+		LEFT JOIN ops o ON o.id = n.op_id
 		WHERE n.user_id = $1
 		ORDER BY n.created_at DESC
 		LIMIT $2`, userID, limit)
@@ -1308,7 +1310,7 @@ func (s *Store) ListNotifications(ctx context.Context, userID string, limit int)
 	var notifs []Notification
 	for rows.Next() {
 		var n Notification
-		if err := rows.Scan(&n.ID, &n.UserID, &n.OpID, &n.SpaceID, &n.Message, &n.Read, &n.CreatedAt,
+		if err := rows.Scan(&n.ID, &n.UserID, &n.OpID, &n.SpaceID, &n.NodeID, &n.Message, &n.Read, &n.CreatedAt,
 			&n.SpaceSlug, &n.SpaceName); err != nil {
 			return nil, fmt.Errorf("scan notification: %w", err)
 		}
