@@ -727,10 +727,20 @@ func (h *Handlers) handleActivity(w http.ResponseWriter, r *http.Request) {
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 
-	ops, err := h.store.ListOps(r.Context(), space.ID, 50)
+	opFilter := r.URL.Query().Get("op")
+	ops, err := h.store.ListOps(r.Context(), space.ID, 100)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if opFilter != "" {
+		var filtered []Op
+		for _, o := range ops {
+			if o.Op == opFilter {
+				filtered = append(filtered, o)
+			}
+		}
+		ops = filtered
 	}
 
 	if wantsJSON(r) {
@@ -738,7 +748,7 @@ func (h *Handlers) handleActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ActivityView(*space, spaces, ops, h.viewUser(r)).Render(r.Context(), w)
+	ActivityView(*space, spaces, ops, h.viewUser(r), opFilter).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleKnowledge(w http.ResponseWriter, r *http.Request) {
@@ -792,10 +802,21 @@ func (h *Handlers) handleChangelog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	searchQuery := r.URL.Query().Get("q")
 	entries, err := h.store.ListChangelog(r.Context(), space.ID, 50)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if searchQuery != "" {
+		var filtered []ChangelogEntry
+		sq := strings.ToLower(searchQuery)
+		for _, e := range entries {
+			if strings.Contains(strings.ToLower(e.Title), sq) {
+				filtered = append(filtered, e)
+			}
+		}
+		entries = filtered
 	}
 
 	if wantsJSON(r) {
@@ -803,7 +824,7 @@ func (h *Handlers) handleChangelog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ChangelogView(*space, spaces, entries, h.viewUser(r)).Render(r.Context(), w)
+	ChangelogView(*space, spaces, entries, h.viewUser(r), searchQuery).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {

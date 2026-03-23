@@ -1416,10 +1416,18 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser) {
 
 // ── Activity view ───────────────────────────────────────────────
 
-templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser) {
+templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser, opFilter string) {
 	@appLayout(space, spaces, "activity", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<h1 class="text-xl font-medium text-warm">Activity</h1>
+			<div class="flex flex-wrap gap-1">
+				@activityOpTab(space.Slug, "", "All", opFilter)
+				@activityOpTab(space.Slug, "intend", "Tasks", opFilter)
+				@activityOpTab(space.Slug, "complete", "Completions", opFilter)
+				@activityOpTab(space.Slug, "respond", "Messages", opFilter)
+				@activityOpTab(space.Slug, "assert", "Claims", opFilter)
+				@activityOpTab(space.Slug, "vote", "Votes", opFilter)
+			</div>
 			<div class="space-y-2">
 				for _, o := range ops {
 					@opItem(o, space.Slug)
@@ -1430,6 +1438,17 @@ templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser) {
 			</div>
 		</div>
 	}
+}
+
+templ activityOpTab(spaceSlug, value, label, active string) {
+	<a
+		href={ templ.SafeURL("/app/" + spaceSlug + "/activity?op=" + value) }
+		class={ "text-xs px-2.5 py-1 rounded-lg transition-colors font-medium",
+			templ.KV("bg-brand/15 text-brand", value == active),
+			templ.KV("bg-elevated text-warm-muted hover:text-warm", value != active) }
+	>
+		{ label }
+	</a>
 }
 
 templ opItem(o Op, spaceSlug string) {
@@ -1653,13 +1672,20 @@ templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser,
 
 // ── Changelog view (Layer 5 — Build) ────────────────────────────
 
-templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user ViewUser) {
+templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user ViewUser, searchQuery string) {
 	@appLayout(space, spaces, "changelog", user) {
 		<div class="p-6 md:p-8 space-y-6">
 			<div>
 				<h1 class="text-2xl font-light text-warm">Changelog</h1>
 				<p class="text-sm text-warm-muted mt-1">What was built — completed tasks with accountability</p>
 			</div>
+			<form action={ templ.SafeURL("/app/" + space.Slug + "/changelog") } method="GET" class="flex gap-2">
+				<input type="text" name="q" value={ searchQuery } placeholder="Search changelog..."
+					class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+				if searchQuery != "" {
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/changelog") } class="text-xs text-warm-faint hover:text-brand transition-colors flex items-center px-2">Clear</a>
+				}
+			</form>
 			if len(entries) == 0 {
 				<div class="text-center py-12">
 					<p class="text-warm-muted text-lg">Nothing shipped yet</p>
