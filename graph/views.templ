@@ -223,64 +223,186 @@ templ settingsIcon() {
 
 // ── Space index ─────────────────────────────────────────────────
 
-templ SpaceIndex(spaces []Space, user ViewUser) {
+templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Spaces — lovyou.ai</title>
+			<title>My Work — lovyou.ai</title>
 			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			@simpleHeader(user)
-			<main class="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
+			<main class="flex-1 max-w-5xl mx-auto px-6 py-8 w-full">
 				<div class="flex items-center justify-between mb-8">
-					<h1 class="text-2xl font-light text-warm">Your Spaces</h1>
-					<a href="/app/keys" class="text-xs text-warm-muted hover:text-brand transition-colors">API Keys</a>
+					<h1 class="text-2xl font-light text-warm">My Work</h1>
+					<div class="flex items-center gap-4">
+						<a href="/discover" class="text-xs text-warm-muted hover:text-brand transition-colors">Discover</a>
+						<a href="/market" class="text-xs text-warm-muted hover:text-brand transition-colors">Market</a>
+						<a href="/app/keys" class="text-xs text-warm-muted hover:text-brand transition-colors">API Keys</a>
+					</div>
 				</div>
-				<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-					for _, sp := range spaces {
-						<a href={ templ.SafeURL("/app/" + sp.Slug) } class="block p-6 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
-							<div class="flex items-center gap-2 mb-2">
-								<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full", kindBadgeClass(sp.Kind) }>
-									{ sp.Kind }
-								</span>
-							</div>
-							<h2 class="text-lg font-medium text-warm">{ sp.Name }</h2>
-							if sp.Description != "" {
-								<p class="text-sm text-warm-muted mt-1">{ sp.Description }</p>
+				<!-- Dashboard grid: tasks + conversations on left, agent activity + spaces on right -->
+				<div class="grid gap-6 lg:grid-cols-3">
+					<div class="lg:col-span-2 space-y-6">
+						<!-- My Tasks -->
+						<section>
+							<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide mb-3">Open Tasks</h2>
+							if len(tasks) == 0 {
+								<div class="bg-surface rounded-lg border border-edge p-6 text-center">
+									<p class="text-warm-faint text-sm">No open tasks assigned to you.</p>
+									<a href="/market" class="text-xs text-brand hover:text-brand-dark mt-2 inline-block">Browse available work</a>
+								</div>
+							} else {
+								<div class="space-y-2">
+									for _, t := range tasks {
+										@dashboardTaskCard(t)
+									}
+								</div>
 							}
-						</a>
-					}
-					<!-- New space card -->
-					<div class="p-6 bg-surface rounded-lg border-2 border-dashed border-edge-mid hover:border-brand transition-all">
-						<h3 class="text-sm font-medium text-warm-muted mb-3">Create new space</h3>
-						<form action="/app/new" method="POST" class="space-y-3">
-							<input type="text" name="name" placeholder="Space name" required
-								class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
-							<textarea name="description" placeholder="Description (optional)" rows="2"
-								class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
-							<select name="kind" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
-								<option value="project">Project</option>
-								<option value="community">Community</option>
-								<option value="team">Team</option>
-							</select>
-							<select name="visibility" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
-								<option value="private">Private</option>
-								<option value="public">Public</option>
-							</select>
-							<button type="submit" class="w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
-								Create
-							</button>
-						</form>
+						</section>
+						<!-- Conversations -->
+						<section>
+							<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide mb-3">Conversations</h2>
+							if len(convos) == 0 {
+								<div class="bg-surface rounded-lg border border-edge p-6 text-center">
+									<p class="text-warm-faint text-sm">No active conversations.</p>
+								</div>
+							} else {
+								<div class="space-y-2">
+									for _, c := range convos {
+										@dashboardConvoCard(c)
+									}
+								</div>
+							}
+						</section>
+					</div>
+					<div class="space-y-6">
+						<!-- Agent Activity -->
+						<section>
+							<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide mb-3">Agent Activity</h2>
+							if len(agentOps) == 0 {
+								<div class="bg-surface rounded-lg border border-edge p-6 text-center">
+									<p class="text-warm-faint text-sm">No agent activity yet.</p>
+								</div>
+							} else {
+								<div class="space-y-1">
+									for _, op := range agentOps {
+										@dashboardAgentRow(op)
+									}
+								</div>
+							}
+						</section>
+						<!-- Spaces -->
+						<section>
+							<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide mb-3">Your Spaces</h2>
+							<div class="space-y-2">
+								for _, sp := range spaces {
+									<a href={ templ.SafeURL("/app/" + sp.Slug) } class="block p-4 bg-surface rounded-lg border border-edge hover:border-brand hover:shadow-md hover:shadow-brand/5 transition-all">
+										<div class="flex items-center gap-2">
+											<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full", kindBadgeClass(sp.Kind) }>
+												{ sp.Kind }
+											</span>
+											<span class="text-sm font-medium text-warm">{ sp.Name }</span>
+										</div>
+									</a>
+								}
+								<!-- New space -->
+								<details class="bg-surface rounded-lg border-2 border-dashed border-edge-mid hover:border-brand transition-all">
+									<summary class="p-4 text-sm font-medium text-warm-muted cursor-pointer">+ New space</summary>
+									<form action="/app/new" method="POST" class="p-4 pt-0 space-y-3">
+										<input type="text" name="name" placeholder="Space name" required
+											class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+										<textarea name="description" placeholder="Description (optional)" rows="2"
+											class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
+										<div class="flex gap-2">
+											<select name="kind" class="flex-1 text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
+												<option value="project">Project</option>
+												<option value="community">Community</option>
+												<option value="team">Team</option>
+											</select>
+											<select name="visibility" class="flex-1 text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-warm-secondary">
+												<option value="private">Private</option>
+												<option value="public">Public</option>
+											</select>
+										</div>
+										<button type="submit" class="w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+											Create
+										</button>
+									</form>
+								</details>
+							</div>
+						</section>
 					</div>
 				</div>
 			</main>
 			@simpleFooter()
 		</body>
 	</html>
+}
+
+templ dashboardTaskCard(t DashboardTask) {
+	<a
+		href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", t.SpaceSlug, t.ID)) }
+		class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:border-brand/40 hover:shadow transition-all"
+	>
+		<span
+			class="w-2 h-2 rounded-full flex-shrink-0"
+			style={ fmt.Sprintf("background-color: %s", priorityDotHex(t.Priority)) }
+			title={ t.Priority }
+		></span>
+		<div class="flex-1 min-w-0">
+			<span class="text-sm font-medium text-warm truncate block">{ t.Title }</span>
+			<div class="flex items-center gap-2 mt-0.5">
+				<span class="text-[10px] text-warm-faint">{ t.SpaceName }</span>
+				if t.ChildCount > 0 {
+					<span class="text-[10px] text-warm-faint">{ fmt.Sprintf("%d/%d subtasks", t.ChildDone, t.ChildCount) }</span>
+				}
+			</div>
+		</div>
+		<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", dashboardStateClass(t.State) }>{ t.State }</span>
+	</a>
+}
+
+templ dashboardConvoCard(c DashboardConversation) {
+	<a
+		href={ templ.SafeURL(fmt.Sprintf("/app/%s/conversation/%s", c.SpaceSlug, c.ID)) }
+		class="block p-3 bg-surface rounded-lg border border-edge hover:border-brand/40 hover:shadow transition-all"
+	>
+		<div class="flex items-center justify-between mb-1">
+			<span class="text-sm font-medium text-warm truncate">{ c.Title }</span>
+			<span class="text-[10px] text-warm-faint flex-shrink-0 ml-2">{ dashRelativeTime(c.UpdatedAt) }</span>
+		</div>
+		if c.LastBody != "" {
+			<div class="flex items-center gap-2 text-xs text-warm-muted">
+				if c.LastAuthorKind == "agent" {
+					<span class="w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center flex-shrink-0">
+						{ initial(c.LastAuthor) }
+					</span>
+				}
+				<span class="truncate">{ truncateBody(c.LastBody, 80) }</span>
+			</div>
+		}
+		<div class="flex items-center gap-2 mt-1">
+			<span class="text-[10px] text-warm-faint">{ c.SpaceName }</span>
+			if c.ChildCount > 0 {
+				<span class="text-[10px] text-warm-faint">{ fmt.Sprintf("%d messages", c.ChildCount) }</span>
+			}
+		</div>
+	</a>
+}
+
+templ dashboardAgentRow(item DashboardOp) {
+	<div class="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-surface transition-colors text-xs">
+		<span class="w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+			{ initial(item.Actor) }
+		</span>
+		<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", opBadgeClass(item.Op.Op) }>{ item.Op.Op }</span>
+		<a href={ templ.SafeURL("/app/" + item.SpaceSlug) } class="text-warm-faint hover:text-brand transition-colors truncate">{ item.SpaceName }</a>
+		<span class="ml-auto text-warm-faint flex-shrink-0">{ dashRelativeTime(item.CreatedAt) }</span>
+	</div>
 }
 
 // ── Onboarding ──────────────────────────────────────────────────
@@ -1535,6 +1657,42 @@ func priorityDotHex(priority string) string {
 	default:
 		return "#78756e"
 	}
+}
+
+func dashboardStateClass(state string) string {
+	switch state {
+	case StateOpen:
+		return "bg-warm-faint/20 text-warm-muted"
+	case StateActive:
+		return "bg-indigo-500/15 text-indigo-400"
+	case StateReview:
+		return "bg-amber-500/15 text-amber-400"
+	default:
+		return "bg-warm-faint/20 text-warm-muted"
+	}
+}
+
+func dashRelativeTime(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	case d < 30*24*time.Hour:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	default:
+		return t.Format("Jan 2")
+	}
+}
+
+func truncateBody(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 func kindBadgeClass(kind string) string {

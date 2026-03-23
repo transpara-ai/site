@@ -1052,6 +1052,187 @@ func (s *Store) ListAvailableTasks(ctx context.Context, query string, limit int)
 }
 
 // ────────────────────────────────────────────────────────────────────
+// Dashboard (cross-space queries)
+// ────────────────────────────────────────────────────────────────────
+
+// DashboardTask is a task with its space context.
+type DashboardTask struct {
+	Node
+	SpaceSlug string `json:"space_slug"`
+	SpaceName string `json:"space_name"`
+}
+
+// DashboardConversation is a conversation summary with space context.
+type DashboardConversation struct {
+	ConversationSummary
+	SpaceSlug string `json:"space_slug"`
+	SpaceName string `json:"space_name"`
+}
+
+// DashboardOp is an op with space context.
+type DashboardOp struct {
+	Op
+	SpaceSlug string `json:"space_slug"`
+	SpaceName string `json:"space_name"`
+}
+
+// ListUserTasks returns open tasks where the user is the author or assignee, across all spaces.
+func (s *Store) ListUserTasks(ctx context.Context, userID string, limit int) ([]DashboardTask, error) {
+	if limit <= 0 {
+		limit = 30
+	}
+	// Assignee stores display name, so resolve the user's name for matching.
+	var userName string
+	s.db.QueryRowContext(ctx, `SELECT name FROM users WHERE id = $1`, userID).Scan(&userName)
+
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
+		       n.state, n.priority, n.assignee, n.author, n.author_id, n.author_kind,
+		       n.tags, n.due_date, n.created_at, n.updated_at,
+		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
+		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
+		       COALESCE((SELECT COUNT(*) FROM node_deps d JOIN nodes b ON b.id = d.depends_on WHERE d.node_id = n.id AND b.state != 'done'), 0),
+		       s.slug, s.name
+		FROM nodes n
+		JOIN spaces s ON s.id = n.space_id
+		WHERE n.kind = 'task' AND n.state NOT IN ('done', 'closed')
+		  AND (n.author_id = $1 OR n.assignee = $2)
+		ORDER BY n.priority = 'urgent' DESC, n.priority = 'high' DESC, n.updated_at DESC
+		LIMIT $3`, userID, userName, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list user tasks: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []DashboardTask
+	for rows.Next() {
+		var dt DashboardTask
+		var parentID sql.NullString
+		var dueDate sql.NullTime
+		if err := rows.Scan(
+			&dt.ID, &dt.SpaceID, &parentID, &dt.Kind, &dt.Title, &dt.Body,
+			&dt.State, &dt.Priority, &dt.Assignee, &dt.Author, &dt.AuthorID, &dt.AuthorKind,
+			pq.Array(&dt.Tags), &dueDate, &dt.CreatedAt, &dt.UpdatedAt,
+			&dt.ChildCount, &dt.ChildDone, &dt.BlockerCount,
+			&dt.SpaceSlug, &dt.SpaceName,
+		); err != nil {
+			return nil, fmt.Errorf("scan user task: %w", err)
+		}
+		if parentID.Valid {
+			dt.ParentID = parentID.String
+		}
+		if dueDate.Valid {
+			d := dueDate.Time
+			dt.DueDate = &d
+		}
+		tasks = append(tasks, dt)
+	}
+	return tasks, rows.Err()
+}
+
+// ListUserConversations returns conversations a user participates in across all spaces.
+func (s *Store) ListUserConversations(ctx context.Context, userID string, limit int) ([]DashboardConversation, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
+		       n.state, n.priority, n.assignee, n.author, n.author_id, n.author_kind, n.tags, n.due_date,
+		       n.created_at, n.updated_at,
+		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
+		       0, 0,
+		       lm.author, lm.author_kind, lm.body,
+		       s.slug, s.name
+		FROM nodes n
+		LEFT JOIN LATERAL (
+		    SELECT c.author, c.author_kind, c.body
+		    FROM nodes c WHERE c.parent_id = n.id
+		    ORDER BY c.created_at DESC LIMIT 1
+		) lm ON true
+		JOIN spaces s ON s.id = n.space_id
+		WHERE n.kind = 'conversation'
+		  AND ($1 = ANY(n.tags) OR n.author_id = $1)
+		ORDER BY GREATEST(n.updated_at, COALESCE(
+		    (SELECT MAX(c.created_at) FROM nodes c WHERE c.parent_id = n.id), n.created_at
+		)) DESC
+		LIMIT $2`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list user conversations: %w", err)
+	}
+	defer rows.Close()
+
+	var convos []DashboardConversation
+	for rows.Next() {
+		var dc DashboardConversation
+		var parentID sql.NullString
+		var dueDate sql.NullTime
+		var lastAuthor, lastAuthorKind, lastBody sql.NullString
+		if err := rows.Scan(
+			&dc.ID, &dc.SpaceID, &parentID, &dc.Kind, &dc.Title, &dc.Body,
+			&dc.State, &dc.Priority, &dc.Assignee, &dc.Author, &dc.AuthorID, &dc.AuthorKind, pq.Array(&dc.Tags), &dueDate,
+			&dc.CreatedAt, &dc.UpdatedAt,
+			&dc.ChildCount, &dc.ChildDone, &dc.BlockerCount,
+			&lastAuthor, &lastAuthorKind, &lastBody,
+			&dc.SpaceSlug, &dc.SpaceName,
+		); err != nil {
+			return nil, fmt.Errorf("scan user conversation: %w", err)
+		}
+		if parentID.Valid {
+			dc.ParentID = parentID.String
+		}
+		if lastAuthor.Valid {
+			dc.LastAuthor = lastAuthor.String
+		}
+		if lastAuthorKind.Valid {
+			dc.LastAuthorKind = lastAuthorKind.String
+		}
+		if lastBody.Valid {
+			dc.LastBody = lastBody.String
+		}
+		dc.SpaceSlug = dc.SpaceSlug
+		dc.SpaceName = dc.SpaceName
+		convos = append(convos, dc)
+	}
+	return convos, rows.Err()
+}
+
+// ListUserAgentActivity returns recent agent actions in spaces the user owns or is a member of.
+func (s *Store) ListUserAgentActivity(ctx context.Context, userID string, limit int) ([]DashboardOp, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
+		       COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		       s.slug, s.name
+		FROM ops o
+		JOIN users u ON u.id = o.actor_id AND u.kind = 'agent'
+		JOIN spaces s ON s.id = o.space_id
+		WHERE s.owner_id = $1
+		   OR EXISTS(SELECT 1 FROM space_members sm WHERE sm.space_id = s.id AND sm.user_id = $1)
+		ORDER BY o.created_at DESC
+		LIMIT $2`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list user agent activity: %w", err)
+	}
+	defer rows.Close()
+
+	var ops []DashboardOp
+	for rows.Next() {
+		var do DashboardOp
+		if err := rows.Scan(
+			&do.ID, &do.SpaceID, &do.NodeID, &do.Actor, &do.ActorID,
+			&do.ActorKind, &do.Op, &do.Payload, &do.CreatedAt,
+			&do.SpaceSlug, &do.SpaceName,
+		); err != nil {
+			return nil, fmt.Errorf("scan agent activity: %w", err)
+		}
+		ops = append(ops, do)
+	}
+	return ops, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Dependencies
 // ────────────────────────────────────────────────────────────────────
 

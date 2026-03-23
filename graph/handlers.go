@@ -224,7 +224,10 @@ func slugify(s string) string {
 // ────────────────────────────────────────────────────────────────────
 
 func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
-	spaces, err := h.store.ListSpaces(r.Context(), h.userID(r))
+	ctx := r.Context()
+	uid := h.userID(r)
+
+	spaces, err := h.store.ListSpaces(ctx, uid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -241,7 +244,11 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SpaceIndex(spaces, h.viewUser(r)).Render(r.Context(), w)
+	tasks, _ := h.store.ListUserTasks(ctx, uid, 10)
+	convos, _ := h.store.ListUserConversations(ctx, uid, 5)
+	agentOps, _ := h.store.ListUserAgentActivity(ctx, uid, 10)
+
+	Dashboard(spaces, tasks, convos, agentOps, h.viewUser(r)).Render(ctx, w)
 }
 
 func (h *Handlers) handleCreateSpace(w http.ResponseWriter, r *http.Request) {
