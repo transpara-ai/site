@@ -64,7 +64,8 @@ func main() {
 	}
 	baseGrammar := content.LoadBaseGrammar()
 	cognitiveGrammar := content.LoadCognitiveGrammar()
-	log.Printf("loaded %d grammars + base grammar + cognitive grammar", len(grammars))
+	codeGraph := content.LoadCodeGraph()
+	log.Printf("loaded %d grammars + base grammar + cognitive grammar + code graph", len(grammars))
 
 	// Blog handlers.
 	handleHome, handleBlogIndex, handleBlogPost := makeHandlers(posts)
@@ -87,6 +88,9 @@ func main() {
 	})
 	mux.HandleFunc("GET /reference/cognitive-grammar", func(w http.ResponseWriter, r *http.Request) {
 		views.CognitiveGrammarPage(cognitiveGrammar).Render(r.Context(), w)
+	})
+	mux.HandleFunc("GET /reference/code-graph", func(w http.ResponseWriter, r *http.Request) {
+		views.CodeGraphPage(codeGraph).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/layers/{num}", func(w http.ResponseWriter, r *http.Request) {
 		num, err := strconv.Atoi(r.PathValue("num"))
@@ -577,6 +581,7 @@ func main() {
 		addURL("/reference/cognitive-grammar")
 		addURL("/reference/grammars")
 		addURL("/reference/agents")
+		addURL("/reference/code-graph")
 		// Blog posts.
 		for _, post := range posts {
 			addURL("/blog/" + post.Slug)

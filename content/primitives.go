@@ -34,6 +34,9 @@ var baseGrammarRaw []byte
 //go:embed reference/cognitive-grammar.md
 var cognitiveGrammarRaw []byte
 
+//go:embed reference/code-graph.md
+var codeGraphRaw []byte
+
 var (
 	tableRow = regexp.MustCompile(`^\| \*\*(.+?)\*\* \| (.+) \|$`)
 	primMD   = goldmark.New(goldmark.WithExtensions(extension.Table))
@@ -468,5 +471,12 @@ func LoadBaseGrammar() string {
 func LoadCognitiveGrammar() string {
 	var buf bytes.Buffer
 	primMD.Convert(cognitiveGrammarRaw, &buf)
+	return buf.String()
+}
+
+// LoadCodeGraph renders the code graph spec markdown to HTML.
+func LoadCodeGraph() string {
+	var buf bytes.Buffer
+	primMD.Convert(codeGraphRaw, &buf)
 	return buf.String()
 }

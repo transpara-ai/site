@@ -5,7 +5,7 @@ import "fmt"
 // ── Reference Index ─────────────────────────────────────────────
 
 templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) {
-	@Layout("Reference", "201 primitives across 14 layers, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
+	@Layout("Reference", "201 primitives across 14 layers, 65 code graph primitives, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
 		<div class="space-y-12">
 			<div>
 				<h1 class="font-display text-3xl font-light text-warm">Reference</h1>
@@ -106,7 +106,33 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 				</div>
 			</section>
 
-			<!-- Section 3: Agent -->
+			<!-- Section 3: Code Graph -->
+			<section>
+				<h2 class="text-xl font-medium mb-1 text-warm">Code Graph</h2>
+				<p class="text-warm-muted text-sm mb-4">The bridge between agents and products. 65 primitives for describing any application as semantic atoms.</p>
+				<div class="space-y-3">
+					<a href="/reference/code-graph" class="block p-5 bg-surface rounded-lg border border-edge hover:border-brand/50 hover:shadow-lg hover:shadow-brand/10 hover:-translate-y-0.5 transition-all duration-200">
+						<div class="flex items-baseline gap-3">
+							<span class="text-sm font-mono text-warm-faint">65</span>
+							<div>
+								<h3 class="text-lg font-medium text-warm">Code Graph Primitives</h3>
+								<p class="text-sm text-warm-muted">65 primitives across 10 categories — the irreducible atoms of software</p>
+								<p class="text-warm-muted text-sm mt-2">
+									Agents don't think in TypeScript or React. They think in intent. The Code Graph
+									gives agents — and humans — a semantic layer to describe applications in terms of
+									what they mean, not how they're implemented. Data (6), Logic (6), IO (6), UI (19),
+									Aesthetic (7), Accessibility (4), Temporal (3), Resilience (4), Structural (3),
+									Social (3). Plus named compositions: Board, Detail, Feed, Dashboard, Inbox, Wizard.
+									Translation to any target technology is mechanical. The semantic description is the
+									source of truth, and it lives on the event graph.
+								</p>
+							</div>
+						</div>
+					</a>
+				</div>
+			</section>
+
+			<!-- Section 4: Agent -->
 			<section>
 				<h2 class="text-xl font-medium mb-1 text-warm">Agent</h2>
 				<p class="text-warm-muted text-sm mb-4">What agents are and can do. The interface between ontology and grammar.</p>
@@ -132,6 +158,40 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 				</div>
 			</section>
 		</div>
+	}
+}
+
+// ── Code Graph Page ─────────────────────────────────────────────
+
+templ CodeGraphPage(body string) {
+	@Layout("Code Graph", "65 primitives for describing any application as semantic atoms — Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social.") {
+		<article class="space-y-6">
+			<div>
+				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
+			</div>
+			<header>
+				<span class="text-sm text-warm-faint font-mono">65 Primitives</span>
+				<h1 class="text-3xl font-light mt-1 text-warm">Code Graph</h1>
+				<p class="text-warm-muted mt-1">The irreducible atoms of software — any application as a composition of semantic primitives</p>
+			</header>
+			<div class="prose max-w-none">
+				@templ.Raw(body)
+			</div>
+			<nav class="border-t border-edge pt-6 mt-8 flex justify-between items-start gap-4">
+				<div class="flex-1">
+					<a href="/reference/agents" class="group">
+						<span class="text-sm text-warm-faint group-hover:text-brand">&larr; Previous</span>
+						<span class="block text-brand font-medium group-hover:underline">Agent Primitives</span>
+					</a>
+				</div>
+				<div class="flex-1 text-right">
+					<a href="/reference/grammars" class="group">
+						<span class="text-sm text-warm-faint group-hover:text-brand">Next &rarr;</span>
+						<span class="block text-brand font-medium group-hover:underline">Layer Grammars</span>
+					</a>
+				</div>
+			</nav>
+		</article>
 	}
 }
 
