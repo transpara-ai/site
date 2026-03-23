@@ -1341,6 +1341,32 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
 
+	case "reflect":
+		body := strings.TrimSpace(r.FormValue("body"))
+		if body == "" {
+			http.Error(w, "body required", http.StatusBadRequest)
+			return
+		}
+		node, err := h.store.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    space.ID,
+			Kind:       KindPost,
+			Title:      "Reflection",
+			Body:       body,
+			Author:     actor,
+			AuthorID:   actorID,
+			AuthorKind: actorKind,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "reflect", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusCreated, map[string]any{"node": node, "op": "reflect"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/feed", http.StatusSeeOther)
+
 	case "pin":
 		nodeID := r.FormValue("node_id")
 		if nodeID == "" {
