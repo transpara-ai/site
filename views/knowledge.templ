@@ -31,6 +31,8 @@ templ KnowledgePage(claims []KnowledgeClaim, stateFilter string) {
 					<a href="/knowledge" class={ "text-xs px-3 py-1.5 rounded-lg transition-colors", templ.KV("bg-brand/15 text-brand", stateFilter == ""), templ.KV("bg-elevated text-warm-muted hover:text-warm", stateFilter != "") }>All</a>
 					<a href="/knowledge?state=claimed" class={ "text-xs px-3 py-1.5 rounded-lg transition-colors", templ.KV("bg-sky-500/15 text-sky-400", stateFilter == "claimed"), templ.KV("bg-elevated text-warm-muted hover:text-warm", stateFilter != "claimed") }>Claimed</a>
 					<a href="/knowledge?state=challenged" class={ "text-xs px-3 py-1.5 rounded-lg transition-colors", templ.KV("bg-amber-500/15 text-amber-400", stateFilter == "challenged"), templ.KV("bg-elevated text-warm-muted hover:text-warm", stateFilter != "challenged") }>Challenged</a>
+					<a href="/knowledge?state=verified" class={ "text-xs px-3 py-1.5 rounded-lg transition-colors", templ.KV("bg-emerald-500/15 text-emerald-400", stateFilter == "verified"), templ.KV("bg-elevated text-warm-muted hover:text-warm", stateFilter != "verified") }>Verified</a>
+					<a href="/knowledge?state=retracted" class={ "text-xs px-3 py-1.5 rounded-lg transition-colors", templ.KV("bg-red-500/15 text-red-400", stateFilter == "retracted"), templ.KV("bg-elevated text-warm-muted hover:text-warm", stateFilter != "retracted") }>Retracted</a>
 				</div>
 			</div>
 			if len(claims) == 0 {

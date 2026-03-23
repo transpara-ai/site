@@ -2159,14 +2159,32 @@ templ KnowledgeCard(node Node, spaceSlug string, challenges int) {
 					}
 				</div>
 			</div>
-			<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") } class="flex-shrink-0">
-				<input type="hidden" name="op" value="challenge"/>
-				<input type="hidden" name="node_id" value={ node.ID }/>
-				<input type="hidden" name="reason" value="disputed"/>
-				<button type="submit" class="text-xs px-3 py-1.5 bg-amber-500/10 text-amber-400 rounded-lg hover:bg-amber-500/20 transition-colors">
-					Challenge
-				</button>
-			</form>
+			<div class="flex gap-1 flex-shrink-0">
+				if node.State == ClaimClaimed || node.State == ClaimChallenged {
+					<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") }>
+						<input type="hidden" name="op" value="challenge"/>
+						<input type="hidden" name="node_id" value={ node.ID }/>
+						<input type="hidden" name="reason" value="disputed"/>
+						<button type="submit" class="text-xs px-2 py-1 bg-amber-500/10 text-amber-400 rounded hover:bg-amber-500/20 transition-colors">
+							Challenge
+						</button>
+					</form>
+					<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") }>
+						<input type="hidden" name="op" value="verify"/>
+						<input type="hidden" name="node_id" value={ node.ID }/>
+						<button type="submit" class="text-xs px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded hover:bg-emerald-500/20 transition-colors">
+							Verify
+						</button>
+					</form>
+					<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") }>
+						<input type="hidden" name="op" value="retract"/>
+						<input type="hidden" name="node_id" value={ node.ID }/>
+						<button type="submit" class="text-xs px-2 py-1 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition-colors">
+							Retract
+						</button>
+					</form>
+				}
+			</div>
 		</div>
 	</div>
 }

@@ -1341,6 +1341,58 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
 
+	case "verify":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		node, err := h.store.GetNode(ctx, nodeID)
+		if err != nil || node == nil {
+			http.NotFound(w, r)
+			return
+		}
+		if node.Kind != KindClaim {
+			http.Error(w, "can only verify claims", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimVerified); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "verify", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "verify"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
+	case "retract":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		node, err := h.store.GetNode(ctx, nodeID)
+		if err != nil || node == nil {
+			http.NotFound(w, r)
+			return
+		}
+		if node.Kind != KindClaim {
+			http.Error(w, "can only retract claims", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimRetracted); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "retract", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "retract"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
 	case "reflect":
 		body := strings.TrimSpace(r.FormValue("body"))
 		if body == "" {

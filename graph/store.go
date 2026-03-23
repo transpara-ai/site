@@ -52,6 +52,8 @@ const (
 const (
 	ClaimClaimed    = "claimed"
 	ClaimChallenged = "challenged"
+	ClaimVerified   = "verified"
+	ClaimRetracted  = "retracted"
 )
 
 // Proposal states.
