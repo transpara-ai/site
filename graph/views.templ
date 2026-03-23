@@ -259,7 +259,7 @@ templ governanceIcon() {
 
 // ── Space index ─────────────────────────────────────────────────
 
-templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int) {
+templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int, taskFilter string) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -311,10 +311,22 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 					<div class="lg:col-span-2 space-y-6">
 						<!-- My Tasks -->
 						<section>
-							<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide mb-3">Open Tasks</h2>
+							<div class="flex items-center gap-2 mb-3">
+								@dashboardTaskTab("", "Open", taskFilter)
+								@dashboardTaskTab("active", "Active", taskFilter)
+								@dashboardTaskTab("review", "Review", taskFilter)
+								@dashboardTaskTab("done", "Done", taskFilter)
+								@dashboardTaskTab("all", "All", taskFilter)
+							</div>
 							if len(tasks) == 0 {
 								<div class="bg-surface rounded-lg border border-edge p-6 text-center">
-									<p class="text-warm-faint text-sm">No open tasks assigned to you.</p>
+									if taskFilter == "done" {
+										<p class="text-warm-faint text-sm">No completed tasks yet.</p>
+									} else if taskFilter == "all" {
+										<p class="text-warm-faint text-sm">No tasks yet.</p>
+									} else {
+										<p class="text-warm-faint text-sm">No tasks in this state.</p>
+									}
 									<a href="/market" class="text-xs text-brand hover:text-brand-dark mt-2 inline-block">Browse available work</a>
 								</div>
 							} else {
@@ -403,6 +415,17 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 			@simpleFooter()
 		</body>
 	</html>
+}
+
+templ dashboardTaskTab(value, label, active string) {
+	<a
+		href={ templ.SafeURL("/app?tasks=" + value) }
+		class={ "text-xs px-3 py-1.5 rounded-lg transition-colors font-medium",
+			templ.KV("bg-brand/15 text-brand", value == active),
+			templ.KV("bg-elevated text-warm-muted hover:text-warm", value != active) }
+	>
+		{ label }
+	</a>
 }
 
 templ dashboardTaskCard(t DashboardTask) {

@@ -588,7 +588,7 @@ func TestDashboardQueries(t *testing.T) {
 	})
 	store.UpdateNodeState(ctx, node.ID, StateDone)
 
-	tasks, err := store.ListUserTasks(ctx, "dash-user", 50)
+	tasks, err := store.ListUserTasks(ctx, "dash-user", "", 50)
 	if err != nil {
 		t.Fatalf("list user tasks: %v", err)
 	}

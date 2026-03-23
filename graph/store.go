@@ -1656,12 +1656,13 @@ type DashboardOp struct {
 	SpaceName string `json:"space_name"`
 }
 
-// ListUserTasks returns open tasks where the user is the author or assignee, across all spaces.
-func (s *Store) ListUserTasks(ctx context.Context, userID string, limit int) ([]DashboardTask, error) {
+// ListUserTasks returns tasks where the user is the author or assignee, across all spaces.
+// stateFilter: "" for open (not done/closed), "all" for everything, or a specific state like "done".
+func (s *Store) ListUserTasks(ctx context.Context, userID string, stateFilter string, limit int) ([]DashboardTask, error) {
 	if limit <= 0 {
 		limit = 30
 	}
-	rows, err := s.db.QueryContext(ctx, `
+	q := `
 		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
 		       n.state, n.priority, n.assignee, n.assignee_id, n.author, n.author_id, n.author_kind,
 		       n.tags, n.pinned, n.due_date, n.created_at, n.updated_at,
@@ -1671,10 +1672,22 @@ func (s *Store) ListUserTasks(ctx context.Context, userID string, limit int) ([]
 		       s.slug, s.name
 		FROM nodes n
 		JOIN spaces s ON s.id = n.space_id
-		WHERE n.kind = 'task' AND n.state NOT IN ('done', 'closed')
-		  AND (n.author_id = $1 OR n.assignee_id = $1)
-		ORDER BY n.priority = 'urgent' DESC, n.priority = 'high' DESC, n.updated_at DESC
-		LIMIT $2`, userID, limit)
+		WHERE n.kind = 'task'
+		  AND (n.author_id = $1 OR n.assignee_id = $1)`
+	switch stateFilter {
+	case "all":
+		// no state filter
+	case "done":
+		q += ` AND n.state = 'done'`
+	case "active":
+		q += ` AND n.state = 'active'`
+	case "review":
+		q += ` AND n.state = 'review'`
+	default:
+		q += ` AND n.state NOT IN ('done', 'closed')`
+	}
+	q += ` ORDER BY n.priority = 'urgent' DESC, n.priority = 'high' DESC, n.updated_at DESC LIMIT $2`
+	rows, err := s.db.QueryContext(ctx, q, userID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list user tasks: %w", err)
 	}

@@ -264,7 +264,8 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, _ := h.store.ListUserTasks(ctx, uid, 10)
+	taskFilter := r.URL.Query().Get("tasks")
+	tasks, _ := h.store.ListUserTasks(ctx, uid, taskFilter, 20)
 	convos, _ := h.store.ListUserConversations(ctx, uid, 5)
 	agentOps, _ := h.store.ListUserAgentActivity(ctx, uid, 10)
 	agents, _ := h.store.ListAgentNames(ctx)
@@ -275,7 +276,7 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	unread := h.store.UnreadCount(ctx, uid)
-	Dashboard(spaces, tasks, convos, agentOps, h.viewUser(r), defaultSlug, agents, unread).Render(ctx, w)
+	Dashboard(spaces, tasks, convos, agentOps, h.viewUser(r), defaultSlug, agents, unread, taskFilter).Render(ctx, w)
 }
 
 func (h *Handlers) handleNotifications(w http.ResponseWriter, r *http.Request) {
