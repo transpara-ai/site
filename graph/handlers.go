@@ -1341,6 +1341,40 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
 
+	case "pin":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.SetPinned(ctx, nodeID, true); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "pin", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "pin"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
+	case "unpin":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.SetPinned(ctx, nodeID, false); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "unpin", nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "unpin"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
 	case "propose":
 		title := strings.TrimSpace(r.FormValue("title"))
 		if title == "" {
