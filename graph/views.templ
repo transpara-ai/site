@@ -554,7 +554,10 @@ templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, 
 					</form>
 				}
 				if isMember && !isOwner {
-					<div class="mt-3 text-xs text-warm-faint">You're a member of this space</div>
+					<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="mt-3">
+						<input type="hidden" name="op" value="leave"/>
+						<button type="submit" class="text-xs text-warm-faint hover:text-red-400 transition-colors">Leave this space</button>
+					</form>
 				}
 			</div>
 			<!-- Quick links to lenses -->
