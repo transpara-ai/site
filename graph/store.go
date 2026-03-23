@@ -1904,6 +1904,14 @@ func (s *Store) ListBlockers(ctx context.Context, nodeID string) ([]Node, error)
 	return nodes, rows.Err()
 }
 
+// RemoveDependency removes the dependency relationship between nodeID and dependsOn.
+func (s *Store) RemoveDependency(ctx context.Context, nodeID, dependsOn string) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM node_deps WHERE node_id = $1 AND depends_on = $2`,
+		nodeID, dependsOn)
+	return err
+}
+
 // ListDependencies returns all nodes that nodeID depends on (both done and not done).
 func (s *Store) ListDependencies(ctx context.Context, nodeID string) ([]Node, error) {
 	rows, err := s.db.QueryContext(ctx, `

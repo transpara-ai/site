@@ -1477,6 +1477,23 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
 
+	case "undepend":
+		nodeID := r.FormValue("node_id")
+		dependsOn := r.FormValue("depends_on")
+		if nodeID == "" || dependsOn == "" {
+			http.Error(w, "node_id and depends_on required", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.RemoveDependency(ctx, nodeID, dependsOn); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": "undepend"})
+			return
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
+
 	case "assert":
 		title := strings.TrimSpace(r.FormValue("title"))
 		body := strings.TrimSpace(r.FormValue("body"))
