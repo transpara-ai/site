@@ -532,7 +532,7 @@ templ SpaceOnboarding(user ViewUser) {
 
 // ── Space overview ───────────────────────────────────────────────
 
-templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, user ViewUser, isOwner bool, memberCount, openTasks, activeTasks, doneTasks int, members []SpaceMember) {
+templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, user ViewUser, isOwner bool, memberCount, openTasks, activeTasks, doneTasks int, members []SpaceMember, isMember bool, loggedIn bool) {
 	@appLayout(space, spaces, "", user) {
 		<div class="p-6 md:p-8 space-y-6 max-w-3xl mx-auto">
 			<div>
@@ -545,6 +545,17 @@ templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, 
 					<span>{ fmt.Sprintf("%d members", memberCount) }</span>
 					<span>{ fmt.Sprintf("%d open · %d active · %d done", openTasks, activeTasks, doneTasks) }</span>
 				</div>
+				if loggedIn && !isMember && !isOwner {
+					<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="mt-3">
+						<input type="hidden" name="op" value="join"/>
+						<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+							Join this space
+						</button>
+					</form>
+				}
+				if isMember && !isOwner {
+					<div class="mt-3 text-xs text-warm-faint">You're a member of this space</div>
+				}
 			</div>
 			<!-- Quick links to lenses -->
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-2">
