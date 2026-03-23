@@ -1067,12 +1067,19 @@ templ FeedCard(node Node, spaceSlug string) {
 
 // ── Threads view ────────────────────────────────────────────────
 
-templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isOwner bool) {
+templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isOwner bool, searchQuery string) {
 	@appLayout(space, spaces, "threads", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="text-xl font-medium text-warm">Threads</h1>
 			</div>
+			<form action={ templ.SafeURL("/app/" + space.Slug + "/threads") } method="GET" class="flex gap-2">
+				<input type="text" name="q" value={ searchQuery } placeholder="Search threads..."
+					class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+				if searchQuery != "" {
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/threads") } class="text-xs text-warm-faint hover:text-brand transition-colors flex items-center px-2">Clear</a>
+				}
+			</form>
 			if user.Name != "" && user.Name != "Anonymous" {
 				<!-- New thread form -->
 				<form action={ templ.SafeURL("/app/" + space.Slug + "/op") } method="POST" class="bg-surface rounded-lg border border-edge p-4 space-y-3">

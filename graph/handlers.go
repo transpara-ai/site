@@ -603,10 +603,12 @@ func (h *Handlers) handleThreads(w http.ResponseWriter, r *http.Request) {
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 
+	searchQuery := r.URL.Query().Get("q")
 	threads, err := h.store.ListNodes(r.Context(), ListNodesParams{
 		SpaceID:  space.ID,
 		Kind:     KindThread,
 		ParentID: "root",
+		Query:    searchQuery,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -618,7 +620,7 @@ func (h *Handlers) handleThreads(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ThreadsView(*space, spaces, threads, h.viewUser(r), isOwner).Render(r.Context(), w)
+	ThreadsView(*space, spaces, threads, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
