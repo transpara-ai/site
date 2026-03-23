@@ -90,6 +90,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 			<!-- Mobile lens bar -->
 			<nav class="md:hidden border-b border-edge bg-surface overflow-x-auto flex-shrink-0">
 				<div class="flex px-2 py-1.5 gap-1">
+					<a href="/app" class="px-2.5 py-1 text-[11px] rounded-md bg-elevated text-warm-faint whitespace-nowrap">My Work</a>
 					@mobileLensTab(space.Slug, "board", "Board", activeLens)
 					@mobileLensTab(space.Slug, "feed", "Feed", activeLens)
 					@mobileLensTab(space.Slug, "threads", "Threads", activeLens)
@@ -106,6 +107,13 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 				<!-- Sidebar -->
 				<aside class="w-60 border-r border-edge bg-surface flex-shrink-0 overflow-y-auto hidden md:block">
 					<div class="p-4 space-y-6">
+						<!-- Dashboard link -->
+						<a href="/app" class="flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md hover:bg-elevated text-warm-muted transition-colors">
+							<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+							</svg>
+							My Work
+						</a>
 						<!-- Lenses -->
 						<div>
 							<h2 class="text-[10px] font-semibold text-warm-faint uppercase tracking-wider mb-2">Views</h2>
