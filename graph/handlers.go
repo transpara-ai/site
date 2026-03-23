@@ -65,6 +65,10 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /app/{slug}/settings", h.writeWrap(h.handleUpdateSpace))
 	mux.Handle("POST /app/{slug}/delete", h.writeWrap(h.handleDeleteSpace))
 
+	// Space invites.
+	mux.Handle("POST /app/{slug}/invite", h.writeWrap(h.handleCreateInvite))
+	mux.Handle("GET /join/{token}", h.writeWrap(h.handleJoinViaInvite))
+
 	// Space lenses (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}", h.readWrap(h.handleSpaceDefault))
 	mux.Handle("GET /app/{slug}/board", h.readWrap(h.handleBoard))
@@ -334,7 +338,11 @@ func (h *Handlers) handleSpaceSettings(w http.ResponseWriter, r *http.Request) {
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 	reports, _ := h.store.ListReports(r.Context(), space.ID)
-	SettingsView(*space, spaces, reports, h.viewUser(r), "").Render(r.Context(), w)
+	inviteToken := r.URL.Query().Get("invite")
+	if inviteToken == "" {
+		inviteToken = h.store.GetInviteToken(r.Context(), space.ID)
+	}
+	SettingsView(*space, spaces, reports, h.viewUser(r), "", inviteToken).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
@@ -352,7 +360,7 @@ func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 		reports, _ := h.store.ListReports(r.Context(), space.ID)
-		SettingsView(*space, spaces, reports, h.viewUser(r), "Name cannot be empty.").Render(r.Context(), w)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Name cannot be empty.", "").Render(r.Context(), w)
 		return
 	}
 
@@ -385,7 +393,7 @@ func (h *Handlers) handleDeleteSpace(w http.ResponseWriter, r *http.Request) {
 	if confirm != space.Name {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 		reports, _ := h.store.ListReports(r.Context(), space.ID)
-		SettingsView(*space, spaces, reports, h.viewUser(r), "Type the space name to confirm deletion.").Render(r.Context(), w)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Type the space name to confirm deletion.", "").Render(r.Context(), w)
 		return
 	}
 
@@ -395,6 +403,55 @@ func (h *Handlers) handleDeleteSpace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
+func (h *Handlers) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
+	space, err := h.spaceOwnerOnly(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Reuse existing token if one exists.
+	token := h.store.GetInviteToken(r.Context(), space.ID)
+	if token == "" {
+		token, err = h.store.CreateInvite(r.Context(), space.ID, h.userID(r))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]string{"token": token})
+		return
+	}
+	http.Redirect(w, r, "/app/"+space.Slug+"/settings?invite="+token, http.StatusSeeOther)
+}
+
+func (h *Handlers) handleJoinViaInvite(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	spaceID := h.store.GetInviteSpaceID(r.Context(), token)
+	if spaceID == "" {
+		http.Error(w, "invalid or expired invite", http.StatusNotFound)
+		return
+	}
+
+	uid := h.userID(r)
+	uname := h.userName(r)
+	h.store.JoinSpace(r.Context(), spaceID, uid, uname)
+	h.store.RecordOp(r.Context(), spaceID, "", uname, uid, "join", nil)
+
+	space, err := h.store.GetSpaceByID(r.Context(), spaceID)
+	if err != nil {
+		http.Redirect(w, r, "/app", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/app/"+space.Slug, http.StatusSeeOther)
 }
 
 func (h *Handlers) handleSpaceDefault(w http.ResponseWriter, r *http.Request) {

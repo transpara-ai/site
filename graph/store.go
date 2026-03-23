@@ -288,6 +288,13 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS invites (
+    token    TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- users table is created by auth.Auth.migrate(). Graph queries JOIN on it.
 -- Creating here too (IF NOT EXISTS) ensures tests work without auth setup.
 CREATE TABLE IF NOT EXISTS users (
@@ -1105,6 +1112,36 @@ func (s *Store) ListAvailableTasks(ctx context.Context, query string, limit int)
 		tasks = append(tasks, n)
 	}
 	return tasks, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Invites
+// ────────────────────────────────────────────────────────────────────
+
+// CreateInvite generates an invite token for a space.
+func (s *Store) CreateInvite(ctx context.Context, spaceID, createdBy string) (string, error) {
+	token := newID()
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO invites (token, space_id, created_by) VALUES ($1, $2, $3)`,
+		token, spaceID, createdBy)
+	if err != nil {
+		return "", fmt.Errorf("create invite: %w", err)
+	}
+	return token, nil
+}
+
+// GetInviteSpaceID returns the space ID for an invite token, or empty if invalid.
+func (s *Store) GetInviteSpaceID(ctx context.Context, token string) string {
+	var spaceID string
+	s.db.QueryRowContext(ctx, `SELECT space_id FROM invites WHERE token = $1`, token).Scan(&spaceID)
+	return spaceID
+}
+
+// GetInviteToken returns an existing invite token for a space (if any), or empty.
+func (s *Store) GetInviteToken(ctx context.Context, spaceID string) string {
+	var token string
+	s.db.QueryRowContext(ctx, `SELECT token FROM invites WHERE space_id = $1 ORDER BY created_at DESC LIMIT 1`, spaceID).Scan(&token)
+	return token
 }
 
 // ────────────────────────────────────────────────────────────────────
