@@ -75,6 +75,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Space lenses (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}", h.readWrap(h.handleSpaceDefault))
 	mux.Handle("GET /app/{slug}/board", h.readWrap(h.handleBoard))
+	mux.Handle("POST /app/{slug}/checklist/dismiss", h.writeWrap(h.handleChecklistDismiss))
 	mux.Handle("GET /app/{slug}/feed", h.readWrap(h.handleFeed))
 	mux.Handle("GET /app/{slug}/threads", h.readWrap(h.handleThreads))
 	mux.Handle("GET /app/{slug}/conversations", h.readWrap(h.handleConversations))
@@ -677,7 +678,43 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 
 	columns := groupByState(tasks)
 	showFirstCompletionToast := r.URL.Query().Get("first_completion") == "1"
-	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast).Render(r.Context(), w)
+
+	// Getting started checklist: show for authenticated users in new spaces (<1 hour old) that haven't dismissed.
+	showChecklist := false
+	if h.userID(r) != "anonymous" && time.Since(space.CreatedAt) < time.Hour {
+		if _, err := r.Cookie("checklist_" + space.ID); err != nil {
+			showChecklist = true
+		}
+	}
+	hasTask := false
+	hasAgentTask := false
+	for _, col := range columns {
+		for _, t := range col.Nodes {
+			hasTask = true
+			if t.AssigneeKind == "agent" {
+				hasAgentTask = true
+			}
+		}
+	}
+
+	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast, showChecklist, hasTask, hasAgentTask).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleChecklistDismiss(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "checklist_" + space.ID,
+		Value:    "1",
+		Path:     "/",
+		MaxAge:   86400 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/app/"+space.Slug+"/board", http.StatusSeeOther)
 }
 
 func (h *Handlers) handleFeed(w http.ResponseWriter, r *http.Request) {
