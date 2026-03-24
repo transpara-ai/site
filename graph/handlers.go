@@ -1484,7 +1484,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		nodeKind := r.FormValue("kind")
-		if nodeKind != KindProject && nodeKind != KindGoal && nodeKind != KindRole && nodeKind != KindTeam {
+		if nodeKind != KindProject && nodeKind != KindGoal && nodeKind != KindRole && nodeKind != KindTeam && nodeKind != KindPolicy {
 			nodeKind = KindTask // default
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
