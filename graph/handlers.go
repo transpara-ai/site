@@ -83,6 +83,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /app/{slug}/knowledge", h.readWrap(h.handleKnowledge))
 	mux.Handle("GET /app/{slug}/governance", h.readWrap(h.handleGovernance))
 	mux.Handle("GET /app/{slug}/changelog", h.readWrap(h.handleChangelog))
+	mux.Handle("GET /app/{slug}/projects", h.readWrap(h.handleProjects))
 
 	// Conversation detail (optional auth).
 	mux.Handle("GET /app/{slug}/conversation/{id}", h.readWrap(h.handleConversationDetail))
@@ -1019,6 +1020,39 @@ func (h *Handlers) handleChangelog(w http.ResponseWriter, r *http.Request) {
 	ChangelogView(*space, spaces, entries, h.viewUser(r), searchQuery).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleProjects(w http.ResponseWriter, r *http.Request) {
+	space, isOwner, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	searchQuery := r.URL.Query().Get("q")
+
+	projects, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		Kind:     KindProject,
+		ParentID: "root",
+		Query:    searchQuery,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "projects": projects})
+		return
+	}
+
+	ProjectsView(*space, spaces, projects, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+}
+
 func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
 	space, isOwner, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
@@ -1299,9 +1333,13 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 				dueDate = &t
 			}
 		}
+		nodeKind := r.FormValue("kind")
+		if nodeKind != KindProject {
+			nodeKind = KindTask // default
+		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
 			SpaceID:    space.ID,
-			Kind:       KindTask,
+			Kind:       nodeKind,
 			Title:      title,
 			Body:       strings.TrimSpace(r.FormValue("description")),
 			Priority:   r.FormValue("priority"),

@@ -100,6 +100,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 				<div class="flex px-2 py-1.5 gap-1">
 					<a href="/app" class="px-2.5 py-1 text-[11px] rounded-md bg-elevated text-warm-faint whitespace-nowrap">Home</a>
 					@mobileLensTab(space.Slug, "board", "Board", activeLens)
+					@mobileLensTab(space.Slug, "projects", "Projects", activeLens)
 					@mobileLensTab(space.Slug, "feed", "Feed", activeLens)
 					@mobileLensTab(space.Slug, "conversations", "Chat", activeLens)
 					@mobileLensTab(space.Slug, "threads", "Threads", activeLens)
@@ -129,6 +130,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 						<div>
 							<nav class="space-y-0.5">
 								@lensLink(space.Slug, "board", "Board", activeLens, boardIcon())
+								@lensLink(space.Slug, "projects", "Projects", activeLens, projectsIcon())
 								@lensLink(space.Slug, "feed", "Feed", activeLens, feedIcon())
 								@lensLink(space.Slug, "conversations", "Chat", activeLens, conversationsIcon())
 								@lensLink(space.Slug, "threads", "Threads", activeLens, threadsIcon())
@@ -406,6 +408,12 @@ templ mobileLensTab(spaceSlug, lens, label, activeLens string) {
 templ boardIcon() {
 	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+	</svg>
+}
+
+templ projectsIcon() {
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"></path>
 	</svg>
 }
 
@@ -1301,6 +1309,85 @@ templ TaskCard(node Node, spaceSlug string) {
 		</div>
 	</a>
 	</div>
+}
+
+// ── Projects view ───────────────────────────────────────────────
+
+templ ProjectsView(space Space, spaces []Space, projects []Node, user ViewUser, isOwner bool, searchQuery string) {
+	@appLayout(space, spaces, "projects", user) {
+		<div class="max-w-3xl mx-auto p-6 space-y-6">
+			<div class="flex items-center justify-between">
+				<h1 class="font-display text-xl font-normal text-warm">Projects</h1>
+				if user.Name != "" && user.Name != "Anonymous" {
+					<button onclick="document.getElementById('new-project-form').classList.toggle('hidden')"
+						class="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+						<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						</svg>
+						New project
+					</button>
+				}
+			</div>
+			<form action={ templ.SafeURL("/app/" + space.Slug + "/projects") } method="GET" class="flex gap-2">
+				<input type="text" name="q" value={ searchQuery } placeholder="Search projects..."
+					class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+				if searchQuery != "" {
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/projects") } class="text-xs text-warm-faint hover:text-brand transition-colors flex items-center px-2">Clear</a>
+				}
+			</form>
+			if user.Name != "" && user.Name != "Anonymous" {
+				<div id="new-project-form" class="hidden">
+					<form
+						method="POST"
+						action={ templ.SafeURL("/app/" + space.Slug + "/op") }
+						class="bg-surface rounded-lg border border-edge p-4 space-y-3"
+					>
+						<input type="hidden" name="op" value="intend"/>
+						<input type="hidden" name="kind" value="project"/>
+						<input type="text" name="title" placeholder="Project name" required
+							class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+						<textarea name="description" placeholder="Description (optional)" rows="2"
+							class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none text-warm placeholder-warm-faint"></textarea>
+						<div class="flex justify-end">
+							<button type="submit" class="px-4 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Create project</button>
+						</div>
+					</form>
+				</div>
+			}
+			<div class="space-y-3">
+				for _, proj := range projects {
+					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, proj.ID)) }
+						class="block bg-surface rounded-lg border border-edge p-4 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/5 hover:-translate-y-0.5 transition-all duration-200">
+						<div class="flex items-center justify-between mb-1">
+							<h3 class="font-medium text-warm">{ proj.Title }</h3>
+							<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", stateBgClass(proj.State) }>{ stateLabel(proj.State) }</span>
+						</div>
+						if proj.Body != "" {
+							<p class="text-sm text-warm-muted line-clamp-2 mb-2">{ truncate(proj.Body, 150) }</p>
+						}
+						<div class="flex items-center gap-3 text-xs text-warm-faint">
+							if proj.ChildCount > 0 {
+								<span>{ fmt.Sprintf("%d/%d tasks done", proj.ChildDone, proj.ChildCount) }</span>
+								<div class="flex-1 max-w-[120px] bg-elevated rounded-full h-1.5">
+									<div class="bg-brand rounded-full h-1.5 transition-all" style={ childProgress(proj) }></div>
+								</div>
+							} else {
+								<span>No tasks yet</span>
+							}
+							<span class="ml-auto">{ proj.CreatedAt.Format("Jan 2") }</span>
+						</div>
+					</a>
+				}
+				if len(projects) == 0 {
+					<div class="text-center py-12 space-y-3">
+						<svg class="w-12 h-12 mx-auto text-warm-faint/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"></path></svg>
+						<p class="text-warm-faint text-sm">No projects yet</p>
+						<p class="text-warm-faint/60 text-xs">Create a project to group related tasks together.</p>
+					</div>
+				}
+			</div>
+		</div>
+	}
 }
 
 // ── List view (table) ───────────────────────────────────────────
