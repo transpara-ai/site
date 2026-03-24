@@ -1163,7 +1163,14 @@ func (h *Handlers) handleNodeDetail(w http.ResponseWriter, r *http.Request) {
 		parents[i], parents[j] = parents[j], parents[i]
 	}
 
-	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks).Render(r.Context(), w)
+	// Engagement data for the node.
+	uid := h.userID(r)
+	endorseCount := h.store.CountEndorsements(r.Context(), nodeID)
+	endorsed := uid != "" && h.store.HasEndorsed(r.Context(), uid, nodeID)
+	repostCounts := h.store.GetBulkRepostCounts(r.Context(), []string{nodeID})
+	reposted := uid != "" && h.store.HasReposted(r.Context(), uid, nodeID)
+
+	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks, endorseCount, endorsed, repostCounts[nodeID], reposted).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────

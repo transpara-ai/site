@@ -2511,7 +2511,7 @@ templ proposalStateBadge(state string) {
 
 // ── Node detail ─────────────────────────────────────────────────
 
-templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node) {
+templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node, endorseCount int, endorsed bool, repostCount int, reposted bool) {
 	@appLayout(space, []Space{space}, "", user) {
 		<div class="max-w-3xl mx-auto p-6 space-y-8">
 			<!-- Breadcrumb -->
@@ -2693,6 +2693,22 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 					<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
 			@renderMarkdown(node.Body)
 		</div>
+				</div>
+			}
+
+			<!-- Engagement bar -->
+			if node.Kind == KindPost || node.Kind == KindThread {
+				<div class="flex items-center gap-4 text-xs text-warm-faint">
+					<span>{ fmt.Sprintf("%d replies", node.ChildCount) }</span>
+					<div id={ "repost-" + node.ID }>
+						@repostButton(node.ID, space.Slug, repostCount, reposted)
+					</div>
+					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/feed?quote=%s", space.Slug, node.ID)) } class="hover:text-brand transition-colors">
+						quote
+					</a>
+					<div id={ "endorse-" + node.ID }>
+						@endorseButton(node.ID, space.Slug, endorseCount, endorsed)
+					</div>
 				</div>
 			}
 
