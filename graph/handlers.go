@@ -85,6 +85,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /app/{slug}/changelog", h.readWrap(h.handleChangelog))
 	mux.Handle("GET /app/{slug}/projects", h.readWrap(h.handleProjects))
 	mux.Handle("GET /app/{slug}/goals", h.readWrap(h.handleGoals))
+	mux.Handle("GET /app/{slug}/roles", h.readWrap(h.handleRoles))
 
 	// Conversation detail (optional auth).
 	mux.Handle("GET /app/{slug}/conversation/{id}", h.readWrap(h.handleConversationDetail))
@@ -1101,6 +1102,39 @@ func (h *Handlers) handleGoals(w http.ResponseWriter, r *http.Request) {
 	GoalsView(*space, spaces, goals, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleRoles(w http.ResponseWriter, r *http.Request) {
+	space, isOwner, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	searchQuery := r.URL.Query().Get("q")
+
+	roles, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		Kind:     KindRole,
+		ParentID: "root",
+		Query:    searchQuery,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "roles": roles})
+		return
+	}
+
+	RolesView(*space, spaces, roles, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+}
+
 func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
 	space, isOwner, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
@@ -1382,7 +1416,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		nodeKind := r.FormValue("kind")
-		if nodeKind != KindProject && nodeKind != KindGoal {
+		if nodeKind != KindProject && nodeKind != KindGoal && nodeKind != KindRole {
 			nodeKind = KindTask // default
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
