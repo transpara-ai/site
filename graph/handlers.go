@@ -676,7 +676,8 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	columns := groupByState(tasks)
-	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter).Render(r.Context(), w)
+	showFirstCompletionToast := r.URL.Query().Get("first_completion") == "1"
+	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleFeed(w http.ResponseWriter, r *http.Request) {
@@ -1757,9 +1758,12 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Track first completion in this space.
+		isFirstCompletion, _ := h.store.MarkFirstCompletion(ctx, space.ID)
+
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
-			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "complete"})
+			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "complete", "first_completion": isFirstCompletion})
 			return
 		}
 
@@ -1768,7 +1772,11 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			TaskCard(*node, space.Slug).Render(ctx, w)
 			return
 		}
-		http.Redirect(w, r, "/app/"+space.Slug+"/board", http.StatusSeeOther)
+		boardURL := "/app/" + space.Slug + "/board"
+		if isFirstCompletion {
+			boardURL += "?first_completion=1"
+		}
+		http.Redirect(w, r, boardURL, http.StatusSeeOther)
 
 	case "assign":
 		nodeID := r.FormValue("node_id")
@@ -2616,16 +2624,26 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 		h.notify(r.Context(), node.AssigneeID, h.userName(r), op.ID, space.ID, opName+" task: "+node.Title)
 	}
 
+	// Track first completion in this space.
+	isFirstCompletion := false
+	if newState == StateDone {
+		isFirstCompletion, _ = h.store.MarkFirstCompletion(r.Context(), space.ID)
+	}
+
 	node, _ = h.store.GetNode(r.Context(), nodeID)
 	if wantsJSON(r) {
-		writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": opName})
+		writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": opName, "first_completion": isFirstCompletion})
 		return
 	}
 	if isHTMX(r) && node != nil {
 		TaskCard(*node, space.Slug).Render(r.Context(), w)
 		return
 	}
-	http.Redirect(w, r, "/app/"+space.Slug+"/board", http.StatusSeeOther)
+	boardURL := "/app/" + space.Slug + "/board"
+	if isFirstCompletion {
+		boardURL += "?first_completion=1"
+	}
+	http.Redirect(w, r, boardURL, http.StatusSeeOther)
 }
 
 func (h *Handlers) handleNodeUpdate(w http.ResponseWriter, r *http.Request) {

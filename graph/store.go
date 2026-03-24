@@ -83,15 +83,16 @@ const (
 
 // Space is a container — project, community, or team.
 type Space struct {
-	ID          string    `json:"id"`
-	Slug        string    `json:"slug"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	OwnerID     string    `json:"owner_id"`
-	Kind        string    `json:"kind"`
-	Visibility  string    `json:"visibility"`
-	ParentID    string    `json:"parent_id,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID                 string     `json:"id"`
+	Slug               string     `json:"slug"`
+	Name               string     `json:"name"`
+	Description        string     `json:"description"`
+	OwnerID            string     `json:"owner_id"`
+	Kind               string     `json:"kind"`
+	Visibility         string     `json:"visibility"`
+	ParentID           string     `json:"parent_id,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	FirstCompletionAt  *time.Time `json:"first_completion_at,omitempty"`
 }
 
 // Node is a universal content unit — task, post, thread, or comment.
@@ -328,6 +329,7 @@ CREATE INDEX IF NOT EXISTS idx_reposts_node ON reposts(node_id);
 
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS verdict TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS rating INT NOT NULL DEFAULT 0;
+ALTER TABLE spaces ADD COLUMN IF NOT EXISTS first_completion_at TIMESTAMPTZ;
 
 -- Backfill assignee_id from users table where assignee name matches.
 UPDATE nodes SET assignee_id = u.id
@@ -538,8 +540,8 @@ func (s *Store) DeleteSpace(ctx context.Context, id string) error {
 func (s *Store) GetSpaceByID(ctx context.Context, id string) (*Space, error) {
 	var sp Space
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, slug, name, description, owner_id, kind, visibility, COALESCE(parent_id, ''), created_at FROM spaces WHERE id = $1`, id,
-	).Scan(&sp.ID, &sp.Slug, &sp.Name, &sp.Description, &sp.OwnerID, &sp.Kind, &sp.Visibility, &sp.ParentID, &sp.CreatedAt)
+		`SELECT id, slug, name, description, owner_id, kind, visibility, COALESCE(parent_id, ''), created_at, first_completion_at FROM spaces WHERE id = $1`, id,
+	).Scan(&sp.ID, &sp.Slug, &sp.Name, &sp.Description, &sp.OwnerID, &sp.Kind, &sp.Visibility, &sp.ParentID, &sp.CreatedAt, &sp.FirstCompletionAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -553,8 +555,8 @@ func (s *Store) GetSpaceByID(ctx context.Context, id string) (*Space, error) {
 func (s *Store) GetSpaceBySlug(ctx context.Context, slug string) (*Space, error) {
 	var sp Space
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, slug, name, description, owner_id, kind, visibility, COALESCE(parent_id, ''), created_at FROM spaces WHERE slug = $1`, slug,
-	).Scan(&sp.ID, &sp.Slug, &sp.Name, &sp.Description, &sp.OwnerID, &sp.Kind, &sp.Visibility, &sp.ParentID, &sp.CreatedAt)
+		`SELECT id, slug, name, description, owner_id, kind, visibility, COALESCE(parent_id, ''), created_at, first_completion_at FROM spaces WHERE slug = $1`, slug,
+	).Scan(&sp.ID, &sp.Slug, &sp.Name, &sp.Description, &sp.OwnerID, &sp.Kind, &sp.Visibility, &sp.ParentID, &sp.CreatedAt, &sp.FirstCompletionAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -562,6 +564,20 @@ func (s *Store) GetSpaceBySlug(ctx context.Context, slug string) (*Space, error)
 		return nil, fmt.Errorf("get space: %w", err)
 	}
 	return &sp, nil
+}
+
+// MarkFirstCompletion sets first_completion_at on a space if it hasn't been set yet.
+// Returns true if this was the first completion (i.e., the column was NULL before).
+func (s *Store) MarkFirstCompletion(ctx context.Context, spaceID string) (bool, error) {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE spaces SET first_completion_at = NOW() WHERE id = $1 AND first_completion_at IS NULL`,
+		spaceID,
+	)
+	if err != nil {
+		return false, fmt.Errorf("mark first completion: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
 }
 
 // ────────────────────────────────────────────────────────────────────

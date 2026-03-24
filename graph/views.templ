@@ -1075,8 +1075,39 @@ templ NotificationsView(notifs []Notification, user ViewUser) {
 
 // ── Board view (kanban) ─────────────────────────────────────────
 
-templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []string, searchQuery string, assigneeFilter string, projects []Node, projectFilter string) {
+templ firstCompletionToast(spaceSlug string) {
+	<div
+		id="first-completion-toast"
+		class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 bg-elevated border border-brand/30 rounded-xl shadow-xl shadow-brand/10 text-sm"
+	>
+		<svg class="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+		</svg>
+		<span class="text-warm">Your AI teammate just helped!</span>
+		<a href={ templ.SafeURL("/app/" + spaceSlug + "/conversations") } class="text-brand hover:text-brand-dark font-medium transition-colors whitespace-nowrap">Try Chat →</a>
+		<button
+			onclick="document.getElementById('first-completion-toast').remove()"
+			class="text-warm-faint hover:text-warm transition-colors ml-1"
+			aria-label="Dismiss"
+		>
+			<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+			</svg>
+		</button>
+		<script>
+			setTimeout(function() {
+				var t = document.getElementById('first-completion-toast');
+				if (t) t.remove();
+			}, 8000);
+		</script>
+	</div>
+}
+
+templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []string, searchQuery string, assigneeFilter string, projects []Node, projectFilter string, showFirstCompletionToast bool) {
 	@appLayout(space, spaces, "board", user) {
+		if showFirstCompletionToast {
+			@firstCompletionToast(space.Slug)
+		}
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
 				<div class="min-w-0">
