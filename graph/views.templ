@@ -1079,11 +1079,9 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 	@appLayout(space, spaces, "board", user) {
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
-				<div class="flex items-center gap-4 min-w-0">
+				<div class="min-w-0">
 					<h1 class="font-display text-xl md:text-2xl font-light text-warm truncate">{ space.Name }</h1>
-					if space.Description != "" {
-						<p class="text-sm text-warm-faint hidden lg:block">{ space.Description }</p>
-					}
+					<p class="text-sm text-warm-muted mt-0.5">Organize tasks in columns by status</p>
 				</div>
 				if user.Name != "" && user.Name != "Anonymous" {
 					<button
@@ -1485,7 +1483,10 @@ templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user View
 	@appLayout(space, spaces, "goals", user) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="font-display text-xl font-normal text-warm">Goals</h1>
+				<div>
+					<h1 class="font-display text-xl font-normal text-warm">Goals</h1>
+					<p class="text-sm text-warm-muted mt-0.5">Project roadmap and objectives</p>
+				</div>
 				if user.Name != "" && user.Name != "Anonymous" {
 					<button onclick="document.getElementById('new-goal-form').classList.toggle('hidden')"
 						class="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
@@ -1999,7 +2000,10 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 	@appLayout(space, spaces, "feed", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="font-display text-xl font-normal text-warm">Feed</h1>
+				<div>
+					<h1 class="font-display text-xl font-normal text-warm">Feed</h1>
+					<p class="text-sm text-warm-muted mt-0.5">Activity stream of posts and updates</p>
+				</div>
 			</div>
 			<!-- Feed tabs -->
 			if user.Name != "" && user.Name != "Anonymous" {
@@ -2220,7 +2224,10 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 	@appLayout(space, spaces, "threads", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="font-display text-xl font-normal text-warm">Threads</h1>
+				<div>
+					<h1 class="font-display text-xl font-normal text-warm">Threads</h1>
+					<p class="text-sm text-warm-muted mt-0.5">Topic discussions and ongoing conversations</p>
+				</div>
 			</div>
 			<form action={ templ.SafeURL("/app/" + space.Slug + "/threads") } method="GET" class="flex gap-2">
 				<input type="text" name="q" value={ searchQuery } placeholder="Search threads..."
@@ -2293,7 +2300,10 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 	@appLayout(space, spaces, "conversations", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
-				<h1 class="font-display text-xl font-normal text-warm">Chat</h1>
+				<div>
+					<h1 class="font-display text-xl font-normal text-warm">Chat</h1>
+					<p class="text-sm text-warm-muted mt-0.5">Direct conversations with teammates and agents</p>
+				</div>
 			</div>
 			<!-- DM / Group filter -->
 			<div class="flex gap-2">
@@ -2679,7 +2689,10 @@ templ reactionBar(nodeID string, spaceSlug string, reactions []Reaction, current
 templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, searchQuery string) {
 	@appLayout(space, spaces, "people", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
-			<h1 class="font-display text-xl font-normal text-warm">People</h1>
+			<div>
+				<h1 class="font-display text-xl font-normal text-warm">People</h1>
+				<p class="text-sm text-warm-muted mt-0.5">Team members and collaborators</p>
+			</div>
 			<form action={ templ.SafeURL("/app/" + space.Slug + "/people") } method="GET" class="flex gap-2">
 				<input type="text" name="q" value={ searchQuery } placeholder="Search people..."
 					class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
@@ -2730,7 +2743,10 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, s
 templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser, opFilter string) {
 	@appLayout(space, spaces, "activity", user) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
-			<h1 class="font-display text-xl font-normal text-warm">Activity</h1>
+			<div>
+				<h1 class="font-display text-xl font-normal text-warm">Activity</h1>
+				<p class="text-sm text-warm-muted mt-0.5">Everything that happened in this space</p>
+			</div>
 			<div class="flex flex-wrap gap-1">
 				@activityOpTab(space.Slug, "", "All", opFilter)
 				@activityOpTab(space.Slug, "intend", "Tasks", opFilter)
