@@ -1582,6 +1582,36 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, parentID), http.StatusSeeOther)
 		}
 
+	case "claim":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if err := h.store.ClaimNode(ctx, nodeID, actor, actorID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		op, _ := h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "claim", nil)
+		// Notify task author.
+		if op != nil {
+			if node, _ := h.store.GetNode(ctx, nodeID); node != nil && node.AuthorID != actorID {
+				h.notify(ctx, node.AuthorID, actor, op.ID, space.ID, "claimed your task: "+node.Title)
+			}
+		}
+		// Trigger Mind if an agent claims.
+		if h.mind != nil {
+			if node, _ := h.store.GetNode(ctx, nodeID); node != nil {
+				go h.mind.OnTaskAssigned(space.ID, space.Slug, node, actorID)
+			}
+		}
+		if wantsJSON(r) {
+			node, _ := h.store.GetNode(ctx, nodeID)
+			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "claim"})
+			return
+		}
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+
 	case "complete":
 		nodeID := r.FormValue("node_id")
 		if nodeID == "" {
@@ -1649,32 +1679,6 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		if wantsJSON(r) {
 			node, _ := h.store.GetNode(ctx, nodeID)
 			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "assign"})
-			return
-		}
-		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)
-
-	case "claim":
-		nodeID := r.FormValue("node_id")
-		if nodeID == "" {
-			http.Error(w, "node_id required", http.StatusBadRequest)
-			return
-		}
-		if err := h.store.UpdateNode(ctx, nodeID, nil, nil, nil, &actor, &actorID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "claim", nil)
-
-		// Trigger Mind if an agent claimed the task.
-		if h.mind != nil && actorKind == "agent" {
-			if node, _ := h.store.GetNode(ctx, nodeID); node != nil {
-				go h.mind.OnTaskAssigned(space.ID, space.Slug, node, actorID)
-			}
-		}
-
-		if wantsJSON(r) {
-			node, _ := h.store.GetNode(ctx, nodeID)
-			writeJSON(w, http.StatusOK, map[string]any{"node": node, "op": "claim"})
 			return
 		}
 		http.Redirect(w, r, fmt.Sprintf("/app/%s/node/%s", space.Slug, nodeID), http.StatusSeeOther)

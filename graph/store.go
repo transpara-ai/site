@@ -1044,6 +1044,22 @@ func (s *Store) UpdateNodeState(ctx context.Context, id, state string) error {
 	return nil
 }
 
+// ClaimNode sets the assignee and transitions state to active in one atomic operation.
+func (s *Store) ClaimNode(ctx context.Context, nodeID, userName, userID string) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE nodes SET assignee = $1, assignee_id = $2, state = $3, updated_at = NOW()
+		 WHERE id = $4 AND (assignee_id = '' OR assignee_id = $2)`,
+		userName, userID, StateActive, nodeID,
+	)
+	if err != nil {
+		return fmt.Errorf("claim node: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("task already claimed by someone else")
+	}
+	return nil
+}
+
 // UpdateNode updates mutable fields on a node.
 func (s *Store) UpdateNode(ctx context.Context, id string, title, body, priority, assignee, assigneeID *string) error {
 	sets := []string{"updated_at = NOW()"}

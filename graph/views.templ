@@ -1232,6 +1232,15 @@ templ TaskCard(node Node, spaceSlug string) {
 	<div class="relative group">
 		<!-- Hover action bar -->
 		<div class="absolute -top-3 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-1">
+			if node.AssigneeID == "" && node.State == StateOpen {
+				<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") } class="inline">
+					<input type="hidden" name="op" value="claim"/>
+					<input type="hidden" name="node_id" value={ node.ID }/>
+					<button type="submit" class="h-6 px-1.5 rounded-md bg-surface border border-edge hover:border-brand/50 hover:bg-brand/10 flex items-center justify-center transition-colors text-[10px] text-warm-muted hover:text-brand font-medium" title="Claim this task" onclick="event.stopPropagation()">
+						Claim
+					</button>
+				</form>
+			}
 			if node.State != StateDone {
 				<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s/state", spaceSlug, node.ID)) } class="inline">
 					<input type="hidden" name="state" value={ StateDone }/>
@@ -1565,6 +1574,12 @@ templ ListView(space Space, spaces []Space, tasks []Node, user ViewUser, isOwner
 											<span class="w-4 h-4 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center">{ initial(task.Assignee) }</span>
 											<span class="text-xs">{ task.Assignee }</span>
 										</span>
+									} else if task.State == StateOpen {
+										<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="inline">
+											<input type="hidden" name="op" value="claim"/>
+											<input type="hidden" name="node_id" value={ task.ID }/>
+											<button type="submit" class="text-[10px] px-2 py-0.5 rounded border border-edge text-warm-faint hover:text-brand hover:border-brand/30 transition-colors">Claim</button>
+										</form>
 									}
 								</td>
 								<td class="py-2 px-3 text-xs">
