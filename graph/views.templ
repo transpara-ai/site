@@ -1149,14 +1149,16 @@ script setAssignee(name string) {
 	document.getElementById('task-assignee').value = name;
 }
 
-script replyTo(author string, text string) {
+script replyTo(msgID string, author string, text string) {
 	var bar = document.getElementById('reply-bar');
 	var barText = document.getElementById('reply-bar-text');
+	var hiddenInput = document.getElementById('reply-to-id');
 	if (bar && barText) {
 		barText.textContent = author + ': ' + text;
 		bar.classList.remove('hidden');
 		bar.dataset.author = author;
 		bar.dataset.text = text;
+		if (hiddenInput) hiddenInput.value = msgID;
 		// Focus the textarea
 		var ta = document.querySelector('textarea[name="body"]');
 		if (ta) ta.focus();
@@ -1634,10 +1636,11 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 						hx-target="#message-list"
 						hx-swap="beforeend"
 						hx-on::before-request="var ta=this.querySelector('textarea[name=body]');if(ta&&ta.value.trim()){var ml=document.getElementById('message-list');var d=document.createElement('div');d.className='flex gap-3 flex-row-reverse';d.id='optimistic-msg';d.innerHTML='<span class=\\'w-8 h-8 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0\\'>...</span><div class=\\'max-w-[75%] rounded-lg px-4 py-2.5 bg-brand/10 border border-brand/20 opacity-60\\'><div class=\\'text-sm text-warm-secondary\\'>'+ta.value.replace(/</g,'&lt;')+'</div></div>';ml.appendChild(d);var m=document.getElementById('messages');m.scrollTop=m.scrollHeight}"
-						hx-on::after-request="var opt=document.getElementById('optimistic-msg');if(opt)opt.remove();if(event.detail.successful){this.reset();var ta=this.querySelector('textarea[name=body]');if(ta){ta.style.height='auto'};var ml=document.getElementById('message-list');var e=document.getElementById('empty-state');if(e)e.remove();var last=ml.querySelector('[data-ts]:last-child');if(last)ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');m.scrollTop=m.scrollHeight;if(ml.dataset.hasAgent){var t=document.getElementById('thinking');if(t){t.classList.remove('hidden');clearTimeout(window._thinkTO);window._thinkTO=setTimeout(function(){t.classList.add('hidden')},60000);}}}"
+						hx-on::after-request="var opt=document.getElementById('optimistic-msg');if(opt)opt.remove();if(event.detail.successful){this.reset();clearReplyAfterSend();var ta=this.querySelector('textarea[name=body]');if(ta){ta.style.height='auto'};var ml=document.getElementById('message-list');var e=document.getElementById('empty-state');if(e)e.remove();var last=ml.querySelector('[data-ts]:last-child');if(last)ml.dataset.lastTs=last.dataset.ts;var m=document.getElementById('messages');m.scrollTop=m.scrollHeight;if(ml.dataset.hasAgent){var t=document.getElementById('thinking');if(t){t.classList.remove('hidden');clearTimeout(window._thinkTO);window._thinkTO=setTimeout(function(){t.classList.add('hidden')},60000);}}}"
 					>
 						<input type="hidden" name="op" value="respond"/>
 						<input type="hidden" name="parent_id" value={ convo.ID }/>
+						<input type="hidden" name="reply_to_id" id="reply-to-id" value=""/>
 						<textarea
 							id="chat-body"
 							name="body"
@@ -1646,7 +1649,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 							autocomplete="off"
 							rows="1"
 							class="flex-1 px-4 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint resize-none overflow-hidden"
-							onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();prependReply();this.form.requestSubmit();}"
+							onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.form.requestSubmit();}"
 							oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,144)+'px'"
 						></textarea>
 						<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">Send</button>
@@ -1663,8 +1666,8 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 			<!-- Scroll to bottom + reply helpers -->
 			<script>
 			(function(){var m=document.getElementById('messages');if(m)m.scrollTop=m.scrollHeight;})();
-			function cancelReply(){var b=document.getElementById('reply-bar');if(b){b.classList.add('hidden');b.dataset.author='';b.dataset.text=''}}
-			function prependReply(){var b=document.getElementById('reply-bar');var ta=document.getElementById('chat-body');if(b&&ta&&!b.classList.contains('hidden')&&b.dataset.author){ta.value='> '+b.dataset.author+': '+b.dataset.text+'\n\n'+ta.value;cancelReply()}}
+			function cancelReply(){var b=document.getElementById('reply-bar');var h=document.getElementById('reply-to-id');if(b){b.classList.add('hidden');b.dataset.author='';b.dataset.text=''}if(h)h.value=''}
+			function clearReplyAfterSend(){var h=document.getElementById('reply-to-id');if(h)h.value='';cancelReply()}
 			</script>
 	}
 }
@@ -1696,10 +1699,16 @@ templ chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []
 					<!-- Hover actions: reply + react -->
 					<div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 ml-1">
 						<button type="button" class="text-[10px] text-warm-faint hover:text-brand cursor-pointer"
-							onclick={ replyTo(msg.Author, truncate(msg.Body, 80)) }>reply</button>
+							onclick={ replyTo(msg.ID, msg.Author, truncate(msg.Body, 80)) }>reply</button>
 						@quickReactButtons(msg.ID, spaceSlug)
 					</div>
 				</div>
+				if msg.ReplyToID != "" {
+					<div class="text-xs border-l-2 border-brand/30 pl-2 py-0.5 mb-1 text-warm-faint truncate">
+						<span class="font-medium text-warm-muted">{ msg.ReplyToAuthor }</span>
+						<span>: { truncate(msg.ReplyToBody, 60) }</span>
+					</div>
+				}
 				<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">
 								@renderMarkdown(msg.Body)
 							</div>
@@ -1726,7 +1735,7 @@ templ chatMessageCompact(msg Node, currentUserID string, spaceSlug string, react
 				<!-- Hover actions -->
 				<div class="absolute -top-2.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-elevated border border-edge rounded px-1 py-0.5 shadow-sm">
 					<button type="button" class="text-[10px] text-warm-faint hover:text-brand cursor-pointer"
-						onclick={ replyTo(msg.Author, truncate(msg.Body, 80)) }>reply</button>
+						onclick={ replyTo(msg.ID, msg.Author, truncate(msg.Body, 80)) }>reply</button>
 					@quickReactButtons(msg.ID, spaceSlug)
 				</div>
 				<div class="text-sm text-warm-secondary prose prose-invert prose-sm max-w-none">

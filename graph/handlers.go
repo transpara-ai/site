@@ -1239,6 +1239,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "parent_id and body required", http.StatusBadRequest)
 			return
 		}
+		replyToID := strings.TrimSpace(r.FormValue("reply_to_id"))
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
 			SpaceID:    space.ID,
 			ParentID:   parentID,
@@ -1247,6 +1248,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			Author:     actor,
 			AuthorID:   actorID,
 			AuthorKind: actorKind,
+			ReplyToID:  replyToID,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

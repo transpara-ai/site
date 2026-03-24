@@ -104,8 +104,11 @@ type Node struct {
 	AuthorID     string     `json:"author_id"`               // user ID — source of truth for identity
 	AuthorKind   string     `json:"author_kind"`              // "human" or "agent"
 	Tags         []string   `json:"tags"`
-	Pinned       bool       `json:"pinned"`
-	DueDate      *time.Time `json:"due_date,omitempty"`
+	Pinned        bool       `json:"pinned"`
+	ReplyToID     string     `json:"reply_to_id,omitempty"`     // message this is a reply to
+	ReplyToAuthor string     `json:"reply_to_author,omitempty"` // resolved at query time
+	ReplyToBody   string     `json:"reply_to_body,omitempty"`   // resolved at query time
+	DueDate       *time.Time `json:"due_date,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	ChildCount   int        `json:"child_count"`
@@ -154,6 +157,7 @@ type CreateNodeParams struct {
 	AuthorKind string // "human" or "agent"
 	Tags       []string
 	DueDate    *time.Time
+	ReplyToID  string
 }
 
 // ListNodesParams controls filtering for node listing.
@@ -273,6 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_space_members_user ON space_members(user_id);
 
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS assignee_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS pinned BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS reply_to_id TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS endorsements (
     from_id    TEXT NOT NULL,
@@ -534,6 +539,7 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 		AuthorKind: authorKind,
 		Tags:       p.Tags,
 		DueDate:    p.DueDate,
+		ReplyToID:  p.ReplyToID,
 	}
 
 	var parentID *string
@@ -542,11 +548,11 @@ func (s *Store) CreateNode(ctx context.Context, p CreateNodeParams) (*Node, erro
 	}
 
 	err := s.db.QueryRowContext(ctx,
-		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, assignee_id, author, author_id, author_kind, tags, due_date)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		`INSERT INTO nodes (id, space_id, parent_id, kind, title, body, state, priority, assignee, assignee_id, author, author_id, author_kind, tags, due_date, reply_to_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		 RETURNING created_at, updated_at`,
 		n.ID, n.SpaceID, parentID, n.Kind, n.Title, n.Body, n.State, n.Priority,
-		n.Assignee, n.AssigneeID, n.Author, n.AuthorID, n.AuthorKind, pq.Array(n.Tags), n.DueDate,
+		n.Assignee, n.AssigneeID, n.Author, n.AuthorID, n.AuthorKind, pq.Array(n.Tags), n.DueDate, n.ReplyToID,
 	).Scan(&n.CreatedAt, &n.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create node: %w", err)
@@ -566,13 +572,17 @@ func (s *Store) GetNode(ctx context.Context, id string) (*Node, error) {
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
-		       COALESCE((SELECT COUNT(*) FROM node_deps d JOIN nodes b ON b.id = d.depends_on WHERE d.node_id = n.id AND b.state != 'done'), 0)
+		       COALESCE((SELECT COUNT(*) FROM node_deps d JOIN nodes b ON b.id = d.depends_on WHERE d.node_id = n.id AND b.state != 'done'), 0),
+		       n.reply_to_id,
+		       COALESCE((SELECT r.author FROM nodes r WHERE r.id = n.reply_to_id), ''),
+		       COALESCE((SELECT LEFT(r.body, 80) FROM nodes r WHERE r.id = n.reply_to_id), '')
 		FROM nodes n WHERE n.id = $1`, id,
 	).Scan(
 		&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
 		&n.State, &n.Priority, &n.Assignee, &n.AssigneeID, &n.Author, &n.AuthorID, &n.AuthorKind, pq.Array(&n.Tags), &n.Pinned, &dueDate,
 		&n.CreatedAt, &n.UpdatedAt,
 		&n.ChildCount, &n.ChildDone, &n.BlockerCount,
+		&n.ReplyToID, &n.ReplyToAuthor, &n.ReplyToBody,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -599,7 +609,10 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 		       n.created_at, n.updated_at,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id AND c.state = 'done'), 0),
-		       COALESCE((SELECT COUNT(*) FROM node_deps d JOIN nodes b ON b.id = d.depends_on WHERE d.node_id = n.id AND b.state != 'done'), 0)
+		       COALESCE((SELECT COUNT(*) FROM node_deps d JOIN nodes b ON b.id = d.depends_on WHERE d.node_id = n.id AND b.state != 'done'), 0),
+		       n.reply_to_id,
+		       COALESCE((SELECT r.author FROM nodes r WHERE r.id = n.reply_to_id), ''),
+		       COALESCE((SELECT LEFT(r.body, 80) FROM nodes r WHERE r.id = n.reply_to_id), '')
 		FROM nodes n
 		WHERE n.space_id = $1`
 
@@ -663,6 +676,7 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 			&n.State, &n.Priority, &n.Assignee, &n.AssigneeID, &n.Author, &n.AuthorID, &n.AuthorKind, pq.Array(&n.Tags), &n.Pinned, &dueDate,
 			&n.CreatedAt, &n.UpdatedAt,
 			&n.ChildCount, &n.ChildDone, &n.BlockerCount,
+			&n.ReplyToID, &n.ReplyToAuthor, &n.ReplyToBody,
 		); err != nil {
 			return nil, fmt.Errorf("scan node: %w", err)
 		}
