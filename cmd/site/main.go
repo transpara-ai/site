@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -206,6 +207,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("graph store: %v", err)
 		}
+		demoSlug := graphStore.SeedDemoSpace(context.Background())
 		graphHandlers := graph.NewHandlers(graphStore, readWrap, writeWrap)
 		graphHandlers.Register(mux)
 		log.Println("app enabled (DATABASE_URL set)")
@@ -242,6 +244,7 @@ func main() {
 				Spaces: ps.Spaces, Tasks: ps.Tasks,
 				Users: ps.Users, AgentOps: ps.AgentOps,
 				FeaturedSpaces: featured,
+				DemoSlug:       demoSlug,
 			}).Render(r.Context(), w)
 		}))
 

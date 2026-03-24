@@ -19,6 +19,7 @@ type HomeStats struct {
 	Users          int
 	AgentOps       int
 	FeaturedSpaces []FeaturedSpace
+	DemoSlug       string // slug of the public demo space, "" if not seeded
 }
 
 templ Home(stats HomeStats) {
@@ -38,9 +39,15 @@ templ Home(stats HomeStats) {
 					<a href="/app" class="inline-block px-8 py-3.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium text-lg hover:shadow-lg hover:shadow-brand/20">
 						Try it free
 					</a>
-					<a href="/blog/agents-that-work" class="inline-block px-8 py-3.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all font-medium text-warm-muted">
-						How it works
-					</a>
+					if stats.DemoSlug != "" {
+						<a href={ templ.SafeURL("/app/" + stats.DemoSlug + "/board") } class="inline-block px-8 py-3.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all font-medium text-warm-muted">
+							See how it works
+						</a>
+					} else {
+						<a href="/blog/agents-that-work" class="inline-block px-8 py-3.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all font-medium text-warm-muted">
+							How it works
+						</a>
+					}
 				</div>
 			</section>
 

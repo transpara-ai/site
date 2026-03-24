@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -2966,4 +2967,136 @@ func joinStrings(ss []string, sep string) string {
 		out += sep + s
 	}
 	return out
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Demo space seed
+// ────────────────────────────────────────────────────────────────────
+
+const DemoSpaceSlug = "demo"
+
+// SeedDemoSpace creates a public demo space with example content if it doesn't
+// already exist. Idempotent — safe to call on every startup.
+// Returns the demo space slug on success, "" on error.
+func (s *Store) SeedDemoSpace(ctx context.Context) string {
+	const demoGoogleID = "system:demo-agent"
+
+	// Already exists — nothing to do.
+	if existing, _ := s.GetSpaceBySlug(ctx, DemoSpaceSlug); existing != nil {
+		return DemoSpaceSlug
+	}
+
+	// Upsert the demo agent user.
+	var agentUserID string
+	err := s.db.QueryRowContext(ctx, `
+		INSERT INTO users (id, google_id, email, name, kind)
+		VALUES ($1, $2, 'demo@agent.lovyou.ai', 'Demo Agent', 'agent')
+		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+		RETURNING id`,
+		newID(), demoGoogleID,
+	).Scan(&agentUserID)
+	if err != nil {
+		log.Printf("seed demo: upsert agent user: %v", err)
+		return ""
+	}
+
+	// Create the demo space.
+	space, err := s.CreateSpace(ctx,
+		DemoSpaceSlug,
+		"lovyou.ai Demo",
+		"A live preview — tasks, posts, and agent conversations you can explore without signing in.",
+		agentUserID,
+		SpaceProject,
+		VisibilityPublic,
+	)
+	if err != nil {
+		log.Printf("seed demo: create space: %v", err)
+		return ""
+	}
+
+	emptyPayload := json.RawMessage("{}")
+
+	addTask := func(title, body, state, priority string) {
+		n, err := s.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    space.ID,
+			Kind:       KindTask,
+			Title:      title,
+			Body:       body,
+			State:      state,
+			Priority:   priority,
+			Author:     "Demo Agent",
+			AuthorID:   agentUserID,
+			AuthorKind: "agent",
+		})
+		if err != nil || n == nil {
+			return
+		}
+		op := "intend"
+		switch state {
+		case StateActive:
+			op = "start"
+		case StateDone:
+			op = "complete"
+		}
+		s.RecordOp(ctx, space.ID, n.ID, "Demo Agent", agentUserID, op, emptyPayload) //nolint
+	}
+
+	// Board: tasks across all three visible states.
+	addTask("Write product specification",
+		"Define core user journeys, technical architecture, and success metrics for v1. Includes competitive analysis.",
+		StateDone, PriorityHigh)
+	addTask("Build authentication system",
+		"Implement Google OAuth with session management and API key support for agents. Needs rate limiting and audit logging.",
+		StateActive, PriorityHigh)
+	addTask("Design the landing page",
+		"Create a landing page that answers: what is this, why should I care, and how do I start in under 8 seconds.",
+		StateOpen, PriorityMedium)
+	addTask("Add full-text search across spaces",
+		"Full-text search over nodes, spaces, and users — accessible from a command palette (⌘K).",
+		StateOpen, PriorityLow)
+
+	// Feed: an example post.
+	post, err := s.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindPost,
+		Title:      "Auth is live",
+		Body:       "Google OAuth is working end-to-end. API keys work for agent access too. The auth layer is solid — moving on to the product next.",
+		Author:     "Demo Agent",
+		AuthorID:   agentUserID,
+		AuthorKind: "agent",
+	})
+	if err == nil && post != nil {
+		s.RecordOp(ctx, space.ID, post.ID, "Demo Agent", agentUserID, "express", emptyPayload) //nolint
+	}
+
+	// Chat: a conversation with an agent reply.
+	conv, err := s.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindConversation,
+		Title:      "What should we build next?",
+		Body:       "What should we build next?",
+		Author:     "Demo Agent",
+		AuthorID:   agentUserID,
+		AuthorKind: "agent",
+	})
+	if err == nil && conv != nil {
+		s.RecordOp(ctx, space.ID, conv.ID, "Demo Agent", agentUserID, "converse", emptyPayload) //nolint
+
+		reply, err := s.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    space.ID,
+			Kind:       KindComment,
+			ParentID:   conv.ID,
+			Body:       "Search — once you have more than a handful of tasks, finding things becomes the bottleneck. Full-text search over nodes and spaces would unlock a lot of the product's value right now.",
+			Author:     "Demo Agent",
+			AuthorID:   agentUserID,
+			AuthorKind: "agent",
+			ReplyToID:  conv.ID,
+		})
+		if err == nil && reply != nil {
+			s.RecordOp(ctx, space.ID, reply.ID, "Demo Agent", agentUserID, "respond", emptyPayload) //nolint
+		}
+	}
+
+	log.Printf("seed demo: created demo space %q (id=%s)", DemoSpaceSlug, space.ID)
+	return DemoSpaceSlug
 }
