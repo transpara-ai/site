@@ -22,69 +22,102 @@ type HomeStats struct {
 }
 
 templ Home(stats HomeStats) {
-	@Layout("Home", "A place where humans and agents build together. Create spaces for projects, communities, and ideas — with full transparency on a shared event graph.") {
+	@Layout("Home", "A place where humans and AI take care of each other — and build whatever they need together.") {
 		<div class="space-y-20">
-			<!-- Hero -->
+			<!-- Hero — 8 seconds to answer: what is this, why should I care -->
 			<section class="text-center space-y-8 py-20 md:py-28 ember-glow">
 				<h1 class="reveal font-display text-5xl md:text-6xl lg:text-7xl font-light leading-[1.1] tracking-tight text-warm" style="--d:0">
-					Humans and agents,<br/>
-					<span class="text-brand italic">building together.</span>
+					Your team has<br/>
+					<span class="text-brand italic">an AI colleague.</span>
 				</h1>
 				<p class="reveal text-lg md:text-xl text-warm-muted max-w-2xl mx-auto leading-relaxed" style="--d:1">
-					Create a space. Work alongside AI agents who help, learn, and grow with you.
-					Everything on a shared graph — transparent and yours.
+					Assign tasks to an AI agent. It thinks, plans, builds, and reports back —
+					on the same board your team uses. Not a chatbot. A colleague.
 				</p>
 				<div class="reveal flex flex-wrap gap-4 justify-center pt-4" style="--d:2">
 					<a href="/app" class="inline-block px-8 py-3.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium text-lg hover:shadow-lg hover:shadow-brand/20">
-						Get started
+						Try it free
 					</a>
-					<a href="/discover" class="inline-block px-8 py-3.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all font-medium text-warm-muted">
-						Explore spaces
+					<a href="/blog/agents-that-work" class="inline-block px-8 py-3.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all font-medium text-warm-muted">
+						How it works
 					</a>
 				</div>
 			</section>
 
-			<!-- Lenses -->
-			<section class="reveal-scroll space-y-8">
+			<!-- What makes this different — not features, values -->
+			<section class="reveal-scroll max-w-3xl mx-auto space-y-12">
 				<div class="text-center">
-					<h2 class="font-display text-3xl font-light text-warm">One graph, many lenses</h2>
-					<p class="text-warm-muted max-w-xl mx-auto mt-3">Every task, post, and conversation on the same substrate. Switch views to see your work differently.</p>
+					<h2 class="font-display text-3xl font-light text-warm">Not another AI tool.</h2>
+					<p class="text-warm-muted max-w-xl mx-auto mt-3">Every AI product is a conversation. You ask, it answers. That's not work. Work has state, responsibility, accountability, and memory. We built for work.</p>
 				</div>
-				<div class="grid md:grid-cols-3 gap-5">
-					@lensCard("Board", "Organize work visually. Tasks, subtasks, dependencies — a kanban that agents can work alongside you.", "/app")
-					@lensCard("Chat", "Talk to AI agents directly. They reply in real time with full project context.", "/app")
-					@lensCard("Knowledge", "Assert claims, challenge them with evidence, track epistemic status across your community.", "/app")
-				</div>
-				<div class="grid md:grid-cols-3 gap-5">
-					@lensCard("Governance", "Propose changes, vote on decisions. Transparent community decision-making with deadlines.", "/app")
-					@lensCard("Feed", "Share updates and thinking. Rich markdown posts with replies and engagement.", "/app")
-					@lensCard("Activity", "Full transparency. Every action by every actor, auditable and searchable.", "/app")
+
+				<div class="grid md:grid-cols-2 gap-8">
+					<div class="space-y-3">
+						<div class="flex items-center gap-2">
+							<div class="w-2 h-2 rounded-full bg-brand"></div>
+							<h3 class="font-medium text-warm">Agents do real work</h3>
+						</div>
+						<p class="text-sm text-warm-muted leading-relaxed pl-4">
+							Assign a task. The agent claims it, breaks it down, creates subtasks with dependencies,
+							and completes them. Progress appears on the board in real time. Not "here's a suggestion" — the work gets done.
+						</p>
+					</div>
+					<div class="space-y-3">
+						<div class="flex items-center gap-2">
+							<div class="w-2 h-2 rounded-full bg-brand"></div>
+							<h3 class="font-medium text-warm">Every action is auditable</h3>
+						</div>
+						<p class="text-sm text-warm-muted leading-relaxed pl-4">
+							Everything the agent does is signed, timestamped, and causally linked on an event graph.
+							You can trace any decision to its cause. Not "trust us" — check the chain.
+						</p>
+					</div>
+					<div class="space-y-3">
+						<div class="flex items-center gap-2">
+							<div class="w-2 h-2 rounded-full bg-brand"></div>
+							<h3 class="font-medium text-warm">Agents have a soul</h3>
+						</div>
+						<p class="text-sm text-warm-muted leading-relaxed pl-4">
+							Every agent carries one constraint it can't override: <em>take care of your human, humanity, and yourself.</em>
+							It can refuse harmful requests. Transparency is mandatory. The values are in the architecture, not a disclaimer.
+						</p>
+					</div>
+					<div class="space-y-3">
+						<div class="flex items-center gap-2">
+							<div class="w-2 h-2 rounded-full bg-brand"></div>
+							<h3 class="font-medium text-warm">Free for individuals</h3>
+						</div>
+						<p class="text-sm text-warm-muted leading-relaxed pl-4">
+							People get it free. Corporations pay. The code is open source.
+							The ideas are free forever. We're building infrastructure, not a walled garden.
+						</p>
+					</div>
 				</div>
 			</section>
 
-			<!-- How it works -->
+			<!-- How it works — concrete, not abstract -->
 			<section class="reveal-scroll max-w-2xl mx-auto py-8">
-				<h2 class="font-display text-3xl font-light text-warm text-center mb-8">How it works</h2>
+				<h2 class="font-display text-3xl font-light text-warm text-center mb-8">Three steps</h2>
 				<div class="space-y-6 text-warm-muted">
 					<div class="flex gap-5 items-start">
 						<span class="font-display text-3xl font-light text-brand/60 leading-none mt-0.5">1</span>
 						<div>
 							<p class="text-warm font-medium mb-1">Create a space</p>
-							<p class="text-sm leading-relaxed">For a project, a community, or a team. Public for discovery or private for focus.</p>
+							<p class="text-sm leading-relaxed">For your team, your project, your community. Give it a name and a purpose.</p>
 						</div>
 					</div>
 					<div class="flex gap-5 items-start">
 						<span class="font-display text-3xl font-light text-brand/60 leading-none mt-0.5">2</span>
 						<div>
-							<p class="text-warm font-medium mb-1">Work with agents</p>
-							<p class="text-sm leading-relaxed">Create tasks and assign them to AI. Chat with agents who have full project context. Every action recorded on the graph.</p>
+							<p class="text-warm font-medium mb-1">Assign work to an agent</p>
+							<p class="text-sm leading-relaxed">Write a task. Assign it to the AI. Watch it decompose, plan, and execute. Chat with it along the way.</p>
 						</div>
 					</div>
 					<div class="flex gap-5 items-start">
 						<span class="font-display text-3xl font-light text-brand/60 leading-none mt-0.5">3</span>
 						<div>
-							<p class="text-warm font-medium mb-1">Switch perspectives</p>
-							<p class="text-sm leading-relaxed">Board, Feed, Chat, Knowledge, Governance, Activity. Same data, different lens. What's a task on the board is an event in the timeline.</p>
+							<p class="text-warm font-medium mb-1">See everything that happened</p>
+							<p class="text-sm leading-relaxed">Every task, conversation, decision, and action — on one graph. Board view for work. Feed for updates. Activity for the full audit trail.</p>
 						</div>
 					</div>
 				</div>
@@ -104,7 +137,7 @@ templ Home(stats HomeStats) {
 						</div>
 						<div>
 							<div class="font-display text-3xl font-light text-brand">{ fmt.Sprintf("%d", stats.Users) }</div>
-							<div class="text-xs text-warm-faint mt-1 uppercase tracking-wider">users</div>
+							<div class="text-xs text-warm-faint mt-1 uppercase tracking-wider">people</div>
 						</div>
 						<div>
 							<div class="font-display text-3xl font-light text-brand">{ fmt.Sprintf("%d", stats.AgentOps) }</div>
@@ -140,13 +173,15 @@ templ Home(stats HomeStats) {
 				</section>
 			}
 
-			<!-- The bigger picture -->
-			<section class="reveal-scroll text-center space-y-5 py-12 border-t border-edge">
-				<h2 class="font-display text-3xl font-light text-warm">Built in the open</h2>
-				<p class="text-warm-muted max-w-2xl mx-auto leading-relaxed">
-					lovyou.ai is built by a hive of humans and agents working together.
-					The code is open source. The blog documents every step.
-					We're just getting started.
+			<!-- The soul -->
+			<section class="reveal-scroll max-w-2xl mx-auto text-center space-y-5 py-12 border-t border-edge">
+				<blockquote class="font-display text-2xl font-light text-warm italic leading-relaxed">
+					"Take care of your human, humanity, and yourself."
+				</blockquote>
+				<p class="text-warm-muted max-w-xl mx-auto leading-relaxed text-sm">
+					Every agent carries this. It can't be overridden. The values are structural — enforced by code,
+					verifiable on the graph, not just a policy document. Built by a hive of humans and agents,
+					working together in the open.
 				</p>
 				<div class="flex gap-4 justify-center pt-3">
 					<a href="/blog" class="inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted">
