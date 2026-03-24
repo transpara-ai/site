@@ -606,7 +606,16 @@ func (h *Handlers) handleFeed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	agents, _ := h.store.ListAgentNames(r.Context())
-	FeedView(*space, spaces, posts, h.viewUser(r), isOwner, len(agents) > 0, searchQuery).Render(r.Context(), w)
+
+	// Load endorsement data for all posts.
+	var postIDs []string
+	for _, p := range posts {
+		postIDs = append(postIDs, p.ID)
+	}
+	endorseCounts := h.store.GetBulkEndorsementCounts(r.Context(), postIDs)
+	userEndorsed := h.store.GetBulkUserEndorsements(r.Context(), h.userID(r), postIDs)
+
+	FeedView(*space, spaces, posts, h.viewUser(r), isOwner, len(agents) > 0, searchQuery, endorseCounts, userEndorsed).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleThreads(w http.ResponseWriter, r *http.Request) {
@@ -1236,7 +1245,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if isHTMX(r) {
-			FeedCard(*node, space.Slug).Render(ctx, w)
+			FeedCard(*node, space.Slug, 0, false).Render(ctx, w)
 			return
 		}
 		http.Redirect(w, r, "/app/"+space.Slug+"/feed", http.StatusSeeOther)
@@ -1876,6 +1885,35 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		if isHTMX(r) {
 			reactions := h.store.GetNodeReactions(ctx, nodeID)
 			reactionBar(nodeID, space.Slug, reactions, actorID).Render(ctx, w)
+			return
+		}
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+
+	case "endorse":
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		// Toggle: endorse if not endorsed, unendorse if already endorsed.
+		endorsed := h.store.HasEndorsed(ctx, actorID, nodeID)
+		if endorsed {
+			h.store.Unendorse(ctx, actorID, nodeID)
+		} else {
+			h.store.Endorse(ctx, actorID, nodeID)
+			h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, "endorse", nil)
+			// Notify the post author.
+			if node, err := h.store.GetNode(ctx, nodeID); err == nil && node.AuthorID != actorID {
+				h.notify(ctx, node.AuthorID, actor, nodeID, space.ID, "endorsed your post")
+			}
+		}
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]any{"op": "endorse", "endorsed": !endorsed})
+			return
+		}
+		if isHTMX(r) {
+			count := h.store.CountEndorsements(ctx, nodeID)
+			endorseButton(nodeID, space.Slug, count, !endorsed).Render(ctx, w)
 			return
 		}
 		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)

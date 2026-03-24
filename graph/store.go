@@ -1804,6 +1804,51 @@ func (s *Store) ListEndorsers(ctx context.Context, userID string, limit int) ([]
 	return names, rows.Err()
 }
 
+// GetBulkEndorsementCounts returns endorsement counts for multiple targets (users or nodes).
+func (s *Store) GetBulkEndorsementCounts(ctx context.Context, targetIDs []string) map[string]int {
+	result := make(map[string]int)
+	if len(targetIDs) == 0 {
+		return result
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT to_id, COUNT(*) FROM endorsements WHERE to_id = ANY($1) GROUP BY to_id`,
+		pq.Array(targetIDs))
+	if err != nil {
+		return result
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var count int
+		if rows.Scan(&id, &count) == nil {
+			result[id] = count
+		}
+	}
+	return result
+}
+
+// GetBulkUserEndorsements returns which targets the user has endorsed.
+func (s *Store) GetBulkUserEndorsements(ctx context.Context, userID string, targetIDs []string) map[string]bool {
+	result := make(map[string]bool)
+	if len(targetIDs) == 0 || userID == "" {
+		return result
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT to_id FROM endorsements WHERE from_id = $1 AND to_id = ANY($2)`,
+		userID, pq.Array(targetIDs))
+	if err != nil {
+		return result
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			result[id] = true
+		}
+	}
+	return result
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Reactions
 // ────────────────────────────────────────────────────────────────────
