@@ -1192,6 +1192,91 @@ templ gettingStartedChecklist(spaceSlug string, hasTask bool, hasAgentTask bool,
 	</div>
 }
 
+templ whatsNextModal(spaceSlug string) {
+	<div
+		id="whats-next-modal"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+	>
+		<div class="w-full max-w-sm bg-elevated border border-edge rounded-2xl shadow-2xl shadow-black/40 p-6 mx-4">
+			<div class="flex items-start justify-between mb-1">
+				<div class="flex items-center gap-2">
+					<svg class="w-5 h-5 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+					</svg>
+					<h2 class="text-sm font-semibold text-warm">You're set up. What's next?</h2>
+				</div>
+				<button
+					onclick="dismissWhatsNext()"
+					class="text-warm-faint hover:text-warm transition-colors ml-2 flex-shrink-0"
+					aria-label="Dismiss"
+				>
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+			<p class="text-xs text-warm-muted mb-4 ml-7">Pick a template — your AI teammate will get started.</p>
+			<div class="space-y-2">
+				<button
+					onclick="pickNextTemplate('Plan a feature with your agent')"
+					class="w-full text-left px-3 py-2.5 bg-surface hover:bg-brand/10 border border-edge hover:border-brand/30 rounded-lg transition-colors group"
+				>
+					<div class="text-xs font-medium text-warm group-hover:text-brand transition-colors">Plan a feature</div>
+					<div class="text-[11px] text-warm-muted mt-0.5">Break it into tasks with your AI teammate</div>
+				</button>
+				<button
+					onclick="pickNextTemplate('Bug: ')"
+					class="w-full text-left px-3 py-2.5 bg-surface hover:bg-brand/10 border border-edge hover:border-brand/30 rounded-lg transition-colors group"
+				>
+					<div class="text-xs font-medium text-warm group-hover:text-brand transition-colors">Track a bug</div>
+					<div class="text-[11px] text-warm-muted mt-0.5">Log and assign it for investigation</div>
+				</button>
+				<button
+					onclick="pickNextTemplate('Decision: ')"
+					class="w-full text-left px-3 py-2.5 bg-surface hover:bg-brand/10 border border-edge hover:border-brand/30 rounded-lg transition-colors group"
+				>
+					<div class="text-xs font-medium text-warm group-hover:text-brand transition-colors">Write a decision</div>
+					<div class="text-[11px] text-warm-muted mt-0.5">Document a choice and the reasoning behind it</div>
+				</button>
+				<button
+					onclick="pickNextTemplate('Goal: ')"
+					class="w-full text-left px-3 py-2.5 bg-surface hover:bg-brand/10 border border-edge hover:border-brand/30 rounded-lg transition-colors group"
+				>
+					<div class="text-xs font-medium text-warm group-hover:text-brand transition-colors">Set a team goal</div>
+					<div class="text-[11px] text-warm-muted mt-0.5">Define what you're working toward this sprint</div>
+				</button>
+			</div>
+			<button
+				onclick="dismissWhatsNext()"
+				class="mt-4 w-full text-xs text-warm-faint hover:text-warm transition-colors py-1"
+			>Not now</button>
+		</div>
+	</div>
+	<script>
+	function dismissWhatsNext() {
+		var modal = document.getElementById('whats-next-modal');
+		if (modal) modal.remove();
+		localStorage.setItem('whats_next_seen_' + location.pathname.split('/')[2], '1');
+	}
+	function pickNextTemplate(title) {
+		dismissWhatsNext();
+		var form = document.getElementById('new-task-form');
+		if (form) {
+			form.classList.remove('hidden');
+			var input = form.querySelector('input[name=title]');
+			if (input) { input.value = title; input.focus(); input.select(); }
+		}
+	}
+	(function() {
+		var key = 'whats_next_seen_' + location.pathname.split('/')[2];
+		if (localStorage.getItem(key)) {
+			var modal = document.getElementById('whats-next-modal');
+			if (modal) modal.remove();
+		}
+	})();
+	</script>
+}
+
 templ firstCompletionToast(spaceSlug string) {
 	<div
 		id="first-completion-toast"
@@ -1227,6 +1312,9 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 		}
 		if showChecklist {
 			@gettingStartedChecklist(space.Slug, hasTask, hasAgentTask, hasCompletion)
+		}
+		if showChecklist && hasTask && hasAgentTask && hasCompletion {
+			@whatsNextModal(space.Slug)
 		}
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
