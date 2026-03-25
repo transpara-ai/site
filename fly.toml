@@ -12,7 +12,7 @@ primary_region = "syd"
 
 [[vm]]
   memory = "8gb"
-  cpu_kind = "shared"
+  cpu_kind = "performance"
   cpus = 2
 
 [[http_service.checks]]
