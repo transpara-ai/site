@@ -400,6 +400,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
 CREATE INDEX IF NOT EXISTS idx_agent_memories_lookup ON agent_memories(persona, user_id);
 
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS last_message_preview TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS persona_name TEXT;
 `)
 	return err
 }
@@ -3019,19 +3020,20 @@ func (s *Store) UpsertAgentPersona(ctx context.Context, p AgentPersona) error {
 
 // GetAgentPersonaForConversation finds any agent participant in the given tag list
 // (user IDs) and returns their persona, or nil if the conversation has no agent.
+// Uses persona_name (the stable slug) for the join, not the mutable display name.
 func (s *Store) GetAgentPersonaForConversation(ctx context.Context, tags []string) *AgentPersona {
 	if len(tags) == 0 {
 		return nil
 	}
-	var agentName string
+	var personaName string
 	err := s.db.QueryRowContext(ctx,
-		`SELECT name FROM users WHERE id = ANY($1) AND kind = 'agent' LIMIT 1`,
+		`SELECT persona_name FROM users WHERE id = ANY($1) AND kind = 'agent' AND persona_name IS NOT NULL LIMIT 1`,
 		pq.Array(tags),
-	).Scan(&agentName)
+	).Scan(&personaName)
 	if err != nil {
 		return nil
 	}
-	return s.GetAgentPersona(ctx, agentName)
+	return s.GetAgentPersona(ctx, personaName)
 }
 
 // GetAgentPersona returns a persona by slug name, or nil if not found.

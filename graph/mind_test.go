@@ -316,7 +316,7 @@ func TestBuildSystemPromptPersonaRouting(t *testing.T) {
 		agentID := "persona-routing-agent-id"
 		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 		_, err := db.ExecContext(ctx,
-			`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
+			`INSERT INTO users (id, google_id, email, name, kind, persona_name) VALUES ($1, $2, $3, $4, 'agent', $4)`,
 			agentID, "agent:"+personaSlug, personaSlug+"@test.lovyou.ai", personaSlug)
 		if err != nil {
 			t.Fatalf("create agent user: %v", err)

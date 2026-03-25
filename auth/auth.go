@@ -402,9 +402,9 @@ func (a *Auth) ensureAgentUser(ctx context.Context, agentName string) (*User, er
 
 	var u User
 	err := a.db.QueryRowContext(ctx, `
-		INSERT INTO users (id, google_id, email, name, kind)
-		VALUES ($1, $2, $3, $4, 'agent')
-		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
+		INSERT INTO users (id, google_id, email, name, kind, persona_name)
+		VALUES ($1, $2, $3, $4, 'agent', $4)
+		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name, persona_name = EXCLUDED.persona_name
 		RETURNING id, email, name, picture, kind`,
 		newID(), syntheticGoogleID, syntheticEmail, agentName,
 	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind)
