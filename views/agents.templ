@@ -1,0 +1,105 @@
+package views
+
+import "fmt"
+
+// AgentPersonaItem holds display data for one agent on the public Agents page.
+type AgentPersonaItem struct {
+	Name        string // slug, e.g. "philosopher"
+	Display     string // display name, e.g. "Philosopher"
+	Description string
+	Category    string
+}
+
+// AgentCategoryGroup groups personas by category for display.
+type AgentCategoryGroup struct {
+	Name     string // e.g. "governance"
+	Label    string // e.g. "Governance"
+	Personas []AgentPersonaItem
+}
+
+templ AgentsPage(categories []AgentCategoryGroup) {
+	@Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.") {
+		<div class="space-y-12">
+			<div class="reveal" style="--d:0">
+				<h1 class="font-display text-3xl font-light text-warm">Agents</h1>
+				<p class="text-warm-muted mt-2">
+					Specialized AI collaborators for any team. Start a conversation or
+					<a href="/app" class="text-brand hover:underline">open a space</a> to work alongside them.
+				</p>
+			</div>
+			if len(categories) == 0 {
+				<div class="text-center py-16">
+					<p class="text-warm-muted">No agents available yet.</p>
+				</div>
+			} else {
+				for i, cat := range categories {
+					<div class="reveal-scroll" style={ fmt.Sprintf("--d:%d", i) }>
+						<div class="flex items-center gap-3 mb-4">
+							<h2 class="font-display text-xl font-light text-warm">{ cat.Label }</h2>
+							<div class="flex-1 h-px bg-edge"></div>
+						</div>
+						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+							for _, p := range cat.Personas {
+								@agentCard(p)
+							}
+						</div>
+					</div>
+				}
+			}
+		</div>
+	}
+}
+
+templ agentCard(p AgentPersonaItem) {
+	<div class="p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-violet-500/30 transition-colors">
+		<div class="flex items-center gap-3">
+			<div class="w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+				<span class="text-sm font-bold text-violet-400">{ agentInitial(p.Display) }</span>
+			</div>
+			<div class="min-w-0">
+				<div class="flex items-center gap-1.5">
+					<span class="text-sm font-medium text-warm truncate">{ p.Display }</span>
+					<span class="text-[9px] px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0">agent</span>
+				</div>
+				<span class={ "text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 inline-block", agentCategoryClass(p.Category) }>
+					{ p.Category }
+				</span>
+			</div>
+		</div>
+		if p.Description != "" {
+			<p class="text-sm text-warm-muted leading-relaxed flex-1">{ p.Description }</p>
+		}
+		<form method="POST" action={ templ.SafeURL("/agents/" + p.Name + "/chat") }>
+			<button type="submit" class="w-full text-xs px-3 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors rounded-md font-medium">
+				Chat with { p.Display }
+			</button>
+		</form>
+	</div>
+}
+
+func agentInitial(display string) string {
+	if len(display) == 0 {
+		return "?"
+	}
+	runes := []rune(display)
+	return string(runes[0])
+}
+
+func agentCategoryClass(cat string) string {
+	switch cat {
+	case "care":
+		return "bg-rose-500/15 text-rose-400"
+	case "governance":
+		return "bg-amber-500/15 text-amber-400"
+	case "knowledge":
+		return "bg-indigo-500/15 text-indigo-400"
+	case "product":
+		return "bg-violet-500/15 text-violet-400"
+	case "outward":
+		return "bg-emerald-500/15 text-emerald-400"
+	case "resource":
+		return "bg-sky-500/15 text-sky-400"
+	default:
+		return "bg-warm-faint/20 text-warm-muted"
+	}
+}

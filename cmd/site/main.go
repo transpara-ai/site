@@ -136,6 +136,7 @@ func main() {
 
 	// Discover page (public spaces) — registered after DB setup below.
 	var graphStore *graph.Store
+	var mind *graph.Mind
 
 	// Auth middleware wrappers — initialized in the DB block, used by routes below.
 	noop := func(hf http.HandlerFunc) http.Handler { return hf }
@@ -215,7 +216,7 @@ func main() {
 
 		// Wire Mind auto-reply if Claude token is set.
 		if claudeToken := os.Getenv("CLAUDE_CODE_OAUTH_TOKEN"); claudeToken != "" {
-			mind := graph.NewMind(db, graphStore, claudeToken)
+			mind = graph.NewMind(db, graphStore, claudeToken)
 			graphHandlers.SetMind(mind)
 			log.Println("mind enabled (CLAUDE_CODE_OAUTH_TOKEN set)")
 		} else {
@@ -378,6 +379,83 @@ func main() {
 		}
 		views.DiscoverPage(ds, query, kindFilter).Render(r.Context(), w)
 	})
+
+	// Agents page — public directory of active agent personas.
+	mux.HandleFunc("GET /agents", func(w http.ResponseWriter, r *http.Request) {
+		if graphStore == nil {
+			views.AgentsPage(nil).Render(r.Context(), w)
+			return
+		}
+		personas, err := graphStore.ListAgentPersonas(r.Context())
+		if err != nil {
+			log.Printf("agents: %v", err)
+			views.AgentsPage(nil).Render(r.Context(), w)
+			return
+		}
+		categoryOrder := []string{"care", "governance", "knowledge", "product", "outward", "resource"}
+		categoryLabels := map[string]string{
+			"care": "Care", "governance": "Governance", "knowledge": "Knowledge",
+			"product": "Product", "outward": "Outward", "resource": "Resource",
+		}
+		grouped := map[string][]views.AgentPersonaItem{}
+		for _, p := range personas {
+			grouped[p.Category] = append(grouped[p.Category], views.AgentPersonaItem{
+				Name: p.Name, Display: p.Display, Description: p.Description, Category: p.Category,
+			})
+		}
+		var categories []views.AgentCategoryGroup
+		for _, cat := range categoryOrder {
+			if items, ok := grouped[cat]; ok {
+				categories = append(categories, views.AgentCategoryGroup{
+					Name: cat, Label: categoryLabels[cat], Personas: items,
+				})
+			}
+		}
+		views.AgentsPage(categories).Render(r.Context(), w)
+	})
+
+	// Chat with agent — creates a conversation in the demo space with the persona's role tag.
+	mux.Handle("POST /agents/{name}/chat", writeWrap(func(w http.ResponseWriter, r *http.Request) {
+		personaName := r.PathValue("name")
+		if graphStore == nil {
+			http.Error(w, "not available", http.StatusServiceUnavailable)
+			return
+		}
+		ctx := r.Context()
+		persona := graphStore.GetAgentPersona(ctx, personaName)
+		if persona == nil {
+			http.NotFound(w, r)
+			return
+		}
+		demoSpace, err := graphStore.GetSpaceBySlug(ctx, graph.DemoSpaceSlug)
+		if err != nil || demoSpace == nil {
+			http.Error(w, "demo space not available", http.StatusServiceUnavailable)
+			return
+		}
+		user := auth.UserFromContext(ctx)
+		actorID, actor, actorKind := "anonymous", "Anonymous", "human"
+		if user != nil {
+			actorID, actor, actorKind = user.ID, user.Name, "human"
+		}
+		node, err := graphStore.CreateNode(ctx, graph.CreateNodeParams{
+			SpaceID:    demoSpace.ID,
+			Kind:       graph.KindConversation,
+			Title:      "Chat with " + persona.Display,
+			Author:     actor,
+			AuthorID:   actorID,
+			AuthorKind: actorKind,
+			Tags:       []string{actorID, "role:" + persona.Name},
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		graphStore.RecordOp(ctx, demoSpace.ID, node.ID, actor, actorID, "converse", nil)
+		if mind != nil {
+			go mind.OnMessage(demoSpace.ID, demoSpace.Slug, node, actorID)
+		}
+		http.Redirect(w, r, fmt.Sprintf("/app/%s/conversation/%s", demoSpace.Slug, node.ID), http.StatusSeeOther)
+	}))
 
 	// User profiles — identity from action history (Layer 8).
 	mux.Handle("GET /user/{name}", readWrap(func(w http.ResponseWriter, r *http.Request) {
@@ -638,6 +716,7 @@ func main() {
 		addURL("/")
 		addURL("/blog")
 		addURL("/discover")
+		addURL("/agents")
 		addURL("/market")
 		addURL("/activity")
 		addURL("/knowledge")

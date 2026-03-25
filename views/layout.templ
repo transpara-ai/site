@@ -133,6 +133,7 @@ templ Layout(title, description string, user ...SiteUser) {
 					<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic">lovyou.ai</a>
 					<div class="flex items-center gap-5 text-sm text-warm-muted">
 						<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
+						<a href="/agents" class="hover:text-brand transition-colors hidden md:inline">Agents</a>
 						<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
 						if len(user) > 0 && user[0].Name != "" {
 							<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
@@ -168,6 +169,7 @@ templ Layout(title, description string, user ...SiteUser) {
 					</div>
 					<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
 						<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
+						<a href="/agents" class="hover:text-brand transition-colors">Agents</a>
 						<a href="/market" class="hover:text-brand transition-colors">Market</a>
 						<a href="/knowledge" class="hover:text-brand transition-colors">Knowledge</a>
 						<a href="/activity" class="hover:text-brand transition-colors">Activity</a>
