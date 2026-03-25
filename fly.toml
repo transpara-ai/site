@@ -11,9 +11,9 @@ primary_region = "syd"
   min_machines_running = 1
 
 [[vm]]
-  memory = "512mb"
+  memory = "8gb"
   cpu_kind = "shared"
-  cpus = 1
+  cpus = 2
 
 [[http_service.checks]]
   grace_period = "5s"
