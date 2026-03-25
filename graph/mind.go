@@ -356,7 +356,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 		}
 		if humanUserID != "" {
 			memory := fmt.Sprintf("Spoke with this user in conversation %q", truncateStr(convo.Title, 80))
-			m.store.RememberForPersona(ctx, role, humanUserID, memory)
+			m.store.RememberForPersona(ctx, role, humanUserID, "context", memory, convo.ID, 5)
 		}
 	}
 

@@ -401,6 +401,9 @@ CREATE INDEX IF NOT EXISTS idx_agent_memories_lookup ON agent_memories(persona, 
 
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS last_message_preview TEXT NOT NULL DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS persona_name TEXT;
+ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'context';
+ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS source_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS importance INT NOT NULL DEFAULT 5;
 `)
 	return err
 }
@@ -3074,21 +3077,43 @@ func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 // Agent Memories
 // ────────────────────────────────────────────────────────────────────
 
+// AgentMemory is a stored memory for a persona about a specific user.
+type AgentMemory struct {
+	ID         string    `json:"id"`
+	Persona    string    `json:"persona"`
+	UserID     string    `json:"user_id"`
+	Kind       string    `json:"kind"`       // "context", "fact", "preference"
+	Content    string    `json:"content"`
+	SourceID   string    `json:"source_id"`  // conversation or node that produced this memory
+	Importance int       `json:"importance"` // 1-10
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 // RememberForPersona stores a memory for a persona about a specific user.
-func (s *Store) RememberForPersona(ctx context.Context, persona, userID, memory string) error {
+// kind: "context" | "fact" | "preference"; importance: 1-10 (default 5).
+func (s *Store) RememberForPersona(ctx context.Context, persona, userID, kind, content, sourceID string, importance int) error {
+	if kind == "" {
+		kind = "context"
+	}
+	if importance <= 0 || importance > 10 {
+		importance = 5
+	}
 	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO agent_memories (id, persona, user_id, memory) VALUES ($1, $2, $3, $4)`,
-		newID(), persona, userID, memory)
+		`INSERT INTO agent_memories (id, persona, user_id, memory, kind, source_id, importance)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		newID(), persona, userID, content, kind, sourceID, importance)
 	return err
 }
 
-// RecallForPersona returns the most recent memories for a persona about a specific user.
+// RecallForPersona returns the most recent memories for a persona about a specific user,
+// ordered by importance desc, then recency desc. Returns content strings for prompt injection.
 func (s *Store) RecallForPersona(ctx context.Context, persona, userID string, limit int) ([]string, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT memory FROM agent_memories WHERE persona = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT $3`,
+		`SELECT memory FROM agent_memories WHERE persona = $1 AND user_id = $2
+		 ORDER BY importance DESC, created_at DESC LIMIT $3`,
 		persona, userID, limit)
 	if err != nil {
 		return nil, err
