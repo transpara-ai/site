@@ -438,20 +438,25 @@ func (m *Mind) buildSystemPrompt(convo *Node, agentID string) string {
 			}
 		}
 	} else {
-		sys.WriteString(mindSoul)
+		// Try to load persona for the specific agent participant.
+		if persona := m.store.GetAgentPersonaForConversation(ctx, convo.Tags); persona != nil {
+			sys.WriteString(persona.Prompt)
+		} else {
+			sys.WriteString(mindSoul)
 
-		// Inject loop state if available (generic Mind only).
-		if state := m.store.GetMindState(ctx, "loop_state"); state != "" {
-			sys.WriteString("\n== CURRENT STATE ==\n")
-			sys.WriteString(state)
-			sys.WriteString("\n")
-		}
+			// Inject loop state if available (generic Mind only).
+			if state := m.store.GetMindState(ctx, "loop_state"); state != "" {
+				sys.WriteString("\n== CURRENT STATE ==\n")
+				sys.WriteString(state)
+				sys.WriteString("\n")
+			}
 
-		// Inject recent work for context.
-		if work := m.store.GetMindState(ctx, "recent_work"); work != "" {
-			sys.WriteString("\n== RECENT WORK ==\n")
-			sys.WriteString(work)
-			sys.WriteString("\n")
+			// Inject recent work for context.
+			if work := m.store.GetMindState(ctx, "recent_work"); work != "" {
+				sys.WriteString("\n== RECENT WORK ==\n")
+				sys.WriteString(work)
+				sys.WriteString("\n")
+			}
 		}
 	}
 
