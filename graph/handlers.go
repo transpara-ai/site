@@ -1052,9 +1052,29 @@ func (h *Handlers) handleAgents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-	agents, _ := h.store.ListAgentNames(r.Context())
+	personas, _ := h.store.ListAgentPersonas(r.Context())
 
-	AgentsView(*space, spaces, agents, h.viewUser(r)).Render(r.Context(), w)
+	categoryOrder := []string{"care", "governance", "knowledge", "product", "outward", "resource"}
+	categoryLabels := map[string]string{
+		"care": "Care", "governance": "Governance", "knowledge": "Knowledge",
+		"product": "Product", "outward": "Outward", "resource": "Resource",
+	}
+	grouped := make(map[string][]AppAgentPersona)
+	for _, p := range personas {
+		grouped[p.Category] = append(grouped[p.Category], AppAgentPersona{
+			Name: p.Name, Display: p.Display, Description: p.Description, Category: p.Category,
+		})
+	}
+	var categories []AppAgentCategoryGroup
+	for _, cat := range categoryOrder {
+		if items, ok := grouped[cat]; ok {
+			categories = append(categories, AppAgentCategoryGroup{
+				Name: cat, Label: categoryLabels[cat], Personas: items,
+			})
+		}
+	}
+
+	AgentsView(*space, spaces, categories, h.viewUser(r)).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleActivity(w http.ResponseWriter, r *http.Request) {
