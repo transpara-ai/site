@@ -403,7 +403,7 @@ func main() {
 		grouped := map[string][]views.AgentPersonaItem{}
 		for _, p := range personas {
 			grouped[p.Category] = append(grouped[p.Category], views.AgentPersonaItem{
-				Name: p.Name, Display: p.Display, Description: p.Description, Category: p.Category,
+				Name: p.Name, Display: p.Display, Description: p.Description, Category: p.Category, LastSeen: p.LastSeen,
 			})
 		}
 		var categories []views.AgentCategoryGroup

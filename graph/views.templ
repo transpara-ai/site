@@ -3025,8 +3025,16 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 							<div class="flex items-center gap-2">
 								if p := personaMap[convo.ID]; p != nil {
 									<span class="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-										<span class="w-3 h-3 rounded-full bg-violet-500/20 flex items-center justify-center font-bold text-[8px]">{ initial(p.Display) }</span>
+										<span class="relative inline-flex">
+											<span class="w-3 h-3 rounded-full bg-violet-500/20 flex items-center justify-center font-bold text-[8px]">{ initial(p.Display) }</span>
+											if p.LastSeen != nil && time.Since(*p.LastSeen) < 5*time.Minute {
+												<span class="absolute -bottom-px -right-px w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+											}
+										</span>
 										{ p.Display }
+										if status := personaOnlineStatus(p); status != "" {
+											<span class={ templ.KV("text-emerald-400", p.LastSeen != nil && time.Since(*p.LastSeen) < 5*time.Minute) }>{ status }</span>
+										}
 									</span>
 								}
 								if convo.UnreadCount > 0 {
@@ -4930,6 +4938,23 @@ func quotePostPlaceholder(q *Node) string {
 		return "Add your thoughts..."
 	}
 	return "What's on your mind?"
+}
+
+func personaOnlineStatus(p *AgentPersona) string {
+	if p == nil || p.LastSeen == nil {
+		return ""
+	}
+	d := time.Since(*p.LastSeen)
+	if d < 5*time.Minute {
+		return "Online"
+	}
+	if d < 60*time.Minute {
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 }
 
 func containsStr(ss []string, s string) bool {

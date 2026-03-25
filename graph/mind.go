@@ -339,6 +339,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 	log.Printf("mind: replied to %q (node %s)", convo.Title, node.ID)
 
 	// Save a memory for persona-based conversations so future replies have context.
+	// Also update last_seen for the persona.
 	role := ""
 	for _, tag := range convo.Tags {
 		if strings.HasPrefix(tag, "role:") {
@@ -346,7 +347,19 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 			break
 		}
 	}
+	// If no role tag, derive persona name from the agent user record.
+	if role == "" {
+		var personaName string
+		if err := m.db.QueryRowContext(ctx,
+			`SELECT persona_name FROM users WHERE id = $1 AND persona_name IS NOT NULL`,
+			agentID,
+		).Scan(&personaName); err == nil {
+			role = personaName
+		}
+	}
 	if role != "" {
+		m.store.UpdateAgentPersonaLastSeen(ctx, role)
+
 		humanUserID := ""
 		for _, tag := range convo.Tags {
 			if !strings.HasPrefix(tag, "role:") && tag != agentID {

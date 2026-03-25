@@ -404,6 +404,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS persona_name TEXT;
 ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'context';
 ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS source_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS importance INT NOT NULL DEFAULT 5;
+ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;
 `)
 	return err
 }
@@ -3002,6 +3003,7 @@ type AgentPersona struct {
 	Prompt      string // full system prompt from the .md file
 	Model       string // "sonnet", "opus", etc.
 	Active      bool
+	LastSeen    *time.Time // nil if never replied
 }
 
 // UpsertAgentPersona inserts or updates an agent persona by name.
@@ -3019,6 +3021,11 @@ func (s *Store) UpsertAgentPersona(ctx context.Context, p AgentPersona) error {
 		newID(), p.Name, p.Display, p.Description, p.Category, p.Prompt, p.Model, p.Active,
 	)
 	return err
+}
+
+// UpdateAgentPersonaLastSeen sets last_seen = NOW() for the named persona.
+func (s *Store) UpdateAgentPersonaLastSeen(ctx context.Context, name string) {
+	s.db.ExecContext(ctx, `UPDATE agent_personas SET last_seen = NOW() WHERE name = $1`, name)
 }
 
 // GetAgentPersonaForConversation finds any agent participant in the given tag list
@@ -3060,7 +3067,7 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 
 	// One query: find agent user IDs and their persona data.
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, ap.id, ap.name, ap.display, ap.description, ap.category, ap.prompt, ap.model, ap.active
+		SELECT u.id, ap.id, ap.name, ap.display, ap.description, ap.category, ap.prompt, ap.model, ap.active, ap.last_seen
 		FROM users u
 		JOIN agent_personas ap ON ap.name = u.persona_name
 		WHERE u.id = ANY($1) AND u.kind = 'agent' AND u.persona_name IS NOT NULL`,
@@ -3076,7 +3083,7 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 	for rows.Next() {
 		var userID string
 		var p AgentPersona
-		if err := rows.Scan(&userID, &p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active); err != nil {
+		if err := rows.Scan(&userID, &p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.LastSeen); err != nil {
 			continue
 		}
 		byUserID[userID] = &p
@@ -3099,9 +3106,9 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 func (s *Store) GetAgentPersona(ctx context.Context, name string) *AgentPersona {
 	var p AgentPersona
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, display, description, category, prompt, model, active
+		`SELECT id, name, display, description, category, prompt, model, active, last_seen
 		 FROM agent_personas WHERE name = $1`, name,
-	).Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active)
+	).Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.LastSeen)
 	if err != nil {
 		return nil
 	}
@@ -3111,7 +3118,7 @@ func (s *Store) GetAgentPersona(ctx context.Context, name string) *AgentPersona 
 // ListAgentPersonas returns all active agent personas ordered by category, display.
 func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, display, description, category, model
+		`SELECT id, name, display, description, category, model, last_seen
 		 FROM agent_personas WHERE active = true ORDER BY category, display`)
 	if err != nil {
 		return nil, err
@@ -3120,7 +3127,7 @@ func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 	var personas []AgentPersona
 	for rows.Next() {
 		var p AgentPersona
-		if err := rows.Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Model); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Model, &p.LastSeen); err != nil {
 			return nil, err
 		}
 		p.Active = true

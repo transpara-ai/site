@@ -1,6 +1,9 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // AgentPersonaItem holds display data for one agent on the public Agents page.
 type AgentPersonaItem struct {
@@ -8,6 +11,7 @@ type AgentPersonaItem struct {
 	Display     string // display name, e.g. "Philosopher"
 	Description string
 	Category    string
+	LastSeen    *time.Time // nil if never replied
 }
 
 // AgentCategoryGroup groups personas by category for display.
@@ -53,17 +57,25 @@ templ AgentsPage(categories []AgentCategoryGroup) {
 templ agentCard(p AgentPersonaItem) {
 	<div class="p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-violet-500/30 transition-colors">
 		<div class="flex items-center gap-3">
-			<div class="w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-				<span class="text-sm font-bold text-violet-400">{ agentInitial(p.Display) }</span>
+			<div class="relative w-9 h-9 flex-shrink-0">
+				<div class="w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center">
+					<span class="text-sm font-bold text-violet-400">{ agentInitial(p.Display) }</span>
+				</div>
+				if p.LastSeen != nil && time.Since(*p.LastSeen) < 5*time.Minute {
+					<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface"></span>
+				}
 			</div>
-			<div class="min-w-0">
+			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-1.5">
 					<span class="text-sm font-medium text-warm truncate">{ p.Display }</span>
 					<span class="text-[9px] px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0">agent</span>
 				</div>
-				<span class={ "text-[10px] px-1.5 py-0.5 rounded-full mt-0.5 inline-block", agentCategoryClass(p.Category) }>
-					{ p.Category }
-				</span>
+				<div class="flex items-center gap-1.5 mt-0.5">
+					<span class={ "text-[10px] px-1.5 py-0.5 rounded-full inline-block", agentCategoryClass(p.Category) }>
+						{ p.Category }
+					</span>
+					<span class={ "text-[10px]", agentStatusClass(p.LastSeen) }>{ agentStatusText(p.LastSeen) }</span>
+				</div>
 			</div>
 		</div>
 		if p.Description != "" {
@@ -80,6 +92,33 @@ templ agentCard(p AgentPersonaItem) {
 			</form>
 		</div>
 	</div>
+}
+
+func agentStatusText(lastSeen *time.Time) string {
+	if lastSeen == nil {
+		return ""
+	}
+	d := time.Since(*lastSeen)
+	if d < 5*time.Minute {
+		return "Online"
+	}
+	if d < 60*time.Minute {
+		return fmt.Sprintf("Active %dm ago", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("Active %dh ago", int(d.Hours()))
+	}
+	return fmt.Sprintf("Active %dd ago", int(d.Hours()/24))
+}
+
+func agentStatusClass(lastSeen *time.Time) string {
+	if lastSeen == nil {
+		return "text-warm-faint hidden"
+	}
+	if time.Since(*lastSeen) < 5*time.Minute {
+		return "text-emerald-400"
+	}
+	return "text-warm-faint"
 }
 
 func agentInitial(display string) string {
