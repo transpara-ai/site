@@ -377,6 +377,18 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reputation_score INT NOT NULL DEFAULT 0;
 ALTER TABLE space_members ADD COLUMN IF NOT EXISTS welcomed_at TIMESTAMPTZ;
+
+CREATE TABLE IF NOT EXISTS agent_personas (
+    id          TEXT PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    display     TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    category    TEXT NOT NULL DEFAULT 'general',
+    prompt      TEXT NOT NULL DEFAULT '',
+    model       TEXT NOT NULL DEFAULT 'sonnet',
+    active      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
 `)
 	return err
 }
@@ -2944,6 +2956,73 @@ func (s *Store) CountChallenges(ctx context.Context, nodeID string) int {
 	var count int
 	s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM ops WHERE node_id = $1 AND op = 'challenge'`, nodeID).Scan(&count)
 	return count
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Agent Personas
+// ────────────────────────────────────────────────────────────────────
+
+// AgentPersona is a named agent persona seeded from agents/*.md files.
+type AgentPersona struct {
+	ID          string
+	Name        string // slug, e.g. "philosopher"
+	Display     string // display name, e.g. "Philosopher"
+	Description string // one-line for the card
+	Category    string // "care", "governance", "knowledge", etc.
+	Prompt      string // full system prompt from the .md file
+	Model       string // "sonnet", "opus", etc.
+	Active      bool
+}
+
+// UpsertAgentPersona inserts or updates an agent persona by name.
+func (s *Store) UpsertAgentPersona(ctx context.Context, p AgentPersona) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO agent_personas (id, name, display, description, category, prompt, model, active)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (name) DO UPDATE SET
+			display = EXCLUDED.display,
+			description = EXCLUDED.description,
+			category = EXCLUDED.category,
+			prompt = EXCLUDED.prompt,
+			model = EXCLUDED.model,
+			active = EXCLUDED.active`,
+		newID(), p.Name, p.Display, p.Description, p.Category, p.Prompt, p.Model, p.Active,
+	)
+	return err
+}
+
+// GetAgentPersona returns a persona by slug name, or nil if not found.
+func (s *Store) GetAgentPersona(ctx context.Context, name string) *AgentPersona {
+	var p AgentPersona
+	err := s.db.QueryRowContext(ctx,
+		`SELECT id, name, display, description, category, prompt, model, active
+		 FROM agent_personas WHERE name = $1`, name,
+	).Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active)
+	if err != nil {
+		return nil
+	}
+	return &p
+}
+
+// ListAgentPersonas returns all active agent personas ordered by category, display.
+func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, name, display, description, category, model
+		 FROM agent_personas WHERE active = true ORDER BY category, display`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var personas []AgentPersona
+	for rows.Next() {
+		var p AgentPersona
+		if err := rows.Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Model); err != nil {
+			return nil, err
+		}
+		p.Active = true
+		personas = append(personas, p)
+	}
+	return personas, rows.Err()
 }
 
 // ────────────────────────────────────────────────────────────────────

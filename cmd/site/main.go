@@ -208,6 +208,7 @@ func main() {
 			log.Fatalf("graph store: %v", err)
 		}
 		demoSlug := graphStore.SeedDemoSpace(context.Background())
+		graphStore.SeedAgentPersonas(context.Background())
 		graphHandlers := graph.NewHandlers(graphStore, readWrap, writeWrap)
 		graphHandlers.Register(mux)
 		log.Println("app enabled (DATABASE_URL set)")
