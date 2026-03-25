@@ -1,6 +1,13 @@
 package views
 
-templ Layout(title, description string) {
+// SiteUser holds the current user for the shared header.
+// Empty Name means anonymous/not logged in.
+type SiteUser struct {
+	Name    string
+	Picture string
+}
+
+templ Layout(title, description string, user ...SiteUser) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -127,7 +134,26 @@ templ Layout(title, description string) {
 					<div class="flex items-center gap-5 text-sm text-warm-muted">
 						<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
 						<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
-						<a href="/app" class="px-3 py-1 bg-brand/10 text-brand rounded-md hover:bg-brand/20 transition-colors text-xs font-medium">My Work</a>
+						if len(user) > 0 && user[0].Name != "" {
+							<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
+								<a href={ templ.SafeURL("/user/" + user[0].Name) } class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+									if user[0].Picture != "" {
+										<img src={ user[0].Picture } class="w-6 h-6 rounded-full" alt={ user[0].Name } referrerpolicy="no-referrer"/>
+									} else {
+										<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center">
+											{ string([]rune(user[0].Name)[0:1]) }
+										</span>
+									}
+									<span class="text-warm-muted text-xs hidden md:inline">{ user[0].Name }</span>
+								</a>
+								<a href="/app" class="text-xs text-warm-faint hover:text-brand transition-colors hidden md:inline">My Work</a>
+								<form method="POST" action="/auth/logout">
+									<button type="submit" class="text-xs text-warm-faint hover:text-red-400 transition-colors hidden md:inline">Logout</button>
+								</form>
+							</div>
+						} else {
+							<a href="/app" class="px-3 py-1 bg-brand/10 text-brand rounded-md hover:bg-brand/20 transition-colors text-xs font-medium">My Work</a>
+						}
 					</div>
 				</nav>
 			</header>
