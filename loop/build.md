@@ -1,39 +1,21 @@
-# Build Report — Public Demo Space
+# Build: Add last message preview to Chat lens conversation list
 
-## Gap
-Anonymous visitors had no way to experience the product before signing in. The landing page linked to a blog post instead of a live demo.
-
-## Changes
+## What changed
 
 ### `graph/store.go`
-- Added `"log"` import
-- Added `DemoSpaceSlug = "demo"` constant
-- Added `SeedDemoSpace(ctx context.Context) string` method:
-  - Idempotent: checks if demo space exists first, returns slug immediately if so
-  - Upserts a `kind='agent'` user with `google_id = "system:demo-agent"` as demo owner
-  - Creates public project space: slug `"demo"`, name `"lovyou.ai Demo"`, visibility `"public"`
-  - Seeds 4 tasks (1 done, 1 active, 2 open) to populate the board
-  - Seeds 1 post to populate the feed
-  - Seeds 1 conversation + 1 agent reply to populate chat
-  - Records ops for each node (intend/start/complete/express/converse/respond)
-  - Returns `""` on any error
+- Added `ALTER TABLE nodes ADD COLUMN IF NOT EXISTS last_message_preview TEXT NOT NULL DEFAULT ''` to `migrate()`
+- Added `UpdateLastMessagePreview(ctx, conversationID, body string) error` — truncates to 100 chars and updates the column + `updated_at`
+- Updated `ListConversations` query: uses `COALESCE(NULLIF(n.last_message_preview, ''), lm.body)` so new messages use the column directly while existing conversations fall back to the lateral join
 
-### `views/home.templ`
-- Added `DemoSlug string` field to `HomeStats` struct
-- Updated hero CTA buttons: if `DemoSlug != ""`, shows "See how it works" link to `/app/{DemoSlug}/board`; otherwise falls back to "How it works" blog link
+### `graph/handlers.go`
+- In the `respond` op handler, after notifying conversation participants, calls `h.store.UpdateLastMessagePreview(ctx, parentID, body)` when the parent is a conversation
 
-### `cmd/site/main.go`
-- Added `"context"` import
-- After `graph.NewStore(db)`, calls `graphStore.SeedDemoSpace(context.Background())` → `demoSlug`
-- Passes `DemoSlug: demoSlug` to `HomeStats` in the home handler
+### `graph/mind.go`
+- After the agent reply node is created and `RecordOp` is called, also calls `m.store.UpdateLastMessagePreview(ctx, convo.ID, cleanResponse)` so agent replies update the preview too
 
-## Read-only mode
-No handler changes needed. The existing system already enforces read-only for anonymous users:
-- `spaceForRead` sets `isOwner = false` for anonymous users
-- Templates gate all write forms on `user.Name != "Anonymous"` (board `canWrite`, feed compose, etc.)
-- POST routes use `writeWrap` which requires authentication
+## What was already done
+The template (`ConversationsView` in `views.templ`) already displayed `convo.LastBody` with author attribution — no template changes were needed.
 
 ## Verification
-- `templ generate` — 13 updates, no errors
-- `go.exe build -buildvcs=false ./...` — no errors
-- `go.exe test ./...` — all pass (auth, graph packages)
+- `go.exe build -buildvcs=false ./...` — clean
+- `go.exe test ./...` — all pass (including `TestConversation` which checks `LastBody`)

@@ -1807,6 +1807,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 						h.notify(ctx, tagID, actor, op.ID, space.ID, "sent a message")
 					}
 				}
+				h.store.UpdateLastMessagePreview(ctx, parentID, body)
 			}
 		}
 

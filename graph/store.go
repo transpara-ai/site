@@ -398,6 +398,8 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_agent_memories_lookup ON agent_memories(persona, user_id);
+
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS last_message_preview TEXT NOT NULL DEFAULT '';
 `)
 	return err
 }
@@ -965,7 +967,8 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userID string) (
 		       n.created_at, n.updated_at, n.verdict, n.rating,
 		       COALESCE((SELECT COUNT(*) FROM nodes c WHERE c.parent_id = n.id), 0),
 		       0, 0,
-		       lm.author, lm.author_kind, lm.body,
+		       lm.author, lm.author_kind,
+		       COALESCE(NULLIF(n.last_message_preview, ''), lm.body),
 		       COALESCE((
 		         SELECT COUNT(*) FROM nodes c
 		         WHERE c.parent_id = n.id
@@ -1019,6 +1022,19 @@ func (s *Store) ListConversations(ctx context.Context, spaceID, userID string) (
 		convos = append(convos, cs)
 	}
 	return convos, rows.Err()
+}
+
+// UpdateLastMessagePreview stores the first 100 chars of the latest message body
+// on the conversation node to avoid a lateral join in list queries.
+func (s *Store) UpdateLastMessagePreview(ctx context.Context, conversationID, body string) error {
+	preview := body
+	if len(preview) > 100 {
+		preview = preview[:100]
+	}
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE nodes SET last_message_preview = $1, updated_at = NOW() WHERE id = $2`,
+		preview, conversationID)
+	return err
 }
 
 // ResolveUserID returns the user ID for a given name, or empty string if not found.

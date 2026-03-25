@@ -335,6 +335,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 	}
 
 	m.store.RecordOp(ctx, spaceID, node.ID, agentName, agentID, "respond", nil)
+	m.store.UpdateLastMessagePreview(ctx, convo.ID, cleanResponse)
 	log.Printf("mind: replied to %q (node %s)", convo.Title, node.ID)
 
 	// Save a memory for persona-based conversations so future replies have context.
