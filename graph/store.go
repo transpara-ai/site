@@ -389,6 +389,15 @@ CREATE TABLE IF NOT EXISTS agent_personas (
     active      BOOLEAN NOT NULL DEFAULT true,
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id          TEXT PRIMARY KEY,
+    persona     TEXT NOT NULL,
+    user_id     TEXT NOT NULL,
+    memory      TEXT NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_agent_memories_lookup ON agent_memories(persona, user_id);
 `)
 	return err
 }
@@ -3040,6 +3049,40 @@ func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 		personas = append(personas, p)
 	}
 	return personas, rows.Err()
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Agent Memories
+// ────────────────────────────────────────────────────────────────────
+
+// RememberForPersona stores a memory for a persona about a specific user.
+func (s *Store) RememberForPersona(ctx context.Context, persona, userID, memory string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO agent_memories (id, persona, user_id, memory) VALUES ($1, $2, $3, $4)`,
+		newID(), persona, userID, memory)
+	return err
+}
+
+// RecallForPersona returns the most recent memories for a persona about a specific user.
+func (s *Store) RecallForPersona(ctx context.Context, persona, userID string, limit int) ([]string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT memory FROM agent_memories WHERE persona = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT $3`,
+		persona, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var memories []string
+	for rows.Next() {
+		var m string
+		if rows.Scan(&m) == nil {
+			memories = append(memories, m)
+		}
+	}
+	return memories, rows.Err()
 }
 
 // ────────────────────────────────────────────────────────────────────

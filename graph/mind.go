@@ -282,7 +282,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 		return fmt.Errorf("list messages: %w", err)
 	}
 
-	systemPrompt := m.buildSystemPrompt(convo)
+	systemPrompt := m.buildSystemPrompt(convo, agentID)
 	claudeMessages := m.buildMessages(convo, messages, agentID)
 
 	response, err := m.callClaude(ctx, systemPrompt, claudeMessages)
@@ -336,6 +336,29 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 
 	m.store.RecordOp(ctx, spaceID, node.ID, agentName, agentID, "respond", nil)
 	log.Printf("mind: replied to %q (node %s)", convo.Title, node.ID)
+
+	// Save a memory for persona-based conversations so future replies have context.
+	role := ""
+	for _, tag := range convo.Tags {
+		if strings.HasPrefix(tag, "role:") {
+			role = strings.TrimPrefix(tag, "role:")
+			break
+		}
+	}
+	if role != "" {
+		humanUserID := ""
+		for _, tag := range convo.Tags {
+			if !strings.HasPrefix(tag, "role:") && tag != agentID {
+				humanUserID = tag
+				break
+			}
+		}
+		if humanUserID != "" {
+			memory := fmt.Sprintf("Spoke with this user in conversation %q", truncateStr(convo.Title, 80))
+			m.store.RememberForPersona(ctx, role, humanUserID, memory)
+		}
+	}
+
 	return nil
 }
 
@@ -377,7 +400,7 @@ func extractTaskCommands(response string) (string, []taskCommand) {
 	return strings.TrimSpace(cleaned.String()), tasks
 }
 
-func (m *Mind) buildSystemPrompt(convo *Node) string {
+func (m *Mind) buildSystemPrompt(convo *Node, agentID string) string {
 	var sys strings.Builder
 	ctx := context.Background()
 
@@ -396,6 +419,23 @@ func (m *Mind) buildSystemPrompt(convo *Node) string {
 			sys.WriteString(persona.Prompt)
 		} else {
 			sys.WriteString(mindSoul) // persona not found, use default
+		}
+
+		// Recall memories for this persona about the human participant.
+		humanUserID := ""
+		for _, tag := range convo.Tags {
+			if !strings.HasPrefix(tag, "role:") && tag != agentID {
+				humanUserID = tag
+				break
+			}
+		}
+		if humanUserID != "" {
+			if memories, _ := m.store.RecallForPersona(ctx, role, humanUserID, 10); len(memories) > 0 {
+				sys.WriteString("\n== MEMORIES ==\n")
+				for _, mem := range memories {
+					sys.WriteString("- " + mem + "\n")
+				}
+			}
 		}
 	} else {
 		sys.WriteString(mindSoul)
