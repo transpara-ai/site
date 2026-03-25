@@ -1,26 +1,25 @@
-# Build Report — Fix: Agent persona badge N+1 and empty-initial issues
+# Build Report — Goal progress dashboard with task aggregation
 
 ## Gap
-Critic flagged three issues in `cedd52e`:
-1. N+1 query: `GetAgentPersonaForConversation` called once per conversation
-2. Blank badge circle when `AgentPersona.Display` is empty (`initial("")` → `""`)
-3. No test for the persona-lookup path
+Goals lens showed goals with project counts but no task progress. Clicking a goal went to the generic node detail page, which wasn't goal-aware. No aggregate view of progress across all projects under a goal.
 
 ## Changes
 
-### `graph/store.go`
-- Added `GetAgentPersonasForConversations(ctx, convos)` — single SQL query joining `users` and `agent_personas` for all conversation tag IDs at once. Returns `map[string]*AgentPersona` (convo ID → persona). O(1) round-trips regardless of page size.
-
 ### `graph/handlers.go`
-- Replaced the N+1 loop in `handleConversations` with a single call to `GetAgentPersonasForConversations`.
+- Added `GoalDetail` struct: `Goal`, `Projects []Node`, `DirectTasks []Node`, `TotalTasks int`, `DoneTasks int`
+- Added `handleGoalDetail` handler: fetches goal by ID, loads projects (kind=project, parent=goal), loads direct tasks (kind=task, parent=goal), aggregates `TotalTasks`/`DoneTasks` by summing project `ChildCount`/`ChildDone` + counting direct task states
+- Registered route `GET /app/{slug}/goals/{id}` (more specific than `/goals`, takes precedence)
 
-### `graph/views.templ` + `graph/views_templ.go`
-- Fixed `initial()`: returns `"?"` instead of `""` for empty input. Prevents blank badge circle for unnamed or freshly-created agents.
-
-### `graph/store_test.go`
-- Added `TestGetAgentPersonasForConversations`: seeds a persona and agent user, constructs two fake ConversationSummary objects (one with agent, one without), verifies the mapping is correct and that empty input doesn't panic. Skips without `DATABASE_URL`.
+### `graph/views.templ`
+- Added `GoalDetailView` template: breadcrumb → goal header → progress card → projects list → direct tasks list
+- Progress card shows overall `done/total` count, wide progress bar, project/task counts, and percentage
+- Each project row has its own mini progress bar (reusing `childProgress`)
+- Each direct task row shows state dot, title, assignee, state badge
+- Added `goalDetailProgress(detail GoalDetail) string` helper for the aggregate progress bar
+- Added `stateColorClass(state string) string` helper for task state indicator dots
+- Updated GoalsView: goal cards now link to `/app/{slug}/goals/{id}` instead of `/node/{id}`
 
 ## Verification
-- `templ generate`: 15 updates, no errors
+- `templ generate`: 15 files updated, no errors
 - `go build -buildvcs=false ./...`: clean
-- `go test ./...`: all pass (graph tests run in 0.507s)
+- `go test ./...`: all pass (graph 0.541s)

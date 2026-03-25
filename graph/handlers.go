@@ -87,6 +87,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /app/{slug}/changelog", h.readWrap(h.handleChangelog))
 	mux.Handle("GET /app/{slug}/projects", h.readWrap(h.handleProjects))
 	mux.Handle("GET /app/{slug}/goals", h.readWrap(h.handleGoals))
+	mux.Handle("GET /app/{slug}/goals/{id}", h.readWrap(h.handleGoalDetail))
 	mux.Handle("GET /app/{slug}/roles", h.readWrap(h.handleRoles))
 	mux.Handle("GET /app/{slug}/teams", h.readWrap(h.handleTeams))
 	mux.Handle("GET /app/{slug}/policies", h.readWrap(h.handlePolicies))
@@ -1233,6 +1234,15 @@ type GoalWithProjects struct {
 	Projects []Node
 }
 
+// GoalDetail is the full goal view: goal + projects + direct tasks + aggregated counts.
+type GoalDetail struct {
+	Goal        Node
+	Projects    []Node
+	DirectTasks []Node
+	TotalTasks  int
+	DoneTasks   int
+}
+
 func (h *Handlers) handleGoals(w http.ResponseWriter, r *http.Request) {
 	space, isOwner, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
@@ -1277,6 +1287,70 @@ func (h *Handlers) handleGoals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	GoalsView(*space, spaces, goalsWithProjects, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleGoalDetail(w http.ResponseWriter, r *http.Request) {
+	space, isOwner, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	id := r.PathValue("id")
+
+	goal, err := h.store.GetNode(r.Context(), id)
+	if errors.Is(err, ErrNotFound) || (err == nil && goal.Kind != KindGoal) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	projects, _ := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		Kind:     KindProject,
+		ParentID: goal.ID,
+	})
+
+	directTasks, _ := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		ParentID: goal.ID,
+	})
+
+	totalTasks := len(directTasks)
+	doneTasks := 0
+	for _, t := range directTasks {
+		if t.State == StateDone {
+			doneTasks++
+		}
+	}
+	for _, proj := range projects {
+		totalTasks += proj.ChildCount
+		doneTasks += proj.ChildDone
+	}
+
+	detail := GoalDetail{
+		Goal:        *goal,
+		Projects:    projects,
+		DirectTasks: directTasks,
+		TotalTasks:  totalTasks,
+		DoneTasks:   doneTasks,
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "goal": detail})
+		return
+	}
+
+	GoalDetailView(*space, spaces, detail, h.viewUser(r), isOwner).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleRoles(w http.ResponseWriter, r *http.Request) {

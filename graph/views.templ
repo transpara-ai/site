@@ -2019,7 +2019,7 @@ templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user View
 			<div class="space-y-4">
 				for _, gp := range goals {
 					<div class="bg-surface rounded-lg border border-edge overflow-hidden">
-						<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, gp.Goal.ID)) }
+						<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/goals/%s", space.Slug, gp.Goal.ID)) }
 							class="flex items-start justify-between p-4 hover:bg-elevated transition-colors">
 							<div class="flex items-start gap-2 min-w-0">
 								<svg class="w-4 h-4 text-brand flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
@@ -2078,6 +2078,149 @@ templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user View
 				}
 			</div>
 		</div>
+	}
+}
+
+// ── Goal detail view ─────────────────────────────────────────────
+
+templ GoalDetailView(space Space, spaces []Space, detail GoalDetail, user ViewUser, isOwner bool) {
+	@appLayout(space, spaces, "goals", user) {
+		<div class="max-w-3xl mx-auto p-6 space-y-6">
+			// Breadcrumb
+			<div class="flex items-center gap-1.5 text-xs text-warm-faint">
+				<a href={ templ.SafeURL("/app/" + space.Slug + "/goals") } class="hover:text-brand transition-colors">Goals</a>
+				<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+				<span class="text-warm-muted truncate">{ truncate(detail.Goal.Title, 60) }</span>
+			</div>
+			// Goal header
+			<div class="space-y-2">
+				<div class="flex items-start justify-between gap-3">
+					<div class="flex items-start gap-2.5 min-w-0">
+						<svg class="w-5 h-5 text-brand flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"></path>
+						</svg>
+						<h1 class="font-display text-xl font-normal text-warm">{ detail.Goal.Title }</h1>
+					</div>
+					<span class={ "text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0", stateBgClass(detail.Goal.State) }>{ stateLabel(detail.Goal.State) }</span>
+				</div>
+				if detail.Goal.Body != "" {
+					<p class="text-sm text-warm-muted ml-7.5">{ detail.Goal.Body }</p>
+				}
+			</div>
+			// Progress summary card
+			<div class="bg-surface rounded-lg border border-edge p-4 space-y-3">
+				<div class="flex items-center justify-between">
+					<span class="text-sm font-medium text-warm">Overall progress</span>
+					<span class="text-sm text-warm-muted">
+						{ fmt.Sprintf("%d / %d tasks done", detail.DoneTasks, detail.TotalTasks) }
+					</span>
+				</div>
+				<div class="w-full bg-elevated rounded-full h-2">
+					<div class="bg-brand rounded-full h-2 transition-all" style={ goalDetailProgress(detail) }></div>
+				</div>
+				<div class="flex items-center gap-4 text-xs text-warm-faint">
+					<span>{ fmt.Sprintf("%d project", len(detail.Projects)) }
+						if len(detail.Projects) != 1 {
+							s
+						}
+					</span>
+					if len(detail.DirectTasks) > 0 {
+						<span>{ fmt.Sprintf("%d direct task", len(detail.DirectTasks)) }
+							if len(detail.DirectTasks) != 1 {
+								s
+							}
+						</span>
+					}
+					if detail.TotalTasks > 0 {
+						<span class="ml-auto text-brand font-medium">
+							{ fmt.Sprintf("%d%%", (detail.DoneTasks*100)/detail.TotalTasks) }
+						</span>
+					}
+				</div>
+			</div>
+			// Projects
+			if len(detail.Projects) > 0 {
+				<div class="space-y-3">
+					<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide">Projects</h2>
+					<div class="space-y-2">
+						for _, proj := range detail.Projects {
+							<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, proj.ID)) }
+								class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:bg-elevated transition-colors">
+								<svg class="w-4 h-4 text-warm-faint flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"></path>
+								</svg>
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center justify-between gap-2">
+										<span class="text-sm text-warm truncate">{ proj.Title }</span>
+										<div class="flex items-center gap-2 flex-shrink-0">
+											if proj.ChildCount > 0 {
+												<span class="text-xs text-warm-faint">{ fmt.Sprintf("%d/%d", proj.ChildDone, proj.ChildCount) }</span>
+											}
+											<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", stateBgClass(proj.State) }>{ stateLabel(proj.State) }</span>
+										</div>
+									</div>
+									if proj.ChildCount > 0 {
+										<div class="w-full bg-elevated rounded-full h-1 mt-1.5">
+											<div class="bg-brand rounded-full h-1 transition-all" style={ childProgress(proj) }></div>
+										</div>
+									}
+								</div>
+							</a>
+						}
+					</div>
+				</div>
+			}
+			// Direct tasks
+			if len(detail.DirectTasks) > 0 {
+				<div class="space-y-3">
+					<h2 class="text-sm font-medium text-warm-muted uppercase tracking-wide">Tasks</h2>
+					<div class="space-y-1.5">
+						for _, task := range detail.DirectTasks {
+							<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", space.Slug, task.ID)) }
+								class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:bg-elevated transition-colors">
+								<div class={ "w-2 h-2 rounded-full flex-shrink-0", stateColorClass(task.State) }></div>
+								<span class="text-sm text-warm flex-1 truncate">{ task.Title }</span>
+								if task.Assignee != "" {
+									<span class="text-xs text-warm-faint flex-shrink-0">{ task.Assignee }</span>
+								}
+								<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0", stateBgClass(task.State) }>{ stateLabel(task.State) }</span>
+							</a>
+						}
+					</div>
+				</div>
+			}
+			if len(detail.Projects) == 0 && len(detail.DirectTasks) == 0 {
+				<div class="text-center py-12 space-y-2">
+					<p class="text-warm-faint text-sm">No projects or tasks yet</p>
+					<p class="text-warm-faint/60 text-xs">Add projects or tasks to this goal to track progress.</p>
+				</div>
+			}
+		</div>
+	}
+}
+
+func goalDetailProgress(detail GoalDetail) string {
+	if detail.TotalTasks == 0 {
+		return "width: 0%"
+	}
+	pct := (detail.DoneTasks * 100) / detail.TotalTasks
+	return fmt.Sprintf("width: %d%%", pct)
+}
+
+func stateColorClass(state string) string {
+	switch state {
+	case StateOpen:
+		return "bg-warm-faint/40"
+	case StateActive:
+		return "bg-brand"
+	case StateReview:
+		return "bg-amber-400"
+	case StateDone:
+		return "bg-emerald-400"
+	case StateClosed:
+		return "bg-warm-faint/20"
+	default:
+		return "bg-warm-faint/40"
 	}
 }
 
