@@ -215,13 +215,9 @@ func appLayout(space Space, spaces []Space, activeLens string, user ViewUser) te
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = mobileLensTab(space.Slug, "agents", "Agents", activeLens).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
 		var templ_7745c5c3_Var10 = []any{"px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors",
-			templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people" && activeLens != "agents"),
-			templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents")}
+			templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people"),
+			templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -244,7 +240,7 @@ func appLayout(space Space, spaces []Space, activeLens string, user ViewUser) te
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 = []any{"px-2 pb-1.5 flex flex-wrap gap-1",
-			templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents")}
+			templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var12...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -263,6 +259,10 @@ func appLayout(space Space, spaces []Space, activeLens string, user ViewUser) te
 			return templ_7745c5c3_Err
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = mobileLensTab(space.Slug, "agents", "Agents", activeLens).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -103,12 +103,11 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 					@mobileLensTab(space.Slug, "conversations", "Chat", activeLens)
 					@mobileLensTab(space.Slug, "feed", "Feed", activeLens)
 					@mobileLensTab(space.Slug, "people", "People", activeLens)
-					@mobileLensTab(space.Slug, "agents", "Agents", activeLens)
 					<button
 						onclick="var m=document.getElementById('mobile-more');m.classList.toggle('hidden');this.classList.toggle('bg-brand/10');this.classList.toggle('text-brand')"
 						class={ "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors",
-							templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people" && activeLens != "agents"),
-							templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents") }
+							templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people"),
+							templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people") }
 					>
 						More
 					</button>
@@ -116,8 +115,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 				<div
 					id="mobile-more"
 					class={ "px-2 pb-1.5 flex flex-wrap gap-1",
-						templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents") }
+						templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people") }
 				>
+					@mobileLensTab(space.Slug, "agents", "Agents", activeLens)
 					@mobileLensTab(space.Slug, "projects", "Projects", activeLens)
 					@mobileLensTab(space.Slug, "goals", "Goals", activeLens)
 					@mobileLensTab(space.Slug, "threads", "Threads", activeLens)
