@@ -103,11 +103,12 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 					@mobileLensTab(space.Slug, "conversations", "Chat", activeLens)
 					@mobileLensTab(space.Slug, "feed", "Feed", activeLens)
 					@mobileLensTab(space.Slug, "people", "People", activeLens)
+					@mobileLensTab(space.Slug, "agents", "Agents", activeLens)
 					<button
 						onclick="var m=document.getElementById('mobile-more');m.classList.toggle('hidden');this.classList.toggle('bg-brand/10');this.classList.toggle('text-brand')"
 						class={ "px-3 py-1.5 text-xs font-medium rounded-md whitespace-nowrap transition-colors",
-							templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people"),
-							templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people") }
+							templ.KV("bg-brand/10 text-brand", activeLens != "" && activeLens != "board" && activeLens != "conversations" && activeLens != "feed" && activeLens != "people" && activeLens != "agents"),
+							templ.KV("text-warm-muted hover:text-warm hover:bg-elevated", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents") }
 					>
 						More
 					</button>
@@ -115,7 +116,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 				<div
 					id="mobile-more"
 					class={ "px-2 pb-1.5 flex flex-wrap gap-1",
-						templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people") }
+						templ.KV("hidden", activeLens == "" || activeLens == "board" || activeLens == "conversations" || activeLens == "feed" || activeLens == "people" || activeLens == "agents") }
 				>
 					@mobileLensTab(space.Slug, "projects", "Projects", activeLens)
 					@mobileLensTab(space.Slug, "goals", "Goals", activeLens)
@@ -151,6 +152,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 								@lensLink(space.Slug, "conversations", "Chat", activeLens, conversationsIcon())
 								@lensLink(space.Slug, "feed", "Feed", activeLens, feedIcon())
 								@lensLink(space.Slug, "people", "People", activeLens, peopleIcon())
+								@lensLink(space.Slug, "agents", "Agents", activeLens, agentsIcon())
 							</nav>
 						</div>
 						<!-- More — expanded on click -->
@@ -514,6 +516,12 @@ templ knowledgeIcon() {
 templ changelogIcon() {
 	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+	</svg>
+}
+
+templ agentsIcon() {
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5A2.25 2.25 0 0 0 6.75 19.5Zm.75-12h9v9h-9v-9Z"></path>
 	</svg>
 }
 
@@ -3211,6 +3219,61 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, s
 					</div>
 				}
 			</div>
+		</div>
+	}
+}
+
+// ── Agents view ─────────────────────────────────────────────────
+
+templ AgentsView(space Space, spaces []Space, agents []string, user ViewUser) {
+	@appLayout(space, spaces, "agents", user) {
+		<div class="max-w-2xl mx-auto p-6 space-y-6">
+			<div>
+				<h1 class="font-display text-xl font-normal text-warm">Agents</h1>
+				<p class="text-sm text-warm-muted mt-0.5">AI collaborators — start a conversation with any agent below</p>
+			</div>
+			if len(agents) == 0 {
+				<div class="py-16 text-center space-y-3">
+					<svg class="w-12 h-12 mx-auto text-warm-faint/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5A2.25 2.25 0 0 0 6.75 19.5Zm.75-12h9v9h-9v-9Z"></path>
+					</svg>
+					<p class="text-sm font-medium text-warm">No agents deployed yet</p>
+					<p class="text-xs text-warm-faint">Agents will appear here once they join this space.</p>
+				</div>
+			} else {
+				<div class="space-y-3">
+					for _, agent := range agents {
+						<div class="bg-surface rounded-lg border border-edge p-4 flex items-center justify-between gap-4">
+							<div class="flex items-center gap-3 min-w-0">
+								<span class="w-10 h-10 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center flex-shrink-0">
+									{ initial(agent) }
+								</span>
+								<div class="min-w-0">
+									<div class="flex items-center gap-2">
+										<p class="text-sm font-medium text-warm truncate">{ agent }</p>
+										<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0">agent</span>
+									</div>
+									<p class="text-xs text-warm-faint mt-0.5">AI collaborator · available to chat</p>
+								</div>
+							</div>
+							if user.Name != "" && user.Name != "Anonymous" {
+								<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") }>
+									<input type="hidden" name="op" value="converse"/>
+									<input type="hidden" name="title" value={ "Chat with " + agent }/>
+									<input type="hidden" name="participants" value={ agent }/>
+									<button type="submit" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex-shrink-0 whitespace-nowrap">
+										Start Chat
+									</button>
+								</form>
+							} else {
+								<a href="/auth/login" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-elevated text-warm-muted hover:text-brand transition-colors flex-shrink-0 whitespace-nowrap">
+									Sign in to chat
+								</a>
+							}
+						</div>
+					}
+				</div>
+			}
 		</div>
 	}
 }

@@ -80,6 +80,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /app/{slug}/threads", h.readWrap(h.handleThreads))
 	mux.Handle("GET /app/{slug}/conversations", h.readWrap(h.handleConversations))
 	mux.Handle("GET /app/{slug}/people", h.readWrap(h.handlePeople))
+	mux.Handle("GET /app/{slug}/agents", h.readWrap(h.handleAgents))
 	mux.Handle("GET /app/{slug}/activity", h.readWrap(h.handleActivity))
 	mux.Handle("GET /app/{slug}/knowledge", h.readWrap(h.handleKnowledge))
 	mux.Handle("GET /app/{slug}/governance", h.readWrap(h.handleGovernance))
@@ -1037,6 +1038,23 @@ func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {
 	}
 
 	PeopleView(*space, spaces, members, h.viewUser(r), searchQuery).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleAgents(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	agents, _ := h.store.ListAgentNames(r.Context())
+
+	AgentsView(*space, spaces, agents, h.viewUser(r)).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleActivity(w http.ResponseWriter, r *http.Request) {
