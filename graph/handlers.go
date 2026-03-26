@@ -19,6 +19,7 @@ import (
 
 // ViewUser holds user info for templates.
 type ViewUser struct {
+	ID          string
 	Name        string
 	Picture     string
 	UnreadCount int
@@ -135,7 +136,7 @@ func (h *Handlers) viewUser(r *http.Request) ViewUser {
 	}
 	uid := h.userID(r)
 	unread := h.store.UnreadCount(r.Context(), uid)
-	return ViewUser{Name: u.Name, Picture: u.Picture, UnreadCount: unread}
+	return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture, UnreadCount: unread}
 }
 
 func (h *Handlers) userID(r *http.Request) string {

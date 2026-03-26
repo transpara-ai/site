@@ -5274,6 +5274,14 @@ func lensTooltip(lens string) string {
 
 // ── Knowledge lens (Layer 6) ────────────────────────────────────
 
+func knowledgeTabURL(slug, tab, q string) string {
+	u := "/app/" + slug + "/knowledge?tab=" + tab
+	if q != "" {
+		u += "&q=" + q
+	}
+	return u
+}
+
 templ KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts map[string]int, user ViewUser, searchQuery string, tab string, docs []Node, questions []Node) {
 	@appLayout(space, spaces, "knowledge", user) {
 		<div class="p-6 md:p-8 space-y-6">
@@ -5283,15 +5291,15 @@ templ KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts 
 			</div>
 			<!-- Tab nav -->
 			<div class="flex gap-1 border-b border-edge">
-				<a href={ templ.SafeURL("/app/" + space.Slug + "/knowledge?tab=docs") }
+				<a href={ templ.SafeURL(knowledgeTabURL(space.Slug, "docs", searchQuery)) }
 					class={ "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors", templ.KV("border-brand text-brand", tab == "docs"), templ.KV("border-transparent text-warm-muted hover:text-warm", tab != "docs") }>
 					Docs
 				</a>
-				<a href={ templ.SafeURL("/app/" + space.Slug + "/knowledge?tab=qa") }
+				<a href={ templ.SafeURL(knowledgeTabURL(space.Slug, "qa", searchQuery)) }
 					class={ "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors", templ.KV("border-brand text-brand", tab == "qa"), templ.KV("border-transparent text-warm-muted hover:text-warm", tab != "qa") }>
 					Q&amp;A
 				</a>
-				<a href={ templ.SafeURL("/app/" + space.Slug + "/knowledge?tab=claims") }
+				<a href={ templ.SafeURL(knowledgeTabURL(space.Slug, "claims", searchQuery)) }
 					class={ "px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors", templ.KV("border-brand text-brand", tab == "claims"), templ.KV("border-transparent text-warm-muted hover:text-warm", tab != "claims") }>
 					Claims
 				</a>
@@ -5309,7 +5317,7 @@ templ KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts 
 
 templ DocumentList(spaceSlug string, docs []Node, user ViewUser) {
 	<div class="space-y-4">
-		if user.Name != "" && user.Name != "Anonymous" {
+		if user.ID != "" {
 			@CreateDocument(spaceSlug)
 		}
 		if len(docs) == 0 {
@@ -5320,7 +5328,7 @@ templ DocumentList(spaceSlug string, docs []Node, user ViewUser) {
 		} else {
 			<div class="space-y-3">
 				for _, d := range docs {
-					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/document/%s", spaceSlug, d.ID)) }
+					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, d.ID)) }
 						class="flex items-start gap-4 p-4 bg-surface rounded-lg border border-edge hover:border-brand/40 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/5 transition-all duration-200">
 						<svg class="w-4 h-4 text-warm-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
@@ -5370,7 +5378,7 @@ templ docStatusBadge(state string) {
 
 templ knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery string) {
 	<div class="space-y-4">
-		if user.Name != "" && user.Name != "Anonymous" {
+		if user.ID != "" {
 			<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") }
 				class="bg-surface border border-edge rounded-lg p-4 space-y-3">
 				<input type="hidden" name="op" value="intend"/>
@@ -5428,25 +5436,27 @@ templ knowledgeClaimsTab(space Space, claims []Node, challengeCounts map[string]
 				<a href={ templ.SafeURL("/app/" + space.Slug + "/knowledge?tab=claims") } class="text-xs text-warm-faint hover:text-brand transition-colors flex items-center px-2">Clear</a>
 			}
 		</form>
-		<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="bg-surface border border-edge rounded-lg p-5 space-y-3">
-			<input type="hidden" name="op" value="assert"/>
-			<input
-				type="text"
-				name="title"
-				placeholder="State a claim..."
-				required
-				class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
-			/>
-			<textarea
-				name="body"
-				placeholder="Evidence or reasoning (optional)"
-				rows="2"
-				class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
-			></textarea>
-			<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
-				Assert claim
-			</button>
-		</form>
+		if user.ID != "" {
+			<form method="POST" action={ templ.SafeURL("/app/" + space.Slug + "/op") } class="bg-surface border border-edge rounded-lg p-5 space-y-3">
+				<input type="hidden" name="op" value="assert"/>
+				<input
+					type="text"
+					name="title"
+					placeholder="State a claim..."
+					required
+					class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+				/>
+				<textarea
+					name="body"
+					placeholder="Evidence or reasoning (optional)"
+					rows="2"
+					class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-none"
+				></textarea>
+				<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium">
+					Assert claim
+				</button>
+			</form>
+		}
 		if len(claims) == 0 {
 			<div class="text-center py-12">
 				<p class="text-warm-muted text-lg">No claims yet</p>
