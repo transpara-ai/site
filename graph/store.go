@@ -1164,6 +1164,24 @@ func (s *Store) ListDocumentContext(ctx context.Context, spaceID string) ([]Node
 	})
 }
 
+// ListDocuments returns KindDocument nodes in a space (BOUNDED: hard limit).
+func (s *Store) ListDocuments(ctx context.Context, spaceID string, limit int) ([]Node, error) {
+	return s.ListNodes(ctx, ListNodesParams{
+		SpaceID: spaceID,
+		Kind:    KindDocument,
+		Limit:   limit,
+	})
+}
+
+// ListQuestions returns KindQuestion nodes in a space (BOUNDED: hard limit).
+func (s *Store) ListQuestions(ctx context.Context, spaceID string, limit int) ([]Node, error) {
+	return s.ListNodes(ctx, ListNodesParams{
+		SpaceID: spaceID,
+		Kind:    KindQuestion,
+		Limit:   limit,
+	})
+}
+
 // UpdateNodeState sets a node's state.
 func (s *Store) UpdateNodeState(ctx context.Context, id, state string) error {
 	res, err := s.db.ExecContext(ctx,

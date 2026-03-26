@@ -1196,16 +1196,8 @@ func (h *Handlers) handleKnowledge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch documents and questions for the unified knowledge view (BOUNDED: Limit 50 each).
-	docs, _ := h.store.ListNodes(r.Context(), ListNodesParams{
-		SpaceID: space.ID,
-		Kind:    KindDocument,
-		Limit:   50,
-	})
-	questions, _ := h.store.ListNodes(r.Context(), ListNodesParams{
-		SpaceID: space.ID,
-		Kind:    KindQuestion,
-		Limit:   50,
-	})
+	docs, _ := h.store.ListDocuments(r.Context(), space.ID, 50)
+	questions, _ := h.store.ListQuestions(r.Context(), space.ID, 50)
 
 	if wantsJSON(r) {
 		writeJSON(w, http.StatusOK, map[string]any{
