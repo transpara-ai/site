@@ -334,10 +334,6 @@ ALTER TABLE nodes ADD COLUMN IF NOT EXISTS verdict TEXT NOT NULL DEFAULT '';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS rating INT NOT NULL DEFAULT 0;
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS first_completion_at TIMESTAMPTZ;
 
--- Backfill assignee_id from users table where assignee name matches.
-UPDATE nodes SET assignee_id = u.id
-FROM users u WHERE nodes.assignee = u.name AND nodes.assignee_id = '' AND nodes.assignee != '';
-
 CREATE TABLE IF NOT EXISTS notifications (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL,
@@ -379,6 +375,21 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS reputation_score INT NOT NULL DEFAULT 0;
 ALTER TABLE space_members ADD COLUMN IF NOT EXISTS welcomed_at TIMESTAMPTZ;
+
+-- Backfill assignee_id from users table where assignee name matches.
+-- (Placed after CREATE TABLE users to avoid reference errors on fresh databases.)
+UPDATE nodes SET assignee_id = u.id
+FROM users u WHERE nodes.assignee = u.name AND nodes.assignee_id = '' AND nodes.assignee != '';
+
+-- api_keys is created by auth.Auth.migrate(). Defined here too (IF NOT EXISTS)
+-- so GetHiveAgentID can query it in tests without requiring the full auth setup.
+CREATE TABLE IF NOT EXISTS api_keys (
+    id         TEXT PRIMARY KEY,
+    key_hash   TEXT UNIQUE NOT NULL DEFAULT '',
+    user_id    TEXT NOT NULL DEFAULT '',
+    agent_id   TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS agent_personas (
     id          TEXT PRIMARY KEY,
@@ -2059,20 +2070,29 @@ func (s *Store) ListHiveActivity(ctx context.Context, authorID string, limit int
 	return nodes, rows.Err()
 }
 
-// GetHiveCurrentTask returns the most recent open task authored by an agent,
-// or nil if none exists. BOUNDED: at most 1 row.
-func (s *Store) GetHiveCurrentTask(ctx context.Context) (*Node, error) {
-	const q = `
+// GetHiveCurrentTask returns the most recent open task authored by the given actor.
+// If actorID is empty, falls back to matching any agent (author_kind = 'agent').
+// BOUNDED: at most 1 row.
+func (s *Store) GetHiveCurrentTask(ctx context.Context, actorID string) (*Node, error) {
+	const cols = `
 		SELECT n.id, n.space_id, COALESCE(n.parent_id, ''), n.kind, n.title, n.body,
 		       n.state, n.priority, n.assignee, n.assignee_id, n.author, n.author_id, n.author_kind,
 		       n.tags, n.pinned, n.due_date, n.created_at, n.updated_at, n.verdict, n.rating
-		FROM nodes n
-		WHERE n.kind = 'task' AND n.state = 'open' AND n.author_kind = 'agent'
-		ORDER BY n.created_at DESC LIMIT 1`
+		FROM nodes n`
+	var row *sql.Row
+	if actorID != "" {
+		row = s.db.QueryRowContext(ctx, cols+`
+			WHERE n.kind = 'task' AND n.state = 'open' AND n.author_id = $1
+			ORDER BY n.created_at DESC LIMIT 1`, actorID)
+	} else {
+		row = s.db.QueryRowContext(ctx, cols+`
+			WHERE n.kind = 'task' AND n.state = 'open' AND n.author_kind = 'agent'
+			ORDER BY n.created_at DESC LIMIT 1`)
+	}
 	var n Node
 	var parentID sql.NullString
 	var dueDate sql.NullTime
-	err := s.db.QueryRowContext(ctx, q).Scan(
+	err := row.Scan(
 		&n.ID, &n.SpaceID, &parentID, &n.Kind, &n.Title, &n.Body,
 		&n.State, &n.Priority, &n.Assignee, &n.AssigneeID, &n.Author, &n.AuthorID, &n.AuthorKind,
 		pq.Array(&n.Tags), &n.Pinned, &dueDate, &n.CreatedAt, &n.UpdatedAt, &n.Verdict, &n.Rating,
@@ -2093,15 +2113,21 @@ func (s *Store) GetHiveCurrentTask(ctx context.Context) (*Node, error) {
 	return &n, nil
 }
 
-// GetHiveTotals returns the count of all ops by agent actors and the most
-// recent op timestamp. Returns (0, zero, nil) if no agent ops exist. BOUNDED.
-func (s *Store) GetHiveTotals(ctx context.Context) (totalOps int, lastActive time.Time, err error) {
+// GetHiveTotals returns the count of ops and last active timestamp for the given actor.
+// If actorID is empty, falls back to matching any agent (users.kind = 'agent'). BOUNDED.
+func (s *Store) GetHiveTotals(ctx context.Context, actorID string) (totalOps int, lastActive time.Time, err error) {
 	var t sql.NullTime
-	err = s.db.QueryRowContext(ctx, `
-		SELECT COUNT(o.id), MAX(o.created_at)
-		FROM ops o
-		JOIN users u ON u.id = o.actor_id
-		WHERE u.kind = 'agent'`).Scan(&totalOps, &t)
+	if actorID != "" {
+		err = s.db.QueryRowContext(ctx, `
+			SELECT COUNT(id), MAX(created_at) FROM ops WHERE actor_id = $1`,
+			actorID).Scan(&totalOps, &t)
+	} else {
+		err = s.db.QueryRowContext(ctx, `
+			SELECT COUNT(o.id), MAX(o.created_at)
+			FROM ops o
+			JOIN users u ON u.id = o.actor_id
+			WHERE u.kind = 'agent'`).Scan(&totalOps, &t)
+	}
 	if err != nil {
 		return 0, time.Time{}, fmt.Errorf("get hive totals: %w", err)
 	}
@@ -2109,6 +2135,31 @@ func (s *Store) GetHiveTotals(ctx context.Context) (totalOps int, lastActive tim
 		lastActive = t.Time
 	}
 	return
+}
+
+// GetHiveAgentID returns the actor ID of the first agent user registered with
+// an API key (users.kind = 'agent'). Returns "" if no agent has been linked
+// to an API key. BOUNDED: LIMIT 1.
+func (s *Store) GetHiveAgentID(ctx context.Context) string {
+	var id string
+	s.db.QueryRowContext(ctx, `
+		SELECT u.id FROM users u
+		JOIN api_keys k ON k.agent_id = u.id
+		WHERE u.kind = 'agent'
+		ORDER BY k.created_at ASC
+		LIMIT 1`).Scan(&id)
+	return id
+}
+
+// GetHiveStats returns aggregated cost metrics for hive agent posts.
+// When actorID is empty, metrics are computed across all agent posts.
+// BOUNDED: queries at most maxHivePosts posts (defined in handlers.go).
+func (s *Store) GetHiveStats(ctx context.Context, actorID string) (HiveStats, error) {
+	posts, err := s.ListHiveActivity(ctx, actorID, maxHivePosts)
+	if err != nil {
+		return HiveStats{}, fmt.Errorf("get hive stats: %w", err)
+	}
+	return computeHiveStats(posts), nil
 }
 
 // HasVoted checks if a user has already voted on a proposal.

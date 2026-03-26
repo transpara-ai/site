@@ -3460,34 +3460,42 @@ func computePipelineRoles(posts []Node) []PipelineRole {
 
 // handleHive renders the public /hive dashboard showing agent posts and stats.
 func (h *Handlers) handleHive(w http.ResponseWriter, r *http.Request) {
-	posts, err := h.store.ListHiveActivity(r.Context(), "", maxHivePosts)
+	ctx := r.Context()
+	agentID := h.store.GetHiveAgentID(ctx)
+	posts, err := h.store.ListHiveActivity(ctx, agentID, maxHivePosts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	stats := computeHiveStats(posts)
+	stats, err := h.store.GetHiveStats(ctx, agentID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	roles := computePipelineRoles(posts)
-	currentTask, err := h.store.GetHiveCurrentTask(r.Context())
+	currentTask, err := h.store.GetHiveCurrentTask(ctx, agentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	totalOps, lastActive, err := h.store.GetHiveTotals(r.Context())
+	totalOps, lastActive, err := h.store.GetHiveTotals(ctx, agentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	HiveView(posts, stats, roles, currentTask, totalOps, lastActive, h.viewUser(r)).Render(r.Context(), w)
+	HiveView(posts, stats, roles, currentTask, totalOps, lastActive, h.viewUser(r)).Render(ctx, w)
 }
 
 // handleHiveStats renders the live stats bar partial for HTMX polling.
 func (h *Handlers) handleHiveStats(w http.ResponseWriter, r *http.Request) {
-	totalOps, lastActive, err := h.store.GetHiveTotals(r.Context())
+	ctx := r.Context()
+	agentID := h.store.GetHiveAgentID(ctx)
+	totalOps, lastActive, err := h.store.GetHiveTotals(ctx, agentID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	HiveStatsBar(totalOps, lastActive).Render(r.Context(), w)
+	HiveStatsBar(totalOps, lastActive).Render(ctx, w)
 }
 
 // groundedLabel returns "grounded in N doc(s)" for agent messages that used document context,

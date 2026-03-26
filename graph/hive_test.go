@@ -235,6 +235,153 @@ func TestGetHive_RendersCurrentlyBuilding(t *testing.T) {
 	}
 }
 
+// TestGetHiveCurrentTask_ScopedToActor verifies that GetHiveCurrentTask only returns
+// tasks authored by the specified actor when actorID is provided — even when a second
+// agent actor also has open tasks.
+func TestGetHiveCurrentTask_ScopedToActor(t *testing.T) {
+	_, store := testDB(t)
+	ctx := t.Context()
+
+	space, err := store.CreateSpace(ctx, "hive-scope-task-test", "Hive Scope Task", "", "owner-scope-task", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	_, err = store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindTask,
+		Title:      "Task from actor A",
+		Author:     "agent-a",
+		AuthorID:   "hive-scope-actor-a",
+		AuthorKind: "agent",
+	})
+	if err != nil {
+		t.Fatalf("create task actor A: %v", err)
+	}
+	_, err = store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindTask,
+		Title:      "Task from actor B",
+		Author:     "agent-b",
+		AuthorID:   "hive-scope-actor-b",
+		AuthorKind: "agent",
+	})
+	if err != nil {
+		t.Fatalf("create task actor B: %v", err)
+	}
+
+	nodeA, err := store.GetHiveCurrentTask(ctx, "hive-scope-actor-a")
+	if err != nil {
+		t.Fatalf("GetHiveCurrentTask actor A: %v", err)
+	}
+	if nodeA == nil {
+		t.Fatal("expected task for actor A, got nil")
+	}
+	if nodeA.Title != "Task from actor A" {
+		t.Errorf("actor A task title = %q, want %q", nodeA.Title, "Task from actor A")
+	}
+
+	nodeB, err := store.GetHiveCurrentTask(ctx, "hive-scope-actor-b")
+	if err != nil {
+		t.Fatalf("GetHiveCurrentTask actor B: %v", err)
+	}
+	if nodeB == nil {
+		t.Fatal("expected task for actor B, got nil")
+	}
+	if nodeB.Title != "Task from actor B" {
+		t.Errorf("actor B task title = %q, want %q", nodeB.Title, "Task from actor B")
+	}
+}
+
+// TestGetHiveTotals_ScopedToActor verifies that GetHiveTotals counts only ops
+// by the specified actor when actorID is provided.
+func TestGetHiveTotals_ScopedToActor(t *testing.T) {
+	_, store := testDB(t)
+	ctx := t.Context()
+
+	space, err := store.CreateSpace(ctx, "hive-scope-totals-test", "Hive Scope Totals", "", "owner-scope-totals", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	node, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindTask,
+		Title:      "Scope totals test node",
+		Author:     "agent-a",
+		AuthorID:   "hive-totals-actor-a",
+		AuthorKind: "agent",
+	})
+	if err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	// 2 ops for actor A, 1 for actor B.
+	for range 2 {
+		if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-a", "hive-totals-actor-a", "express", nil); err != nil {
+			t.Fatalf("record op A: %v", err)
+		}
+	}
+	if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-b", "hive-totals-actor-b", "express", nil); err != nil {
+		t.Fatalf("record op B: %v", err)
+	}
+
+	totalA, _, err := store.GetHiveTotals(ctx, "hive-totals-actor-a")
+	if err != nil {
+		t.Fatalf("GetHiveTotals actorA: %v", err)
+	}
+	if totalA != 2 {
+		t.Errorf("GetHiveTotals(actorA) = %d, want 2", totalA)
+	}
+
+	totalB, _, err := store.GetHiveTotals(ctx, "hive-totals-actor-b")
+	if err != nil {
+		t.Fatalf("GetHiveTotals actorB: %v", err)
+	}
+	if totalB != 1 {
+		t.Errorf("GetHiveTotals(actorB) = %d, want 1", totalB)
+	}
+}
+
+// TestGetHiveAgentID_IntegrationPath verifies that GetHiveAgentID returns the actor ID
+// of the agent linked via the api_keys table: api_keys row → GetHiveAgentID → correct actor_id.
+func TestGetHiveAgentID_IntegrationPath(t *testing.T) {
+	db, store := testDB(t)
+	ctx := t.Context()
+
+	const agentUserID = "hive-get-agent-id-test-actor"
+	const apiKeyID = "hive-get-agent-id-apikey-test"
+
+	// Insert a test agent user.
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id, email, name, kind) VALUES ($1, $2, $3, 'agent')`,
+		agentUserID, "hive-agent-id-test@test.local", "test-hive-agent-id-func")
+	if err != nil {
+		t.Fatalf("insert agent user: %v", err)
+	}
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM api_keys WHERE id = $1`, apiKeyID)
+		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentUserID)
+	})
+
+	// Insert an api_keys row linking to the agent. Use a very old created_at so this
+	// row is always returned first by ORDER BY created_at ASC LIMIT 1.
+	_, err = db.ExecContext(ctx,
+		`INSERT INTO api_keys (id, key_hash, user_id, agent_id, created_at) VALUES ($1, $2, $3, $4, '2020-01-01 00:00:00+00')`,
+		apiKeyID, "hive-get-agent-id-testhash", "test-owner-id", agentUserID)
+	if err != nil {
+		t.Fatalf("insert api_key: %v", err)
+	}
+
+	// The integration path: api_keys row → GetHiveAgentID → correct actor_id.
+	got := store.GetHiveAgentID(ctx)
+	if got != agentUserID {
+		t.Errorf("GetHiveAgentID = %q, want %q", got, agentUserID)
+	}
+}
+
 // TestGetHiveStats_Partial verifies GET /hive/stats returns 200 with stats bar HTML.
 func TestGetHiveStats_Partial(t *testing.T) {
 	h, _, _ := testHandlers(t)
