@@ -3240,9 +3240,9 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 				}
 				if resolved := h.store.ResolveUserID(ctx, name); resolved != "" {
 					agentIDs = append(agentIDs, resolved)
-				} else {
-					agentIDs = append(agentIDs, name)
 				}
+				// Unresolvable names are skipped — storing a display name where an ID
+				// is required violates invariant 11 (IDENTITY).
 			}
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{

@@ -172,7 +172,14 @@ func (m *Mind) OnCouncilConvened(spaceID, spaceSlug string, council *Node) {
 		docs = nil
 	}
 
-	for _, agentID := range council.Tags {
+	const maxCouncilAgents = 10
+	tags := council.Tags
+	if len(tags) > maxCouncilAgents {
+		log.Printf("mind: council %q: capping agents from %d to %d (invariant 13)", council.Title, len(tags), maxCouncilAgents)
+		tags = tags[:maxCouncilAgents]
+	}
+
+	for _, agentID := range tags {
 		var agentName, personaName string
 		if err := m.db.QueryRowContext(ctx,
 			`SELECT name, COALESCE(persona_name, '') FROM users WHERE id = $1 AND kind = 'agent'`,
@@ -182,7 +189,7 @@ func (m *Mind) OnCouncilConvened(spaceID, spaceSlug string, council *Node) {
 			continue
 		}
 
-		systemPrompt := m.buildCouncilPrompt(council, personaName, docs)
+		systemPrompt := m.buildCouncilPrompt(ctx, council, personaName, docs)
 		messages := []claudeMessage{{
 			Role:    "user",
 			Content: fmt.Sprintf("Question: %s\n\n%s", council.Title, council.Body),
@@ -215,11 +222,11 @@ func (m *Mind) OnCouncilConvened(spaceID, spaceSlug string, council *Node) {
 
 // buildCouncilPrompt builds the system prompt for a council response.
 // Uses the agent's persona prompt if available, otherwise falls back to mindSoul.
-func (m *Mind) buildCouncilPrompt(council *Node, personaName string, docs []Node) string {
+func (m *Mind) buildCouncilPrompt(ctx context.Context, council *Node, personaName string, docs []Node) string {
 	var sys strings.Builder
 
 	if personaName != "" {
-		if persona := m.store.GetAgentPersona(context.Background(), personaName); persona != nil {
+		if persona := m.store.GetAgentPersona(ctx, personaName); persona != nil {
 			sys.WriteString(persona.Prompt)
 		} else {
 			sys.WriteString(mindSoul)

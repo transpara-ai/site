@@ -1,40 +1,19 @@
-# Build Report — invite_codes schema + store methods
+# Build Report — Fix: Multi-agent auto-response trigger on convene
 
 ## Gap
+Critic found three violations in commit 64338c2 related to the `convene` op and council Mind logic.
 
-Task requested: add `invite_codes` table (id, space_id, created_by, code, expires_at, max_uses, use_count, created_at) and `InviteCode` struct + `CreateInviteCode`, `GetInviteCode`, `UseInviteCode` methods.
+## Changes
 
-## Findings
+### graph/handlers.go — convene op
+**Invariant 11 (IDENTITY) fix.** Removed the fallback that stored a display name in `agentIDs` when `ResolveUserID` returned empty. Unresolvable names are now skipped silently. A name is not an ID — smuggling it into a field that expects an ID corrupts `Tags` and downstream `AuthorID` in `CreateNode`.
 
-This task is already implemented. Prior iterations built the full invite infrastructure in `graph/store.go`:
+### graph/mind.go — OnCouncilConvened
+**Invariant 13 (BOUNDED) fix.** Added a cap of 10 agents per council. If `council.Tags` exceeds 10, the excess is dropped and a log line is emitted. This prevents unbounded sequential Claude API calls in a single goroutine.
 
-### Schema (lines 349–431)
-- `invites` table: `token` (primary key, serves as both id and code), `space_id`, `created_by`, `created_at`
-- `ALTER TABLE invites ADD COLUMN IF NOT EXISTS expires_at`, `max_uses`, `use_count`
-- `invite_uses` table: `(token, user_id)` primary key for idempotent use tracking
-
-### `InviteCode` struct (line 1765)
-```go
-type InviteCode struct {
-    Token     string
-    SpaceID   string
-    CreatedBy string
-    CreatedAt time.Time
-    ExpiresAt *time.Time
-    MaxUses   int
-    UseCount  int
-}
-```
-
-### Methods (lines 1775–1855)
-- `CreateInviteCode(ctx, spaceID, createdBy, expiresAt, maxUses) (string, error)` — generates token, inserts
-- `GetInviteCode(ctx, token) (*InviteCode, error)` — validates expiry + exhaustion, returns nil/nil if invalid
-- `UseInviteCode(ctx, token, userID) error` — idempotent per (token, userID), increments use_count
-- `ListInvites` and `RevokeInvite` also present
-
-### Note on task path mismatch
-Task referenced `internal/store/migrations/`, `internal/store/store.go`, `internal/store/pg.go` — these paths don't exist. The actual store is `graph/store.go`. The task was written against a hypothetical architecture. Functionality is equivalent.
+### graph/mind.go — buildCouncilPrompt
+**Context propagation fix.** Changed `buildCouncilPrompt` to accept a `ctx context.Context` parameter and pass it to `m.store.GetAgentPersona`. Previously `context.Background()` was used, bypassing the `replyTimeout` set in `OnCouncilConvened`. A stalled `GetAgentPersona` call will now be cancelled when the parent context times out.
 
 ## Verification
-- `go.exe build -buildvcs=false ./...` — clean (no output)
-- `go.exe test ./...` — all pass
+- `go.exe build -buildvcs=false ./...` — clean
+- `go.exe test ./...` — all pass (graph: 2.784s)
