@@ -866,6 +866,46 @@ func TestHandlerCreateInviteHTMX(t *testing.T) {
 			t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
 		}
 	})
+
+	t.Run("non_owner_rejected", func(t *testing.T) {
+		otherUser := &auth.User{ID: "other-user-99", Name: "Other", Email: "other@test.com", Kind: "human"}
+		otherWrap := func(next http.HandlerFunc) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx := auth.ContextWithUser(r.Context(), otherUser)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			})
+		}
+		h2 := NewHandlers(store, otherWrap, otherWrap)
+		mux2 := http.NewServeMux()
+		h2.Register(mux2)
+
+		req := httptest.NewRequest("POST", "/app/htmx-invite-test/invites", nil)
+		w := httptest.NewRecorder()
+		mux2.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d (non-owner should be rejected)", w.Code, http.StatusNotFound)
+		}
+	})
+
+	t.Run("unauthenticated_rejected", func(t *testing.T) {
+		anonWrap := func(next http.HandlerFunc) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, r)
+			})
+		}
+		h2 := NewHandlers(store, anonWrap, anonWrap)
+		mux2 := http.NewServeMux()
+		h2.Register(mux2)
+
+		req := httptest.NewRequest("POST", "/app/htmx-invite-test/invites", nil)
+		w := httptest.NewRecorder()
+		mux2.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d (unauthenticated should be rejected)", w.Code, http.StatusNotFound)
+		}
+	})
 }
 
 func TestHandlerRevokeInvite(t *testing.T) {
@@ -910,6 +950,58 @@ func TestHandlerRevokeInvite(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("status = %d, want %d", w.Code, http.StatusNotFound)
+		}
+	})
+
+	t.Run("non_owner_cannot_revoke", func(t *testing.T) {
+		tok, err := store.CreateInviteCode(t.Context(), space.ID, "test-user-1", nil, 0)
+		if err != nil {
+			t.Fatalf("create invite: %v", err)
+		}
+		t.Cleanup(func() { store.RevokeInvite(t.Context(), tok) })
+
+		otherUser := &auth.User{ID: "other-user-99", Name: "Other", Email: "other@test.com", Kind: "human"}
+		otherWrap := func(next http.HandlerFunc) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx := auth.ContextWithUser(r.Context(), otherUser)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			})
+		}
+		h2 := NewHandlers(store, otherWrap, otherWrap)
+		mux2 := http.NewServeMux()
+		h2.Register(mux2)
+
+		req := httptest.NewRequest("DELETE", "/app/revoke-invite-test/invites/"+tok, nil)
+		w := httptest.NewRecorder()
+		mux2.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d (non-owner should be rejected)", w.Code, http.StatusNotFound)
+		}
+	})
+
+	t.Run("unauthenticated_cannot_revoke", func(t *testing.T) {
+		tok, err := store.CreateInviteCode(t.Context(), space.ID, "test-user-1", nil, 0)
+		if err != nil {
+			t.Fatalf("create invite: %v", err)
+		}
+		t.Cleanup(func() { store.RevokeInvite(t.Context(), tok) })
+
+		anonWrap := func(next http.HandlerFunc) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, r)
+			})
+		}
+		h2 := NewHandlers(store, anonWrap, anonWrap)
+		mux2 := http.NewServeMux()
+		h2.Register(mux2)
+
+		req := httptest.NewRequest("DELETE", "/app/revoke-invite-test/invites/"+tok, nil)
+		w := httptest.NewRecorder()
+		mux2.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("status = %d, want %d (unauthenticated should be rejected)", w.Code, http.StatusNotFound)
 		}
 	})
 }

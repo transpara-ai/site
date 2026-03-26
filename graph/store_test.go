@@ -1392,8 +1392,8 @@ func TestListInvitesAndRevoke(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list invites: %v", err)
 		}
-		if len(codes) < 2 {
-			t.Errorf("expected at least 2 invites, got %d", len(codes))
+		if len(codes) != 2 {
+			t.Errorf("expected exactly 2 invites, got %d", len(codes))
 		}
 	})
 
