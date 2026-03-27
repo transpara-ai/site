@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,8 +9,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,13 +40,194 @@ type ViewAPIKey struct {
 	CreatedAt string
 }
 
+// LoopState holds the current hive loop iteration state read from loop files on disk.
+type LoopState struct {
+	Iteration  int
+	Phase      string
+	BuildTitle string
+	BuildCost  float64 // parsed from build.md
+}
+
+// readLoopState reads Iteration and Phase from state.md and the build title from build.md.
+// Returns zero value if dir is empty or files are missing.
+func readLoopState(dir string) LoopState {
+	if dir == "" {
+		return LoopState{}
+	}
+	var s LoopState
+	if data, err := os.ReadFile(filepath.Join(dir, "state.md")); err == nil {
+		scanner := bufio.NewScanner(strings.NewReader(string(data)))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if after, ok := strings.CutPrefix(line, "Iteration:"); ok {
+				if n, err := strconv.Atoi(strings.TrimSpace(after)); err == nil {
+					s.Iteration = n
+				}
+			} else if after, ok := strings.CutPrefix(line, "Phase:"); ok {
+				s.Phase = strings.TrimSpace(after)
+			}
+		}
+	}
+	if data, err := os.ReadFile(filepath.Join(dir, "build.md")); err == nil {
+		scanner := bufio.NewScanner(strings.NewReader(string(data)))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if after, ok := strings.CutPrefix(line, "# "); ok && s.BuildTitle == "" {
+				s.BuildTitle = strings.TrimSpace(after)
+			}
+		}
+		s.BuildCost = parseCostDollars(string(data))
+	}
+	return s
+}
+
+// DiagEntry is a phase diagnostic event read from loop/diagnostics.jsonl.
+type DiagEntry struct {
+	Phase     string
+	Outcome   string
+	CostUSD   float64
+	Timestamp time.Time
+}
+
+// readDiagnostics reads the last limit entries from loop/diagnostics.jsonl, newest first.
+// Returns nil if dir is empty or the file does not exist.
+func readDiagnostics(dir string, limit int) []DiagEntry {
+	if dir == "" {
+		return nil
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "diagnostics.jsonl"))
+	if err != nil {
+		return nil
+	}
+	type raw struct {
+		Phase     string  `json:"phase"`
+		Outcome   string  `json:"outcome"`
+		CostUSD   float64 `json:"cost_usd"`
+		Timestamp string  `json:"timestamp"`
+	}
+	var all []DiagEntry
+	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		var r raw
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			continue
+		}
+		e := DiagEntry{Phase: r.Phase, Outcome: r.Outcome, CostUSD: r.CostUSD}
+		if r.Timestamp != "" {
+			if t, err := time.Parse(time.RFC3339, r.Timestamp); err == nil {
+				e.Timestamp = t
+			}
+		}
+		all = append(all, e)
+	}
+	start := 0
+	if len(all) > limit {
+		start = len(all) - limit
+	}
+	tail := make([]DiagEntry, len(all)-start)
+	copy(tail, all[start:])
+	// Reverse so newest entry is first.
+	for i, j := 0, len(tail)-1; i < j; i, j = i+1, j-1 {
+		tail[i], tail[j] = tail[j], tail[i]
+	}
+	return tail
+}
+
+// RecentCommit holds a short git commit hash and subject line.
+type RecentCommit struct {
+	Hash    string
+	Subject string
+}
+
+// readRecentCommits runs git log in repoDir and returns up to limit commits.
+// Returns nil if repoDir is empty or git is unavailable.
+func readRecentCommits(repoDir string, limit int) []RecentCommit {
+	if repoDir == "" {
+		return nil
+	}
+	out, err := exec.Command("git", "-C", repoDir, "log", "--oneline", fmt.Sprintf("-%d", limit)).Output()
+	if err != nil {
+		return nil
+	}
+	var commits []RecentCommit
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) == 2 {
+			commits = append(commits, RecentCommit{Hash: parts[0], Subject: parts[1]})
+		}
+	}
+	return commits
+}
+
+// hivePhaseClass returns Tailwind badge classes for a pipeline phase name.
+func hivePhaseClass(phase string) string {
+	switch strings.ToLower(phase) {
+	case "scout":
+		return "bg-amber-400/10 text-amber-300 border-amber-400/20"
+	case "architect":
+		return "bg-indigo-400/10 text-indigo-300 border-indigo-400/20"
+	case "builder":
+		return "bg-emerald-400/10 text-emerald-300 border-emerald-400/20"
+	case "critic":
+		return "bg-orange-400/10 text-orange-300 border-orange-400/20"
+	case "reflector":
+		return "bg-violet-400/10 text-violet-300 border-violet-400/20"
+	default:
+		return "bg-elevated text-warm-muted border-edge"
+	}
+}
+
+// diagOutcomeIcon returns a symbol representing a diagnostic outcome.
+func diagOutcomeIcon(outcome string) string {
+	switch outcome {
+	case "revise", "revise_blocked":
+		return "↻"
+	case "failure", "error":
+		return "✗"
+	case "empty_sections":
+		return "○"
+	case "":
+		return "✓"
+	default:
+		return "·"
+	}
+}
+
+// diagOutcomeColor returns a Tailwind text-color class for a diagnostic outcome.
+func diagOutcomeColor(outcome string) string {
+	switch outcome {
+	case "revise", "revise_blocked":
+		return "text-amber-400"
+	case "failure", "error":
+		return "text-red-400"
+	case "empty_sections":
+		return "text-warm-faint"
+	case "":
+		return "text-emerald-400"
+	default:
+		return "text-warm-muted"
+	}
+}
+
+// maxHiveDiagEntries is the upper bound on diagnostic entries shown on the /hive page.
+const maxHiveDiagEntries = 10
+
 // Handlers serves the unified product HTTP endpoints.
 type Handlers struct {
 	store     *Store
 	mind      *Mind // optional — triggers auto-reply on conversation messages
 	readWrap  func(http.HandlerFunc) http.Handler // optional auth (reads)
 	writeWrap func(http.HandlerFunc) http.Handler // required auth (writes)
+	loopDir   string                              // optional — path to loop/ dir for reading iteration state
 }
+
+// SetLoopDir configures the directory from which loop state files are read.
+func (h *Handlers) SetLoopDir(dir string) { h.loopDir = dir }
 
 // NewHandlers creates handlers with auth middleware.
 // readWrap allows anonymous access (for public spaces), writeWrap requires auth.
@@ -128,6 +313,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Hive dashboard — public, no auth required.
 	mux.HandleFunc("GET /hive", h.handleHive)
+	mux.HandleFunc("GET /hive/feed", h.handleHiveFeed)
 	mux.HandleFunc("GET /hive/stats", h.handleHiveStats)
 	mux.HandleFunc("GET /hive/status", h.handleHiveStatus)
 }
@@ -3746,29 +3932,17 @@ func parseIterFromPosts(posts []Node) int {
 	return best
 }
 
-// handleHive renders the public /hive dashboard showing agent posts and stats.
+// handleHive renders the public /hive dashboard showing iteration status, phase timeline, and recent commits.
 func (h *Handlers) handleHive(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	agentID := h.store.GetHiveAgentID(ctx)
-	posts, err := h.store.ListHiveActivity(ctx, agentID, maxHivePosts)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	ls := readLoopState(h.loopDir)
+	entries := readDiagnostics(h.loopDir, maxHiveDiagEntries)
+	repoDir := ""
+	if h.loopDir != "" {
+		repoDir = filepath.Dir(h.loopDir)
 	}
-	stats := computeHiveStats(posts)
-	roles := computePipelineRoles(posts)
-	tasks, err := h.store.ListHiveAgentTasks(ctx, agentID, maxHiveAgentTasks)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	totalOps, lastActive, err := h.store.GetHiveTotals(ctx, agentID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	iterCount := parseIterFromPosts(posts)
-	HiveView(posts, stats, roles, tasks, totalOps, lastActive, iterCount, h.viewUser(r)).Render(ctx, w)
+	commits := readRecentCommits(repoDir, 10)
+	HivePage(ls, entries, commits, h.viewUser(r)).Render(ctx, w)
 }
 
 // handleHiveStatus renders the main content partial for HTMX polling (every 5s).
@@ -3795,7 +3969,17 @@ func (h *Handlers) handleHiveStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	iterCount := parseIterFromPosts(posts)
-	HiveStatusPartial(posts, stats, roles, tasks, totalOps, lastActive, iterCount).Render(ctx, w)
+	ls := readLoopState(h.loopDir)
+	if ls.Iteration > iterCount {
+		iterCount = ls.Iteration
+	}
+	HiveStatusPartial(posts, stats, roles, tasks, totalOps, lastActive, iterCount, ls).Render(ctx, w)
+}
+
+// handleHiveFeed renders the phase timeline partial for HTMX polling — public, no auth required.
+func (h *Handlers) handleHiveFeed(w http.ResponseWriter, r *http.Request) {
+	entries := readDiagnostics(h.loopDir, maxHiveDiagEntries)
+	HiveDiagFeed(entries).Render(r.Context(), w)
 }
 
 // handleHiveStats renders the live stats bar partial for HTMX polling.

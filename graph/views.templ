@@ -121,9 +121,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 					@mobileLensTab(space.Slug, "agents", "Agents", activeLens)
 					@mobileLensTab(space.Slug, "projects", "Projects", activeLens)
 					@mobileLensTab(space.Slug, "goals", "Goals", activeLens)
+					@mobileLensTab(space.Slug, "knowledge", "Knowledge", activeLens)
 					@mobileLensTab(space.Slug, "threads", "Threads", activeLens)
 					@mobileLensTab(space.Slug, "council", "Council", activeLens)
-					@mobileLensTab(space.Slug, "knowledge", "Knowledge", activeLens)
 					@mobileLensTab(space.Slug, "governance", "Governance", activeLens)
 					@mobileLensTab(space.Slug, "roles", "Roles", activeLens)
 					@mobileLensTab(space.Slug, "teams", "Teams", activeLens)
@@ -168,9 +168,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
 							<nav id="sidebar-more" class="hidden space-y-0.5 mt-0.5">
 								@lensLink(space.Slug, "projects", "Projects", activeLens, projectsIcon())
 								@lensLink(space.Slug, "goals", "Goals", activeLens, goalsIcon())
+								@lensLink(space.Slug, "knowledge", "Knowledge", activeLens, knowledgeIcon())
 								@lensLink(space.Slug, "threads", "Threads", activeLens, threadsIcon())
 								@lensLink(space.Slug, "council", "Council", activeLens, councilIcon())
-								@lensLink(space.Slug, "knowledge", "Knowledge", activeLens, knowledgeIcon())
 								@lensLink(space.Slug, "governance", "Governance", activeLens, governanceIcon())
 								@lensLink(space.Slug, "roles", "Roles", activeLens, rolesIcon())
 								@lensLink(space.Slug, "teams", "Teams", activeLens, teamsIcon())
@@ -5798,7 +5798,7 @@ func opProgressBody(payload json.RawMessage) string {
 
 // HiveStatusPartial renders the main content element for /hive — used by both
 // the full page and the /hive/status HTMX partial poll (every 5s).
-templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tasks []Node, totalOps int, lastActive time.Time, iterCount int) {
+templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tasks []Node, totalOps int, lastActive time.Time, iterCount int, ls LoopState) {
 	<main id="hive-content" hx-get="/hive/status" hx-trigger="every 5s" hx-target="#hive-content" hx-swap="outerHTML" class="flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10">
 		<!-- Section 1: Header -->
 		<div class="space-y-2">
@@ -5809,7 +5809,15 @@ templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tas
 				if iterCount > 0 {
 					<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">Iteration { fmt.Sprintf("%d", iterCount) }</span>
 				}
+				if ls.Phase != "" {
+					<span class="ml-1 text-xs px-2 py-0.5 rounded-full bg-elevated text-warm-muted border border-edge">Phase { ls.Phase }</span>
+				}
 			</p>
+			if ls.BuildTitle != "" {
+				<p class="text-sm text-warm-muted mt-1">
+					<span class="text-warm-faint">Building:</span> { ls.BuildTitle }
+				</p>
+			}
 			<!-- Stat cards -->
 			<div class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-4">
 				<div class="bg-surface border border-edge rounded-lg p-5">
@@ -5905,26 +5913,6 @@ templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tas
 		<!-- Stats bar (HTMX live refresh every 15s) -->
 		@HiveStatsBar(totalOps, lastActive)
 	</main>
-}
-
-// HiveView renders the public /hive dashboard — four sections.
-templ HiveView(posts []Node, stats HiveStats, roles []PipelineRole, tasks []Node, totalOps int, lastActive time.Time, iterCount int, user ViewUser) {
-	<!DOCTYPE html>
-	<html lang="en">
-		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>The Hive — lovyou.ai</title>
-			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
-			@themeBlock()
-		</head>
-		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
-			@HiveStatusPartial(posts, stats, roles, tasks, totalOps, lastActive, iterCount)
-			@simpleFooter()
-		</body>
-	</html>
 }
 
 // HiveStatsBar renders the live stats bar — total ops + last active.

@@ -1,0 +1,69 @@
+package graph
+
+import "fmt"
+
+// HivePage renders the /hive dashboard — iteration badge, phase pill, last build,
+// phase timeline (HTMX-polled), and recent commits.
+templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>The Hive — lovyou.ai</title>
+			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+			@themeBlock()
+		</head>
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
+			@simpleHeader(user)
+			<main class="flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10">
+				<!-- Header: large iteration counter + phase pill + last build title -->
+				<div class="space-y-4">
+					<div class="flex items-end gap-5 flex-wrap">
+						if ls.Iteration > 0 {
+							<span class="text-7xl font-light text-brand tabular-nums leading-none">{ fmt.Sprintf("%d", ls.Iteration) }</span>
+						} else {
+							<span class="text-7xl font-light text-warm-faint tabular-nums leading-none">0</span>
+						}
+						if ls.Phase != "" {
+							<span class={ "px-3 py-1.5 rounded-full text-sm font-medium border mb-2", hivePhaseClass(ls.Phase) }>
+								{ ls.Phase }
+							</span>
+						}
+					</div>
+					if ls.BuildTitle != "" {
+						<div class="flex items-center gap-3 flex-wrap">
+							<p class="text-warm font-medium">{ ls.BuildTitle }</p>
+							if ls.BuildCost > 0 {
+								<span class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">
+									{ fmt.Sprintf("$%.2f", ls.BuildCost) }
+								</span>
+							}
+						</div>
+					}
+				</div>
+				<!-- Phase timeline (HTMX-polled every 5s via hive-feed partial) -->
+				<div class="space-y-3">
+					<h2 class="text-xs font-medium text-warm-muted uppercase tracking-widest">Phase timeline</h2>
+					@HiveDiagFeed(entries)
+				</div>
+				<!-- Recent commits -->
+				if len(commits) > 0 {
+					<div class="space-y-3">
+						<h2 class="text-xs font-medium text-warm-muted uppercase tracking-widest">Recent commits</h2>
+						<div class="bg-surface border border-edge rounded-lg divide-y divide-edge overflow-hidden">
+							for _, c := range commits {
+								<div class="px-4 py-2.5 flex items-center gap-3 min-w-0">
+									<span class="font-mono text-xs text-warm-faint flex-shrink-0">{ c.Hash }</span>
+									<span class="font-mono text-xs text-warm truncate">{ c.Subject }</span>
+								</div>
+							}
+						</div>
+					</div>
+				}
+			</main>
+			@simpleFooter()
+		</body>
+	</html>
+}

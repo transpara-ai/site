@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -496,5 +498,80 @@ func TestGetHiveStats_Partial(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "total ops") {
 		t.Error("expected 'total ops' in /hive/stats response")
+	}
+}
+
+// TestHiveDashboard verifies that GET /hive reads loop state files from loopDir and
+// renders the iteration number, phase, and current build title in the response.
+func TestHiveDashboard(t *testing.T) {
+	dir := t.TempDir()
+
+	// diagnostics.jsonl — three realistic entries.
+	diagnostics := `{"timestamp":"2026-03-27T10:00:00Z","phase":"Builder","iteration":7,"event":"build_start"}
+{"timestamp":"2026-03-27T10:05:00Z","phase":"Builder","iteration":7,"event":"build_progress","detail":"editing handlers.go"}
+{"timestamp":"2026-03-27T10:10:00Z","phase":"Builder","iteration":7,"event":"build_complete","cost":0.42}
+`
+	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(diagnostics), 0600); err != nil {
+		t.Fatalf("write diagnostics.jsonl: %v", err)
+	}
+
+	// state.md — current iteration and phase.
+	stateMd := "Iteration: 7\nPhase: Builder\n"
+	if err := os.WriteFile(filepath.Join(dir, "state.md"), []byte(stateMd), 0600); err != nil {
+		t.Fatalf("write state.md: %v", err)
+	}
+
+	// build.md — current build title and cost.
+	buildMd := "# Add kanban board\n\nCost: $0.42\n"
+	if err := os.WriteFile(filepath.Join(dir, "build.md"), []byte(buildMd), 0600); err != nil {
+		t.Fatalf("write build.md: %v", err)
+	}
+
+	h, _, _ := testHandlers(t)
+	h.SetLoopDir(dir)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest("GET", "/hive", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /hive with loop state: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "7") {
+		t.Error("response body does not contain iteration number 7")
+	}
+	if !strings.Contains(body, "Builder") {
+		t.Error("response body does not contain phase 'Builder'")
+	}
+	if !strings.Contains(body, "Add kanban board") {
+		t.Error("response body does not contain build title 'Add kanban board'")
+	}
+}
+
+// TestGetHiveFeed_PublicNoAuth verifies GET /hive/feed returns 200 without auth
+// and returns the standalone phase-timeline partial (no full HTML shell).
+func TestGetHiveFeed_PublicNoAuth(t *testing.T) {
+	h, _, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest("GET", "/hive/feed", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /hive/feed without auth: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "hive-feed") {
+		t.Error("GET /hive/feed: body does not contain 'hive-feed' element")
+	}
+	if strings.Contains(body, "<html") {
+		t.Error("GET /hive/feed: body contains full HTML shell — partial must not include <html>")
 	}
 }
