@@ -85,6 +85,12 @@ const (
 	VisibilityPublic  = "public"
 )
 
+// Node membership ops.
+const (
+	OpJoinTeam  = "join_team"
+	OpLeaveTeam = "leave_team"
+)
+
 // Space is a container — project, community, or team.
 type Space struct {
 	ID                 string     `json:"id"`
@@ -431,6 +437,15 @@ CREATE TABLE IF NOT EXISTS invite_uses (
 ALTER TABLE invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE invites ADD COLUMN IF NOT EXISTS max_uses INT NOT NULL DEFAULT 0;
 ALTER TABLE invites ADD COLUMN IF NOT EXISTS use_count INT NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS node_members (
+    node_id    TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    user_id    TEXT NOT NULL,
+    joined_at  TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (node_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_node_members_user ON node_members(user_id);
+ALTER TABLE node_members DROP COLUMN IF EXISTS user_name;
 `)
 	return err
 }
@@ -802,7 +817,7 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 		argN++
 	}
 
-	query += " ORDER BY n.pinned DESC, n.created_at"
+	query += " ORDER BY n.pinned DESC, n.created_at DESC"
 
 	limit := p.Limit
 	if limit <= 0 {
@@ -1479,6 +1494,70 @@ func (s *Store) ListMembers(ctx context.Context, spaceID string, limit int) ([]S
 	for rows.Next() {
 		var m SpaceMember
 		if rows.Scan(&m.UserID, &m.UserName, &m.Kind) == nil {
+			members = append(members, m)
+		}
+	}
+	return members, rows.Err()
+}
+
+// NodeMember holds a node (team/role) member's info for display.
+type NodeMember struct {
+	UserID   string `json:"user_id"`
+	UserName string `json:"user_name"`
+}
+
+// JoinNodeMember adds a user to a node (team/role) member list.
+func (s *Store) JoinNodeMember(ctx context.Context, nodeID, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO node_members (node_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		nodeID, userID)
+	return err
+}
+
+// LeaveNodeMember removes a user from a node (team/role) member list.
+func (s *Store) LeaveNodeMember(ctx context.Context, nodeID, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`DELETE FROM node_members WHERE node_id = $1 AND user_id = $2`,
+		nodeID, userID)
+	return err
+}
+
+// IsNodeMember checks if a user is a member of a node (team/role).
+func (s *Store) IsNodeMember(ctx context.Context, nodeID, userID string) bool {
+	var exists bool
+	s.db.QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM node_members WHERE node_id = $1 AND user_id = $2)`,
+		nodeID, userID).Scan(&exists)
+	return exists
+}
+
+// NodeMemberCount returns the number of members in a node (team/role).
+func (s *Store) NodeMemberCount(ctx context.Context, nodeID string) int {
+	var count int
+	s.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM node_members WHERE node_id = $1`, nodeID).Scan(&count)
+	return count
+}
+
+// ListTeamMembers returns members of a team node within a space.
+// Display names are resolved from the users table at query time, not stored in node_members.
+func (s *Store) ListTeamMembers(ctx context.Context, spaceID, teamID string) ([]NodeMember, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT nm.user_id, COALESCE(u.name, nm.user_id)
+		 FROM node_members nm
+		 JOIN nodes n ON n.id = nm.node_id
+		 LEFT JOIN users u ON u.id = nm.user_id
+		 WHERE nm.node_id = $1 AND n.space_id = $2
+		 ORDER BY nm.joined_at
+		 LIMIT 100`, teamID, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var members []NodeMember
+	for rows.Next() {
+		var m NodeMember
+		if rows.Scan(&m.UserID, &m.UserName) == nil {
 			members = append(members, m)
 		}
 	}
