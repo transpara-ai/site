@@ -1535,7 +1535,18 @@ func (h *Handlers) handleTeams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	TeamsView(*space, spaces, teams, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	ctx := r.Context()
+	uid := h.userID(r)
+	memberCounts := make(map[string]int, len(teams))
+	isMember := make(map[string]bool, len(teams))
+	for _, t := range teams {
+		memberCounts[t.ID] = h.store.NodeMemberCount(ctx, t.ID)
+		if uid != "" {
+			isMember[t.ID] = h.store.IsNodeMember(ctx, t.ID, uid)
+		}
+	}
+
+	TeamsView(*space, spaces, teams, h.viewUser(r), isOwner, searchQuery, memberCounts, isMember).Render(r.Context(), w)
 }
 
 func (h *Handlers) handlePolicies(w http.ResponseWriter, r *http.Request) {
@@ -2559,6 +2570,61 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Redirect(w, r, "/app/"+space.Slug, http.StatusSeeOther)
 
+	case OpJoinTeam:
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if actorID == "" {
+			http.Error(w, "must be logged in to join a team", http.StatusUnauthorized)
+			return
+		}
+		if !h.store.IsMember(ctx, space.ID, actorID) {
+			http.Error(w, "must be a space member to join a team", http.StatusForbidden)
+			return
+		}
+		if err := h.store.JoinNodeMember(ctx, nodeID, actorID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, OpJoinTeam, nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": OpJoinTeam, "status": "joined"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/teams", http.StatusSeeOther)
+
+	case OpLeaveTeam:
+		nodeID := r.FormValue("node_id")
+		if nodeID == "" {
+			http.Error(w, "node_id required", http.StatusBadRequest)
+			return
+		}
+		if actorID == "" {
+			http.Error(w, "must be logged in to leave a team", http.StatusUnauthorized)
+			return
+		}
+		// Self or space owner can remove.
+		targetID := r.FormValue("user_id")
+		if targetID == "" {
+			targetID = actorID
+		}
+		if targetID != actorID && space.OwnerID != actorID {
+			http.Error(w, "only space owner can remove others from a team", http.StatusForbidden)
+			return
+		}
+		if err := h.store.LeaveNodeMember(ctx, nodeID, targetID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.store.RecordOp(ctx, space.ID, nodeID, actor, actorID, OpLeaveTeam, nil)
+		if wantsJSON(r) {
+			writeJSON(w, http.StatusOK, map[string]string{"op": OpLeaveTeam, "status": "left"})
+			return
+		}
+		http.Redirect(w, r, "/app/"+space.Slug+"/teams", http.StatusSeeOther)
+
 	case "kick":
 		memberID := r.FormValue("member_id")
 		if memberID == "" {
@@ -3459,6 +3525,12 @@ func groupByState(nodes []Node) []BoardColumn {
 			col.Nodes = append(col.Nodes, n)
 		}
 	}
+	// Done column: newest completions first (updated_at DESC).
+	if done, ok := byState[StateDone]; ok {
+		sort.Slice(done.Nodes, func(i, j int) bool {
+			return done.Nodes[i].UpdatedAt.After(done.Nodes[j].UpdatedAt)
+		})
+	}
 	return columns
 }
 
@@ -3563,6 +3635,22 @@ func parseDurationStr(body string) string {
 	return m[1]
 }
 
+// hiveCostStr returns a formatted cost string for a node's body, e.g. "$0.42".
+// Returns empty string if no cost is found or cost is zero.
+func hiveCostStr(n Node) string {
+	c := parseCostDollars(n.Body)
+	if c <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("$%.2f", c)
+}
+
+// hiveDurationStr returns the duration string from a node's body, e.g. "3m28s".
+// Returns empty string if no duration is found.
+func hiveDurationStr(n Node) string {
+	return parseDurationStr(n.Body)
+}
+
 // computeHiveStats aggregates cost metrics across hive agent posts.
 // posts must be pre-bounded (callers must pass at most maxHivePosts entries).
 // Features counts only posts that include a cost line (cost > 0); posts without
@@ -3598,6 +3686,7 @@ var pipelineRoleDefs = []struct {
 	prefix  string
 }{
 	{"Scout", "[hive:scout]"},
+	{"Architect", "[hive:architect]"},
 	{"Builder", "[hive:builder]"},
 	{"Critic", "[hive:critic]"},
 	{"Reflector", "[hive:reflector]"},
