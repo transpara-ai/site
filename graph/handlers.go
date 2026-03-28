@@ -2579,10 +2579,6 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.store.UpdateNodeState(ctx, nodeID, StateDone); err != nil {
-			if errors.Is(err, ErrChildrenIncomplete) {
-				http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-				return
-			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3599,10 +3595,6 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.UpdateNodeState(r.Context(), nodeID, newState); err != nil {
-		if errors.Is(err, ErrChildrenIncomplete) {
-			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-			return
-		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

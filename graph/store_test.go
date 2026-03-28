@@ -374,24 +374,21 @@ func TestUpdateNodeStateChildGate(t *testing.T) {
 		t.Fatalf("create child: %v", err)
 	}
 
-	// Completing parent with incomplete child must be rejected.
-	err = store.UpdateNodeState(ctx, parent.ID, StateDone)
-	if !errors.Is(err, ErrChildrenIncomplete) {
-		t.Fatalf("expected ErrChildrenIncomplete, got %v", err)
-	}
-
-	// Complete the child first.
-	if err := store.UpdateNodeState(ctx, child.ID, StateDone); err != nil {
-		t.Fatalf("complete child: %v", err)
-	}
-
-	// Now completing parent must succeed.
+	// Completing parent with incomplete child must auto-cascade and succeed.
 	if err := store.UpdateNodeState(ctx, parent.ID, StateDone); err != nil {
-		t.Fatalf("complete parent after child done: %v", err)
+		t.Fatalf("complete parent: %v", err)
 	}
-	got, _ := store.GetNode(ctx, parent.ID)
-	if got.State != StateDone {
-		t.Errorf("parent state = %q, want %q", got.State, StateDone)
+
+	// Parent must be done.
+	gotParent, _ := store.GetNode(ctx, parent.ID)
+	if gotParent.State != StateDone {
+		t.Errorf("parent state = %q, want %q", gotParent.State, StateDone)
+	}
+
+	// Child must have been auto-closed by the cascade.
+	gotChild, _ := store.GetNode(ctx, child.ID)
+	if gotChild.State != StateDone {
+		t.Errorf("child state = %q, want %q (expected cascade close)", gotChild.State, StateDone)
 	}
 }
 
@@ -479,20 +476,79 @@ func TestUpdateNodeStateChildGateMultipleChildren(t *testing.T) {
 		t.Fatalf("create child2: %v", err)
 	}
 
-	// Complete only child1 — parent still blocked by child2.
+	// Complete only child1 — completing parent must auto-cascade and close child2.
 	if err := store.UpdateNodeState(ctx, child1.ID, StateDone); err != nil {
 		t.Fatalf("complete child1: %v", err)
 	}
-	if err := store.UpdateNodeState(ctx, parent.ID, StateDone); !errors.Is(err, ErrChildrenIncomplete) {
-		t.Fatalf("expected ErrChildrenIncomplete with one incomplete child, got %v", err)
+	if err := store.UpdateNodeState(ctx, parent.ID, StateDone); err != nil {
+		t.Fatalf("complete parent with one open child: %v", err)
 	}
 
-	// Complete child2 — parent now completable.
-	if err := store.UpdateNodeState(ctx, child2.ID, StateDone); err != nil {
-		t.Fatalf("complete child2: %v", err)
+	// child2 must have been auto-closed by the cascade.
+	gotChild2, _ := store.GetNode(ctx, child2.ID)
+	if gotChild2.State != StateDone {
+		t.Errorf("child2 state = %q, want %q (expected cascade close)", gotChild2.State, StateDone)
 	}
-	if err := store.UpdateNodeState(ctx, parent.ID, StateDone); err != nil {
-		t.Fatalf("complete parent after all children done: %v", err)
+
+	// Parent must be done.
+	gotParent, _ := store.GetNode(ctx, parent.ID)
+	if gotParent.State != StateDone {
+		t.Errorf("parent state = %q, want %q", gotParent.State, StateDone)
+	}
+}
+
+// TestCascadeCloseChildrenDeep verifies that completing a grandparent also closes
+// grandchildren — the recursive cascade traverses all descendant levels.
+func TestCascadeCloseChildrenDeep(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	space, err := store.CreateSpace(ctx, "test-cascade-deep", "Cascade Deep", "", "owner-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	grandparent, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, Kind: KindTask, Title: "Grandparent",
+		Author: "tester", AuthorID: "tester-id", State: StateActive,
+	})
+	if err != nil {
+		t.Fatalf("create grandparent: %v", err)
+	}
+
+	parent, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, ParentID: grandparent.ID, Kind: KindTask, Title: "Parent",
+		Author: "tester", AuthorID: "tester-id", State: StateActive,
+	})
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+
+	grandchild, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, ParentID: parent.ID, Kind: KindTask, Title: "Grandchild",
+		Author: "tester", AuthorID: "tester-id", State: StateActive,
+	})
+	if err != nil {
+		t.Fatalf("create grandchild: %v", err)
+	}
+
+	if err := store.UpdateNodeState(ctx, grandparent.ID, StateDone); err != nil {
+		t.Fatalf("complete grandparent: %v", err)
+	}
+
+	for label, id := range map[string]string{
+		"grandparent": grandparent.ID,
+		"parent":      parent.ID,
+		"grandchild":  grandchild.ID,
+	} {
+		got, err := store.GetNode(ctx, id)
+		if err != nil {
+			t.Fatalf("get %s: %v", label, err)
+		}
+		if got.State != StateDone {
+			t.Errorf("%s state = %q, want %q (expected cascade close)", label, got.State, StateDone)
+		}
 	}
 }
 

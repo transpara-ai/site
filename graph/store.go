@@ -1259,17 +1259,53 @@ func (s *Store) ListCouncilSessions(ctx context.Context, spaceID string, limit i
 	})
 }
 
+// maxCascadeDepth bounds the recursive child-close to satisfy invariant 13 (BOUNDED).
+const maxCascadeDepth = 50
+
+// cascadeCloseChildren sets all non-done descendants of parentID to done.
+// Depth-first: grandchildren are closed before their parents.
+func (s *Store) cascadeCloseChildren(ctx context.Context, parentID string, depth int) error {
+	if depth > maxCascadeDepth {
+		return fmt.Errorf("cascade depth exceeded for parent %s", parentID)
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id FROM nodes WHERE parent_id = $1 AND state != 'done'`, parentID,
+	)
+	if err != nil {
+		return fmt.Errorf("cascade children of %s: %w", parentID, err)
+	}
+	var childIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		childIDs = append(childIDs, id)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, childID := range childIDs {
+		if err := s.cascadeCloseChildren(ctx, childID, depth+1); err != nil {
+			return err
+		}
+		if _, err := s.db.ExecContext(ctx,
+			`UPDATE nodes SET state = 'done', updated_at = NOW() WHERE id = $1`,
+			childID,
+		); err != nil {
+			return fmt.Errorf("cascade close child %s: %w", childID, err)
+		}
+	}
+	return nil
+}
+
 // UpdateNodeState sets a node's state.
+// When transitioning to done, all non-done descendants are auto-closed first.
 func (s *Store) UpdateNodeState(ctx context.Context, id, state string) error {
 	if state == StateDone {
-		var incomplete int
-		if err := s.db.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM nodes WHERE parent_id = $1 AND state != 'done'`, id,
-		).Scan(&incomplete); err != nil {
-			return fmt.Errorf("check children: %w", err)
-		}
-		if incomplete > 0 {
-			return ErrChildrenIncomplete
+		if err := s.cascadeCloseChildren(ctx, id, 0); err != nil {
+			return err
 		}
 	}
 	res, err := s.db.ExecContext(ctx,
