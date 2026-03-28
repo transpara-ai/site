@@ -1708,4 +1708,12 @@ func TestPopulateFormFromJSON(t *testing.T) {
 		r.Body = io.NopCloser(strings.NewReader(""))
 		populateFormFromJSON(r) // must not panic
 	})
+
+	t.Run("array with null item drops null keeps strings", func(t *testing.T) {
+		r := makeReq("application/json", `{"causes":["id1",null,"id2"]}`)
+		populateFormFromJSON(r)
+		if got := r.FormValue("causes"); got != "id1,id2" {
+			t.Errorf("causes = %q, want %q", got, "id1,id2")
+		}
+	})
 }
