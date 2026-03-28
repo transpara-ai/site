@@ -474,6 +474,7 @@ ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS importance INT NOT NULL DEFA
 ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS space_id TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS idx_agent_memories_space ON agent_memories(space_id, user_id, persona);
 ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;
+ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS session_id UUID DEFAULT gen_random_uuid();
 
 CREATE TABLE IF NOT EXISTS invite_uses (
     token   TEXT NOT NULL REFERENCES invites(token) ON DELETE CASCADE,
@@ -3830,14 +3831,15 @@ func (s *Store) CountChallenges(ctx context.Context, nodeID string) int {
 // AgentPersona is a named agent persona seeded from agents/*.md files.
 type AgentPersona struct {
 	ID          string
-	Name        string // slug, e.g. "philosopher"
-	Display     string // display name, e.g. "Philosopher"
-	Description string // one-line for the card
-	Category    string // "care", "governance", "knowledge", etc.
-	Prompt      string // full system prompt from the .md file
-	Model       string // "sonnet", "opus", etc.
+	Name        string     // slug, e.g. "philosopher"
+	Display     string     // display name, e.g. "Philosopher"
+	Description string     // one-line for the card
+	Category    string     // "care", "governance", "knowledge", etc.
+	Prompt      string     // full system prompt from the .md file
+	Model       string     // "sonnet", "opus", etc.
 	Active      bool
 	LastSeen    *time.Time // nil if never replied
+	SessionID   string     // UUID for Claude CLI --session-id (persistent session)
 }
 
 // UpsertAgentPersona inserts or updates an agent persona by name.

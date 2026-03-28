@@ -1264,6 +1264,13 @@ func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {
+	// JSON agents endpoint for the hive pipeline.
+	if r.URL.Query().Get("format") == "agents" && wantsJSON(r) {
+		personas, _ := h.store.ListAgentPersonas(r.Context())
+		writeJSON(w, http.StatusOK, map[string]any{"agents": personas})
+		return
+	}
+
 	space, _, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
 		http.NotFound(w, r)
