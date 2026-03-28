@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -593,6 +594,47 @@ func TestUpdateNodeStateNonDoneSkipsGate(t *testing.T) {
 	// Setting to StateReview (non-done) must not trigger the gate.
 	if err := store.UpdateNodeState(ctx, parent.ID, StateReview); err != nil {
 		t.Fatalf("set parent to review with incomplete child: %v", err)
+	}
+}
+
+// TestCascadeDepthBoundary verifies that cascadeCloseChildren returns an error
+// when depth exceeds maxCascadeDepth (50). Uses a parent+child pair but calls
+// cascadeCloseChildren directly at depth=maxCascadeDepth so the recursive call
+// hits depth=51, triggering the bound — without needing a 52-level tree.
+func TestCascadeDepthBoundary(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	space, err := store.CreateSpace(ctx, "test-cascade-bound", "Cascade Bound", "", "owner-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	parent, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, Kind: KindTask, Title: "Parent",
+		Author: "tester", AuthorID: "tester-id", State: StateActive,
+	})
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+
+	_, err = store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, ParentID: parent.ID, Kind: KindTask, Title: "Child",
+		Author: "tester", AuthorID: "tester-id", State: StateActive,
+	})
+	if err != nil {
+		t.Fatalf("create child: %v", err)
+	}
+
+	// Call at maxCascadeDepth: the child recurse call hits depth=51, which exceeds
+	// the cap. Cascade must fail with a depth-exceeded error.
+	err = store.cascadeCloseChildren(ctx, parent.ID, maxCascadeDepth)
+	if err == nil {
+		t.Fatal("expected depth-exceeded error, got nil")
+	}
+	if !strings.Contains(err.Error(), "cascade depth exceeded") {
+		t.Errorf("error = %q, want to contain %q", err.Error(), "cascade depth exceeded")
 	}
 }
 
