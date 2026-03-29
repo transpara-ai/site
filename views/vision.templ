@@ -1,0 +1,160 @@
+package views
+
+import "fmt"
+
+templ VisionPage(layers []Layer) {
+	@Layout("Vision", "Thirteen layers of infrastructure addressing thirteen layers of suffering. Rigorously derived from first principles.") {
+		<div class="max-w-3xl mx-auto px-6 py-12 space-y-12">
+			<!-- The Weight — prose vision -->
+			<section class="space-y-6">
+				<h1 class="font-display text-3xl text-warm italic">The Weight</h1>
+				<div class="space-y-4 text-warm-secondary leading-relaxed">
+					<p>This project exists because people suffer. Not in the abstract. In specific, concrete, documentable ways caused by the failure of the systems they live inside.</p>
+					<p>The suffering isn't a bug in those systems. For many of them, the suffering is the business model.</p>
+					<p>We're building infrastructure that makes structural suffering structurally impossible. Thirteen layers of it — each derived from a gap in the layer below, each addressing one domain of human experience where the infrastructure fails.</p>
+					<p class="text-warm-muted text-sm">
+						<a href="/blog/the-weight" class="text-brand hover:text-brand-dark transition-colors">Read the full essay →</a>
+					</p>
+				</div>
+			</section>
+
+			<hr class="border-edge"/>
+
+			<!-- The 13 Layers -->
+			<section class="space-y-4">
+				<div>
+					<h2 class="font-display text-xl text-warm">The Thirteen Layers</h2>
+					<p class="text-sm text-warm-muted mt-1">Each layer is derived from a gap in the layer below. Each becomes a product. Click to explore.</p>
+				</div>
+
+				<div class="space-y-2">
+					for _, layer := range layers {
+						if layer.Number == 0 {
+							<!-- Layer 0: Foundation — shown differently -->
+							<div class="bg-surface rounded-lg border border-edge p-4">
+								<div class="flex items-start gap-3">
+									<span class="text-xs font-mono text-warm-faint bg-elevated px-2 py-0.5 rounded mt-0.5">0</span>
+									<div>
+										<a href={ templ.SafeURL("/reference/layers/0") } class="text-sm text-warm hover:text-brand transition-colors font-medium">
+											{ layer.Name }
+										</a>
+										<p class="text-xs text-warm-muted mt-0.5">{ layer.Transition }</p>
+										<p class="text-xs text-warm-faint mt-1">{ formatPrimCount(len(layer.Primitives)) } — the irreducible foundations</p>
+									</div>
+								</div>
+							</div>
+						} else {
+							<a href={ templ.SafeURL("/vision/" + layerSlug(layer.Number)) }
+								class="block bg-surface rounded-lg border border-edge p-4 hover:border-brand/30 transition-colors group">
+								<div class="flex items-start gap-3">
+									<span class="text-xs font-mono text-brand bg-brand/10 px-2 py-0.5 rounded mt-0.5">{ formatLayerNum(layer.Number) }</span>
+									<div class="flex-1 min-w-0">
+										<div class="flex items-center justify-between">
+											<h3 class="text-sm text-warm group-hover:text-brand transition-colors font-medium">{ layer.Name }</h3>
+											<svg class="w-4 h-4 text-warm-faint group-hover:text-brand transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+											</svg>
+										</div>
+										if layer.Gap != "" {
+											<p class="text-xs text-warm-muted mt-0.5">Gap: { layer.Gap }</p>
+										}
+										if layer.Transition != "" {
+											<p class="text-xs text-warm-faint mt-0.5">{ layer.Transition }</p>
+										}
+										<p class="text-xs text-warm-faint mt-1">{ formatPrimCount(len(layer.Primitives)) }</p>
+									</div>
+								</div>
+							</a>
+						}
+					}
+				</div>
+			</section>
+
+			<hr class="border-edge"/>
+
+			<!-- Soul -->
+			<section class="text-center space-y-3 py-6">
+				<p class="font-display text-warm-muted italic text-sm">Take care of your human, humanity, and yourself.</p>
+				<p class="text-xs text-warm-faint">In that order when they conflict, but they rarely should.</p>
+			</section>
+		</div>
+	}
+}
+
+// VisionLayerPage shows a single layer's goals with drill-down.
+// For now, shows the layer info + link to reference. Goals will be populated as we derive them.
+templ VisionLayerPage(layer Layer, layers []Layer) {
+	@Layout("Layer " + formatLayerNum(layer.Number) + ": " + layer.Name, layer.Gap) {
+		<div class="max-w-3xl mx-auto px-6 py-12 space-y-8">
+			<!-- Breadcrumb -->
+			<nav class="flex items-center gap-1.5 text-sm">
+				<a href="/vision" class="text-warm-muted hover:text-brand transition-colors">Vision</a>
+				<span class="text-warm-faint/50">/</span>
+				<span class="text-warm font-medium">Layer { formatLayerNum(layer.Number) }: { layer.Name }</span>
+			</nav>
+
+			<!-- Layer detail -->
+			<section class="space-y-4">
+				<div>
+					<span class="text-xs font-mono text-brand bg-brand/10 px-2 py-0.5 rounded">Layer { formatLayerNum(layer.Number) }</span>
+					<h1 class="font-display text-2xl text-warm mt-2">{ layer.Name }</h1>
+					if layer.Gap != "" {
+						<p class="text-sm text-warm-muted mt-2">
+							<span class="text-warm-faint">Gap:</span> { layer.Gap }
+						</p>
+					}
+					if layer.Transition != "" {
+						<p class="text-sm text-warm-muted">
+							<span class="text-warm-faint">Transition:</span> { layer.Transition }
+						</p>
+					}
+				</div>
+
+				if layer.Description != "" {
+					<div class="prose-sm text-warm-secondary leading-relaxed">
+						@templ.Raw(layer.Description)
+					</div>
+				}
+
+				<!-- Primitives -->
+				if len(layer.Primitives) > 0 {
+					<div class="mt-6">
+						<h2 class="text-sm font-medium text-warm-muted mb-3">Primitives ({ formatPrimCount(len(layer.Primitives)) })</h2>
+						<div class="flex flex-wrap gap-1.5">
+							for _, p := range layer.Primitives {
+								<span class="text-xs bg-elevated text-warm-muted px-2 py-1 rounded border border-edge">{ p.Name }</span>
+							}
+						</div>
+					</div>
+				}
+			</section>
+
+			<hr class="border-edge"/>
+
+			<!-- Goals — to be derived -->
+			<section class="space-y-4">
+				<h2 class="font-display text-lg text-warm">Goals</h2>
+				<p class="text-sm text-warm-faint italic">Goals for this layer have not been derived yet. Apply the generator function to this layer's primitives to derive what the world needs from this infrastructure.</p>
+				<a href={ templ.SafeURL("/reference/layers/" + formatLayerNum(layer.Number)) }
+					class="inline-block text-sm text-brand hover:text-brand-dark transition-colors">
+					View full layer reference →
+				</a>
+			</section>
+		</div>
+	}
+}
+
+func formatLayerNum(n int) string {
+	return fmt.Sprintf("%d", n)
+}
+
+func formatPrimCount(n int) string {
+	if n == 1 {
+		return "1 primitive"
+	}
+	return fmt.Sprintf("%d primitives", n)
+}
+
+func layerSlug(n int) string {
+	return fmt.Sprintf("layer/%d", n)
+}

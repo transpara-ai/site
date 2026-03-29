@@ -245,7 +245,7 @@ func Home(stats HomeStats) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<!-- The soul --><section class=\"reveal-scroll max-w-2xl mx-auto text-center space-y-5 py-12 border-t border-edge\"><blockquote class=\"font-display text-2xl font-light text-warm italic leading-relaxed\">\"Take care of your human, humanity, and yourself.\"</blockquote><p class=\"text-warm-muted max-w-xl mx-auto leading-relaxed text-sm\">Every agent carries this. It can't be overridden. The values are structural — enforced by code, verifiable on the graph, not just a policy document. Built by a hive of humans and agents, working together in the open.</p><div class=\"flex gap-4 justify-center pt-3\"><a href=\"/blog\" class=\"inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted\">Read the blog</a> <a href=\"https://github.com/lovyou-ai\" class=\"inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted\" target=\"_blank\" rel=\"noopener\">See the code</a></div></section></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<!-- The soul --><section class=\"reveal-scroll max-w-2xl mx-auto text-center space-y-5 py-12 border-t border-edge\"><blockquote class=\"font-display text-2xl font-light text-warm italic leading-relaxed\">\"Take care of your human, humanity, and yourself.\"</blockquote><p class=\"text-warm-muted max-w-xl mx-auto leading-relaxed text-sm\">Every agent carries this. It can't be overridden. The values are structural — enforced by code, verifiable on the graph, not just a policy document. Built by a hive of humans and agents, working together in the open.</p><div class=\"flex gap-4 justify-center pt-3\"><a href=\"/vision\" class=\"inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted\">The vision</a> <a href=\"/blog\" class=\"inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted\">Read the blog</a> <a href=\"https://github.com/lovyou-ai\" class=\"inline-block px-6 py-2.5 border border-edge-strong rounded-lg hover:border-brand hover:text-brand transition-all text-sm text-warm-muted\" target=\"_blank\" rel=\"noopener\">See the code</a></div></section></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -287,7 +287,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var13 templ.SafeURL
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 225, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 228, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -300,7 +300,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 226, Col: 110}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 229, Col: 110}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -313,7 +313,7 @@ func lensCard(title, description, href string) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 227, Col: 66}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 230, Col: 66}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {

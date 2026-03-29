@@ -83,6 +83,23 @@ func main() {
 	mux.HandleFunc("GET /blog", handleBlogIndex)
 	mux.HandleFunc("GET /blog/{slug}", handleBlogPost)
 
+	// Vision.
+	mux.HandleFunc("GET /vision", func(w http.ResponseWriter, r *http.Request) {
+		views.VisionPage(layers).Render(r.Context(), w)
+	})
+	mux.HandleFunc("GET /vision/layer/{num}", func(w http.ResponseWriter, r *http.Request) {
+		num, err := strconv.Atoi(r.PathValue("num"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if layer, ok := layersByNum[num]; ok {
+			views.VisionLayerPage(layer, layers).Render(r.Context(), w)
+		} else {
+			http.NotFound(w, r)
+		}
+	})
+
 	// Reference.
 	mux.HandleFunc("GET /reference", func(w http.ResponseWriter, r *http.Request) {
 		views.ReferenceIndex(layers, agentPrims, grammars).Render(r.Context(), w)

@@ -2370,6 +2370,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{
 			SpaceID:    space.ID,
+			ParentID:   strings.TrimSpace(r.FormValue("parent_id")),
 			Kind:       nodeKind,
 			Title:      title,
 			Body:       intentBody,
