@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS magic_link_tokens (
 // Register adds auth routes to the mux.
 func (a *Auth) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/login", a.handleLogin)
+	mux.HandleFunc("GET /auth/google", a.handleGoogleOAuth)
 	mux.HandleFunc("GET /auth/callback", a.handleCallback)
 	mux.HandleFunc("POST /auth/logout", a.handleLogout)
 	mux.HandleFunc("GET /auth/error", a.handleAuthError)
@@ -212,7 +213,7 @@ func (a *Auth) OptionalAuth(next http.HandlerFunc) http.Handler {
 // Handlers
 // ────────────────────────────────────────────────────────────────────
 
-func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (a *Auth) handleGoogleOAuth(w http.ResponseWriter, r *http.Request) {
 	state := newID()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "oauth_state",
@@ -810,4 +811,94 @@ func newID() string {
 		panic("crypto/rand: " + err.Error())
 	}
 	return hex.EncodeToString(b)
+}
+
+// handleLogin renders the login page with Google OAuth and email magic link options.
+func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign in — lovyou.ai</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{max-width:400px;width:100%;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+    h1{margin:0 0 .25rem;font-size:1.4rem;font-weight:700;color:#f0ede8}
+    .sub{margin:0 0 2rem;font-size:.9rem;color:#78756e}
+    .btn-google{display:flex;align-items:center;justify-content:center;gap:.65rem;width:100%;padding:.75rem 1rem;background:#fff;color:#1a1a1a;border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s}
+    .btn-google:hover{background:#f0f0f0}
+    .btn-google svg{flex-shrink:0}
+    .divider{display:flex;align-items:center;gap:.75rem;margin:1.5rem 0;color:#4a4844;font-size:.8rem}
+    .divider::before,.divider::after{content:'';flex:1;border-top:1px solid #2a2a2e}
+    details{border:1px solid #2a2a2e;border-radius:8px;overflow:hidden}
+    summary{padding:.75rem 1rem;cursor:pointer;font-size:.9rem;color:#c4a882;list-style:none;display:flex;align-items:center;justify-content:space-between;user-select:none}
+    summary::-webkit-details-marker{display:none}
+    summary::after{content:'▾';transition:transform .2s;font-size:.75rem;color:#78756e}
+    details[open] summary::after{transform:rotate(-180deg)}
+    .email-body{padding:1rem;border-top:1px solid #2a2a2e}
+    label{display:block;margin-bottom:.4rem;font-size:.8rem;color:#78756e}
+    input[type=email]{width:100%;padding:.65rem .8rem;background:#0d0d0d;border:1px solid #3a3a3f;border-radius:6px;color:#f0ede8;font-size:.95rem;outline:none;transition:border-color .15s}
+    input[type=email]:focus{border-color:#e8a0b8}
+    .btn-email{margin-top:.75rem;width:100%;padding:.65rem;background:#e8a0b8;color:#0d0d0d;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
+    .btn-email:hover{background:#d48aa0}
+    .sent-msg{display:none;padding:.75rem 1rem;font-size:.85rem;color:#a0c4a0;background:#0a1a0a;border-radius:6px;margin-top:.75rem}
+    details[open] .email-body{display:block}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in</h1>
+    <p class="sub">to lovyou.ai</p>
+
+    <a href="/auth/google" class="btn-google">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </a>
+
+    <div class="divider">or</div>
+
+    <details>
+      <summary>Use email instead</summary>
+      <div class="email-body">
+        <form method="POST" action="/auth/magic-link/request" onsubmit="handleEmailSubmit(event, this)">
+          <label for="ml-email">Email address</label>
+          <input type="email" id="ml-email" name="email" placeholder="you@example.com" required autocomplete="email">
+          <button type="submit" class="btn-email">Send sign-in link</button>
+        </form>
+        <div class="sent-msg" id="ml-sent">Check your email — a sign-in link is on its way.</div>
+      </div>
+    </details>
+  </div>
+  <script>
+    function handleEmailSubmit(e, form) {
+      e.preventDefault();
+      var email = form.email.value.trim();
+      if (!email) return;
+      fetch('/auth/magic-link/request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'email=' + encodeURIComponent(email)
+      }).then(function(r) {
+        if (r.ok) {
+          form.style.display = 'none';
+          document.getElementById('ml-sent').style.display = 'block';
+        } else {
+          alert('Something went wrong. Please try again.');
+        }
+      }).catch(function() {
+        // Fallback: submit the form normally so the server handles it.
+        form.submit();
+      });
+    }
+  </script>
+</body>
+</html>`)
 }

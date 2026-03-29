@@ -1,19 +1,35 @@
-# Build Report — Fix: Multi-agent auto-response trigger on convene
+# Auth: email magic link for Workspace-blocked users
 
-## Gap
-Critic found three violations in commit 64338c2 related to the `convene` op and council Mind logic.
+## What changed
 
-## Changes
+**auth/auth.go** — all changes in one file:
 
-### graph/handlers.go — convene op
-**Invariant 11 (IDENTITY) fix.** Removed the fallback that stored a display name in `agentIDs` when `ResolveUserID` returned empty. Unresolvable names are now skipped silently. A name is not an ID — smuggling it into a field that expects an ID corrupts `Tags` and downstream `AuthorID` in `CreateNode`.
+1. **Register()**: Added `GET /auth/google` route mapped to `handleGoogleOAuth`.
 
-### graph/mind.go — OnCouncilConvened
-**Invariant 13 (BOUNDED) fix.** Added a cap of 10 agents per council. If `council.Tags` exceeds 10, the excess is dropped and a log line is emitted. This prevents unbounded sequential Claude API calls in a single goroutine.
+2. **Renamed `handleLogin` → `handleGoogleOAuth`**: The existing login handler (which immediately redirects to Google OAuth) is now at `/auth/google`. This keeps the existing OAuth flow intact.
 
-### graph/mind.go — buildCouncilPrompt
-**Context propagation fix.** Changed `buildCouncilPrompt` to accept a `ctx context.Context` parameter and pass it to `m.store.GetAgentPersona`. Previously `context.Background()` was used, bypassing the `replyTimeout` set in `OnCouncilConvened`. A stalled `GetAgentPersona` call will now be cancelled when the parent context times out.
+3. **New `handleLogin`**: Renders a proper login page at `GET /auth/login` with:
+   - Google OAuth button linking to `/auth/google`
+   - Collapsible `<details>` "Use email instead" section
+   - Email form that posts to `/auth/magic-link/request`
+   - JS-enhanced submit: shows inline "Check your email" confirmation; falls back to plain form POST if fetch fails
+
+4. **Already present (iter 306, not changed)**:
+   - `magic_link_tokens` table in `migrate()`
+   - `handleMagicLinkRequestForm`, `handleMagicLinkRequest`, `handleMagicLinkVerify`
+   - `requestMagicLink`, `verifyMagicLink`, `upsertUserByEmail`
+   - Full test suite: happy path, expired token, used token, invalid token, idempotent user
 
 ## Verification
-- `go.exe build -buildvcs=false ./...` — clean
-- `go.exe test ./...` — all pass (graph: 2.784s)
+
+```
+go.exe build -buildvcs=false ./...   ✅
+go.exe test -buildvcs=false ./...    ✅ (all packages pass)
+```
+
+## Flow after this change
+
+1. User visits `/auth/login` → sees Google button + "Use email instead" collapsible
+2. Google-blocked users expand the section, enter email, click send
+3. Server generates token, stores hash, logs the link (email delivery stubbed)
+4. User clicks link → `GET /auth/magic-link/verify?token=...` → session created → redirect to `/app`
