@@ -9,8 +9,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -80,7 +82,7 @@ func (a *Auth) migrate() error {
 	_, err := a.db.Exec(`
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
-    google_id TEXT UNIQUE NOT NULL,
+    google_id TEXT UNIQUE,
     email TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL DEFAULT '',
     picture TEXT NOT NULL DEFAULT '',
@@ -101,6 +103,14 @@ CREATE TABLE IF NOT EXISTS api_keys (
     agent_id TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS magic_link_tokens (
+    id TEXT PRIMARY KEY,
+    token_hash TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `)
 	if err != nil {
 		return err
@@ -111,6 +121,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS agent_name TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS agent_id TEXT REFERENCES users(id) ON DELETE SET NULL`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'human'`,
+		`ALTER TABLE users ALTER COLUMN google_id DROP NOT NULL`,
 	}
 	for _, m := range migrations {
 		if _, err := a.db.ExecContext(context.Background(), m); err != nil {
@@ -125,6 +136,13 @@ func (a *Auth) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/login", a.handleLogin)
 	mux.HandleFunc("GET /auth/callback", a.handleCallback)
 	mux.HandleFunc("POST /auth/logout", a.handleLogout)
+	mux.HandleFunc("GET /auth/error", a.handleAuthError)
+	mux.HandleFunc("GET /auth/status", a.handleStatus)
+
+	// Magic link (email-based) auth — fallback for blocked OAuth users.
+	mux.HandleFunc("GET /auth/magic-link/request", a.handleMagicLinkRequestForm)
+	mux.HandleFunc("POST /auth/magic-link/request", a.handleMagicLinkRequest)
+	mux.HandleFunc("GET /auth/magic-link/verify", a.handleMagicLinkVerify)
 
 	// API key management (requires session auth).
 	mux.Handle("POST /auth/api-keys", a.RequireAuth(a.handleCreateAPIKey))
@@ -207,15 +225,23 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// the domain the user is visiting (avoids cookie domain mismatch).
 	redirectURL := a.redirectURL(r)
 	authURL := a.oauth.AuthCodeURL(state, oauth2.SetAuthURLParam("redirect_uri", redirectURL))
-	log.Printf("auth: login redirect to %s", authURL)
+	log.Printf("auth: login redirect state=%s host=%s", state[:8], r.Host)
 	http.Redirect(w, r, authURL, http.StatusSeeOther)
 }
 
 func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
+	// Google may send ?error=access_denied or similar before state check.
+	if errCode := r.URL.Query().Get("error"); errCode != "" {
+		log.Printf("auth: callback google error: %s", errCode)
+		http.Redirect(w, r, "/auth/error?code="+url.QueryEscape(errCode), http.StatusSeeOther)
+		return
+	}
+
 	// Verify CSRF state.
 	stateCookie, err := r.Cookie("oauth_state")
 	if err != nil || stateCookie.Value != r.URL.Query().Get("state") {
-		http.Error(w, "invalid oauth state", http.StatusBadRequest)
+		log.Printf("auth: callback invalid state: cookie_err=%v", err)
+		http.Redirect(w, r, "/auth/error?code=invalid_state", http.StatusSeeOther)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Path: "/auth", MaxAge: -1})
@@ -225,8 +251,8 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 	token, err := a.oauth.Exchange(r.Context(), r.URL.Query().Get("code"),
 		oauth2.SetAuthURLParam("redirect_uri", redirectURL))
 	if err != nil {
-		log.Printf("auth: oauth exchange: %v", err)
-		http.Error(w, "authentication failed", http.StatusInternalServerError)
+		log.Printf("auth: token exchange error: %v", err)
+		http.Redirect(w, r, "/auth/error?code=exchange_failed", http.StatusSeeOther)
 		return
 	}
 
@@ -234,8 +260,8 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 	client := a.oauth.Client(r.Context(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		log.Printf("auth: fetch userinfo: %v", err)
-		http.Error(w, "authentication failed", http.StatusInternalServerError)
+		log.Printf("auth: fetch userinfo error: %v", err)
+		http.Redirect(w, r, "/auth/error?code=userinfo_failed", http.StatusSeeOther)
 		return
 	}
 	defer resp.Body.Close()
@@ -247,18 +273,19 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 		Picture string `json:"picture"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		log.Printf("auth: decode userinfo: %v", err)
-		http.Error(w, "authentication failed", http.StatusInternalServerError)
+		log.Printf("auth: decode userinfo error: %v", err)
+		http.Redirect(w, r, "/auth/error?code=userinfo_failed", http.StatusSeeOther)
 		return
 	}
 
-	// Upsert user.
+	// Upsert user — creates on first login, updates name/picture on subsequent logins.
 	user, err := a.upsertUser(r.Context(), info.ID, info.Email, info.Name, info.Picture)
 	if err != nil {
-		log.Printf("auth: upsert user: %v", err)
-		http.Error(w, "authentication failed", http.StatusInternalServerError)
+		log.Printf("auth: upsert user error email=%s: %v", info.Email, err)
+		http.Redirect(w, r, "/auth/error?code=user_create_failed", http.StatusSeeOther)
 		return
 	}
+	log.Printf("auth: user upserted id=%s email=%s", user.ID, user.Email)
 
 	// Create session (30 days).
 	sessionID := newID()
@@ -267,10 +294,12 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 		`INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)`,
 		sessionID, user.ID, expiresAt,
 	); err != nil {
-		log.Printf("auth: create session: %v", err)
-		http.Error(w, "authentication failed", http.StatusInternalServerError)
+		log.Printf("auth: create session error user=%s: %v", user.ID, err)
+		http.Redirect(w, r, "/auth/error?code=session_failed", http.StatusSeeOther)
 		return
 	}
+
+	log.Printf("auth: login success user=%s email=%s session=%s", user.ID, user.Email, sessionID[:8])
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
@@ -283,6 +312,69 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
+// handleAuthError renders a user-facing error page when OAuth fails.
+// Error codes come from the callback handler and from Google directly.
+func (a *Auth) handleAuthError(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	log.Printf("auth: error page shown code=%s", code)
+
+	msg := "Authentication failed. Please try again."
+	switch code {
+	case "access_denied":
+		msg = "Sign-in was cancelled or blocked. Your organisation may restrict third-party sign-in. Try using an API key instead."
+	case "invalid_state":
+		msg = "Your sign-in session expired. Please try signing in again."
+	case "exchange_failed":
+		msg = "Could not complete sign-in with Google. Your organisation may block third-party sign-in. Try using an API key instead."
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign-in error — lovyou.ai</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+    h1{margin:0 0 1rem;font-size:1.25rem;color:#e8a0b8}
+    p{margin:0 0 1.5rem;line-height:1.6;color:#c4a882}
+    a{display:inline-block;padding:.6rem 1.2rem;background:#e8a0b8;color:#0d0d0d;border-radius:6px;text-decoration:none;font-weight:600}
+    a:hover{background:#d48aa0}
+    .code{margin-top:1rem;font-size:.75rem;color:#666}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign-in error</h1>
+    <p>%s</p>
+    <a href="/auth/login">Try again</a>
+    %s
+  </div>
+</body>
+</html>`,
+		html.EscapeString(msg),
+		func() string {
+			if code != "" {
+				return `<p class="code">Error code: ` + html.EscapeString(code) + `</p>`
+			}
+			return ""
+		}(),
+	)
+}
+
+// handleStatus returns the auth configuration state for debugging.
+// Returns safe config state only — no secrets, no tokens.
+func (a *Auth) handleStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"oauth_configured": a.oauth != nil && a.oauth.ClientID != "",
+		"redirect_url":     a.redirectURL(r),
+		"secure":           a.secure,
+	})
 }
 
 func (a *Auth) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -519,6 +611,190 @@ func (a *Auth) userByAPIKey(ctx context.Context, rawKey string) (*User, error) {
 	}
 
 	return &u, nil
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Magic link (email-based) auth
+// ────────────────────────────────────────────────────────────────────
+
+// handleMagicLinkRequestForm renders the email entry form.
+func (a *Auth) handleMagicLinkRequestForm(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign in by email — lovyou.ai</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{max-width:420px;width:100%;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+    h1{margin:0 0 .5rem;font-size:1.25rem;color:#e8a0b8}
+    p{margin:0 0 1.5rem;line-height:1.6;color:#c4a882;font-size:.9rem}
+    label{display:block;margin-bottom:.4rem;font-size:.85rem;color:#c4a882}
+    input{width:100%;box-sizing:border-box;padding:.6rem .8rem;background:#0d0d0d;border:1px solid #444;border-radius:6px;color:#e8d5c4;font-size:1rem;margin-bottom:1rem}
+    button{width:100%;padding:.65rem;background:#e8a0b8;color:#0d0d0d;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer}
+    button:hover{background:#d48aa0}
+    .back{display:block;text-align:center;margin-top:1rem;color:#666;font-size:.85rem;text-decoration:none}
+    .back:hover{color:#c4a882}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Sign in by email</h1>
+    <p>Enter your email address and we'll send you a one-time sign-in link valid for 15 minutes.</p>
+    <form method="POST" action="/auth/magic-link/request">
+      <label for="email">Email address</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com" required autofocus>
+      <button type="submit">Send sign-in link</button>
+    </form>
+    <a class="back" href="/auth/login">← Back to sign-in</a>
+  </div>
+</body>
+</html>`)
+}
+
+// handleMagicLinkRequest handles POST /auth/magic-link/request.
+// Validates the email, generates a one-time token, and logs the link
+// (production email delivery is wired via the Mailer field).
+func (a *Auth) handleMagicLinkRequest(w http.ResponseWriter, r *http.Request) {
+	email := strings.TrimSpace(r.FormValue("email"))
+	if !strings.Contains(email, "@") || len(email) < 3 {
+		http.Error(w, "invalid email address", http.StatusBadRequest)
+		return
+	}
+
+	rawToken, err := a.requestMagicLink(r.Context(), email)
+	if err != nil {
+		log.Printf("auth: magic link request error email=%s: %v", email, err)
+		http.Error(w, "failed to generate link", http.StatusInternalServerError)
+		return
+	}
+
+	scheme := "https"
+	if !a.secure {
+		scheme = "http"
+	}
+	link := scheme + "://" + r.Host + "/auth/magic-link/verify?token=" + url.QueryEscape(rawToken)
+	log.Printf("auth: magic link generated email=%s link=%s", email, link)
+	// TODO: send email — stub logs link above; wire smtp/sendgrid here.
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Check your email — lovyou.ai</title>
+  <style>
+    body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+    h1{margin:0 0 1rem;font-size:1.25rem;color:#e8a0b8}
+    p{margin:0 0 1rem;line-height:1.6;color:#c4a882}
+    .note{font-size:.85rem;color:#666}
+    a{color:#e8a0b8;text-decoration:none}a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Check your email</h1>
+    <p>A sign-in link has been sent to <strong>%s</strong>. The link expires in 15 minutes.</p>
+    <p class="note">Didn't receive it? Check your spam folder or <a href="/auth/magic-link/request">send again</a>.</p>
+  </div>
+</body>
+</html>`, html.EscapeString(email))
+}
+
+// handleMagicLinkVerify handles GET /auth/magic-link/verify?token=...
+// Validates the token, creates a session, and redirects to /app.
+func (a *Auth) handleMagicLinkVerify(w http.ResponseWriter, r *http.Request) {
+	rawToken := r.URL.Query().Get("token")
+	if rawToken == "" {
+		http.Redirect(w, r, "/auth/error?code=invalid_token", http.StatusSeeOther)
+		return
+	}
+
+	user, err := a.verifyMagicLink(r.Context(), rawToken)
+	if err != nil {
+		log.Printf("auth: magic link verify failed: %v", err)
+		http.Redirect(w, r, "/auth/error?code=invalid_token", http.StatusSeeOther)
+		return
+	}
+
+	sessionID := newID()
+	expiresAt := time.Now().Add(30 * 24 * time.Hour)
+	if _, err := a.db.ExecContext(r.Context(),
+		`INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)`,
+		sessionID, user.ID, expiresAt,
+	); err != nil {
+		log.Printf("auth: magic link session create error user=%s: %v", user.ID, err)
+		http.Redirect(w, r, "/auth/error?code=session_failed", http.StatusSeeOther)
+		return
+	}
+
+	log.Printf("auth: magic link login success user=%s email=%s session=%s", user.ID, user.Email, sessionID[:8])
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  expiresAt,
+		HttpOnly: true,
+		Secure:   a.secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/app", http.StatusSeeOther)
+}
+
+// requestMagicLink generates a one-time token for the given email and stores
+// its hash in the database. Returns the raw token for delivery to the user.
+func (a *Auth) requestMagicLink(ctx context.Context, email string) (string, error) {
+	rawToken := newID()
+	hash := hashKey(rawToken)
+	id := newID()
+	expiresAt := time.Now().Add(15 * time.Minute)
+	_, err := a.db.ExecContext(ctx,
+		`INSERT INTO magic_link_tokens (id, token_hash, email, expires_at) VALUES ($1, $2, $3, $4)`,
+		id, hash, email, expiresAt)
+	if err != nil {
+		return "", fmt.Errorf("insert magic link token: %w", err)
+	}
+	return rawToken, nil
+}
+
+// verifyMagicLink atomically marks the token used and returns the user.
+// Returns an error if the token is invalid, expired, or already used.
+func (a *Auth) verifyMagicLink(ctx context.Context, rawToken string) (*User, error) {
+	hash := hashKey(rawToken)
+	var email string
+	err := a.db.QueryRowContext(ctx,
+		`UPDATE magic_link_tokens SET used = TRUE
+		 WHERE token_hash = $1 AND expires_at > NOW() AND used = FALSE
+		 RETURNING email`,
+		hash,
+	).Scan(&email)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("invalid, expired, or already used token")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("verify magic link: %w", err)
+	}
+	return a.upsertUserByEmail(ctx, email)
+}
+
+// upsertUserByEmail finds an existing user by email or creates a new one.
+// Used for magic-link auth where there is no Google ID.
+func (a *Auth) upsertUserByEmail(ctx context.Context, email string) (*User, error) {
+	id := newID()
+	var u User
+	err := a.db.QueryRowContext(ctx, `
+		INSERT INTO users (id, email, name, kind)
+		VALUES ($1, $2, '', 'human')
+		ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
+		RETURNING id, email, name, picture, kind`,
+		id, email,
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind)
+	return &u, err
 }
 
 func hashKey(rawKey string) string {

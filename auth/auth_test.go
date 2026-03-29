@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
+	"golang.org/x/oauth2"
 	_ "github.com/lib/pq"
 )
 
@@ -192,4 +194,348 @@ func TestRequireAuth(t *testing.T) {
 			t.Errorf("status = %d, want %d (redirect to login)", w.Code, http.StatusSeeOther)
 		}
 	})
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Callback handler tests (no DB required)
+// ────────────────────────────────────────────────────────────────────
+
+func newTestAuth() *Auth {
+	return &Auth{
+		secure: false,
+		oauth:  &oauth2.Config{ClientID: "test-client", ClientSecret: "test-secret"},
+	}
+}
+
+// TestCallbackInvalidState verifies that a state mismatch redirects to /auth/error.
+func TestCallbackInvalidState(t *testing.T) {
+	a := newTestAuth()
+	req := httptest.NewRequest("GET", "/auth/callback?state=wrong&code=test", nil)
+	req.AddCookie(&http.Cookie{Name: "oauth_state", Value: "correct"})
+	w := httptest.NewRecorder()
+	a.handleCallback(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusSeeOther)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "invalid_state") {
+		t.Errorf("expected redirect to /auth/error?code=invalid_state, got %q", loc)
+	}
+}
+
+// TestCallbackExpiredState verifies that a missing oauth_state cookie (expired)
+// redirects to /auth/error.
+func TestCallbackExpiredState(t *testing.T) {
+	a := newTestAuth()
+	req := httptest.NewRequest("GET", "/auth/callback?state=some_state&code=test", nil)
+	// No oauth_state cookie — simulates an expired or missing state.
+	w := httptest.NewRecorder()
+	a.handleCallback(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusSeeOther)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "invalid_state") {
+		t.Errorf("expected redirect to /auth/error?code=invalid_state, got %q", loc)
+	}
+}
+
+// TestCallbackGoogleError verifies that a Google error param redirects to /auth/error
+// before any state or token exchange.
+func TestCallbackGoogleError(t *testing.T) {
+	a := newTestAuth()
+	req := httptest.NewRequest("GET", "/auth/callback?error=access_denied", nil)
+	w := httptest.NewRecorder()
+	a.handleCallback(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusSeeOther)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.Contains(loc, "access_denied") {
+		t.Errorf("expected redirect to include access_denied error code, got %q", loc)
+	}
+	if !strings.HasPrefix(loc, "/auth/error") {
+		t.Errorf("expected redirect to /auth/error, got %q", loc)
+	}
+}
+
+// TestAuthErrorPage verifies that the error page renders with the right message.
+func TestAuthErrorPage(t *testing.T) {
+	a := newTestAuth()
+
+	t.Run("access_denied", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/error?code=access_denied", nil)
+		w := httptest.NewRecorder()
+		a.handleAuthError(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, "Sign-in was cancelled") {
+			t.Errorf("expected 'Sign-in was cancelled' in body, got: %s", body)
+		}
+		if !strings.Contains(body, "access_denied") {
+			t.Errorf("expected error code in body, got: %s", body)
+		}
+	})
+
+	t.Run("invalid_state", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/error?code=invalid_state", nil)
+		w := httptest.NewRecorder()
+		a.handleAuthError(w, req)
+
+		body := w.Body.String()
+		if !strings.Contains(body, "expired") {
+			t.Errorf("expected 'expired' in body for invalid_state, got: %s", body)
+		}
+	})
+
+	t.Run("no_code", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/error", nil)
+		w := httptest.NewRecorder()
+		a.handleAuthError(w, req)
+
+		body := w.Body.String()
+		if !strings.Contains(body, "Authentication failed") {
+			t.Errorf("expected default message in body, got: %s", body)
+		}
+	})
+
+	t.Run("try_again_link", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/auth/error?code=exchange_failed", nil)
+		w := httptest.NewRecorder()
+		a.handleAuthError(w, req)
+
+		body := w.Body.String()
+		if !strings.Contains(body, `href="/auth/login"`) {
+			t.Errorf("expected retry link in error page, got: %s", body)
+		}
+	})
+}
+
+// TestAuthStatus verifies the /auth/status endpoint returns safe config state.
+func TestAuthStatus(t *testing.T) {
+	a := newTestAuth()
+	req := httptest.NewRequest("GET", "/auth/status", nil)
+	req.Host = "localhost:8080"
+	w := httptest.NewRecorder()
+	a.handleStatus(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `"oauth_configured":true`) {
+		t.Errorf("expected oauth_configured=true, got: %s", body)
+	}
+	if !strings.Contains(body, "localhost:8080") {
+		t.Errorf("expected redirect_url with host in body, got: %s", body)
+	}
+	// Must not expose secrets.
+	if strings.Contains(body, "test-secret") {
+		t.Errorf("status endpoint must not expose client_secret, got: %s", body)
+	}
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Magic link tests
+// ────────────────────────────────────────────────────────────────────
+
+// TestMagicLinkRequestInvalidEmail verifies that invalid emails are rejected
+// before touching the database.
+func TestMagicLinkRequestInvalidEmail(t *testing.T) {
+	a := newTestAuth()
+
+	cases := []struct{ name, email string }{
+		{"empty", ""},
+		{"no_at", "notanemail"},
+		{"at_only", "@"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := "email=" + tc.email
+			req := httptest.NewRequest("POST", "/auth/magic-link/request", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			a.handleMagicLinkRequest(w, req)
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("email=%q: status = %d, want %d", tc.email, w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+// TestMagicLinkVerifyMissingToken verifies that a missing token redirects to the error page.
+func TestMagicLinkVerifyMissingToken(t *testing.T) {
+	a := newTestAuth()
+	req := httptest.NewRequest("GET", "/auth/magic-link/verify", nil)
+	w := httptest.NewRecorder()
+	a.handleMagicLinkVerify(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusSeeOther)
+	}
+	loc := w.Header().Get("Location")
+	if !strings.HasPrefix(loc, "/auth/error") {
+		t.Errorf("expected redirect to /auth/error, got %q", loc)
+	}
+}
+
+// TestMagicLinkHappyPath tests the full request+verify flow with a real database.
+func TestMagicLinkHappyPath(t *testing.T) {
+	a, db := testAuth(t)
+	ctx := context.Background()
+
+	email := "magic-happy@test.invalid"
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM magic_link_tokens WHERE email = $1`, email)
+		db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = $1)`, email)
+		db.ExecContext(ctx, `DELETE FROM users WHERE email = $1`, email)
+	})
+
+	rawToken, err := a.requestMagicLink(ctx, email)
+	if err != nil {
+		t.Fatalf("requestMagicLink: %v", err)
+	}
+	if rawToken == "" {
+		t.Fatal("expected non-empty token")
+	}
+
+	user, err := a.verifyMagicLink(ctx, rawToken)
+	if err != nil {
+		t.Fatalf("verifyMagicLink: %v", err)
+	}
+	if user.Email != email {
+		t.Errorf("user.Email = %q, want %q", user.Email, email)
+	}
+	if user.Kind != "human" {
+		t.Errorf("user.Kind = %q, want 'human'", user.Kind)
+	}
+
+	// Second verify must fail — token already used.
+	_, err = a.verifyMagicLink(ctx, rawToken)
+	if err == nil {
+		t.Error("second verify should fail (token already used)")
+	}
+}
+
+// TestMagicLinkExpiredToken verifies that expired tokens are rejected.
+func TestMagicLinkExpiredToken(t *testing.T) {
+	a, db := testAuth(t)
+	ctx := context.Background()
+
+	email := "magic-expired@test.invalid"
+	rawToken := newID()
+	hash := hashKey(rawToken)
+	id := newID()
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO magic_link_tokens (id, token_hash, email, expires_at)
+		 VALUES ($1, $2, $3, NOW() - INTERVAL '1 minute')`,
+		id, hash, email)
+	if err != nil {
+		t.Fatalf("insert expired token: %v", err)
+	}
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM magic_link_tokens WHERE id = $1`, id)
+	})
+
+	_, err = a.verifyMagicLink(ctx, rawToken)
+	if err == nil {
+		t.Error("expired token should be rejected")
+	}
+}
+
+// TestMagicLinkInvalidToken verifies that bogus tokens are rejected.
+func TestMagicLinkInvalidToken(t *testing.T) {
+	a, _ := testAuth(t)
+	ctx := context.Background()
+
+	_, err := a.verifyMagicLink(ctx, "totally-bogus-token-that-does-not-exist-in-db")
+	if err == nil {
+		t.Error("invalid token should be rejected")
+	}
+}
+
+// TestMagicLinkIdempotentUser verifies that two magic link logins with the same
+// email resolve to the same user — not two separate accounts.
+func TestMagicLinkIdempotentUser(t *testing.T) {
+	a, db := testAuth(t)
+	ctx := context.Background()
+
+	email := "magic-idem@test.invalid"
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM magic_link_tokens WHERE email = $1`, email)
+		db.ExecContext(ctx, `DELETE FROM users WHERE email = $1`, email)
+	})
+
+	tok1, err := a.requestMagicLink(ctx, email)
+	if err != nil {
+		t.Fatalf("requestMagicLink 1: %v", err)
+	}
+	tok2, err := a.requestMagicLink(ctx, email)
+	if err != nil {
+		t.Fatalf("requestMagicLink 2: %v", err)
+	}
+
+	u1, err := a.verifyMagicLink(ctx, tok1)
+	if err != nil {
+		t.Fatalf("verifyMagicLink 1: %v", err)
+	}
+	u2, err := a.verifyMagicLink(ctx, tok2)
+	if err != nil {
+		t.Fatalf("verifyMagicLink 2: %v", err)
+	}
+
+	if u1.ID != u2.ID {
+		t.Errorf("same email should resolve to same user: u1=%s u2=%s", u1.ID, u2.ID)
+	}
+}
+
+// TestConcurrentSessions verifies that two active sessions for the same user
+// both resolve correctly. Requires a real database.
+func TestConcurrentSessions(t *testing.T) {
+	a, db := testAuth(t)
+	ctx := context.Background()
+
+	userID := "concurrent-session-test"
+	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'human')`,
+		userID, "google:concurrent-test", "concurrent@test.com", "Concurrent Tester")
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	t.Cleanup(func() {
+		db.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID)
+		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	})
+
+	// Create two sessions for the same user.
+	session1 := newID()
+	session2 := newID()
+	exp := "NOW() + INTERVAL '30 days'"
+	db.ExecContext(ctx, `INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, `+exp+`)`, session1, userID)
+	db.ExecContext(ctx, `INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, `+exp+`)`, session2, userID)
+
+	// Both sessions should resolve to the same user.
+	u1, err := a.userBySession(ctx, session1)
+	if err != nil {
+		t.Fatalf("session1 lookup: %v", err)
+	}
+	u2, err := a.userBySession(ctx, session2)
+	if err != nil {
+		t.Fatalf("session2 lookup: %v", err)
+	}
+
+	if u1.ID != userID || u2.ID != userID {
+		t.Errorf("concurrent sessions resolved to wrong user: session1=%s session2=%s want=%s",
+			u1.ID, u2.ID, userID)
+	}
+	if u1.Email != u2.Email {
+		t.Errorf("sessions resolved to different users: u1.Email=%s u2.Email=%s", u1.Email, u2.Email)
+	}
 }
