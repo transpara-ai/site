@@ -208,10 +208,24 @@ func main() {
 			})
 		}
 
+		// Find nodes that reference this goal in their causes (multi-parent).
+		alsoServes, _ := graphStore.ListNodes(r.Context(), graph.ListNodesParams{
+			SpaceID:  hiveSpaceID,
+			CausedBy: id,
+		})
+		var crossRefs []views.VisionBreadcrumb
+		for _, ref := range alsoServes {
+			if ref.State != "done" && ref.State != "closed" && ref.ID != goal.ID {
+				crossRefs = append(crossRefs, views.VisionBreadcrumb{
+					ID: ref.ID, Title: ref.Title, Kind: ref.Kind,
+				})
+			}
+		}
+
 		views.VisionGoalPage(
 			views.VisionBreadcrumb{ID: goal.ID, Title: goal.Title, Kind: goal.Kind},
 			goal.Body, goal.State,
-			breadcrumbs, childNodes,
+			breadcrumbs, childNodes, crossRefs,
 		).Render(r.Context(), w)
 	})
 

@@ -212,6 +212,7 @@ type ListNodesParams struct {
 	Query    string     // ILIKE search on title/body, empty = all
 	After    *time.Time // only nodes created after this time, nil = all
 	Pinned   bool       // if true, only return pinned nodes
+	CausedBy string     // if set, return nodes where this ID is in their causes array
 	Limit    int        // max results, 0 = default (500)
 }
 
@@ -887,6 +888,11 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 	}
 	if p.Pinned {
 		query += " AND n.pinned = true"
+	}
+	if p.CausedBy != "" {
+		query += fmt.Sprintf(" AND $%d = ANY(n.causes)", argN)
+		args = append(args, p.CausedBy)
+		argN++
 	}
 	if p.Query != "" {
 		query += fmt.Sprintf(" AND (n.title ILIKE '%%' || $%d || '%%' OR n.body ILIKE '%%' || $%d || '%%')", argN, argN)
