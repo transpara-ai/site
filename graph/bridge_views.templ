@@ -1,0 +1,248 @@
+package graph
+
+import "fmt"
+
+// bridgeShell wraps bridge pages with the standard HTML boilerplate.
+templ bridgeShell(title string, user ViewUser) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } — lovyou.ai</title>
+			<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
+			@themeBlock()
+		</head>
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
+			@simpleHeader(user)
+			<main class="flex-1 w-full">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}
+
+// BridgeIndexPage renders the personal action queue.
+templ BridgeIndexPage(pending []BridgeAction, recent []BridgeAction, user ViewUser) {
+	@bridgeShell("Agent Bridge", user) {
+		<div class="max-w-4xl mx-auto px-6 py-8">
+			<h1 class="text-2xl font-semibold text-warm mb-6">Your Actions</h1>
+
+			<div id="bridge-feed" hx-get="/bridge/feed" hx-trigger="every 5s" hx-swap="outerHTML">
+				@BridgeActionFeed(pending)
+			</div>
+
+			if len(recent) > 0 {
+				<div class="mt-8">
+					<h2 class="text-lg font-medium text-warm-faint mb-4">Recent Decisions</h2>
+					<div class="space-y-2">
+						for _, a := range recent {
+							<div class="bg-surface border border-edge rounded-lg px-4 py-3 flex items-center justify-between">
+								<div>
+									<span class="text-sm font-medium text-warm">{ a.AgentName }</span>
+									<span class="text-sm text-warm-faint ml-2">{ a.Summary }</span>
+								</div>
+								<div class="flex items-center gap-2">
+									@bridgeStatusBadge(a.Status)
+									<span class="text-xs text-warm-faint">{ formatTimeAgo(a.CreatedAt) }</span>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+// BridgeActionFeed is the HTMX-polled partial showing pending actions.
+templ BridgeActionFeed(pending []BridgeAction) {
+	<div id="bridge-feed" hx-get="/bridge/feed" hx-trigger="every 5s" hx-swap="outerHTML">
+		if len(pending) == 0 {
+			<div class="bg-surface border border-edge rounded-lg px-6 py-8 text-center">
+				<p class="text-warm-faint">No pending actions. Your agents are running smoothly.</p>
+			</div>
+		} else {
+			<div class="space-y-3">
+				<p class="text-sm text-warm-faint">{ fmt.Sprintf("%d pending", len(pending)) }</p>
+				for _, a := range pending {
+					@bridgeActionCard(a)
+				}
+			</div>
+		}
+	</div>
+}
+
+templ bridgeActionCard(a BridgeAction) {
+	<div class="bg-surface border border-edge rounded-lg px-5 py-4">
+		<div class="flex items-start justify-between mb-2">
+			<div>
+				<span class="text-sm font-semibold text-brand">{ a.AgentName }</span>
+				<span class="text-sm text-warm-faint ml-2">{ a.ActionType }</span>
+			</div>
+			@bridgeAuthorityBadge(a.Authority)
+		</div>
+		<p class="text-warm mb-3">{ a.Summary }</p>
+		<div class="flex items-center gap-2">
+			<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/bridge/actions/%s/decide", a.ID)) } class="flex gap-2">
+				<input type="hidden" name="decision" value="approved"/>
+				<button type="submit" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-md">
+					Approve
+				</button>
+			</form>
+			<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/bridge/actions/%s/decide", a.ID)) } class="flex gap-2">
+				<input type="hidden" name="decision" value="rejected"/>
+				<button type="submit" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-sm rounded-md">
+					Reject
+				</button>
+			</form>
+			<a href={ templ.SafeURL(fmt.Sprintf("/bridge/actions/%s", a.ID)) }
+			   class="px-3 py-1.5 bg-surface border border-edge hover:border-warm-faint text-warm-faint text-sm rounded-md">
+				Detail
+			</a>
+			<span class="text-xs text-warm-faint ml-auto">{ formatTimeAgo(a.CreatedAt) }</span>
+		</div>
+	</div>
+}
+
+templ bridgeStatusBadge(status string) {
+	switch status {
+		case "approved":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-emerald-900 text-emerald-300">approved</span>
+		case "rejected":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-red-900 text-red-300">rejected</span>
+		case "auto_approved":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-amber-900 text-amber-300">auto</span>
+		default:
+			<span class="px-2 py-0.5 text-xs rounded-full bg-zinc-800 text-zinc-400">{ status }</span>
+	}
+}
+
+templ bridgeAuthorityBadge(authority string) {
+	switch authority {
+		case "required":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-red-900 text-red-300">required</span>
+		case "recommended":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-amber-900 text-amber-300">recommended</span>
+		case "notification":
+			<span class="px-2 py-0.5 text-xs rounded-full bg-zinc-800 text-zinc-400">notification</span>
+	}
+}
+
+// BridgeActionDetailPage renders a single action for review.
+templ BridgeActionDetailPage(action *BridgeAction, user ViewUser) {
+	@bridgeShell("Action Detail", user) {
+		<div class="max-w-2xl mx-auto px-6 py-8">
+			<a href="/bridge/" class="text-sm text-warm-faint hover:text-warm mb-4 block">&larr; Back to actions</a>
+			<h1 class="text-xl font-semibold text-warm mb-2">{ action.Summary }</h1>
+			<div class="flex items-center gap-3 mb-6">
+				<span class="text-sm text-brand">{ action.AgentName }</span>
+				@bridgeAuthorityBadge(action.Authority)
+				@bridgeStatusBadge(action.Status)
+			</div>
+
+			if action.Status == "pending" {
+				<div class="bg-surface border border-edge rounded-lg p-5 mb-6">
+					<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/bridge/actions/%s/decide", action.ID)) }>
+						<div class="mb-4">
+							<label class="block text-sm text-warm-faint mb-1">Notes (optional)</label>
+							<textarea name="notes" rows="3"
+								class="w-full bg-void border border-edge rounded-md px-3 py-2 text-warm text-sm"></textarea>
+						</div>
+						<div class="flex gap-2">
+							<button type="submit" name="decision" value="approved"
+								class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm rounded-md">
+								Approve
+							</button>
+							<button type="submit" name="decision" value="rejected"
+								class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm rounded-md">
+								Reject
+							</button>
+						</div>
+					</form>
+				</div>
+			}
+		</div>
+	}
+}
+
+// BridgeAgentsPage lists all membrane agents.
+templ BridgeAgentsPage(agents []string, user ViewUser) {
+	@bridgeShell("Membrane Agents", user) {
+		<div class="max-w-4xl mx-auto px-6 py-8">
+			<h1 class="text-2xl font-semibold text-warm mb-6">Membrane Agents</h1>
+			if len(agents) == 0 {
+				<p class="text-warm-faint">No membrane agents registered yet.</p>
+			} else {
+				<div class="space-y-3">
+					for _, name := range agents {
+						<a href={ templ.SafeURL(fmt.Sprintf("/bridge/agents/%s", name)) }
+						   class="block bg-surface border border-edge rounded-lg px-5 py-4 hover:border-brand transition-colors">
+							<span class="text-warm font-medium">{ name }</span>
+							<span class="text-warm-faint text-sm ml-2">membrane agent</span>
+						</a>
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+// BridgeAgentDetailPage shows activity for a specific agent.
+templ BridgeAgentDetailPage(name string, events []BridgeEvent, user ViewUser) {
+	@bridgeShell(name+" — Agent Bridge", user) {
+		<div class="max-w-4xl mx-auto px-6 py-8">
+			<a href="/bridge/agents" class="text-sm text-warm-faint hover:text-warm mb-4 block">&larr; All agents</a>
+			<h1 class="text-2xl font-semibold text-warm mb-6">{ name }</h1>
+
+			if len(events) == 0 {
+				<p class="text-warm-faint">No events recorded yet.</p>
+			} else {
+				<div class="space-y-2">
+					for _, e := range events {
+						<div class="bg-surface border border-edge rounded-lg px-4 py-3 flex items-center justify-between">
+							<div>
+								<span class="text-sm font-mono text-brand">{ e.EventType }</span>
+							</div>
+							<span class="text-xs text-warm-faint">{ formatTimeAgo(e.CreatedAt) }</span>
+						</div>
+					}
+				</div>
+			}
+		</div>
+	}
+}
+
+// BridgePreferencesPage renders notification settings.
+templ BridgePreferencesPage(prefs []NotifyPreference, user ViewUser) {
+	@bridgeShell("Notification Preferences", user) {
+		<div class="max-w-2xl mx-auto px-6 py-8">
+			<h1 class="text-2xl font-semibold text-warm mb-6">Notification Preferences</h1>
+			<form method="POST" action="/bridge/preferences" class="bg-surface border border-edge rounded-lg p-5">
+				<div class="space-y-4">
+					<label class="flex items-center gap-3">
+						<input type="checkbox" name="email" class="rounded"
+							if prefEnabled(prefs, "email") {
+								checked
+							}
+						/>
+						<span class="text-warm">Email notifications</span>
+					</label>
+					<label class="flex items-center gap-3">
+						<input type="checkbox" name="teams" class="rounded"
+							if prefEnabled(prefs, "teams") {
+								checked
+							}
+						/>
+						<span class="text-warm">Teams notifications</span>
+					</label>
+				</div>
+				<button type="submit"
+					class="mt-6 px-4 py-2 bg-brand hover:bg-brand/80 text-void text-sm font-medium rounded-md">
+					Save
+				</button>
+			</form>
+		</div>
+	}
+}
