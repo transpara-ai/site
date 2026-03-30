@@ -322,6 +322,19 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /hive/feed", h.handleHiveFeed)
 	mux.HandleFunc("GET /hive/stats", h.handleHiveStats)
 	mux.HandleFunc("GET /hive/status", h.handleHiveStatus)
+
+	// Bridge routes — human action queue for membrane agents
+	mux.Handle("POST /api/bridge/action", h.writeWrap(h.handleBridgeActionWebhook))
+	mux.Handle("POST /api/bridge/event", h.writeWrap(h.handleBridgeEventWebhook))
+	mux.Handle("GET /api/bridge/decisions", h.readWrap(h.handleBridgeDecisionsAPI))
+	mux.Handle("GET /bridge/", h.writeWrap(h.handleBridgeIndex))
+	mux.Handle("GET /bridge/actions/{id}", h.writeWrap(h.handleBridgeActionDetail))
+	mux.Handle("POST /bridge/actions/{id}/decide", h.writeWrap(h.handleBridgeDecide))
+	mux.Handle("GET /bridge/agents", h.readWrap(h.handleBridgeAgents))
+	mux.Handle("GET /bridge/agents/{name}", h.readWrap(h.handleBridgeAgentDetail))
+	mux.Handle("GET /bridge/preferences", h.writeWrap(h.handleBridgePreferences))
+	mux.Handle("POST /bridge/preferences", h.writeWrap(h.handleBridgeSavePreferences))
+	mux.Handle("GET /bridge/feed", h.writeWrap(h.handleBridgeFeed))
 }
 
 // ────────────────────────────────────────────────────────────────────
