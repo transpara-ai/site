@@ -519,6 +519,42 @@ CREATE TABLE IF NOT EXISTS hive_diagnostics (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_hive_diagnostics_created ON hive_diagnostics(created_at DESC);
+
+-- bridge tables: human action queue for membrane agents
+CREATE TABLE IF NOT EXISTS bridge_actions (
+    id           TEXT PRIMARY KEY,
+    agent_name   TEXT NOT NULL,
+    action_type  TEXT NOT NULL,
+    summary      TEXT NOT NULL DEFAULT '',
+    authority    TEXT NOT NULL DEFAULT 'required',
+    target_human TEXT NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'pending',
+    decided_by   TEXT NOT NULL DEFAULT '',
+    decided_at   TIMESTAMPTZ,
+    decision_notes TEXT NOT NULL DEFAULT '',
+    domain_data  JSONB NOT NULL DEFAULT '{}',
+    created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bridge_actions_target ON bridge_actions(target_human, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bridge_actions_agent ON bridge_actions(agent_name, status);
+
+CREATE TABLE IF NOT EXISTS bridge_events (
+    id          TEXT PRIMARY KEY,
+    agent_name  TEXT NOT NULL,
+    event_type  TEXT NOT NULL,
+    payload     JSONB NOT NULL DEFAULT '{}',
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bridge_events_agent ON bridge_events(agent_name, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS bridge_notify_preferences (
+    user_id    TEXT NOT NULL,
+    channel    TEXT NOT NULL,
+    enabled    BOOLEAN NOT NULL DEFAULT true,
+    config     JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, channel)
+);
 `)
 	return err
 }
