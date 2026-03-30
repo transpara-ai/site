@@ -193,6 +193,27 @@ func (h *Handlers) handleBridgeAgentDetail(w http.ResponseWriter, r *http.Reques
 	BridgeAgentDetailPage(name, events, h.viewUser(r)).Render(ctx, w)
 }
 
+// handleBridgeAgentDomain renders a domain-specific view for a membrane agent.
+// GET /bridge/agents/{name}/domain
+func (h *Handlers) handleBridgeAgentDomain(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	ctx := r.Context()
+
+	actions, err := h.store.ListAllBridgeActions(ctx, name, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	events, err := h.store.ListBridgeEvents(ctx, name, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	BridgeAgentDomainPage(name, actions, events, h.viewUser(r)).Render(ctx, w)
+}
+
 // handleBridgePreferences renders notification preference settings.
 // GET /bridge/preferences
 func (h *Handlers) handleBridgePreferences(w http.ResponseWriter, r *http.Request) {

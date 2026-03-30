@@ -274,6 +274,35 @@ func (s *Store) GetBridgeNotifyPreferences(ctx context.Context, userID string) (
 	return prefs, rows.Err()
 }
 
+// ListAllBridgeActions returns recent actions for an agent regardless of status.
+func (s *Store) ListAllBridgeActions(ctx context.Context, agentName string, limit int) ([]BridgeAction, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, agent_name, action_type, summary, authority, target_human, status,
+		        decided_by, decided_at, decision_notes, domain_data, created_at
+		 FROM bridge_actions
+		 WHERE agent_name = $1
+		 ORDER BY created_at DESC LIMIT $2`, agentName, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list all bridge actions: %w", err)
+	}
+	defer rows.Close()
+
+	var actions []BridgeAction
+	for rows.Next() {
+		var a BridgeAction
+		if err := rows.Scan(&a.ID, &a.AgentName, &a.ActionType, &a.Summary, &a.Authority,
+			&a.TargetHuman, &a.Status, &a.DecidedBy, &a.DecidedAt, &a.DecisionNotes,
+			&a.DomainData, &a.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan bridge action: %w", err)
+		}
+		actions = append(actions, a)
+	}
+	return actions, rows.Err()
+}
+
 // ListBridgeAgentNames returns distinct agent names that have actions.
 func (s *Store) ListBridgeAgentNames(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx,
