@@ -887,7 +887,10 @@ func TestReportsAndResolve(t *testing.T) {
 	_, store := testDB(t)
 	ctx := context.Background()
 
-	space, _ := store.CreateSpace(ctx, "test-reports", "Reports Test", "", "owner-1", "project", "public")
+	space, err := store.CreateSpace(ctx, fmt.Sprintf("test-reports-%d", time.Now().UnixNano()), "Reports Test", "", "owner-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
 	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
 
 	node, _ := store.CreateNode(ctx, CreateNodeParams{
@@ -1194,7 +1197,12 @@ func TestReposts(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a space and post for reposting.
-	sp, _ := store.CreateSpace(ctx, "repost-test", "Repost Test", "", "test-owner", "project", "public")
+	slug := fmt.Sprintf("repost-test-%d", time.Now().UnixNano())
+	sp, err := store.CreateSpace(ctx, slug, "Repost Test", "", "test-owner", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, sp.ID) })
 	post, _ := store.CreateNode(ctx, CreateNodeParams{
 		SpaceID: sp.ID, Kind: KindPost, Title: "Test Post", Body: "body", Author: "tester", AuthorID: "test-owner",
 	})
@@ -1242,7 +1250,12 @@ func TestQuotePost(t *testing.T) {
 	_, store := testDB(t)
 	ctx := context.Background()
 
-	sp, _ := store.CreateSpace(ctx, "quote-test", "Quote Test", "", "test-owner", "project", "public")
+	slug := fmt.Sprintf("quote-test-%d", time.Now().UnixNano())
+	sp, err := store.CreateSpace(ctx, slug, "Quote Test", "", "test-owner", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, sp.ID) })
 
 	// Create original post.
 	original, _ := store.CreateNode(ctx, CreateNodeParams{
@@ -1284,7 +1297,12 @@ func TestMessageSearch(t *testing.T) {
 	_, store := testDB(t)
 	ctx := context.Background()
 
-	sp, _ := store.CreateSpace(ctx, "msgsearch-test", "Msg Search Test", "", "test-owner", "project", "public")
+	slug := fmt.Sprintf("msgsearch-test-%d", time.Now().UnixNano())
+	sp, err := store.CreateSpace(ctx, slug, "Msg Search Test", "", "test-owner", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, sp.ID) })
 
 	// Create a conversation with messages.
 	convo, _ := store.CreateNode(ctx, CreateNodeParams{
