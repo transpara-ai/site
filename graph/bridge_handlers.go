@@ -140,13 +140,18 @@ func (h *Handlers) handleBridgeActionDetail(w http.ResponseWriter, r *http.Reque
 // POST /bridge/actions/{id}/decide
 func (h *Handlers) handleBridgeDecide(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	decision := r.FormValue("decision")
 	notes := r.FormValue("notes")
 	uid := h.userID(r)
 
-	if decision == "" {
-		http.Error(w, "decision is required", http.StatusBadRequest)
+	switch decision {
+	case "approved", "rejected":
+	default:
+		http.Error(w, "decision must be 'approved' or 'rejected'", http.StatusBadRequest)
 		return
 	}
 
@@ -194,22 +199,35 @@ func (h *Handlers) handleBridgePreferences(w http.ResponseWriter, r *http.Reques
 	ctx := r.Context()
 	uid := h.userID(r)
 
-	prefs, _ := h.store.GetBridgeNotifyPreferences(ctx, uid)
+	prefs, err := h.store.GetBridgeNotifyPreferences(ctx, uid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	BridgePreferencesPage(prefs, h.viewUser(r)).Render(ctx, w)
 }
 
 // handleBridgeSavePreferences saves notification preferences.
 // POST /bridge/preferences
 func (h *Handlers) handleBridgeSavePreferences(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	uid := h.userID(r)
 	ctx := r.Context()
 
 	emailEnabled := r.FormValue("email") == "on"
 	teamsEnabled := r.FormValue("teams") == "on"
 
-	h.store.SetBridgeNotifyPreference(ctx, uid, "email", emailEnabled)
-	h.store.SetBridgeNotifyPreference(ctx, uid, "teams", teamsEnabled)
+	if err := h.store.SetBridgeNotifyPreference(ctx, uid, "email", emailEnabled); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := h.store.SetBridgeNotifyPreference(ctx, uid, "teams", teamsEnabled); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	http.Redirect(w, r, "/bridge/preferences", http.StatusSeeOther)
 }
@@ -218,6 +236,10 @@ func (h *Handlers) handleBridgeSavePreferences(w http.ResponseWriter, r *http.Re
 // GET /bridge/feed
 func (h *Handlers) handleBridgeFeed(w http.ResponseWriter, r *http.Request) {
 	uid := h.userID(r)
-	pending, _ := h.store.ListPendingBridgeActions(r.Context(), uid, 50)
+	pending, err := h.store.ListPendingBridgeActions(r.Context(), uid, 50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	BridgeActionFeed(pending).Render(r.Context(), w)
 }
