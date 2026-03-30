@@ -332,6 +332,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /bridge/actions/{id}/decide", h.writeWrap(h.handleBridgeDecide))
 	mux.Handle("GET /bridge/agents", h.readWrap(h.handleBridgeAgents))
 	mux.Handle("GET /bridge/agents/{name}", h.readWrap(h.handleBridgeAgentDetail))
+	mux.Handle("GET /bridge/agents/{name}/domain", h.readWrap(h.handleBridgeAgentDomain))
 	mux.Handle("GET /bridge/preferences", h.writeWrap(h.handleBridgePreferences))
 	mux.Handle("POST /bridge/preferences", h.writeWrap(h.handleBridgeSavePreferences))
 	mux.Handle("GET /bridge/feed", h.writeWrap(h.handleBridgeFeed))

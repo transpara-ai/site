@@ -2,6 +2,7 @@ package graph
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -17,6 +18,16 @@ func formatTimeAgo(t time.Time) string {
 	default:
 		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 	}
+}
+
+func countByStatus(actions []BridgeAction, status string) string {
+	n := 0
+	for _, a := range actions {
+		if a.Status == status {
+			n++
+		}
+	}
+	return strconv.Itoa(n)
 }
 
 func prefEnabled(prefs []NotifyPreference, channel string) bool {

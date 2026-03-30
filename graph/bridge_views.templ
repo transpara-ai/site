@@ -214,6 +214,82 @@ templ BridgeAgentDetailPage(name string, events []BridgeEvent, user ViewUser) {
 	}
 }
 
+// BridgeAgentDomainPage renders a domain-specific view for an agent.
+templ BridgeAgentDomainPage(name string, actions []BridgeAction, events []BridgeEvent, user ViewUser) {
+	@bridgeShell(name+" — Domain View", user) {
+		<div class="max-w-5xl mx-auto px-6 py-8">
+			<a href={ templ.SafeURL(fmt.Sprintf("/bridge/agents/%s", name)) } class="text-sm text-warm-faint hover:text-warm mb-4 block">&larr; { name } overview</a>
+			<h1 class="text-2xl font-semibold text-warm mb-6">{ name } — Domain View</h1>
+
+			<!-- Pipeline summary -->
+			<div class="grid grid-cols-3 gap-4 mb-8">
+				@domainStatCard("Pending", countByStatus(actions, "pending"), "bg-zinc-800 text-zinc-400")
+				@domainStatCard("Approved", countByStatus(actions, "approved"), "bg-emerald-900 text-emerald-300")
+				@domainStatCard("Rejected", countByStatus(actions, "rejected"), "bg-red-900 text-red-300")
+			</div>
+
+			<!-- Recent actions table -->
+			<div class="mb-8">
+				<h2 class="text-lg font-medium text-warm mb-4">Recent Actions</h2>
+				if len(actions) == 0 {
+					<p class="text-warm-faint">No actions recorded yet.</p>
+				} else {
+					<div class="bg-surface border border-edge rounded-lg overflow-hidden">
+						<table class="w-full text-sm">
+							<thead>
+								<tr class="border-b border-edge text-left text-warm-faint">
+									<th class="px-4 py-2">Date</th>
+									<th class="px-4 py-2">Type</th>
+									<th class="px-4 py-2">Summary</th>
+									<th class="px-4 py-2">Status</th>
+									<th class="px-4 py-2">Decided By</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, a := range actions {
+									<tr class="border-b border-edge last:border-0">
+										<td class="px-4 py-2 text-warm-faint whitespace-nowrap">{ formatTimeAgo(a.CreatedAt) }</td>
+										<td class="px-4 py-2 text-brand">{ a.ActionType }</td>
+										<td class="px-4 py-2 text-warm">{ a.Summary }</td>
+										<td class="px-4 py-2">
+											@bridgeStatusBadge(a.Status)
+										</td>
+										<td class="px-4 py-2 text-warm-faint">{ a.DecidedBy }</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+
+			<!-- Recent events -->
+			<div>
+				<h2 class="text-lg font-medium text-warm mb-4">Recent Events</h2>
+				if len(events) == 0 {
+					<p class="text-warm-faint">No events recorded yet.</p>
+				} else {
+					<div class="space-y-2">
+						for _, e := range events {
+							<div class="bg-surface border border-edge rounded-lg px-4 py-3 flex items-center justify-between">
+								<span class="text-sm font-mono text-brand">{ e.EventType }</span>
+								<span class="text-xs text-warm-faint">{ formatTimeAgo(e.CreatedAt) }</span>
+							</div>
+						}
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ domainStatCard(label string, count string, colorClasses string) {
+	<div class="bg-surface border border-edge rounded-lg px-5 py-4 text-center">
+		<p class={ "text-3xl font-bold mb-1", colorClasses }>{ count }</p>
+		<p class="text-sm text-warm-faint">{ label }</p>
+	</div>
+}
+
 // BridgePreferencesPage renders notification settings.
 templ BridgePreferencesPage(prefs []NotifyPreference, user ViewUser) {
 	@bridgeShell("Notification Preferences", user) {
