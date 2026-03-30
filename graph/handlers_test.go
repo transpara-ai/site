@@ -40,12 +40,13 @@ func TestHandlerCreateSpace(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	slug := fmt.Sprintf("handler-test-%d", time.Now().UnixNano())
+	// The handler generates slug from name via slugify(), not from a form field.
+	uniqueName := fmt.Sprintf("Handler Test %d", time.Now().UnixNano())
+	expectedSlug := slugify(uniqueName)
 
 	// Create space via form POST.
 	form := url.Values{}
-	form.Set("slug", slug)
-	form.Set("name", "Handler Test")
+	form.Set("name", uniqueName)
 	form.Set("description", "Testing handlers")
 	form.Set("kind", "project")
 	form.Set("visibility", "public")
@@ -60,15 +61,15 @@ func TestHandlerCreateSpace(t *testing.T) {
 	}
 
 	// Verify space was created.
-	space, err := store.GetSpaceBySlug(t.Context(), slug)
+	space, err := store.GetSpaceBySlug(t.Context(), expectedSlug)
 	if err != nil {
 		t.Fatalf("get space: %v", err)
 	}
 	_ = ctx
 	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
 
-	if space.Name != "Handler Test" {
-		t.Errorf("name = %q, want %q", space.Name, "Handler Test")
+	if space.Name != uniqueName {
+		t.Errorf("name = %q, want %q", space.Name, uniqueName)
 	}
 	if space.Visibility != "public" {
 		t.Errorf("visibility = %q, want %q", space.Visibility, "public")

@@ -685,7 +685,7 @@ func TestAutoReplyDocumentInjectionPath(t *testing.T) {
 	ctx := t.Context()
 	mind := NewMind(db, store, "fake-token")
 
-	space, err := store.CreateSpace(ctx, "auto-reply-doc-inject-test", "Doc Inject Test", "", "owner", "project", "public")
+	space, err := store.CreateSpace(ctx, fmt.Sprintf("auto-reply-doc-inject-test-%d", time.Now().UnixNano()), "Doc Inject Test", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
@@ -753,7 +753,7 @@ func TestListDocumentContextBounded(t *testing.T) {
 	_, store := testDB(t)
 	ctx := t.Context()
 
-	space, err := store.CreateSpace(ctx, "doc-ctx-limit-test", "Doc Ctx Limit", "", "owner", "project", "public")
+	space, err := store.CreateSpace(ctx, fmt.Sprintf("doc-ctx-limit-test-%d", time.Now().UnixNano()), "Doc Ctx Limit", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
@@ -802,7 +802,7 @@ func TestReplyToInjectsDocuments(t *testing.T) {
 	}
 	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
 
-	space, err := store.CreateSpace(ctx, "reply-doc-inject-test", "Reply Doc Inject Test", "", "owner", "project", "public")
+	space, err := store.CreateSpace(ctx, fmt.Sprintf("reply-doc-inject-test-%d", time.Now().UnixNano()), "Reply Doc Inject Test", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
@@ -867,7 +867,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 	}
 	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
 
-	space, err := store.CreateSpace(ctx, "reply-no-doc-test", "Reply No Doc Test", "", "owner", "project", "public")
+	space, err := store.CreateSpace(ctx, fmt.Sprintf("reply-no-doc-test-%d", time.Now().UnixNano()), "Reply No Doc Test", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
