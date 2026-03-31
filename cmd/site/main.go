@@ -946,7 +946,12 @@ func main() {
 // canonicalHost redirects non-canonical hostnames to lovyou.ai.
 // Skips health checks (Fly probes via internal IP) and localhost.
 func canonicalHost(next http.Handler) http.Handler {
+	skip := os.Getenv("SKIP_CANONICAL_HOST") != ""
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if skip {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if r.URL.Path == "/health" {
 			next.ServeHTTP(w, r)
 			return
