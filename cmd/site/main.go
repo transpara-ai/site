@@ -952,13 +952,23 @@ func canonicalHost(next http.Handler) http.Handler {
 			return
 		}
 		host := r.Host
-		if host != "" && host != "lovyou.ai" && !strings.HasPrefix(host, "localhost") && !strings.HasPrefix(host, "127.0.0.1") {
+		// Allow canonical domain, localhost, loopback, and LAN hostnames (no dot = bare hostname like "nucbuntu").
+		if host != "" && host != "lovyou.ai" && !strings.HasPrefix(host, "localhost") && !strings.HasPrefix(host, "127.0.0.1") && !strings.HasPrefix(host, "192.168.") && !strings.HasPrefix(host, "10.") && !isBareName(host) {
 			target := "https://lovyou.ai" + r.URL.RequestURI()
 			http.Redirect(w, r, target, http.StatusMovedPermanently)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// isBareName returns true if host is a bare LAN hostname (no dots before any port).
+func isBareName(host string) bool {
+	h := host
+	if i := strings.LastIndex(h, ":"); i != -1 {
+		h = h[:i]
+	}
+	return !strings.Contains(h, ".")
 }
 
 func noCache(next http.Handler) http.Handler {
