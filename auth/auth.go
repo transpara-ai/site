@@ -800,6 +800,43 @@ func (a *Auth) upsertUserByEmail(ctx context.Context, email string) (*User, erro
 	return &u, err
 }
 
+// UserFromBearer resolves a Bearer token from the request without requiring
+// a full Auth instance. Used in anonymous mode to support API key auth.
+func UserFromBearer(db *sql.DB, r *http.Request) *User {
+	hdr := r.Header.Get("Authorization")
+	if !strings.HasPrefix(hdr, "Bearer ") {
+		return nil
+	}
+	rawKey := strings.TrimPrefix(hdr, "Bearer ")
+	if rawKey == "" {
+		return nil
+	}
+	hash := hashKey(rawKey)
+	var u User
+	var agentID sql.NullString
+	err := db.QueryRowContext(r.Context(), `
+		SELECT u.id, u.email, u.name, u.picture, u.kind, k.agent_id
+		FROM users u
+		JOIN api_keys k ON k.user_id = u.id
+		WHERE k.key_hash = $1`, hash,
+	).Scan(&u.ID, &u.Email, &u.Name, &u.Picture, &u.Kind, &agentID)
+	if err != nil {
+		return nil
+	}
+	if agentID.Valid {
+		var agent User
+		err := db.QueryRowContext(r.Context(), `
+			SELECT id, email, name, picture, kind FROM users WHERE id = $1`,
+			agentID.String,
+		).Scan(&agent.ID, &agent.Email, &agent.Name, &agent.Picture, &agent.Kind)
+		if err != nil {
+			return nil
+		}
+		return &agent
+	}
+	return &u
+}
+
 func hashKey(rawKey string) string {
 	h := sha256.Sum256([]byte(rawKey))
 	return hex.EncodeToString(h[:])

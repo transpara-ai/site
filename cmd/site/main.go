@@ -338,17 +338,24 @@ func main() {
 			readWrap = authService.OptionalAuth
 			log.Println("auth enabled (Google OAuth)")
 		} else {
+			// Anonymous mode with Bearer token support.
+			// If a valid Bearer token is present, resolve the real user
+			// (enables hive API key auth without full Google OAuth).
 			anonWrap := func(next http.HandlerFunc) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					ctx := auth.ContextWithUser(r.Context(), &auth.User{
-						ID: "anonymous", Name: "Anonymous", Email: "anon@lovyou.ai",
-					})
+					user := auth.UserFromBearer(db, r)
+					if user == nil {
+						user = &auth.User{
+							ID: "anonymous", Name: "Anonymous", Email: "anon@lovyou.ai",
+						}
+					}
+					ctx := auth.ContextWithUser(r.Context(), user)
 					next.ServeHTTP(w, r.WithContext(ctx))
 				})
 			}
 			readWrap = anonWrap
 			writeWrap = anonWrap
-			log.Println("auth disabled (no GOOGLE_CLIENT_ID) — anonymous mode")
+			log.Println("auth disabled (no GOOGLE_CLIENT_ID) — anonymous mode (Bearer tokens accepted)")
 		}
 
 		graphStore, err = graph.NewStore(db)
