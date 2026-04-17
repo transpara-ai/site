@@ -159,16 +159,17 @@ type Node struct {
 
 // Op is a recorded grammar operation.
 type Op struct {
-	ID        string          `json:"id"`
-	SpaceID   string          `json:"space_id"`
-	NodeID    string          `json:"node_id,omitempty"`
-	NodeTitle string          `json:"node_title,omitempty"` // resolved from nodes table when available
-	Actor     string          `json:"actor"`
-	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
-	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
-	Op        string          `json:"op"`
-	Payload   json.RawMessage `json:"payload"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID           string          `json:"id"`
+	SpaceID      string          `json:"space_id"`
+	NodeID       string          `json:"node_id,omitempty"`
+	NodeTitle    string          `json:"node_title,omitempty"` // resolved from nodes table when available
+	Actor        string          `json:"actor"`
+	ActorID      string          `json:"actor_id"`   // user ID — source of truth for identity
+	ActorKind    string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
+	Op           string          `json:"op"`
+	Payload      json.RawMessage `json:"payload"`
+	CreatedAt    time.Time       `json:"created_at"`
+	HiveChainRef string          `json:"hive_chain_ref,omitempty"` // stamped by /api/hive/mirror when hive echoes back
 }
 
 // Reaction is a single emoji reaction on a node.
@@ -333,6 +334,8 @@ CREATE TABLE IF NOT EXISTS node_deps (
 CREATE INDEX IF NOT EXISTS idx_node_deps_node ON node_deps(node_id);
 CREATE INDEX IF NOT EXISTS idx_node_deps_dep ON node_deps(depends_on);
 ALTER TABLE ops ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE ops ADD COLUMN IF NOT EXISTS hive_chain_ref TEXT;
+CREATE INDEX IF NOT EXISTS idx_ops_hive_chain_ref ON ops(hive_chain_ref) WHERE hive_chain_ref IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS mind_state (
     key   TEXT PRIMARY KEY,
@@ -1491,7 +1494,8 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	}
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
-		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		        COALESCE(o.hive_chain_ref, '')
 		 FROM ops o
 		 LEFT JOIN users u ON u.id = o.actor_id
 		 LEFT JOIN nodes n ON n.id = o.node_id
@@ -1506,7 +1510,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt, &o.HiveChainRef); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)
@@ -1518,7 +1522,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), o.actor, o.actor_id,
-		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		        COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at, COALESCE(o.hive_chain_ref, '')
 		 FROM ops o
 		 LEFT JOIN users u ON u.id = o.actor_id
 		 WHERE o.node_id = $1 ORDER BY o.created_at`,
@@ -1532,12 +1536,169 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt, &o.HiveChainRef); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
 		}
 		ops = append(ops, o)
 	}
 	return ops, rows.Err()
+}
+
+// ListOpsSince returns operations for a space with created_at >= since, oldest-first.
+// Used by hive reconciliation to catch up on missed webhook deliveries.
+// If since is zero, behaves like ListOps but ascending.
+// limit is clamped to [1, 500]; zero or negative defaults to 100.
+func (s *Store) ListOpsSince(ctx context.Context, spaceID string, since time.Time, limit int) ([]Op, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		        COALESCE(o.hive_chain_ref, '')
+		 FROM ops o
+		 LEFT JOIN users u ON u.id = o.actor_id
+		 LEFT JOIN nodes n ON n.id = o.node_id
+		 WHERE o.space_id = $1 AND o.created_at >= $2
+		 ORDER BY o.created_at ASC LIMIT $3`,
+		spaceID, since, limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list ops since: %w", err)
+	}
+	defer rows.Close()
+
+	var ops []Op
+	for rows.Next() {
+		var o Op
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt, &o.HiveChainRef); err != nil {
+			return nil, fmt.Errorf("scan op: %w", err)
+		}
+		ops = append(ops, o)
+	}
+	return ops, rows.Err()
+}
+
+// GetOp returns a single op by ID.
+func (s *Store) GetOp(ctx context.Context, opID string) (*Op, error) {
+	var o Op
+	err := s.db.QueryRowContext(ctx,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at,
+		        COALESCE(o.hive_chain_ref, '')
+		 FROM ops o
+		 LEFT JOIN users u ON u.id = o.actor_id
+		 LEFT JOIN nodes n ON n.id = o.node_id
+		 WHERE o.id = $1`,
+		opID,
+	).Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt, &o.HiveChainRef)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get op: %w", err)
+	}
+	return &o, nil
+}
+
+// StampOpHiveChainRef records the hive-side causal chain reference on a local op.
+// Latest-wins: a new ref overwrites an existing one. Unknown op_id is a silent
+// no-op (by design — the hive may echo ops that predate this column, and
+// mirror calls must not fail for missing/evicted rows). Callers that need to
+// distinguish "stamped" vs "unknown" should look up the op separately.
+func (s *Store) StampOpHiveChainRef(ctx context.Context, opID, hiveChainRef string) error {
+	if hiveChainRef == "" {
+		return fmt.Errorf("hive_chain_ref required")
+	}
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE ops SET hive_chain_ref = $1
+		 WHERE id = $2 AND (hive_chain_ref IS NULL OR hive_chain_ref <> $1)`,
+		hiveChainRef, opID,
+	)
+	if err != nil {
+		return fmt.Errorf("stamp hive_chain_ref: %w", err)
+	}
+	return nil
+}
+
+// UpdateNodeFromMirror applies a mirror-driven state change to the derived
+// node for a stamped op, based on the hive event_type. Returns nil and no
+// error for unknown event_types or when the op has no associated node —
+// non-fatal so callers can continue stamping the chain_ref.
+func (s *Store) UpdateNodeFromMirror(ctx context.Context, opID, eventType string) error {
+	op, err := s.GetOp(ctx, opID)
+	if errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if op.NodeID == "" {
+		return nil
+	}
+	var newState string
+	switch eventType {
+	case "hive.spec.ingested":
+		newState = "ingested"
+	case "hive.spec.completed":
+		newState = "completed"
+	default:
+		return nil
+	}
+	if err := s.UpdateNodeState(ctx, op.NodeID, newState); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// isTransitionTrackedKind reports whether the node kind should emit a structured
+// `transition` op when its state changes. Kinds outside this set either lack
+// meaningful state transitions or already carry richer domain ops (e.g. proposal).
+func isTransitionTrackedKind(kind string) bool {
+	switch kind {
+	case KindTask, KindDocument, KindClaim, KindThread, KindQuestion:
+		return true
+	}
+	return false
+}
+
+// UpdateNodeStateAndRecordTransition updates a node's state and, for tracked
+// kinds (task/document/claim/thread/question), records a `transition` op with
+// structured `{from_state, to_state, node_kind}` payload so downstream
+// subscribers (e.g. hive webhook) can react to the transition.
+//
+// Returns the transition Op when one is recorded (nil for untracked kinds).
+// The state update is persisted regardless of kind — only the op is gated.
+func (s *Store) UpdateNodeStateAndRecordTransition(ctx context.Context, spaceID, nodeID, newState, actor, actorID string) (*Op, error) {
+	node, err := s.GetNode(ctx, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	fromState := node.State
+	if err := s.UpdateNodeState(ctx, nodeID, newState); err != nil {
+		return nil, err
+	}
+	if fromState == newState {
+		return nil, nil
+	}
+	if !isTransitionTrackedKind(node.Kind) {
+		return nil, nil
+	}
+	payload, err := json.Marshal(map[string]string{
+		"from_state": fromState,
+		"to_state":   newState,
+		"node_kind":  node.Kind,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal transition payload: %w", err)
+	}
+	return s.RecordOp(ctx, spaceID, nodeID, actor, actorID, "transition", payload)
 }
 
 // ────────────────────────────────────────────────────────────────────
