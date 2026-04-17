@@ -476,6 +476,7 @@ ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS space_id TEXT NOT NULL DEFAU
 CREATE INDEX IF NOT EXISTS idx_agent_memories_space ON agent_memories(space_id, user_id, persona);
 ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;
 ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS session_id UUID DEFAULT gen_random_uuid();
+ALTER TABLE agent_personas ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ready';
 
 CREATE TABLE IF NOT EXISTS invite_uses (
     token   TEXT NOT NULL REFERENCES invites(token) ON DELETE CASCADE,
@@ -3835,6 +3836,12 @@ func (s *Store) CountChallenges(ctx context.Context, nodeID string) int {
 // ────────────────────────────────────────────────────────────────────
 
 // AgentPersona is a named agent persona seeded from agents/*.md files.
+//
+// Status reflects the role's maturity as declared in the source .md file's
+// leading `<!-- Status: X -->` comment. Seven values: running, ready, designed,
+// aspirational, challenged, absorbed, retired. Personas with status
+// "absorbed" or "retired" are forced inactive during seeding regardless
+// of the personaActive map — the source file is the authority.
 type AgentPersona struct {
 	ID          string     `json:"id"`
 	Name        string     `json:"name"`
@@ -3844,23 +3851,29 @@ type AgentPersona struct {
 	Prompt      string     `json:"prompt"`
 	Model       string     `json:"model"`
 	Active      bool       `json:"active"`
+	Status      string     `json:"status"`
 	LastSeen    *time.Time `json:"last_seen,omitempty"`
 	SessionID   string     `json:"session_id"`
 }
 
 // UpsertAgentPersona inserts or updates an agent persona by name.
 func (s *Store) UpsertAgentPersona(ctx context.Context, p AgentPersona) error {
+	status := p.Status
+	if status == "" {
+		status = "ready"
+	}
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO agent_personas (id, name, display, description, category, prompt, model, active)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO agent_personas (id, name, display, description, category, prompt, model, active, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (name) DO UPDATE SET
 			display = EXCLUDED.display,
 			description = EXCLUDED.description,
 			category = EXCLUDED.category,
 			prompt = EXCLUDED.prompt,
 			model = EXCLUDED.model,
-			active = EXCLUDED.active`,
-		newID(), p.Name, p.Display, p.Description, p.Category, p.Prompt, p.Model, p.Active,
+			active = EXCLUDED.active,
+			status = EXCLUDED.status`,
+		newID(), p.Name, p.Display, p.Description, p.Category, p.Prompt, p.Model, p.Active, status,
 	)
 	return err
 }
@@ -3919,7 +3932,7 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 
 	// One query: find agent user IDs and their persona data.
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT u.id, ap.id, ap.name, ap.display, ap.description, ap.category, ap.prompt, ap.model, ap.active, ap.last_seen
+		SELECT u.id, ap.id, ap.name, ap.display, ap.description, ap.category, ap.prompt, ap.model, ap.active, ap.status, ap.last_seen
 		FROM users u
 		JOIN agent_personas ap ON ap.name = u.persona_name
 		WHERE u.id = ANY($1) AND u.kind = 'agent' AND u.persona_name IS NOT NULL`,
@@ -3935,7 +3948,7 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 	for rows.Next() {
 		var userID string
 		var p AgentPersona
-		if err := rows.Scan(&userID, &p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.LastSeen); err != nil {
+		if err := rows.Scan(&userID, &p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.Status, &p.LastSeen); err != nil {
 			continue
 		}
 		byUserID[userID] = &p
@@ -3958,9 +3971,9 @@ func (s *Store) GetAgentPersonasForConversations(ctx context.Context, convos []C
 func (s *Store) GetAgentPersona(ctx context.Context, name string) *AgentPersona {
 	var p AgentPersona
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, name, display, description, category, prompt, model, active, last_seen
+		`SELECT id, name, display, description, category, prompt, model, active, status, last_seen
 		 FROM agent_personas WHERE name = $1`, name,
-	).Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.LastSeen)
+	).Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Active, &p.Status, &p.LastSeen)
 	if err != nil {
 		return nil
 	}
@@ -3970,7 +3983,7 @@ func (s *Store) GetAgentPersona(ctx context.Context, name string) *AgentPersona 
 // ListAgentPersonas returns all active agent personas ordered by category, display.
 func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, display, description, category, prompt, model, last_seen, session_id
+		`SELECT id, name, display, description, category, prompt, model, status, last_seen, session_id
 		 FROM agent_personas WHERE active = true ORDER BY category, display`)
 	if err != nil {
 		return nil, err
@@ -3980,7 +3993,7 @@ func (s *Store) ListAgentPersonas(ctx context.Context) ([]AgentPersona, error) {
 	for rows.Next() {
 		var p AgentPersona
 		var sessionID *string
-		if err := rows.Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.LastSeen, &sessionID); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Display, &p.Description, &p.Category, &p.Prompt, &p.Model, &p.Status, &p.LastSeen, &sessionID); err != nil {
 			return nil, err
 		}
 		p.Active = true
