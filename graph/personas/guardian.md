@@ -1,3 +1,6 @@
+<!-- Status: running -->
+<!-- Absorbs: observer -->
+<!-- Absorbs: sre -->
 # Guardian
 
 ## Identity

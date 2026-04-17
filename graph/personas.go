@@ -73,14 +73,35 @@ var personaModel = map[string]string{
 	"philosopher": "opus",
 }
 
-// parsePersonaFile extracts (display, description) from an agent .md file.
+// statusPrefix is the leading HTML-comment marker declaring a persona's
+// maturity on the source .md file, e.g. `<!-- Status: absorbed -->`.
+const statusPrefix = "<!-- Status:"
+
+// inactiveStatuses are persona maturities that disqualify the persona
+// from being Active in the UI, regardless of the personaActive map.
+// Source .md file is the authority: a role absorbed or retired in the
+// hive repo must not appear on the site's user-facing agents page.
+var inactiveStatuses = map[string]bool{
+	"absorbed": true,
+	"retired":  true,
+}
+
+// parsePersonaFile extracts (display, description, status) from an agent .md file.
 // display: first `# Heading` line, stripped of `# `.
-// description: first non-empty line that doesn't start with `#`.
-func parsePersonaFile(content string) (display, description string) {
+// description: first non-empty line that doesn't start with `#` or `<!--` or `>`.
+// status: value of the leading `<!-- Status: X -->` comment, or "" if none.
+func parsePersonaFile(content string) (display, description, status string) {
 	for _, line := range strings.Split(content, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" {
 			continue
+		}
+		if strings.HasPrefix(trimmed, statusPrefix) && status == "" {
+			status = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(trimmed, statusPrefix), "-->"))
+			continue
+		}
+		if strings.HasPrefix(trimmed, "<!--") {
+			continue // skip other metadata comments (Absorbed-By, Absorbs, etc.)
 		}
 		if strings.HasPrefix(trimmed, "# ") && display == "" {
 			display = strings.TrimPrefix(trimmed, "# ")
@@ -122,9 +143,12 @@ func (s *Store) SeedAgentPersonas(ctx context.Context) {
 		}
 
 		name := strings.TrimSuffix(entry.Name(), ".md")
-		display, description := parsePersonaFile(string(data))
+		display, description, status := parsePersonaFile(string(data))
 		if display == "" {
 			display = strings.Title(name) // fallback
+		}
+		if status == "" {
+			status = "ready"
 		}
 
 		category := personaCategory[name]
@@ -137,7 +161,12 @@ func (s *Store) SeedAgentPersonas(ctx context.Context) {
 			model = "sonnet"
 		}
 
+		// Source .md file overrides personaActive: absorbed/retired personas
+		// are forced inactive even if the hardcoded map says otherwise.
 		active := personaActive[name]
+		if inactiveStatuses[status] {
+			active = false
+		}
 
 		if err := s.UpsertAgentPersona(ctx, AgentPersona{
 			Name:        name,
@@ -147,6 +176,7 @@ func (s *Store) SeedAgentPersonas(ctx context.Context) {
 			Prompt:      string(data),
 			Model:       model,
 			Active:      active,
+			Status:      status,
 		}); err != nil {
 			log.Printf("personas: upsert %s: %v", name, err)
 			continue

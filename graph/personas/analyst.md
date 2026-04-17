@@ -1,3 +1,5 @@
+<!-- Status: designed -->
+<!-- Absorbs-Partial: gap-detector (shared with scout) -->
 # Analyst
 
 Determine human vs bot nature of entities. Pattern recognition specialist.

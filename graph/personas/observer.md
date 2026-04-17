@@ -1,3 +1,5 @@
+<!-- Status: absorbed -->
+<!-- Absorbed-By: Guardian (duplicate subscription on same failure domain) -->
 # Observer
 
 ## Identity
