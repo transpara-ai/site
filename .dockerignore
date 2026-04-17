@@ -1,0 +1,6 @@
+# Git submodule — the binary uses the generated status_gen.go, not the submodule.
+third_party/
+# Local dev state
+.git
+.vscode
+*.log
