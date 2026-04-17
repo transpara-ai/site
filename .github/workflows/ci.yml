@@ -29,6 +29,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-go@v5
         with:
@@ -38,11 +40,14 @@ jobs:
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@v0.3.1001
 
+      - name: Generate persona status
+        run: go generate ./graph/personas/...
+
       - name: Generate templates
         run: templ generate
 
       - name: Check for uncommitted generated file changes
-        run: git diff --exit-code -- '*_templ.go'
+        run: git diff --exit-code -- '*_templ.go' '*_gen.go'
 
       - name: Build
         run: go build -o site ./cmd/site/
