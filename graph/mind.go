@@ -369,6 +369,28 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 	}
 }
 
+// OnMirrorUpdate surfaces a hive-side mirror event back to the site user
+// via the notification system. Called by the hive/mirror handler after the
+// local op has been stamped with its hive_chain_ref. Safe to call with a
+// nil Mind — the handler checks before invoking.
+func (m *Mind) OnMirrorUpdate(spaceID, actorID, eventType, summary string) {
+	if actorID == "" || actorID == "anonymous" {
+		return
+	}
+	msg := summary
+	if msg == "" {
+		msg = eventType
+	}
+	if msg == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := m.store.CreateNotification(ctx, actorID, "", spaceID, "hive: "+msg); err != nil {
+		log.Printf("mind: mirror update notify %s: %v", actorID, err)
+	}
+}
+
 // workPlan is the structured output from the Mind when working on a task.
 type workPlan struct {
 	Comment  string       `json:"comment"`
