@@ -334,9 +334,9 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 		}
 	}
 
-	// Update task status.
+	// Update task status — emits a structured transition op for tracked kinds.
 	if plan.Status == "done" || plan.Status == "active" {
-		m.store.UpdateNodeState(ctx, task.ID, plan.Status)
+		m.store.UpdateNodeStateAndRecordTransition(ctx, spaceID, task.ID, plan.Status, agentName, assigneeID)
 		if plan.Status == "done" {
 			m.store.RecordOp(ctx, spaceID, task.ID, agentName, assigneeID, "complete", nil)
 		}

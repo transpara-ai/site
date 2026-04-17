@@ -2645,7 +2645,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "node_id required", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, StateDone); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, StateDone, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3064,7 +3064,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Update claim state to challenged.
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimChallenged); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimChallenged, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3091,7 +3091,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "can only verify claims", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimVerified); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimVerified, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3125,7 +3125,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "can only retract claims", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimRetracted); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimRetracted, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3472,7 +3472,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "task must be in active state to submit for review", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, StateReview); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, StateReview, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3523,7 +3523,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		default: // "reject"
 			newState = StateClosed
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, newState); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, newState, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3710,7 +3710,7 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.store.UpdateNodeState(r.Context(), nodeID, newState); err != nil {
+	if _, err := h.store.UpdateNodeStateAndRecordTransition(r.Context(), space.ID, nodeID, newState, h.userName(r), h.userID(r)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -4214,16 +4214,16 @@ func (h *Handlers) handleHiveEscalation(w http.ResponseWriter, r *http.Request) 
 
 	ctx := r.Context()
 
-	// Set task state to escalated.
-	if err := h.store.UpdateNodeState(ctx, req.TaskID, "escalated"); err != nil {
-		http.Error(w, "update task state: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Look up the space to find the owner for notification.
+	// Look up the space up-front so the transition op can reference it.
 	space, err := h.store.GetSpaceBySlug(ctx, req.SpaceSlug)
 	if err != nil {
 		http.Error(w, "space not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Set task state to escalated (emits a structured transition op for tracked kinds).
+	if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, req.TaskID, "escalated", "hive", h.userID(r)); err != nil {
+		http.Error(w, "update task state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
