@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lovyou-ai/site/graph/personas"
 	_ "github.com/lib/pq"
 )
 
@@ -2561,4 +2562,43 @@ func TestVotingBodyQuorum(t *testing.T) {
 			t.Errorf("council rejection proposal state = %q, want %q", node.State, ProposalFailed)
 		}
 	})
+}
+
+// TestSeedAgentPersonas_StatusForcesInactive verifies that a persona whose
+// HiveStatus is "absorbed" or "retired" is upserted with Active=false,
+// regardless of what personaActive[name] says.
+func TestSeedAgentPersonas_StatusForcesInactive(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	// Find any persona whose HiveStatus is absorbed or retired. If none exist
+	// in the current pinned hive, the test is a no-op — log and skip.
+	var targetName, targetStatus string
+	for name, status := range personas.HiveStatus {
+		if status == "absorbed" || status == "retired" {
+			targetName, targetStatus = name, status
+			break
+		}
+	}
+	if targetName == "" {
+		t.Skip("no absorbed/retired personas in current hive pin")
+	}
+
+	// Seeding runs against the embedded personas; ensure target is among them.
+	if _, err := personaFiles.ReadFile("personas/" + targetName + ".md"); err != nil {
+		t.Skipf("target persona %q has no embedded .md (skip): %v", targetName, err)
+	}
+
+	store.SeedAgentPersonas(ctx)
+
+	got := store.GetAgentPersona(ctx, targetName)
+	if got == nil {
+		t.Fatalf("GetAgentPersona(%q) returned nil", targetName)
+	}
+	if got.Status != targetStatus {
+		t.Errorf("Status = %q, want %q", got.Status, targetStatus)
+	}
+	if got.Active {
+		t.Errorf("Active = true for %s persona %q, want false", targetStatus, targetName)
+	}
 }
