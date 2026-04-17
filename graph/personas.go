@@ -5,6 +5,8 @@ import (
 	"embed"
 	"log"
 	"strings"
+
+	"github.com/lovyou-ai/site/graph/personas"
 )
 
 //go:embed personas/*.md
@@ -137,7 +139,15 @@ func (s *Store) SeedAgentPersonas(ctx context.Context) {
 			model = "sonnet"
 		}
 
+		status, ok := personas.HiveStatus[name]
+		if !ok {
+			status = "ready"
+		}
+
 		active := personaActive[name]
+		if status == "absorbed" || status == "retired" {
+			active = false
+		}
 
 		if err := s.UpsertAgentPersona(ctx, AgentPersona{
 			Name:        name,
@@ -147,6 +157,7 @@ func (s *Store) SeedAgentPersonas(ctx context.Context) {
 			Prompt:      string(data),
 			Model:       model,
 			Active:      active,
+			Status:      status,
 		}); err != nil {
 			log.Printf("personas: upsert %s: %v", name, err)
 			continue
