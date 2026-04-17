@@ -17,7 +17,7 @@ import (
 	"text/template"
 )
 
-var statusRegex = regexp.MustCompile(`<!--\s*Status:\s*(\w+)\s*-->`)
+var statusRegex = regexp.MustCompile(`(?m)^<!--\s*Status:\s*(\w+)\s*-->`)
 
 type entry struct {
 	Name   string
@@ -118,7 +118,9 @@ func render(entries []entry) ([]byte, error) {
 	}
 	formatted, err := format.Source(buf.Bytes())
 	if err != nil {
-		// Fall back to unformatted on gofmt failure so the error is visible.
+		// Return the pre-format bytes alongside the error so callers can
+		// inspect the malformed template output when debugging. main()
+		// exits on this error path without writing the file.
 		return buf.Bytes(), fmt.Errorf("gofmt: %w", err)
 	}
 	return formatted, nil
