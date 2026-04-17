@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lovyou-ai/site/graph/personas"
 	_ "github.com/lib/pq"
+	"github.com/lovyou-ai/site/graph/personas"
 )
 
 // testDB returns a test database connection. Skips if DATABASE_URL is not set.
@@ -2588,6 +2588,7 @@ func TestSeedAgentPersonas_StatusForcesInactive(t *testing.T) {
 	if _, err := personaFiles.ReadFile("personas/" + targetName + ".md"); err != nil {
 		t.Skipf("target persona %q has no embedded .md (skip): %v", targetName, err)
 	}
+	t.Logf("testing persona %q (status %q)", targetName, targetStatus)
 
 	store.SeedAgentPersonas(ctx)
 
