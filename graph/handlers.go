@@ -312,6 +312,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
 
 	// Hive reconciliation ticker: list ops since a given timestamp.
+	// Mounted under readWrap (not writeWrap) so the inner guard returns a
+	// clean 401 instead of RequireAuth's login redirect. The guard rejects
+	// both nil users and anonymous-mode fallback users — see handleListOpsSince.
 	mux.Handle("GET /app/{slug}/ops", h.readWrap(h.handleListOpsSince))
 
 	// Node children (for HTMX polling).
@@ -4308,9 +4311,10 @@ func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
 
 	// Notify via Mind if we can resolve the op's owner. Unknown op_id remains
 	// a successful no-op — StampOpHiveChainRef didn't error, so a missing row
-	// here just means nothing to notify about.
+	// here just means nothing to notify about. OnMirrorUpdate is itself
+	// non-blocking (channel send), so no goroutine is needed here.
 	if op, err := h.store.GetOp(ctx, req.OpID); err == nil && op != nil && h.mind != nil {
-		go h.mind.OnMirrorUpdate(op.SpaceID, op.ActorID, req.EventType, req.Summary)
+		h.mind.OnMirrorUpdate(op.SpaceID, op.ActorID, req.EventType, req.Summary)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})

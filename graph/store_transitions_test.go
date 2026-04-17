@@ -141,3 +141,119 @@ func TestUpdateNodeStateAndRecordTransition_NoOpOnSameState(t *testing.T) {
 		t.Errorf("want no op for same-state transition, got %+v", op)
 	}
 }
+
+// TestUpdateNodeStateAndRecordTransition_CascadeEmitsChildOps ensures that
+// when a parent task is completed, each cascade-closed tracked-kind child
+// also emits its own `transition` op — so the hive bridge sees a signal for
+// every auto-closed subtask, not just the root.
+func TestUpdateNodeStateAndRecordTransition_CascadeEmitsChildOps(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	slug := fmt.Sprintf("trans-cascade-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(ctx, slug, "Cascade", "", "owner-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	parent, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, Kind: KindTask, Title: "Parent", Author: "tester", AuthorID: "tester-1",
+	})
+	if err != nil {
+		t.Fatalf("create parent: %v", err)
+	}
+	child, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, Kind: KindTask, Title: "Child", Author: "tester", AuthorID: "tester-1",
+		ParentID: parent.ID,
+	})
+	if err != nil {
+		t.Fatalf("create child: %v", err)
+	}
+
+	if _, err := store.UpdateNodeStateAndRecordTransition(ctx, space.ID, parent.ID, StateDone, "tester", "tester-1"); err != nil {
+		t.Fatalf("transition parent: %v", err)
+	}
+
+	gotChild, err := store.GetNode(ctx, child.ID)
+	if err != nil {
+		t.Fatalf("get child: %v", err)
+	}
+	if gotChild.State != StateDone {
+		t.Errorf("child state = %q, want done", gotChild.State)
+	}
+
+	// Check that a transition op was recorded for the child (not just the parent).
+	ops, err := store.ListOps(ctx, space.ID, 100)
+	if err != nil {
+		t.Fatalf("list ops: %v", err)
+	}
+	var sawChildTransition, sawParentTransition bool
+	for _, op := range ops {
+		if op.Op != "transition" {
+			continue
+		}
+		switch op.NodeID {
+		case child.ID:
+			sawChildTransition = true
+		case parent.ID:
+			sawParentTransition = true
+		}
+	}
+	if !sawChildTransition {
+		t.Error("no transition op recorded for cascade-closed child")
+	}
+	if !sawParentTransition {
+		t.Error("no transition op recorded for parent")
+	}
+}
+
+// TestUpdateNodeStateAndRecordTransition_ConcurrentCallersEmitSingleOp guards
+// the TOCTOU fix: two concurrent complete calls on the same node must result
+// in exactly one transition op, not two. Pre-fix, both callers would read
+// from_state=open, both would UPDATE to done (idempotent), and both would
+// emit a duplicate `transition: open→done` op.
+func TestUpdateNodeStateAndRecordTransition_ConcurrentCallersEmitSingleOp(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	slug := fmt.Sprintf("trans-race-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(ctx, slug, "Race", "", "owner-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	task, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID: space.ID, Kind: KindTask, Title: "Race", Author: "tester", AuthorID: "tester-1",
+	})
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	const N = 8
+	errs := make(chan error, N)
+	ops := make(chan *Op, N)
+	ready := make(chan struct{})
+	for i := 0; i < N; i++ {
+		go func() {
+			<-ready
+			op, err := store.UpdateNodeStateAndRecordTransition(ctx, space.ID, task.ID, StateDone, "tester", "tester-1")
+			ops <- op
+			errs <- err
+		}()
+	}
+	close(ready)
+	var nonNil int
+	for i := 0; i < N; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("concurrent call %d: %v", i, err)
+		}
+		if op := <-ops; op != nil {
+			nonNil++
+		}
+	}
+	if nonNil != 1 {
+		t.Errorf("got %d non-nil transition ops from %d concurrent callers, want exactly 1", nonNil, N)
+	}
+}

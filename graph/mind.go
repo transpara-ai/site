@@ -23,15 +23,49 @@ type Mind struct {
 	// callClaudeOverride is set in tests to stub out the Claude CLI without a real token.
 	// When non-nil, callClaude dispatches here instead of exec-ing the claude binary.
 	callClaudeOverride func(ctx context.Context, systemPrompt string, messages []claudeMessage) (string, error)
+
+	// mirrorCh is a bounded queue feeding a single background worker that
+	// writes hive-originated notifications. Bounding the queue + one worker
+	// prevents a goroutine storm during hive catchup (a reconciliation burst
+	// can fire hundreds of mirror calls in a tight loop).
+	mirrorCh chan mirrorNotification
 }
+
+type mirrorNotification struct {
+	spaceID, actorID, eventType, summary string
+}
+
+// mirrorQueueSize caps queued hive-originated notifications. On overflow the
+// handler drops the notification and logs — the hive_chain_ref stamp has
+// already persisted, so the bridge's durable state is intact.
+const mirrorQueueSize = 256
 
 // NewMind creates a Mind that auto-replies in agent conversations.
 func NewMind(db *sql.DB, store *Store, claudeToken string) *Mind {
-	return &Mind{
+	m := &Mind{
 		db:           db,
 		store:        store,
 		token:        claudeToken,
 		replyTimeout: 5 * time.Minute,
+		mirrorCh:     make(chan mirrorNotification, mirrorQueueSize),
+	}
+	go m.mirrorWorker()
+	return m
+}
+
+// mirrorWorker drains mirrorCh serially so mirror notifications don't spawn
+// an unbounded number of goroutines or hold unbounded parallel DB writes.
+func (m *Mind) mirrorWorker() {
+	for n := range m.mirrorCh {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		msg := n.summary
+		if msg == "" {
+			msg = n.eventType
+		}
+		if err := m.store.CreateNotification(ctx, n.actorID, "", n.spaceID, "hive: "+msg); err != nil {
+			log.Printf("mind: mirror update notify %s: %v", n.actorID, err)
+		}
+		cancel()
 	}
 }
 
@@ -371,23 +405,21 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 
 // OnMirrorUpdate surfaces a hive-side mirror event back to the site user
 // via the notification system. Called by the hive/mirror handler after the
-// local op has been stamped with its hive_chain_ref. Safe to call with a
-// nil Mind — the handler checks before invoking.
+// local op has been stamped with its hive_chain_ref. Non-blocking: the
+// notification is enqueued for the mirror worker and dropped on queue
+// overflow so the request path never blocks on the notification DB write.
+// Safe to call with a nil Mind — the handler checks before invoking.
 func (m *Mind) OnMirrorUpdate(spaceID, actorID, eventType, summary string) {
 	if actorID == "" || actorID == "anonymous" {
 		return
 	}
-	msg := summary
-	if msg == "" {
-		msg = eventType
-	}
-	if msg == "" {
+	if summary == "" && eventType == "" {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := m.store.CreateNotification(ctx, actorID, "", spaceID, "hive: "+msg); err != nil {
-		log.Printf("mind: mirror update notify %s: %v", actorID, err)
+	select {
+	case m.mirrorCh <- mirrorNotification{spaceID: spaceID, actorID: actorID, eventType: eventType, summary: summary}:
+	default:
+		log.Printf("mind: mirror queue full, dropping notify actor=%s event=%s", actorID, eventType)
 	}
 }
 

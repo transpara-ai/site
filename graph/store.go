@@ -1673,32 +1673,111 @@ func isTransitionTrackedKind(kind string) bool {
 // structured `{from_state, to_state, node_kind}` payload so downstream
 // subscribers (e.g. hive webhook) can react to the transition.
 //
-// Returns the transition Op when one is recorded (nil for untracked kinds).
-// The state update is persisted regardless of kind — only the op is gated.
+// The state change is atomic: a single CTE locks the row, reads the pre-update
+// state, and only writes when state actually differs — preventing duplicate
+// transition ops under concurrent callers racing on the same node.
+//
+// When transitioning to `done`, descendants are cascade-closed first and each
+// auto-closed child emits its own transition op (routed back through this
+// function) so the bridge sees a signal for every tracked state change.
+//
+// Returns the transition Op when one is recorded (nil for untracked kinds or
+// no-op transitions). The state update is persisted regardless of kind — only
+// the op is gated.
 func (s *Store) UpdateNodeStateAndRecordTransition(ctx context.Context, spaceID, nodeID, newState, actor, actorID string) (*Op, error) {
-	node, err := s.GetNode(ctx, nodeID)
+	return s.updateNodeStateAndRecordTransition(ctx, spaceID, nodeID, newState, actor, actorID, 0)
+}
+
+// updateNodeStateAndRecordTransition is the depth-tracking internal helper.
+// The depth parameter is only consulted for cascade recursion; public callers
+// always enter at depth 0.
+func (s *Store) updateNodeStateAndRecordTransition(ctx context.Context, spaceID, nodeID, newState, actor, actorID string, depth int) (*Op, error) {
+	// Cascade descendants first so grandchildren close before parents, matching
+	// UpdateNodeState's historical ordering. Each affected child re-enters this
+	// function so tracked-kind children emit their own `transition` op.
+	if newState == StateDone {
+		if err := s.cascadeCloseChildrenWithTransitions(ctx, nodeID, depth, spaceID, actor, actorID); err != nil {
+			return nil, err
+		}
+	}
+
+	// Single-statement atomic state change: FOR UPDATE locks the row, the
+	// UPDATE fires only when state differs, and the outer SELECT returns the
+	// pre-update state/kind plus a `changed` flag. This closes the TOCTOU
+	// where a prior Get + Update could let two concurrent callers both
+	// emit a transition op for a single effective transition.
+	var fromState, kind string
+	var changed bool
+	err := s.db.QueryRowContext(ctx,
+		`WITH target AS (
+			SELECT id, state AS from_state, kind FROM nodes WHERE id = $1 FOR UPDATE
+		 ),
+		 updated AS (
+			UPDATE nodes n
+			SET state = $2, updated_at = NOW()
+			FROM target t
+			WHERE n.id = t.id AND t.from_state <> $2
+			RETURNING n.id
+		 )
+		 SELECT t.from_state, t.kind, EXISTS(SELECT 1 FROM updated) AS changed
+		 FROM target t`,
+		nodeID, newState,
+	).Scan(&fromState, &kind, &changed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update state: %w", err)
 	}
-	fromState := node.State
-	if err := s.UpdateNodeState(ctx, nodeID, newState); err != nil {
-		return nil, err
-	}
-	if fromState == newState {
+	if !changed {
 		return nil, nil
 	}
-	if !isTransitionTrackedKind(node.Kind) {
+	if !isTransitionTrackedKind(kind) {
 		return nil, nil
 	}
 	payload, err := json.Marshal(map[string]string{
 		"from_state": fromState,
 		"to_state":   newState,
-		"node_kind":  node.Kind,
+		"node_kind":  kind,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("marshal transition payload: %w", err)
 	}
 	return s.RecordOp(ctx, spaceID, nodeID, actor, actorID, "transition", payload)
+}
+
+// cascadeCloseChildrenWithTransitions mirrors cascadeCloseChildren but routes
+// each child through UpdateNodeStateAndRecordTransition so tracked-kind
+// descendants emit their own `transition` op instead of transitioning
+// silently. Preserves depth-first ordering and the maxCascadeDepth guard.
+func (s *Store) cascadeCloseChildrenWithTransitions(ctx context.Context, parentID string, depth int, spaceID, actor, actorID string) error {
+	if depth > maxCascadeDepth {
+		return fmt.Errorf("cascade depth exceeded for parent %s", parentID)
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id FROM nodes WHERE parent_id = $1 AND state != 'done'`, parentID,
+	)
+	if err != nil {
+		return fmt.Errorf("cascade children of %s: %w", parentID, err)
+	}
+	var childIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		childIDs = append(childIDs, id)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, childID := range childIDs {
+		if _, err := s.updateNodeStateAndRecordTransition(ctx, spaceID, childID, StateDone, actor, actorID, depth+1); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ────────────────────────────────────────────────────────────────────
