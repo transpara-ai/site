@@ -62,6 +62,25 @@ func getOpsSince(t *testing.T, h *Handlers, slug string, query string) (*httptes
 	return w, body
 }
 
+// A private space owned by a different user must 404 for a non-member —
+// handleListOpsSince routes through spaceForRead to enforce this.
+func TestOpsSince_RejectsNonMemberOnPrivateSpace(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	ctx := context.Background()
+
+	slug := fmt.Sprintf("ops-since-priv-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(ctx, slug, "Private", "", "other-owner-1", "project", VisibilityPrivate)
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	w, _ := getOpsSince(t, h, slug, "")
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404 (spaceForRead hides private spaces from non-members); body: %s", w.Code, w.Body.String())
+	}
+}
+
 func TestOpsSince_ReturnsOpsAfterTimestamp(t *testing.T) {
 	h, store, _ := testHandlers(t)
 	space, ops := seedOpsSpace(t, store, 5)

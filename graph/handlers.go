@@ -4285,7 +4285,7 @@ func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
 		Summary      string    `json:"summary"`
 		MirroredAt   time.Time `json:"mirrored_at"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 64*1024)).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -4304,7 +4304,7 @@ func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
 	// Update derived nodes for hive.spec.* state transitions. Non-fatal on
 	// failure — the chain_ref is already stamped and the bridge can retry.
 	if strings.HasPrefix(req.EventType, "hive.spec.") {
-		if err := h.store.UpdateNodeFromMirror(ctx, req.OpID, req.EventType); err != nil {
+		if err := h.store.UpdateNodeFromMirror(ctx, req.OpID, req.EventType, "hive", h.userID(r)); err != nil {
 			log.Printf("mirror: update derived node for op=%s event=%s: %v", req.OpID, req.EventType, err)
 		}
 	}
@@ -4330,7 +4330,7 @@ func (h *Handlers) handleListOpsSince(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	space, err := h.store.GetSpaceBySlug(r.Context(), r.PathValue("slug"))
+	space, _, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
 		http.NotFound(w, r)
 		return

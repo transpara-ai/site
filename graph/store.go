@@ -1625,10 +1625,12 @@ func (s *Store) StampOpHiveChainRef(ctx context.Context, opID, hiveChainRef stri
 }
 
 // UpdateNodeFromMirror applies a mirror-driven state change to the derived
-// node for a stamped op, based on the hive event_type. Returns nil and no
-// error for unknown event_types or when the op has no associated node —
-// non-fatal so callers can continue stamping the chain_ref.
-func (s *Store) UpdateNodeFromMirror(ctx context.Context, opID, eventType string) error {
+// node for a stamped op, based on the hive event_type. Routed through
+// UpdateNodeStateAndRecordTransition so tracked kinds emit a transition op,
+// keeping inbound mirror events consistent with outbound state changes.
+// Returns nil and no error for unknown event_types or when the op has no
+// associated node — non-fatal so callers can continue stamping the chain_ref.
+func (s *Store) UpdateNodeFromMirror(ctx context.Context, opID, eventType, actor, actorID string) error {
 	op, err := s.GetOp(ctx, opID)
 	if errors.Is(err, ErrNotFound) {
 		return nil
@@ -1648,7 +1650,7 @@ func (s *Store) UpdateNodeFromMirror(ctx context.Context, opID, eventType string
 	default:
 		return nil
 	}
-	if err := s.UpdateNodeState(ctx, op.NodeID, newState); err != nil {
+	if _, err := s.UpdateNodeStateAndRecordTransition(ctx, op.SpaceID, op.NodeID, newState, actor, actorID); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil
 		}

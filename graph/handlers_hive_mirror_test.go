@@ -203,3 +203,39 @@ func TestHiveMirror_UpdatesDerivedNodeForSpecCompleted(t *testing.T) {
 		t.Errorf("node state = %q, want completed", got.State)
 	}
 }
+
+// A hive.spec.completed mirror event on a tracked kind (task) must emit a
+// structured `transition` op, mirroring the invariant outbound state changes
+// honour via UpdateNodeStateAndRecordTransition.
+func TestHiveMirror_SpecCompletedEmitsTransitionOp(t *testing.T) {
+	h, store, opID, cleanup := setupMirrorTest(t)
+	t.Cleanup(cleanup)
+
+	ctx := context.Background()
+	opBefore, _ := store.GetOp(ctx, opID)
+	nodeID := opBefore.NodeID
+
+	w := postMirror(t, h, map[string]string{
+		"op_id":          opID,
+		"hive_chain_ref": "cas://spec/tx",
+		"event_type":     "hive.spec.completed",
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+
+	ops, err := store.ListNodeOps(ctx, nodeID)
+	if err != nil {
+		t.Fatalf("list node ops: %v", err)
+	}
+	var found bool
+	for _, op := range ops {
+		if op.Op == "transition" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("no transition op emitted for mirror-driven state change; got ops: %+v", ops)
+	}
+}
