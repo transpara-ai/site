@@ -27,6 +27,13 @@
   --color-warm-secondary: #c8c4bc;
   --color-warm-muted: #78756e;
   --color-warm-faint: #4a4844;
+
+  /* State + priority semantic tokens. PriorityHigh reuses
+     --color-state-review intentionally (same amber). */
+  --color-state-active: #818cf8;
+  --color-state-review: #fbbf24;
+  --color-state-done: #6ec89b;
+  --color-priority-urgent: #e07070;
 }
 
 /* ─── Typography ─────────────────────────────────────────────────── */
