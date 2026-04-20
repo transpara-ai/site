@@ -8,6 +8,9 @@ fail() { echo "FAIL: $1" >&2; exit 1; }
 
 cd "$REPO" || fail "cd to $REPO"
 
+step "make css"
+make css || fail "make css"
+
 step "templ generate"
 export PATH="$HOME/go/bin:$PATH"
 templ generate || fail "templ generate"
