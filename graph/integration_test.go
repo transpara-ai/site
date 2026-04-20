@@ -124,8 +124,18 @@ func TestNewUserJourney(t *testing.T) {
 	var listResult map[string]any
 	json.NewDecoder(w.Body).Decode(&listResult)
 	convos := listResult["conversations"].([]any)
-	if len(convos) != 1 {
-		t.Errorf("expected 1 conversation, got %d", len(convos))
+	// handleCreateSpace auto-creates a "Welcome" conversation, so there will be
+	// at least 2 conversations here (Welcome + the Team Chat we created). Assert
+	// that our Team Chat is in the list rather than pinning the total count.
+	foundOurs := false
+	for _, c := range convos {
+		if c.(map[string]any)["id"] == convoID {
+			foundOurs = true
+			break
+		}
+	}
+	if !foundOurs {
+		t.Errorf("conversation %s not found in list of %d conversations", convoID, len(convos))
 	}
 }
 

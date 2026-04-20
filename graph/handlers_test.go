@@ -35,17 +35,17 @@ func testHandlers(t *testing.T) (*Handlers, *Store, func(http.HandlerFunc) http.
 
 func TestHandlerCreateSpace(t *testing.T) {
 	h, store, _ := testHandlers(t)
-	ctx := t
 
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	slug := fmt.Sprintf("handler-test-%d", time.Now().UnixNano())
+	// handleCreateSpace derives the slug from slugify(name) and ignores any
+	// explicit slug form field, so make the name unique to keep the slug unique.
+	name := fmt.Sprintf("Handler Test %d", time.Now().UnixNano())
+	expectedSlug := slugify(name)
 
-	// Create space via form POST.
 	form := url.Values{}
-	form.Set("slug", slug)
-	form.Set("name", "Handler Test")
+	form.Set("name", name)
 	form.Set("description", "Testing handlers")
 	form.Set("kind", "project")
 	form.Set("visibility", "public")
@@ -59,16 +59,14 @@ func TestHandlerCreateSpace(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusSeeOther, w.Body.String())
 	}
 
-	// Verify space was created.
-	space, err := store.GetSpaceBySlug(t.Context(), slug)
+	space, err := store.GetSpaceBySlug(t.Context(), expectedSlug)
 	if err != nil {
 		t.Fatalf("get space: %v", err)
 	}
-	_ = ctx
 	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
 
-	if space.Name != "Handler Test" {
-		t.Errorf("name = %q, want %q", space.Name, "Handler Test")
+	if space.Name != name {
+		t.Errorf("name = %q, want %q", space.Name, name)
 	}
 	if space.Visibility != "public" {
 		t.Errorf("visibility = %q, want %q", space.Visibility, "public")
@@ -1453,7 +1451,8 @@ func TestHandlerQuestionAutoAnswer(t *testing.T) {
 	}
 }
 
-// TestHivePage issues GET /hive and asserts HTTP 200 and the body contains "Civilization Engine".
+// TestHivePage issues GET /hive and asserts HTTP 200 and the body contains
+// the "Phase timeline" section heading that the template always renders.
 func TestHivePage(t *testing.T) {
 	h, _, _ := testHandlers(t)
 
@@ -1467,8 +1466,8 @@ func TestHivePage(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("GET /hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "Civilization Engine") {
-		t.Error("GET /hive: body does not contain 'Civilization Engine'")
+	if !strings.Contains(w.Body.String(), "Phase timeline") {
+		t.Error("GET /hive: body does not contain 'Phase timeline'")
 	}
 }
 
@@ -1478,9 +1477,10 @@ func TestListHiveActivity(t *testing.T) {
 	_, store := testDB(t)
 	ctx := t.Context()
 
-	const agentUserID = "hive-list-activity-test-agent"
+	agentUserID := fmt.Sprintf("hive-list-activity-test-agent-%d", time.Now().UnixNano())
+	slug := fmt.Sprintf("hive-list-activity-test-%d", time.Now().UnixNano())
 
-	space, err := store.CreateSpace(ctx, "hive-list-activity-test", "Hive List Activity Test", "", "owner-list-activity", "project", "public")
+	space, err := store.CreateSpace(ctx, slug, "Hive List Activity Test", "", "owner-list-activity", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}

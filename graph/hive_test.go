@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -221,7 +223,8 @@ func TestGetHiveCurrentTask_ScopedToActor(t *testing.T) {
 	_, store := testDB(t)
 	ctx := t.Context()
 
-	space, err := store.CreateSpace(ctx, "hive-scope-task-test", "Hive Scope Task", "", "owner-scope-task", "project", "public")
+	slug := fmt.Sprintf("hive-scope-task-test-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(ctx, slug, "Hive Scope Task", "", "owner-scope-task", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
@@ -279,7 +282,15 @@ func TestGetHiveTotals_ScopedToActor(t *testing.T) {
 	_, store := testDB(t)
 	ctx := t.Context()
 
-	space, err := store.CreateSpace(ctx, "hive-scope-totals-test", "Hive Scope Totals", "", "owner-scope-totals", "project", "public")
+	nonce := time.Now().UnixNano()
+	slug := fmt.Sprintf("hive-scope-totals-test-%d", nonce)
+	// GetHiveTotals counts ops by actor ID across all spaces, so randomize the
+	// actor IDs too — otherwise stale ops from prior runs (or other tests that
+	// reuse the literal) inflate the count.
+	actorA := fmt.Sprintf("hive-totals-actor-a-%d", nonce)
+	actorB := fmt.Sprintf("hive-totals-actor-b-%d", nonce)
+
+	space, err := store.CreateSpace(ctx, slug, "Hive Scope Totals", "", "owner-scope-totals", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
@@ -290,7 +301,7 @@ func TestGetHiveTotals_ScopedToActor(t *testing.T) {
 		Kind:       KindTask,
 		Title:      "Scope totals test node",
 		Author:     "agent-a",
-		AuthorID:   "hive-totals-actor-a",
+		AuthorID:   actorA,
 		AuthorKind: "agent",
 	})
 	if err != nil {
@@ -299,15 +310,15 @@ func TestGetHiveTotals_ScopedToActor(t *testing.T) {
 
 	// 2 ops for actor A, 1 for actor B.
 	for range 2 {
-		if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-a", "hive-totals-actor-a", "express", nil); err != nil {
+		if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-a", actorA, "express", nil); err != nil {
 			t.Fatalf("record op A: %v", err)
 		}
 	}
-	if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-b", "hive-totals-actor-b", "express", nil); err != nil {
+	if _, err := store.RecordOp(ctx, space.ID, node.ID, "agent-b", actorB, "express", nil); err != nil {
 		t.Fatalf("record op B: %v", err)
 	}
 
-	totalA, _, err := store.GetHiveTotals(ctx, "hive-totals-actor-a")
+	totalA, _, err := store.GetHiveTotals(ctx, actorA)
 	if err != nil {
 		t.Fatalf("GetHiveTotals actorA: %v", err)
 	}
@@ -315,7 +326,7 @@ func TestGetHiveTotals_ScopedToActor(t *testing.T) {
 		t.Errorf("GetHiveTotals(actorA) = %d, want 2", totalA)
 	}
 
-	totalB, _, err := store.GetHiveTotals(ctx, "hive-totals-actor-b")
+	totalB, _, err := store.GetHiveTotals(ctx, actorB)
 	if err != nil {
 		t.Fatalf("GetHiveTotals actorB: %v", err)
 	}
@@ -330,26 +341,34 @@ func TestGetHiveAgentID_IntegrationPath(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
 
-	const agentUserID = "hive-get-agent-id-test-actor"
-	const apiKeyID = "hive-get-agent-id-apikey-test"
+	nonce := time.Now().UnixNano()
+	agentUserID := fmt.Sprintf("hive-get-agent-id-test-actor-%d", nonce)
+	apiKeyID := fmt.Sprintf("hive-get-agent-id-apikey-test-%d", nonce)
+	agentEmail := fmt.Sprintf("hive-agent-id-test-%d@test.local", nonce)
 
 	// Insert a test agent user.
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, email, name, kind) VALUES ($1, $2, $3, 'agent')`,
-		agentUserID, "hive-agent-id-test@test.local", "test-hive-agent-id-func")
+		agentUserID, agentEmail, "test-hive-agent-id-func")
 	if err != nil {
 		t.Fatalf("insert agent user: %v", err)
 	}
 	t.Cleanup(func() {
-		db.ExecContext(ctx, `DELETE FROM api_keys WHERE id = $1`, apiKeyID)
-		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentUserID)
+		// t.Context() is cancelled by the time cleanup runs, so use a fresh
+		// background context — otherwise these DELETEs silently no-op and
+		// stale rows bleed into later runs.
+		cleanupCtx := context.Background()
+		db.ExecContext(cleanupCtx, `DELETE FROM api_keys WHERE id = $1`, apiKeyID)
+		db.ExecContext(cleanupCtx, `DELETE FROM users WHERE id = $1`, agentUserID)
 	})
 
 	// Insert an api_keys row linking to the agent. Use a very old created_at so this
 	// row is always returned first by ORDER BY created_at ASC LIMIT 1.
+	// user_id is the key owner (FK to users.id); reuse agentUserID so we don't
+	// depend on another test having seeded a "test-owner-id" user.
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO api_keys (id, key_hash, user_id, agent_id, created_at) VALUES ($1, $2, $3, $4, '2020-01-01 00:00:00+00')`,
-		apiKeyID, "hive-get-agent-id-testhash", "test-owner-id", agentUserID)
+		apiKeyID, fmt.Sprintf("hive-get-agent-id-testhash-%d", nonce), agentUserID, agentUserID)
 	if err != nil {
 		t.Fatalf("insert api_key: %v", err)
 	}
