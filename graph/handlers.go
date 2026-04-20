@@ -308,6 +308,14 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Hive diagnostics ingestion (requires auth — used by hive runner).
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
+	// Hive reconciliation: stamp a local op with the hive-side causal chain ref.
+	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
+
+	// Hive reconciliation ticker: list ops since a given timestamp.
+	// Mounted under readWrap (not writeWrap) so the inner guard returns a
+	// clean 401 instead of RequireAuth's login redirect. The guard rejects
+	// both nil users and anonymous-mode fallback users — see handleListOpsSince.
+	mux.Handle("GET /app/{slug}/ops", h.readWrap(h.handleListOpsSince))
 
 	// Node children (for HTMX polling).
 	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
@@ -2645,7 +2653,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "node_id required", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, StateDone); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, StateDone, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3064,7 +3072,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Update claim state to challenged.
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimChallenged); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimChallenged, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3091,7 +3099,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "can only verify claims", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimVerified); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimVerified, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3125,7 +3133,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "can only retract claims", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, ClaimRetracted); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, ClaimRetracted, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3472,7 +3480,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "task must be in active state to submit for review", http.StatusBadRequest)
 			return
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, StateReview); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, StateReview, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3523,7 +3531,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 		default: // "reject"
 			newState = StateClosed
 		}
-		if err := h.store.UpdateNodeState(ctx, nodeID, newState); err != nil {
+		if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, nodeID, newState, actor, actorID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -3710,7 +3718,7 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.store.UpdateNodeState(r.Context(), nodeID, newState); err != nil {
+	if _, err := h.store.UpdateNodeStateAndRecordTransition(r.Context(), space.ID, nodeID, newState, h.userName(r), h.userID(r)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -4214,16 +4222,16 @@ func (h *Handlers) handleHiveEscalation(w http.ResponseWriter, r *http.Request) 
 
 	ctx := r.Context()
 
-	// Set task state to escalated.
-	if err := h.store.UpdateNodeState(ctx, req.TaskID, "escalated"); err != nil {
-		http.Error(w, "update task state: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Look up the space to find the owner for notification.
+	// Look up the space up-front so the transition op can reference it.
 	space, err := h.store.GetSpaceBySlug(ctx, req.SpaceSlug)
 	if err != nil {
 		http.Error(w, "space not found: "+err.Error(), http.StatusNotFound)
+		return
+	}
+
+	// Set task state to escalated (emits a structured transition op for tracked kinds).
+	if _, err := h.store.UpdateNodeStateAndRecordTransition(ctx, space.ID, req.TaskID, "escalated", "hive", h.userID(r)); err != nil {
+		http.Error(w, "update task state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -4244,6 +4252,134 @@ func (h *Handlers) handleHiveEscalation(w http.ResponseWriter, r *http.Request) 
 		"Hive ESCALATION: "+req.Reason)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "escalated", "task_id": req.TaskID})
+}
+
+// handleHiveMirror accepts POST /api/hive/mirror from the hive bridge.
+// The hive side calls this after processing a site-originated op to stamp the
+// local ops row with the hive-side causal chain reference, closing the
+// reconciliation loop.
+//
+// Payload shape:
+//
+//	{
+//	  "op_id":          "op-abc123",            // required — local op to stamp
+//	  "hive_chain_ref": "cas://event/..",       // required — hive-side chain reference
+//	  "event_type":     "hive.spec.completed",  // required — drives derived-node updates
+//	  "summary":        "...",                  // optional — notification body
+//	  "mirrored_at":    "2026-04-17T14:00:00Z"  // optional — hive-side timestamp
+//	}
+//
+// Idempotent, latest-wins: repeated calls with the same (op_id, hive_chain_ref)
+// pair succeed without change; a new hive_chain_ref overwrites the previous
+// stamp. Unknown op_id is a silent 200 (stamp is a no-op) — the hive may echo
+// ops that predate the column or have been evicted.
+func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
+	if u := auth.UserFromContext(r.Context()); u == nil || u.ID == anonUserID {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	var req struct {
+		OpID         string    `json:"op_id"`
+		HiveChainRef string    `json:"hive_chain_ref"`
+		EventType    string    `json:"event_type"`
+		Summary      string    `json:"summary"`
+		MirroredAt   time.Time `json:"mirrored_at"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 64*1024)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.OpID == "" || req.HiveChainRef == "" || req.EventType == "" {
+		http.Error(w, "op_id, hive_chain_ref, and event_type required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+
+	if err := h.store.StampOpHiveChainRef(ctx, req.OpID, req.HiveChainRef); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Update derived nodes for hive.spec.* state transitions. Non-fatal on
+	// failure — the chain_ref is already stamped and the bridge can retry.
+	if strings.HasPrefix(req.EventType, "hive.spec.") {
+		if err := h.store.UpdateNodeFromMirror(ctx, req.OpID, req.EventType, "hive", h.userID(r)); err != nil {
+			log.Printf("mirror: update derived node for op=%s event=%s: %v", req.OpID, req.EventType, err)
+		}
+	}
+
+	// Notify via Mind if we can resolve the op's owner. Unknown op_id remains
+	// a successful no-op — StampOpHiveChainRef didn't error, so a missing row
+	// here just means nothing to notify about. OnMirrorUpdate is itself
+	// non-blocking (channel send), so no goroutine is needed here.
+	if op, err := h.store.GetOp(ctx, req.OpID); err == nil && op != nil && h.mind != nil {
+		h.mind.OnMirrorUpdate(op.SpaceID, op.ActorID, req.EventType, req.Summary)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+}
+
+// handleListOpsSince serves GET /app/{slug}/ops?since=<RFC3339>&limit=<n>.
+// Used by the hive reconciliation ticker to catch up on missed webhook
+// deliveries without re-scanning the full history. Requires an authenticated
+// user — anonymous requests receive 401 even in anonymous-mode deployments.
+func (h *Handlers) handleListOpsSince(w http.ResponseWriter, r *http.Request) {
+	if u := auth.UserFromContext(r.Context()); u == nil || u.ID == anonUserID {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sinceStr := r.URL.Query().Get("since")
+	var since time.Time
+	if sinceStr != "" {
+		since, err = time.Parse(time.RFC3339Nano, sinceStr)
+		if err != nil {
+			if since, err = time.Parse(time.RFC3339, sinceStr); err != nil {
+				http.Error(w, "since must be RFC3339 timestamp", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	limit := 100
+	if s := r.URL.Query().Get("limit"); s != "" {
+		n, err := strconv.Atoi(s)
+		if err != nil || n <= 0 {
+			http.Error(w, "limit must be a positive integer", http.StatusBadRequest)
+			return
+		}
+		limit = n
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	ops, err := h.store.ListOpsSince(r.Context(), space.ID, since, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if ops == nil {
+		ops = []Op{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"space": space.Slug,
+		"since": sinceStr,
+		"limit": limit,
+		"count": len(ops),
+		"ops":   ops,
+	})
 }
 
 // handleHiveFeed renders the phase timeline partial for HTMX polling — public, no auth required.
