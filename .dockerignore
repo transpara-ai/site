@@ -4,3 +4,7 @@ third_party/
 .git
 .vscode
 *.log
+# Node
+node_modules/
+# Compiled CSS (produced inside Docker by the css-builder stage).
+static/css/site.css
