@@ -802,14 +802,17 @@ func TestReplyToInjectsDocuments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
-	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
+	t.Cleanup(func() {
+		cleanupCtx := context.Background()
+		db.ExecContext(cleanupCtx, `DELETE FROM users WHERE id = $1`, agentID)
+	})
 
 	slug := fmt.Sprintf("reply-doc-inject-test-%d", nonce)
 	space, err := store.CreateSpace(ctx, slug, "Reply Doc Inject Test", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
-	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+	t.Cleanup(func() { store.DeleteSpace(context.Background(), space.ID) })
 
 	// Seed documents in the space.
 	store.CreateNode(ctx, CreateNodeParams{
@@ -868,14 +871,17 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
-	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
+	t.Cleanup(func() {
+		cleanupCtx := context.Background()
+		db.ExecContext(cleanupCtx, `DELETE FROM users WHERE id = $1`, agentID)
+	})
 
 	slug := fmt.Sprintf("reply-no-doc-test-%d", nonce)
 	space, err := store.CreateSpace(ctx, slug, "Reply No Doc Test", "", "owner", "project", "public")
 	if err != nil {
 		t.Fatalf("create space: %v", err)
 	}
-	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+	t.Cleanup(func() { store.DeleteSpace(context.Background(), space.ID) })
 
 	// No documents seeded — space is empty.
 
