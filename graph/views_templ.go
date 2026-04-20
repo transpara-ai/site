@@ -16968,32 +16968,33 @@ func stateBgClass(state string) string {
 func stateColorHex(state string) string {
 	switch state {
 	case StateOpen:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	case StateActive:
-		return "#818cf8"
+		return "var(--color-state-active)"
 	case StateReview:
-		return "#fbbf24"
+		return "var(--color-state-review)"
 	case StateDone:
-		return "#6ec89b"
+		return "var(--color-state-done)"
 	case StateClosed:
-		return "#4a4844"
+		return "var(--color-warm-faint)"
 	default:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	}
 }
 
 func priorityDotHex(priority string) string {
 	switch priority {
 	case PriorityUrgent:
-		return "#e07070"
+		return "var(--color-priority-urgent)"
 	case PriorityHigh:
-		return "#fbbf24"
+		// Intentional reuse: high priority shares the review amber.
+		return "var(--color-state-review)"
 	case PriorityMedium:
-		return "#e8a0b8"
+		return "var(--color-brand)"
 	case PriorityLow:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	default:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	}
 }
 
@@ -17264,7 +17265,7 @@ func KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts m
 			var templ_7745c5c3_Var876 templ.SafeURL
 			templ_7745c5c3_Var876, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(knowledgeTabURL(space.Slug, "docs", searchQuery)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5537, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5538, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var876))
 			if templ_7745c5c3_Err != nil {
@@ -17299,7 +17300,7 @@ func KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts m
 			var templ_7745c5c3_Var879 templ.SafeURL
 			templ_7745c5c3_Var879, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(knowledgeTabURL(space.Slug, "qa", searchQuery)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5541, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5542, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var879))
 			if templ_7745c5c3_Err != nil {
@@ -17334,7 +17335,7 @@ func KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts m
 			var templ_7745c5c3_Var882 templ.SafeURL
 			templ_7745c5c3_Var882, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(knowledgeTabURL(space.Slug, "claims", searchQuery)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5545, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5546, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var882))
 			if templ_7745c5c3_Err != nil {
@@ -17436,7 +17437,7 @@ func DocumentList(spaceSlug string, docs []Node, user ViewUser) templ.Component 
 				var templ_7745c5c3_Var885 templ.SafeURL
 				templ_7745c5c3_Var885, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, d.ID)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5574, Col: 77}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5575, Col: 77}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var885))
 				if templ_7745c5c3_Err != nil {
@@ -17449,7 +17450,7 @@ func DocumentList(spaceSlug string, docs []Node, user ViewUser) templ.Component 
 				var templ_7745c5c3_Var886 string
 				templ_7745c5c3_Var886, templ_7745c5c3_Err = templ.JoinStringErrs(d.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5581, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5582, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var886))
 				if templ_7745c5c3_Err != nil {
@@ -17475,7 +17476,7 @@ func DocumentList(spaceSlug string, docs []Node, user ViewUser) templ.Component 
 					var templ_7745c5c3_Var887 string
 					templ_7745c5c3_Var887, templ_7745c5c3_Err = templ.JoinStringErrs(truncate(d.Body, 200))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5585, Col: 84}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5586, Col: 84}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var887))
 					if templ_7745c5c3_Err != nil {
@@ -17493,7 +17494,7 @@ func DocumentList(spaceSlug string, docs []Node, user ViewUser) templ.Component 
 				var templ_7745c5c3_Var888 string
 				templ_7745c5c3_Var888, templ_7745c5c3_Err = templ.JoinStringErrs(d.Author)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5588, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5589, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var888))
 				if templ_7745c5c3_Err != nil {
@@ -17506,7 +17507,7 @@ func DocumentList(spaceSlug string, docs []Node, user ViewUser) templ.Component 
 				var templ_7745c5c3_Var889 string
 				templ_7745c5c3_Var889, templ_7745c5c3_Err = templ.JoinStringErrs(d.CreatedAt.Format("Jan 2, 2006"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5589, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5590, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var889))
 				if templ_7745c5c3_Err != nil {
@@ -17558,7 +17559,7 @@ func CreateDocument(spaceSlug string) templ.Component {
 		var templ_7745c5c3_Var891 templ.SafeURL
 		templ_7745c5c3_Var891, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + spaceSlug + "/op"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5600, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5601, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var891))
 		if templ_7745c5c3_Err != nil {
@@ -17647,7 +17648,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 			var templ_7745c5c3_Var894 templ.SafeURL
 			templ_7745c5c3_Var894, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/op"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5628, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5629, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var894))
 			if templ_7745c5c3_Err != nil {
@@ -17670,7 +17671,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 			var templ_7745c5c3_Var895 templ.SafeURL
 			templ_7745c5c3_Var895, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/app/%s/questions/%s", space.Slug, q.ID)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5643, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5644, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var895))
 			if templ_7745c5c3_Err != nil {
@@ -17683,7 +17684,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 			var templ_7745c5c3_Var896 string
 			templ_7745c5c3_Var896, templ_7745c5c3_Err = templ.JoinStringErrs(q.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5651, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5652, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var896))
 			if templ_7745c5c3_Err != nil {
@@ -17716,7 +17717,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 				var templ_7745c5c3_Var897 string
 				templ_7745c5c3_Var897, templ_7745c5c3_Err = templ.JoinStringErrs(truncate(q.Body, 150))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5659, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5660, Col: 84}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var897))
 				if templ_7745c5c3_Err != nil {
@@ -17734,7 +17735,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 			var templ_7745c5c3_Var898 string
 			templ_7745c5c3_Var898, templ_7745c5c3_Err = templ.JoinStringErrs(q.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5662, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5663, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var898))
 			if templ_7745c5c3_Err != nil {
@@ -17752,7 +17753,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 				var templ_7745c5c3_Var899 string
 				templ_7745c5c3_Var899, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d answer", q.ChildCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5664, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5665, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var899))
 				if templ_7745c5c3_Err != nil {
@@ -17761,7 +17762,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 				var templ_7745c5c3_Var900 string
 				templ_7745c5c3_Var900, templ_7745c5c3_Err = templ.JoinStringErrs(pluralS(q.ChildCount))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5664, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5665, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var900))
 				if templ_7745c5c3_Err != nil {
@@ -17779,7 +17780,7 @@ func knowledgeQATab(space Space, questions []Node, user ViewUser, searchQuery st
 			var templ_7745c5c3_Var901 string
 			templ_7745c5c3_Var901, templ_7745c5c3_Err = templ.JoinStringErrs(q.CreatedAt.Format("Jan 2"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5666, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5667, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var901))
 			if templ_7745c5c3_Err != nil {
@@ -17832,7 +17833,7 @@ func knowledgeClaimsTab(space Space, claims []Node, challengeCounts map[string]i
 		var templ_7745c5c3_Var903 templ.SafeURL
 		templ_7745c5c3_Var903, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/knowledge"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5684, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5685, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var903))
 		if templ_7745c5c3_Err != nil {
@@ -17845,7 +17846,7 @@ func knowledgeClaimsTab(space Space, claims []Node, challengeCounts map[string]i
 		var templ_7745c5c3_Var904 string
 		templ_7745c5c3_Var904, templ_7745c5c3_Err = templ.JoinStringErrs(searchQuery)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5686, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5687, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var904))
 		if templ_7745c5c3_Err != nil {
@@ -17863,7 +17864,7 @@ func knowledgeClaimsTab(space Space, claims []Node, challengeCounts map[string]i
 			var templ_7745c5c3_Var905 templ.SafeURL
 			templ_7745c5c3_Var905, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/knowledge?tab=claims"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5689, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5690, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var905))
 			if templ_7745c5c3_Err != nil {
@@ -17886,7 +17887,7 @@ func knowledgeClaimsTab(space Space, claims []Node, challengeCounts map[string]i
 			var templ_7745c5c3_Var906 templ.SafeURL
 			templ_7745c5c3_Var906, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/op"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5693, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5694, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var906))
 			if templ_7745c5c3_Err != nil {
@@ -17962,7 +17963,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 		var templ_7745c5c3_Var908 templ.SafeURL
 		templ_7745c5c3_Var908, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5732, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5733, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var908))
 		if templ_7745c5c3_Err != nil {
@@ -17975,7 +17976,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 		var templ_7745c5c3_Var909 string
 		templ_7745c5c3_Var909, templ_7745c5c3_Err = templ.JoinStringErrs(node.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5733, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5734, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var909))
 		if templ_7745c5c3_Err != nil {
@@ -17993,7 +17994,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var910 string
 			templ_7745c5c3_Var910, templ_7745c5c3_Err = templ.JoinStringErrs(truncate(node.Body, 200))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5737, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5738, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var910))
 			if templ_7745c5c3_Err != nil {
@@ -18016,7 +18017,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var911 string
 			templ_7745c5c3_Var911, templ_7745c5c3_Err = templ.JoinStringErrs(node.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5741, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5742, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var911))
 			if templ_7745c5c3_Err != nil {
@@ -18034,7 +18035,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var912 string
 			templ_7745c5c3_Var912, templ_7745c5c3_Err = templ.JoinStringErrs(node.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5743, Col: 23}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5744, Col: 23}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var912))
 			if templ_7745c5c3_Err != nil {
@@ -18052,7 +18053,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 		var templ_7745c5c3_Var913 string
 		templ_7745c5c3_Var913, templ_7745c5c3_Err = templ.JoinStringErrs(node.CreatedAt.Format("Jan 2, 2006"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5745, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5746, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var913))
 		if templ_7745c5c3_Err != nil {
@@ -18070,7 +18071,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var914 string
 			templ_7745c5c3_Var914, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d challenge", challenges))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5747, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5748, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var914))
 			if templ_7745c5c3_Err != nil {
@@ -18079,7 +18080,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var915 string
 			templ_7745c5c3_Var915, templ_7745c5c3_Err = templ.JoinStringErrs(pluralS(challenges))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5747, Col: 97}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5748, Col: 97}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var915))
 			if templ_7745c5c3_Err != nil {
@@ -18153,7 +18154,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var919 string
 			templ_7745c5c3_Var919, templ_7745c5c3_Err = templ.JoinStringErrs("challenge-" + node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5762, Col: 36}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5763, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var919))
 			if templ_7745c5c3_Err != nil {
@@ -18166,7 +18167,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var920 templ.SafeURL
 			templ_7745c5c3_Var920, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + spaceSlug + "/op"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5762, Col: 104}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5763, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var920))
 			if templ_7745c5c3_Err != nil {
@@ -18179,7 +18180,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var921 string
 			templ_7745c5c3_Var921, templ_7745c5c3_Err = templ.JoinStringErrs(node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5764, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5765, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var921))
 			if templ_7745c5c3_Err != nil {
@@ -18192,7 +18193,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var922 string
 			templ_7745c5c3_Var922, templ_7745c5c3_Err = templ.JoinStringErrs("verify-" + node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5771, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5772, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var922))
 			if templ_7745c5c3_Err != nil {
@@ -18205,7 +18206,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var923 templ.SafeURL
 			templ_7745c5c3_Var923, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + spaceSlug + "/op"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5771, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5772, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var923))
 			if templ_7745c5c3_Err != nil {
@@ -18218,7 +18219,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var924 string
 			templ_7745c5c3_Var924, templ_7745c5c3_Err = templ.JoinStringErrs(node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5773, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5774, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var924))
 			if templ_7745c5c3_Err != nil {
@@ -18231,7 +18232,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var925 string
 			templ_7745c5c3_Var925, templ_7745c5c3_Err = templ.JoinStringErrs("retract-" + node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5780, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5781, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var925))
 			if templ_7745c5c3_Err != nil {
@@ -18244,7 +18245,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var926 templ.SafeURL
 			templ_7745c5c3_Var926, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + spaceSlug + "/op"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5780, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5781, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var926))
 			if templ_7745c5c3_Err != nil {
@@ -18257,7 +18258,7 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			var templ_7745c5c3_Var927 string
 			templ_7745c5c3_Var927, templ_7745c5c3_Err = templ.JoinStringErrs(node.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5782, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5783, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var927))
 			if templ_7745c5c3_Err != nil {
@@ -18326,7 +18327,7 @@ func claimStatusBadge(state string) templ.Component {
 			var templ_7745c5c3_Var929 string
 			templ_7745c5c3_Var929, templ_7745c5c3_Err = templ.JoinStringErrs(state)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5804, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5805, Col: 106}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var929))
 			if templ_7745c5c3_Err != nil {
@@ -18436,7 +18437,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 			var templ_7745c5c3_Var931 string
 			templ_7745c5c3_Var931, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", iterCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5879, Col: 143}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5880, Col: 143}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var931))
 			if templ_7745c5c3_Err != nil {
@@ -18455,7 +18456,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 			var templ_7745c5c3_Var932 string
 			templ_7745c5c3_Var932, templ_7745c5c3_Err = templ.JoinStringErrs(ls.Phase)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5882, Col: 120}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5883, Col: 120}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var932))
 			if templ_7745c5c3_Err != nil {
@@ -18478,7 +18479,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 			var templ_7745c5c3_Var933 string
 			templ_7745c5c3_Var933, templ_7745c5c3_Err = templ.JoinStringErrs(ls.BuildTitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5887, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5888, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var933))
 			if templ_7745c5c3_Err != nil {
@@ -18496,7 +18497,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 		var templ_7745c5c3_Var934 string
 		templ_7745c5c3_Var934, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.Features))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5893, Col: 96}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5894, Col: 96}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var934))
 		if templ_7745c5c3_Err != nil {
@@ -18509,7 +18510,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 		var templ_7745c5c3_Var935 string
 		templ_7745c5c3_Var935, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("$%.2f", stats.TotalCost))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5897, Col: 101}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5898, Col: 101}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var935))
 		if templ_7745c5c3_Err != nil {
@@ -18522,7 +18523,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 		var templ_7745c5c3_Var936 string
 		templ_7745c5c3_Var936, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("$%.2f", stats.AvgCost))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5901, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5902, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var936))
 		if templ_7745c5c3_Err != nil {
@@ -18591,7 +18592,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 			var templ_7745c5c3_Var941 string
 			templ_7745c5c3_Var941, templ_7745c5c3_Err = templ.JoinStringErrs(role.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5918, Col: 92}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5919, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var941))
 			if templ_7745c5c3_Err != nil {
@@ -18614,7 +18615,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 				var templ_7745c5c3_Var942 string
 				templ_7745c5c3_Var942, templ_7745c5c3_Err = templ.JoinStringErrs(dashRelativeTime(role.LastActive))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5923, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5924, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var942))
 				if templ_7745c5c3_Err != nil {
@@ -18652,7 +18653,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 				var templ_7745c5c3_Var943 string
 				templ_7745c5c3_Var943, templ_7745c5c3_Err = templ.JoinStringErrs(task.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5941, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5942, Col: 67}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var943))
 				if templ_7745c5c3_Err != nil {
@@ -18670,7 +18671,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 					var templ_7745c5c3_Var944 string
 					templ_7745c5c3_Var944, templ_7745c5c3_Err = templ.JoinStringErrs(task.Assignee)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5944, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5945, Col: 62}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var944))
 					if templ_7745c5c3_Err != nil {
@@ -18688,7 +18689,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 				var templ_7745c5c3_Var945 string
 				templ_7745c5c3_Var945, templ_7745c5c3_Err = templ.JoinStringErrs(task.State)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5946, Col: 125}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5947, Col: 125}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var945))
 				if templ_7745c5c3_Err != nil {
@@ -18726,7 +18727,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 				var templ_7745c5c3_Var946 string
 				templ_7745c5c3_Var946, templ_7745c5c3_Err = templ.JoinStringErrs(p.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5963, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5964, Col: 78}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var946))
 				if templ_7745c5c3_Err != nil {
@@ -18739,7 +18740,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 				var templ_7745c5c3_Var947 string
 				templ_7745c5c3_Var947, templ_7745c5c3_Err = templ.JoinStringErrs(dashRelativeTime(p.CreatedAt))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5965, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5966, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var947))
 				if templ_7745c5c3_Err != nil {
@@ -18757,7 +18758,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 					var templ_7745c5c3_Var948 string
 					templ_7745c5c3_Var948, templ_7745c5c3_Err = templ.JoinStringErrs(hiveCostStr(p))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5967, Col: 119}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5968, Col: 119}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var948))
 					if templ_7745c5c3_Err != nil {
@@ -18776,7 +18777,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 					var templ_7745c5c3_Var949 string
 					templ_7745c5c3_Var949, templ_7745c5c3_Err = templ.JoinStringErrs(hiveDurationStr(p))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5970, Col: 68}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5971, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var949))
 					if templ_7745c5c3_Err != nil {
@@ -18799,7 +18800,7 @@ func HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, task
 					var templ_7745c5c3_Var950 string
 					templ_7745c5c3_Var950, templ_7745c5c3_Err = templ.JoinStringErrs(truncateBody(p.Body, 120))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5975, Col: 86}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5976, Col: 86}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var950))
 					if templ_7745c5c3_Err != nil {
@@ -18866,7 +18867,7 @@ func HiveStatsBar(totalOps int, lastActive time.Time) templ.Component {
 		var templ_7745c5c3_Var952 string
 		templ_7745c5c3_Var952, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", totalOps))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5993, Col: 89}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5994, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var952))
 		if templ_7745c5c3_Err != nil {
@@ -18884,7 +18885,7 @@ func HiveStatsBar(totalOps int, lastActive time.Time) templ.Component {
 			var templ_7745c5c3_Var953 string
 			templ_7745c5c3_Var953, templ_7745c5c3_Err = templ.JoinStringErrs(dashRelativeTime(lastActive))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5998, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5999, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var953))
 			if templ_7745c5c3_Err != nil {

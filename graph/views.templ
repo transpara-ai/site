@@ -5278,32 +5278,33 @@ func stateBgClass(state string) string {
 func stateColorHex(state string) string {
 	switch state {
 	case StateOpen:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	case StateActive:
-		return "#818cf8"
+		return "var(--color-state-active)"
 	case StateReview:
-		return "#fbbf24"
+		return "var(--color-state-review)"
 	case StateDone:
-		return "#6ec89b"
+		return "var(--color-state-done)"
 	case StateClosed:
-		return "#4a4844"
+		return "var(--color-warm-faint)"
 	default:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	}
 }
 
 func priorityDotHex(priority string) string {
 	switch priority {
 	case PriorityUrgent:
-		return "#e07070"
+		return "var(--color-priority-urgent)"
 	case PriorityHigh:
-		return "#fbbf24"
+		// Intentional reuse: high priority shares the review amber.
+		return "var(--color-state-review)"
 	case PriorityMedium:
-		return "#e8a0b8"
+		return "var(--color-brand)"
 	case PriorityLow:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	default:
-		return "#78756e"
+		return "var(--color-warm-muted)"
 	}
 }
 
