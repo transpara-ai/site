@@ -37,6 +37,17 @@ jobs:
           go-version: "1.25"
           cache-dependency-path: go.sum
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build CSS
+        run: make css
+
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@v0.3.1001
 

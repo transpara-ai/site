@@ -1,0 +1,14 @@
+{
+  "name": "lovyou-ai-site",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tailwind v4 build chain for lovyou-ai-site. Not a published package.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/site.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/site.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "tailwindcss": "^4.0.0"
+  }
+}
