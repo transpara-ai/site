@@ -369,17 +369,6 @@ func main() {
 		graphHandlers.Register(mux)
 		log.Println("app enabled (DATABASE_URL set)")
 
-		// Surface the anonymous-mode × bridge risk at startup (design §9.1):
-		// in anonymous mode, write endpoints accept `user_id=anonymous`, which
-		// includes the /api/hive/mirror sink. A misconfigured deployment can
-		// silently accept mirror writes from anywhere. Log-only — never blocks.
-		if os.Getenv("GOOGLE_CLIENT_ID") == "" {
-			log.Println("WARNING: GOOGLE_CLIENT_ID not set — anonymous-mode fallback active")
-			if os.Getenv("HIVE_WEBHOOK_URL") != "" {
-				log.Println("WARNING: bridge active with anonymous auth — mirror writes may land under user_id=anonymous in production")
-			}
-		}
-
 		// Wire pub/sub webhook for hive event notifications.
 		if webhookURL := os.Getenv("HIVE_WEBHOOK_URL"); webhookURL != "" {
 			graphStore.OnOp(graph.WebhookSubscriber(webhookURL))
