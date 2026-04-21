@@ -148,6 +148,85 @@ func TestGetAccentColor_validProfile_returnsField(t *testing.T) {
 	}
 }
 
+func TestGetHeaderNav_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	got := p.GetHeaderNav()
+	want := Default().HeaderNav
+	if len(got) == 0 {
+		t.Fatal("nil.GetHeaderNav() returned empty slice; expected default fallback")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("nil.GetHeaderNav() len = %d, want %d", len(got), len(want))
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("nil.GetHeaderNav()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+func TestGetHeaderNav_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetHeaderNav()
+	if len(got) == 0 {
+		t.Fatal("transpara.GetHeaderNav() returned empty slice")
+	}
+	// transpara is intentionally narrower than default — if this
+	// test ever flips to equal-length, something merged the two
+	// nav sets by accident.
+	if len(got) >= len(Default().HeaderNav) {
+		t.Errorf("transpara header nav len = %d, expected fewer than default's %d", len(got), len(Default().HeaderNav))
+	}
+	if got[0].Path != "/discover" {
+		t.Errorf("transpara header nav[0].Path = %q, want %q", got[0].Path, "/discover")
+	}
+}
+
+func TestGetFooterNav_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	got := p.GetFooterNav()
+	want := Default().FooterNav
+	if len(got) == 0 {
+		t.Fatal("nil.GetFooterNav() returned empty slice; expected default fallback")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("nil.GetFooterNav() len = %d, want %d", len(got), len(want))
+	}
+}
+
+func TestGetFooterNav_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetFooterNav()
+	if len(got) == 0 {
+		t.Fatal("transpara.GetFooterNav() returned empty slice")
+	}
+	if len(got) >= len(Default().FooterNav) {
+		t.Errorf("transpara footer nav len = %d, expected fewer than default's %d", len(got), len(Default().FooterNav))
+	}
+}
+
+func TestHeaderNav_emptyFieldFallsBackToDefault(t *testing.T) {
+	// A registered profile with an empty HeaderNav slice should
+	// render the default profile's nav rather than an empty nav
+	// bar. Protects against a configuration mistake producing a
+	// visibly broken page.
+	p := &Profile{Slug: "test", HeaderNav: nil}
+	got := p.GetHeaderNav()
+	if len(got) != len(Default().HeaderNav) {
+		t.Errorf("empty-HeaderNav profile returned len %d, want default len %d", len(got), len(Default().HeaderNav))
+	}
+}
+
+func TestHeaderNav_profilesDiverge(t *testing.T) {
+	// The whole point of Phase 5 is that different profiles have
+	// different nav. If this fails, the registry somehow tied.
+	l := Lookup(DefaultSlug).HeaderNav
+	p := Lookup("transpara").HeaderNav
+	if len(l) == len(p) {
+		t.Errorf("registered HeaderNav lengths collide: %d == %d", len(l), len(p))
+	}
+}
+
 func TestContext_roundTrip(t *testing.T) {
 	p := Default()
 	ctx := WithProfile(context.Background(), p)

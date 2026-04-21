@@ -8,11 +8,23 @@
 // default branding rather than panicking.
 package profile
 
+// NavItem is a single link in a profile-driven navigation bar. Path is
+// the href value (starting with "/" for internal routes); Label is the
+// visible link text. Each profile's HeaderNav / FooterNav is an ordered
+// slice of these — order = render order.
+type NavItem struct {
+	Label string
+	Path  string
+}
+
 // Profile is the declarative presentation bundle attached to a request.
 //
 // Slug is the resolution key (query param, subdomain, etc.) and
 // uniquely identifies the profile. BrandName, LogoPath, and
-// AccentColor drive the visible chrome. Name is retained for backward
+// AccentColor drive the visible chrome. HeaderNav and FooterNav drive
+// the profile-aware nav surfaces — the public Layout, simpleHeader
+// (orphan pages), and appLayout (app chrome) all read HeaderNav; the
+// public Layout footer reads FooterNav. Name is retained for backward
 // compatibility with earlier phases — new code should read BrandName.
 type Profile struct {
 	Slug        string // resolution key
@@ -20,6 +32,9 @@ type Profile struct {
 	BrandName   string // what appears in headers, titles, meta
 	LogoPath    string // path to logo asset (e.g. /static/logo-lovyou.svg)
 	AccentColor string // hex color for CSS --accent property
+
+	HeaderNav []NavItem // items rendered in the top chrome nav
+	FooterNav []NavItem // items rendered in the public layout footer
 }
 
 // DefaultSlug is the slug that resolves when no other resolver matches.
@@ -36,6 +51,23 @@ var registry = map[string]*Profile{
 		BrandName:   "lovyou.ai",
 		LogoPath:    "/static/logo-lovyou.svg",
 		AccentColor: "#e8a0b8",
+		HeaderNav: []NavItem{
+			{Label: "Discover", Path: "/discover"},
+			{Label: "Hive", Path: "/hive"},
+			{Label: "Agents", Path: "/agents"},
+			{Label: "Blog", Path: "/blog"},
+		},
+		FooterNav: []NavItem{
+			{Label: "Discover", Path: "/discover"},
+			{Label: "Hive", Path: "/hive"},
+			{Label: "Agents", Path: "/agents"},
+			{Label: "Market", Path: "/market"},
+			{Label: "Knowledge", Path: "/knowledge"},
+			{Label: "Activity", Path: "/activity"},
+			{Label: "Search", Path: "/search"},
+			{Label: "Blog", Path: "/blog"},
+			{Label: "Reference", Path: "/reference"},
+		},
 	},
 	"transpara": {
 		Slug:        "transpara",
@@ -43,6 +75,22 @@ var registry = map[string]*Profile{
 		BrandName:   "Transpara",
 		LogoPath:    "/static/logo-transpara.svg",
 		AccentColor: "#0ea5e9",
+		// Transpara's nav intentionally omits hive, agents, market,
+		// knowledge, activity, and reference — those routes surface
+		// lovyou.ai-specific civilization-build content (the live
+		// agent timeline, the agent persona catalogue, the task
+		// marketplace, the knowledge-claim graph, the site-wide
+		// activity stream, the grammar reference). Discover (public
+		// spaces) and Blog (long-form content) are generic platform
+		// surfaces that still make sense under a Transpara identity.
+		HeaderNav: []NavItem{
+			{Label: "Discover", Path: "/discover"},
+			{Label: "Blog", Path: "/blog"},
+		},
+		FooterNav: []NavItem{
+			{Label: "Discover", Path: "/discover"},
+			{Label: "Blog", Path: "/blog"},
+		},
 	},
 }
 
@@ -104,4 +152,26 @@ func (p *Profile) GetAccentColor() string {
 		return Default().AccentColor
 	}
 	return p.AccentColor
+}
+
+// GetHeaderNav returns the profile's top-chrome nav items, falling
+// back to the default profile's HeaderNav if the receiver is nil OR
+// has an empty slice. An empty slice is treated the same as nil here
+// because a profile with zero header links would render a blank nav
+// area — almost certainly a misconfiguration, not an intentional
+// choice. Templates iterate the returned slice directly.
+func (p *Profile) GetHeaderNav() []NavItem {
+	if p == nil || len(p.HeaderNav) == 0 {
+		return Default().HeaderNav
+	}
+	return p.HeaderNav
+}
+
+// GetFooterNav returns the profile's footer nav items, with the same
+// nil-and-empty fallback semantics as GetHeaderNav.
+func (p *Profile) GetFooterNav() []NavItem {
+	if p == nil || len(p.FooterNav) == 0 {
+		return Default().FooterNav
+	}
+	return p.FooterNav
 }
