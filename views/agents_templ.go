@@ -123,7 +123,7 @@ func AgentsPage(categories []AgentCategoryGroup, p *profile.Profile) templ.Compo
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Agents", "Meet the agents on "+p.GetBrandName()+" — specialized AI collaborators you can chat with, assign work, and build alongside.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

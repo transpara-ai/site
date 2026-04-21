@@ -61,6 +61,93 @@ func TestAll_includesRegisteredProfiles(t *testing.T) {
 	}
 }
 
+func TestRegistry_fieldsPopulated(t *testing.T) {
+	for _, p := range All() {
+		if p.BrandName == "" {
+			t.Errorf("profile %q has empty BrandName", p.Slug)
+		}
+		if p.LogoPath == "" {
+			t.Errorf("profile %q has empty LogoPath", p.Slug)
+		}
+		if p.AccentColor == "" {
+			t.Errorf("profile %q has empty AccentColor", p.Slug)
+		}
+	}
+}
+
+func TestRegistry_profilesDiverge(t *testing.T) {
+	// Phase 4 precondition: the two registered profiles must differ
+	// on every brand-bearing field, otherwise the divergence tests
+	// downstream (bounded-diff) would silently pass against a tie.
+	l := Lookup(DefaultSlug)
+	p := Lookup("transpara")
+	if l.BrandName == p.BrandName {
+		t.Errorf("registry BrandNames collide: %q", l.BrandName)
+	}
+	if l.LogoPath == p.LogoPath {
+		t.Errorf("registry LogoPaths collide: %q", l.LogoPath)
+	}
+	if l.AccentColor == p.AccentColor {
+		t.Errorf("registry AccentColors collide: %q", l.AccentColor)
+	}
+}
+
+func TestGetSlug_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetSlug(), Default().Slug; got != want {
+		t.Errorf("nil.GetSlug() = %q, want %q", got, want)
+	}
+}
+
+func TestGetSlug_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetSlug(), "transpara"; got != want {
+		t.Errorf("transpara.GetSlug() = %q, want %q", got, want)
+	}
+}
+
+func TestGetBrandName_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetBrandName(), Default().BrandName; got != want {
+		t.Errorf("nil.GetBrandName() = %q, want %q", got, want)
+	}
+}
+
+func TestGetBrandName_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetBrandName(), "Transpara"; got != want {
+		t.Errorf("transpara.GetBrandName() = %q, want %q", got, want)
+	}
+}
+
+func TestGetLogoPath_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetLogoPath(), Default().LogoPath; got != want {
+		t.Errorf("nil.GetLogoPath() = %q, want %q", got, want)
+	}
+}
+
+func TestGetLogoPath_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetLogoPath(), "/static/logo-transpara.svg"; got != want {
+		t.Errorf("transpara.GetLogoPath() = %q, want %q", got, want)
+	}
+}
+
+func TestGetAccentColor_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetAccentColor(), Default().AccentColor; got != want {
+		t.Errorf("nil.GetAccentColor() = %q, want %q", got, want)
+	}
+}
+
+func TestGetAccentColor_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetAccentColor(), "#0ea5e9"; got != want {
+		t.Errorf("transpara.GetAccentColor() = %q, want %q", got, want)
+	}
+}
+
 func TestContext_roundTrip(t *testing.T) {
 	p := Default()
 	ctx := WithProfile(context.Background(), p)

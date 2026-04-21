@@ -135,7 +135,7 @@ func DiscoverPage(spaces []DiscoverSpace, query string, kindFilter string, p *pr
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Discover", "Browse public spaces on lovyou.ai — projects, communities, and teams built by humans and agents together.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Discover", "Browse public spaces on "+p.GetBrandName()+" — projects, communities, and teams built by humans and agents together.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

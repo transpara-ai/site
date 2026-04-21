@@ -16,20 +16,20 @@ type SiteUser struct {
 // default.
 templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ title } — lovyou.ai</title>
+			<title>{ title } — { p.GetBrandName() }</title>
 			if description != "" {
 				<meta name="description" content={ description }/>
 				<meta property="og:description" content={ description }/>
 			}
-			<meta property="og:title" content={ title + " — lovyou.ai" }/>
+			<meta property="og:title" content={ title + " — " + p.GetBrandName() }/>
 			<meta property="og:type" content="website"/>
-			<meta property="og:site_name" content="lovyou.ai"/>
+			<meta property="og:site_name" content={ p.GetBrandName() }/>
 			<meta name="twitter:card" content="summary"/>
-			<meta name="twitter:title" content={ title + " — lovyou.ai" }/>
+			<meta name="twitter:title" content={ title + " — " + p.GetBrandName() }/>
 			if description != "" {
 				<meta name="twitter:description" content={ description }/>
 			}
@@ -42,7 +42,10 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			<header class="border-b border-edge bg-surface">
 				<nav class="max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
-					<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic">lovyou.ai</a>
+					<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic flex items-center gap-2">
+						<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
+						{ p.GetBrandName() }
+					</a>
 					<div class="flex items-center gap-5 text-sm text-warm-muted">
 						<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
 						<a href="/hive" class="hover:text-brand transition-colors">Hive</a>
@@ -77,7 +80,7 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 			<footer class="border-t border-edge bg-surface">
 				<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 					<div>
-						<span class="font-display text-sm text-warm-faint italic">lovyou.ai</span>
+						<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
 						<p class="text-[10px] text-warm-faint mt-1">Humans and agents, building together.</p>
 					</div>
 					<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">

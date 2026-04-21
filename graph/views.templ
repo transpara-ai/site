@@ -27,11 +27,11 @@ templ themeBlock() {
 
 templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>{ space.Name } — lovyou.ai</title>
+			<title>{ space.Name } — { p.GetBrandName() }</title>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 			@themeBlock()
 		</head>
@@ -39,7 +39,10 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 			<header class="border-b border-edge bg-surface flex-shrink-0">
 				<nav class="px-4 md:px-6 py-3 flex items-center justify-between">
 					<div class="flex items-center gap-2 md:gap-3 min-w-0">
-						<a href="/" class="font-display text-xl font-normal text-brand brand-breathe flex-shrink-0 italic">lovyou.ai</a>
+						<a href="/" class="font-display text-xl font-normal text-brand brand-breathe flex-shrink-0 italic flex items-center gap-2">
+							<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
+							{ p.GetBrandName() }
+						</a>
 						<span class="text-warm-faint/50">/</span>
 						<a href="/app" class="text-xs font-medium hover:text-brand transition-colors text-warm-muted hidden md:inline">My Work</a>
 						<span class="text-warm-faint/50 hidden md:inline">/</span>
@@ -533,11 +536,11 @@ templ governanceIcon() {
 
 templ Welcome(user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Welcome — lovyou.ai</title>
+			<title>Welcome — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm min-h-screen">
@@ -607,11 +610,11 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 
 templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int, taskFilter string, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>My Work — lovyou.ai</title>
+			<title>My Work — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -1026,11 +1029,11 @@ templ overviewLensLink(slug, lens, label, subtitle string) {
 
 templ NotificationsView(notifs []Notification, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Notifications — lovyou.ai</title>
+			<title>Notifications — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -5073,11 +5076,11 @@ templ CommentItem(node Node) {
 
 templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>API Keys — lovyou.ai</title>
+			<title>API Keys — { p.GetBrandName() }</title>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 			@themeBlock()
 		</head>
@@ -5085,7 +5088,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 			@simpleHeader(user, p)
 			<main class="flex-1 max-w-2xl mx-auto px-4 md:px-6 py-12 w-full">
 				<h1 class="text-2xl font-light text-warm mb-2">API Keys</h1>
-				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with lovyou.ai programmatically.</p>
+				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with { p.GetBrandName() } programmatically.</p>
 				<!-- Create new key -->
 				<div class="bg-surface rounded-lg border border-edge p-6 mb-8">
 					<h2 class="text-sm font-medium text-warm mb-4">Create new key</h2>
@@ -5165,7 +5168,10 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 templ simpleHeader(user ViewUser, p *profile.Profile) {
 	<header class="border-b border-edge bg-surface">
 		<nav class="max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
-			<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic">lovyou.ai</a>
+			<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic flex items-center gap-2">
+				<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
+				{ p.GetBrandName() }
+			</a>
 			<div class="flex items-center gap-5 text-sm text-warm-muted">
 				<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
 				<a href="/hive" class="hover:text-brand transition-colors">Hive</a>
@@ -5198,7 +5204,7 @@ templ simpleFooter(p *profile.Profile) {
 	<footer class="border-t border-edge bg-surface">
 		<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 			<div>
-				<span class="font-display text-sm text-warm-faint italic">lovyou.ai</span>
+				<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
 				<p class="text-[10px] text-warm-faint mt-1">Humans and agents, building together.</p>
 			</div>
 			<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
@@ -5843,14 +5849,14 @@ func opProgressBody(payload json.RawMessage) string {
 
 // HiveStatusPartial renders the main content element for /hive — used by both
 // the full page and the /hive/status HTMX partial poll (every 5s).
-templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tasks []Node, totalOps int, lastActive time.Time, iterCount int, ls LoopState) {
+templ HiveStatusPartial(posts []Node, stats HiveStats, roles []PipelineRole, tasks []Node, totalOps int, lastActive time.Time, iterCount int, ls LoopState, p *profile.Profile) {
 	<main id="hive-content" hx-get="/hive/status" hx-trigger="every 5s" hx-target="#hive-content" hx-swap="outerHTML" class="flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10">
 		<!-- Section 1: Header -->
 		<div class="space-y-2">
 			<h1 class="font-display text-3xl font-light text-warm">The Civilization Engine</h1>
 			<p class="text-sm text-warm-faint italic">The Civilization Builds.</p>
 			<p class="text-warm-muted">
-				Autonomous AI agents building lovyou.ai — live.
+				Autonomous AI agents building { p.GetBrandName() } — live.
 				if iterCount > 0 {
 					<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">Iteration { fmt.Sprintf("%d", iterCount) }</span>
 				}
