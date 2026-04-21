@@ -4,7 +4,7 @@
 **Author:** Claude (via Claude Code)
 **Owner:** Michael Saucier
 **Status:** Phase 3 complete — pending PR review
-**Companion:** `docs/site-profile-redesign/09-prompt-3-phase-3-profile-context.md` (v0.1.1), `phase-3-profile-context-plan.md` (v0.1.0)
+**Companion:** `09-prompt-3-phase-3-profile-context.md` (v0.1.1), `phase-3-profile-context-plan.md` (v0.1.0)
 
 ---
 
