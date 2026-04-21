@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/yuin/goldmark"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // ── Theme block (shared across app layouts) ─────────────────────
@@ -23,7 +25,7 @@ templ themeBlock() {
 //
 // Two-column layout: sidebar (spaces + lens nav) + main content.
 
-templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser) {
+templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -917,8 +919,8 @@ templ SpaceOnboarding(user ViewUser) {
 
 // ── Space overview ───────────────────────────────────────────────
 
-templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, user ViewUser, isOwner bool, memberCount, openTasks, activeTasks, doneTasks int, members []SpaceMember, isMember bool, loggedIn bool) {
-	@appLayout(space, spaces, "", user) {
+templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, user ViewUser, isOwner bool, memberCount, openTasks, activeTasks, doneTasks int, members []SpaceMember, isMember bool, loggedIn bool, p *profile.Profile) {
+	@appLayout(space, spaces, "", user, p) {
 		<div class="p-6 md:p-8 space-y-6 max-w-3xl mx-auto">
 			<div>
 				<h1 class="font-display text-2xl font-light text-warm">{ space.Name }</h1>
@@ -1523,8 +1525,8 @@ templ spaceWelcomeModal(space Space, members []SpaceMember) {
 	</script>
 }
 
-templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []AgentPersona, searchQuery string, assigneeFilter string, projects []Node, projectFilter string, showFirstCompletionToast bool, showChecklist bool, hasTask bool, hasAgentTask bool, hasCompletion bool, taskCount int, elapsedStr string, showWelcome bool, welcomeMembers []SpaceMember, showInviteCard bool, inviteToken string) {
-	@appLayout(space, spaces, "board", user) {
+templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUser, isOwner bool, agents []AgentPersona, searchQuery string, assigneeFilter string, projects []Node, projectFilter string, showFirstCompletionToast bool, showChecklist bool, hasTask bool, hasAgentTask bool, hasCompletion bool, taskCount int, elapsedStr string, showWelcome bool, welcomeMembers []SpaceMember, showInviteCard bool, inviteToken string, p *profile.Profile) {
+	@appLayout(space, spaces, "board", user, p) {
 		if showWelcome {
 			@spaceWelcomeModal(space, welcomeMembers)
 		}
@@ -1988,8 +1990,8 @@ templ TaskCard(node Node, spaceSlug string) {
 
 // ── Goals view ──────────────────────────────────────────────────
 
-templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "goals", user) {
+templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "goals", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -2096,8 +2098,8 @@ templ GoalsView(space Space, spaces []Space, goals []GoalWithProjects, user View
 
 // ── Goal detail view ─────────────────────────────────────────────
 
-templ GoalDetailView(space Space, spaces []Space, detail GoalDetail, user ViewUser, isOwner bool) {
-	@appLayout(space, spaces, "goals", user) {
+templ GoalDetailView(space Space, spaces []Space, detail GoalDetail, user ViewUser, isOwner bool, p *profile.Profile) {
+	@appLayout(space, spaces, "goals", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			// Breadcrumb
 			<div class="flex items-center gap-1.5 text-xs text-warm-faint">
@@ -2239,8 +2241,8 @@ func stateColorClass(state string) string {
 
 // ── Projects view ───────────────────────────────────────────────
 
-templ ProjectsView(space Space, spaces []Space, projects []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "projects", user) {
+templ ProjectsView(space Space, spaces []Space, projects []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "projects", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Projects</h1>
@@ -2318,8 +2320,8 @@ templ ProjectsView(space Space, spaces []Space, projects []Node, user ViewUser, 
 
 // ── Roles view ───────────────────────────────────────────────
 
-templ RolesView(space Space, spaces []Space, roles []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "roles", user) {
+templ RolesView(space Space, spaces []Space, roles []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "roles", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Roles</h1>
@@ -2391,8 +2393,8 @@ templ RolesView(space Space, spaces []Space, roles []Node, user ViewUser, isOwne
 
 // ── Teams view ──────────────────────────────────────────────────
 
-templ TeamsView(space Space, spaces []Space, teams []Node, user ViewUser, isOwner bool, searchQuery string, memberCounts map[string]int, isMember map[string]bool) {
-	@appLayout(space, spaces, "teams", user) {
+templ TeamsView(space Space, spaces []Space, teams []Node, user ViewUser, isOwner bool, searchQuery string, memberCounts map[string]int, isMember map[string]bool, p *profile.Profile) {
+	@appLayout(space, spaces, "teams", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Teams</h1>
@@ -2484,8 +2486,8 @@ templ TeamsView(space Space, spaces []Space, teams []Node, user ViewUser, isOwne
 
 // ── Policies view ───────────────────────────────────────────────
 
-templ PoliciesView(space Space, spaces []Space, policies []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "policies", user) {
+templ PoliciesView(space Space, spaces []Space, policies []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "policies", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Policies</h1>
@@ -2558,8 +2560,8 @@ templ PoliciesView(space Space, spaces []Space, policies []Node, user ViewUser, 
 
 // ── Documents view ───────────────────────────────────────────
 
-templ DocumentsView(space Space, spaces []Space, documents []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "documents", user) {
+templ DocumentsView(space Space, spaces []Space, documents []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "documents", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Documents</h1>
@@ -2631,8 +2633,8 @@ templ DocumentsView(space Space, spaces []Space, documents []Node, user ViewUser
 
 // ── Document edit view ───────────────────────────────────────────
 
-templ DocumentEditView(space Space, spaces []Space, node Node, user ViewUser) {
-	@appLayout(space, spaces, "documents", user) {
+templ DocumentEditView(space Space, spaces []Space, node Node, user ViewUser, p *profile.Profile) {
+	@appLayout(space, spaces, "documents", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center gap-2 text-sm text-warm-faint">
 				<a href={ templ.SafeURL("/app/" + space.Slug + "/documents") } class="hover:text-brand transition-colors">Documents</a>
@@ -2666,8 +2668,8 @@ templ DocumentEditView(space Space, spaces []Space, node Node, user ViewUser) {
 
 // ── Questions view ───────────────────────────────────────────
 
-templ QuestionsView(space Space, spaces []Space, questions []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "questions", user) {
+templ QuestionsView(space Space, spaces []Space, questions []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "questions", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<h1 class="font-display text-xl font-normal text-warm">Q&amp;A</h1>
@@ -2742,8 +2744,8 @@ templ QuestionsView(space Space, spaces []Space, questions []Node, user ViewUser
 
 // ── Question detail view ───────────────────────────────────────────
 
-templ QuestionDetailView(space Space, spaces []Space, question Node, answers []Node, user ViewUser, isOwner bool) {
-	@appLayout(space, spaces, "questions", user) {
+templ QuestionDetailView(space Space, spaces []Space, question Node, answers []Node, user ViewUser, isOwner bool, p *profile.Profile) {
+	@appLayout(space, spaces, "questions", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center gap-2 text-sm text-warm-faint">
 				<a href={ templ.SafeURL("/app/" + space.Slug + "/questions") } class="hover:text-brand transition-colors">Q&amp;A</a>
@@ -2813,8 +2815,8 @@ templ QuestionDetailView(space Space, spaces []Space, question Node, answers []N
 
 // ── Council lens ────────────────────────────────────────────────
 
-templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUser) {
-	@appLayout(space, spaces, "council", user) {
+templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUser, p *profile.Profile) {
+	@appLayout(space, spaces, "council", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -2879,8 +2881,8 @@ templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUse
 	}
 }
 
-templ CouncilDetailView(space Space, spaces []Space, session Node, responses []Node, user ViewUser) {
-	@appLayout(space, spaces, "council", user) {
+templ CouncilDetailView(space Space, spaces []Space, session Node, responses []Node, user ViewUser, p *profile.Profile) {
+	@appLayout(space, spaces, "council", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center gap-2 text-sm text-warm-faint">
 				<a href={ templ.SafeURL("/app/" + space.Slug + "/council") } class="hover:text-brand transition-colors">Council</a>
@@ -2926,8 +2928,8 @@ templ CouncilDetailView(space Space, spaces []Space, session Node, responses []N
 
 // ── List view (table) ───────────────────────────────────────────
 
-templ ListView(space Space, spaces []Space, tasks []Node, user ViewUser, isOwner bool, agents []AgentPersona, searchQuery string, assigneeFilter string, sortBy string, projects []Node, projectFilter string) {
-	@appLayout(space, spaces, "board", user) {
+templ ListView(space Space, spaces []Space, tasks []Node, user ViewUser, isOwner bool, agents []AgentPersona, searchQuery string, assigneeFilter string, sortBy string, projects []Node, projectFilter string, p *profile.Profile) {
+	@appLayout(space, spaces, "board", user, p) {
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 gap-2">
 				<h1 class="font-display text-xl font-light text-warm truncate">{ space.Name }</h1>
@@ -3037,8 +3039,8 @@ templ ListView(space Space, spaces []Space, tasks []Node, user ViewUser, isOwner
 
 // ── Feed view ───────────────────────────────────────────────────
 
-templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner bool, hasAgent bool, searchQuery string, feedTab string, endorseCounts map[string]int, userEndorsed map[string]bool, repostCounts map[string]int, userReposted map[string]bool, repostedBy map[string]string, quotePost *Node) {
-	@appLayout(space, spaces, "feed", user) {
+templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner bool, hasAgent bool, searchQuery string, feedTab string, endorseCounts map[string]int, userEndorsed map[string]bool, repostCounts map[string]int, userReposted map[string]bool, repostedBy map[string]string, quotePost *Node, p *profile.Profile) {
+	@appLayout(space, spaces, "feed", user, p) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -3261,8 +3263,8 @@ templ repostButton(nodeID string, spaceSlug string, count int, reposted bool) {
 
 // ── Threads view ────────────────────────────────────────────────
 
-templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isOwner bool, searchQuery string) {
-	@appLayout(space, spaces, "threads", user) {
+templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "threads", user, p) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -3337,8 +3339,8 @@ script addParticipant(name string) {
 	input.focus();
 }
 
-templ ConversationsView(space Space, spaces []Space, convos []ConversationSummary, user ViewUser, agents []string, nameMap map[string]string, personaMap map[string]*AgentPersona, searchQuery string, isDMFilter bool, isGroupFilter bool, msgResults []MessageSearchResult) {
-	@appLayout(space, spaces, "conversations", user) {
+templ ConversationsView(space Space, spaces []Space, convos []ConversationSummary, user ViewUser, agents []string, nameMap map[string]string, personaMap map[string]*AgentPersona, searchQuery string, isDMFilter bool, isGroupFilter bool, msgResults []MessageSearchResult, p *profile.Profile) {
+	@appLayout(space, spaces, "conversations", user, p) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -3479,8 +3481,8 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 
 // ── Conversation detail view ────────────────────────────────────
 
-templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool, agentPersona *AgentPersona, nameMap map[string]string, rxnMap map[string][]Reaction) {
-	@appLayout(space, []Space{space}, "conversations", user) {
+templ ConversationDetailView(space Space, convo Node, messages []Node, user ViewUser, userID string, hasAgent bool, agentPersona *AgentPersona, nameMap map[string]string, rxnMap map[string][]Reaction, p *profile.Profile) {
+	@appLayout(space, []Space{space}, "conversations", user, p) {
 		<div class="flex flex-col h-full">
 			<!-- Conversation header -->
 			<div class="border-b border-edge bg-surface px-6 py-3 flex-shrink-0">
@@ -3764,8 +3766,8 @@ templ reactionBar(nodeID string, spaceSlug string, reactions []Reaction, current
 
 // ── People view ─────────────────────────────────────────────────
 
-templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, searchQuery string) {
-	@appLayout(space, spaces, "people", user) {
+templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "people", user, p) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div>
 				<h1 class="font-display text-xl font-normal text-warm">People</h1>
@@ -3833,8 +3835,8 @@ type AppAgentCategoryGroup struct {
 	Personas []AppAgentPersona
 }
 
-templ AgentsView(space Space, spaces []Space, categories []AppAgentCategoryGroup, user ViewUser) {
-	@appLayout(space, spaces, "agents", user) {
+templ AgentsView(space Space, spaces []Space, categories []AppAgentCategoryGroup, user ViewUser, p *profile.Profile) {
+	@appLayout(space, spaces, "agents", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-8">
 			<div>
 				<h1 class="font-display text-xl font-normal text-warm">Agents</h1>
@@ -3919,8 +3921,8 @@ func appAgentCategoryClass(cat string) string {
 
 // ── Activity view ───────────────────────────────────────────────
 
-templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser, opFilter string) {
-	@appLayout(space, spaces, "activity", user) {
+templ ActivityView(space Space, spaces []Space, ops []Op, user ViewUser, opFilter string, p *profile.Profile) {
+	@appLayout(space, spaces, "activity", user, p) {
 		<div class="max-w-2xl mx-auto p-6 space-y-6">
 			<div>
 				<h1 class="font-display text-xl font-normal text-warm">Activity</h1>
@@ -4029,8 +4031,8 @@ templ InviteCodeRow(inv InviteCode, slug string) {
 	</div>
 }
 
-templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser, errMsg string, members []SpaceMember, invites []InviteCode) {
-	@appLayout(space, spaces, "settings", user) {
+templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser, errMsg string, members []SpaceMember, invites []InviteCode, p *profile.Profile) {
+	@appLayout(space, spaces, "settings", user, p) {
 		<div class="max-w-xl mx-auto p-6 space-y-8">
 			<h1 class="font-display text-xl font-normal text-warm">Settings</h1>
 			if errMsg != "" {
@@ -4214,8 +4216,8 @@ templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser,
 
 // ── Changelog view (Layer 5 — Build) ────────────────────────────
 
-templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user ViewUser, searchQuery string) {
-	@appLayout(space, spaces, "changelog", user) {
+templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user ViewUser, searchQuery string, p *profile.Profile) {
+	@appLayout(space, spaces, "changelog", user, p) {
 		<div class="p-6 md:p-8 space-y-6">
 			<div>
 				<h1 class="font-display text-2xl font-light text-warm">Changelog</h1>
@@ -4266,8 +4268,8 @@ templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user 
 
 // ── Governance view ──────────────────────────────────────────────
 
-templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes, user ViewUser, isOwner bool, stateFilter string, searchQuery string, hasDelegated bool, delegateName string, delegations []DelegationRow) {
-	@appLayout(space, spaces, "governance", user) {
+templ GovernanceView(space Space, spaces []Space, proposals []ProposalWithVotes, user ViewUser, isOwner bool, stateFilter string, searchQuery string, hasDelegated bool, delegateName string, delegations []DelegationRow, p *profile.Profile) {
+	@appLayout(space, spaces, "governance", user, p) {
 		<div class="p-6 md:p-8 space-y-6">
 			<div class="flex items-center justify-between">
 				<div>
@@ -4510,8 +4512,8 @@ templ proposalStateBadge(state string) {
 
 // ── Node detail ─────────────────────────────────────────────────
 
-templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node, endorseCount int, endorsed bool, repostCount int, reposted bool) {
-	@appLayout(space, []Space{space}, "", user) {
+templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node, endorseCount int, endorsed bool, repostCount int, reposted bool, p *profile.Profile) {
+	@appLayout(space, []Space{space}, "", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-8">
 			<!-- Breadcrumb -->
 			<div class="text-sm flex flex-wrap items-center gap-1">
@@ -5492,8 +5494,8 @@ func knowledgeTabURL(slug, tab, q string) string {
 	return u
 }
 
-templ KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts map[string]int, user ViewUser, searchQuery string, tab string, docs []Node, questions []Node) {
-	@appLayout(space, spaces, "knowledge", user) {
+templ KnowledgeView(space Space, spaces []Space, claims []Node, challengeCounts map[string]int, user ViewUser, searchQuery string, tab string, docs []Node, questions []Node, p *profile.Profile) {
+	@appLayout(space, spaces, "knowledge", user, p) {
 		<div class="p-6 md:p-8 space-y-6">
 			<div>
 				<h1 class="font-display text-2xl font-light text-warm">Knowledge</h1>

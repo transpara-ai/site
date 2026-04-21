@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/lovyou-ai/site/auth"
+	"github.com/lovyou-ai/site/profile"
 )
 
 // anonUserID is the sentinel value returned by userID() when no session exists.
@@ -694,7 +695,7 @@ func (h *Handlers) handleSpaceSettings(w http.ResponseWriter, r *http.Request) {
 	reports, _ := h.store.ListReports(r.Context(), space.ID)
 	members, _ := h.store.ListMembers(r.Context(), space.ID, 50)
 	invites, _ := h.store.ListInvites(r.Context(), space.ID)
-	SettingsView(*space, spaces, reports, h.viewUser(r), "", members, invites).Render(r.Context(), w)
+	SettingsView(*space, spaces, reports, h.viewUser(r), "", members, invites, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
@@ -712,7 +713,7 @@ func (h *Handlers) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
 	if name == "" {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 		reports, _ := h.store.ListReports(r.Context(), space.ID)
-		SettingsView(*space, spaces, reports, h.viewUser(r), "Name cannot be empty.", nil, nil).Render(r.Context(), w)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Name cannot be empty.", nil, nil, profile.FromContext(r.Context())).Render(r.Context(), w)
 		return
 	}
 
@@ -745,7 +746,7 @@ func (h *Handlers) handleDeleteSpace(w http.ResponseWriter, r *http.Request) {
 	if confirm != space.Name {
 		spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
 		reports, _ := h.store.ListReports(r.Context(), space.ID)
-		SettingsView(*space, spaces, reports, h.viewUser(r), "Type the space name to confirm deletion.", nil, nil).Render(r.Context(), w)
+		SettingsView(*space, spaces, reports, h.viewUser(r), "Type the space name to confirm deletion.", nil, nil, profile.FromContext(r.Context())).Render(r.Context(), w)
 		return
 	}
 
@@ -886,7 +887,7 @@ func (h *Handlers) handleSpaceDefault(w http.ResponseWriter, r *http.Request) {
 	isMember := h.store.IsMember(ctx, space.ID, uid)
 	loggedIn := uid != anonUserID
 	SpaceOverview(*space, spaces, pinned, recentOps, h.viewUser(r), isOwner,
-		memberCount, openTasks, activeTasks, doneTasks, members, isMember, loggedIn).Render(ctx, w)
+		memberCount, openTasks, activeTasks, doneTasks, members, isMember, loggedIn, profile.FromContext(ctx)).Render(ctx, w)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -959,7 +960,7 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 	if viewMode == "list" {
 		// Sort tasks for list view.
 		sortTasks(tasks, sortBy)
-		ListView(*space, spaces, tasks, h.viewUser(r), isOwner, agents, q, assigneeFilter, sortBy, projects, projectFilter).Render(r.Context(), w)
+		ListView(*space, spaces, tasks, h.viewUser(r), isOwner, agents, q, assigneeFilter, sortBy, projects, projectFilter, profile.FromContext(r.Context())).Render(r.Context(), w)
 		return
 	}
 
@@ -1013,7 +1014,7 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast, showChecklist, hasTask, hasAgentTask, hasCompletion, taskCount, elapsedStr, showWelcome, welcomeMembers, showInviteCard, inviteToken).Render(r.Context(), w)
+	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast, showChecklist, hasTask, hasAgentTask, hasCompletion, taskCount, elapsedStr, showWelcome, welcomeMembers, showInviteCard, inviteToken, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func formatElapsed(d time.Duration) string {
@@ -1165,7 +1166,7 @@ func (h *Handlers) handleFeed(w http.ResponseWriter, r *http.Request) {
 		quotePost, _ = h.store.GetNode(r.Context(), qid)
 	}
 
-	FeedView(*space, spaces, posts, h.viewUser(r), isOwner, len(agents) > 0, searchQuery, feedTab, endorseCounts, userEndorsed, repostCounts, userReposted, repostedBy, quotePost).Render(r.Context(), w)
+	FeedView(*space, spaces, posts, h.viewUser(r), isOwner, len(agents) > 0, searchQuery, feedTab, endorseCounts, userEndorsed, repostCounts, userReposted, repostedBy, quotePost, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleThreads(w http.ResponseWriter, r *http.Request) {
@@ -1198,7 +1199,7 @@ func (h *Handlers) handleThreads(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ThreadsView(*space, spaces, threads, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	ThreadsView(*space, spaces, threads, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
@@ -1262,7 +1263,7 @@ func (h *Handlers) handleConversations(w http.ResponseWriter, r *http.Request) {
 		msgResults, _ = h.store.SearchMessages(r.Context(), space.ID, bodyQ, fromAuthor, 20)
 	}
 
-	ConversationsView(*space, spaces, convos, h.viewUser(r), agents, nameMap, personaMap, searchQuery, filterMode == "dm", filterMode == "group", msgResults).Render(r.Context(), w)
+	ConversationsView(*space, spaces, convos, h.viewUser(r), agents, nameMap, personaMap, searchQuery, filterMode == "dm", filterMode == "group", msgResults, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {
@@ -1316,7 +1317,7 @@ func (h *Handlers) handlePeople(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	PeopleView(*space, spaces, members, h.viewUser(r), searchQuery).Render(r.Context(), w)
+	PeopleView(*space, spaces, members, h.viewUser(r), searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleAgents(w http.ResponseWriter, r *http.Request) {
@@ -1353,7 +1354,7 @@ func (h *Handlers) handleAgents(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	AgentsView(*space, spaces, categories, h.viewUser(r)).Render(r.Context(), w)
+	AgentsView(*space, spaces, categories, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleAgentSessionUpdate(w http.ResponseWriter, r *http.Request) {
@@ -1440,7 +1441,7 @@ func (h *Handlers) handleActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ActivityView(*space, spaces, ops, h.viewUser(r), opFilter).Render(r.Context(), w)
+	ActivityView(*space, spaces, ops, h.viewUser(r), opFilter, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleKnowledge(w http.ResponseWriter, r *http.Request) {
@@ -1504,7 +1505,7 @@ func (h *Handlers) handleKnowledge(w http.ResponseWriter, r *http.Request) {
 		tab = "docs"
 	}
 
-	KnowledgeView(*space, spaces, claims, challengeCounts, h.viewUser(r), searchQuery, tab, docs, questions).Render(r.Context(), w)
+	KnowledgeView(*space, spaces, claims, challengeCounts, h.viewUser(r), searchQuery, tab, docs, questions, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleChangelog(w http.ResponseWriter, r *http.Request) {
@@ -1541,7 +1542,7 @@ func (h *Handlers) handleChangelog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ChangelogView(*space, spaces, entries, h.viewUser(r), searchQuery).Render(r.Context(), w)
+	ChangelogView(*space, spaces, entries, h.viewUser(r), searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleProjects(w http.ResponseWriter, r *http.Request) {
@@ -1574,7 +1575,7 @@ func (h *Handlers) handleProjects(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ProjectsView(*space, spaces, projects, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	ProjectsView(*space, spaces, projects, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // GoalWithProjects pairs a goal with its child projects.
@@ -1635,7 +1636,7 @@ func (h *Handlers) handleGoals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	GoalsView(*space, spaces, goalsWithProjects, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	GoalsView(*space, spaces, goalsWithProjects, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleGoalDetail(w http.ResponseWriter, r *http.Request) {
@@ -1713,7 +1714,7 @@ func (h *Handlers) handleGoalDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	GoalDetailView(*space, spaces, detail, h.viewUser(r), isOwner).Render(r.Context(), w)
+	GoalDetailView(*space, spaces, detail, h.viewUser(r), isOwner, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleRoles(w http.ResponseWriter, r *http.Request) {
@@ -1746,7 +1747,7 @@ func (h *Handlers) handleRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RolesView(*space, spaces, roles, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	RolesView(*space, spaces, roles, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleTeams(w http.ResponseWriter, r *http.Request) {
@@ -1790,7 +1791,7 @@ func (h *Handlers) handleTeams(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	TeamsView(*space, spaces, teams, h.viewUser(r), isOwner, searchQuery, memberCounts, isMember).Render(r.Context(), w)
+	TeamsView(*space, spaces, teams, h.viewUser(r), isOwner, searchQuery, memberCounts, isMember, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handlePolicies(w http.ResponseWriter, r *http.Request) {
@@ -1823,7 +1824,7 @@ func (h *Handlers) handlePolicies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	PoliciesView(*space, spaces, policies, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	PoliciesView(*space, spaces, policies, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleDocuments(w http.ResponseWriter, r *http.Request) {
@@ -1857,7 +1858,7 @@ func (h *Handlers) handleDocuments(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	DocumentsView(*space, spaces, documents, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	DocumentsView(*space, spaces, documents, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleDocumentEdit(w http.ResponseWriter, r *http.Request) {
@@ -1911,7 +1912,7 @@ func (h *Handlers) handleDocumentEdit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
-	DocumentEditView(*space, spaces, *node, h.viewUser(r)).Render(r.Context(), w)
+	DocumentEditView(*space, spaces, *node, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleQuestions(w http.ResponseWriter, r *http.Request) {
@@ -1945,7 +1946,7 @@ func (h *Handlers) handleQuestions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	QuestionsView(*space, spaces, questions, h.viewUser(r), isOwner, searchQuery).Render(r.Context(), w)
+	QuestionsView(*space, spaces, questions, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleQuestionDetail(w http.ResponseWriter, r *http.Request) {
@@ -1991,7 +1992,7 @@ func (h *Handlers) handleQuestionDetail(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	QuestionDetailView(*space, spaces, *question, answers, h.viewUser(r), isOwner).Render(r.Context(), w)
+	QuestionDetailView(*space, spaces, *question, answers, h.viewUser(r), isOwner, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleCouncil(w http.ResponseWriter, r *http.Request) {
@@ -2018,7 +2019,7 @@ func (h *Handlers) handleCouncil(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CouncilListView(*space, spaces, sessions, h.viewUser(r)).Render(r.Context(), w)
+	CouncilListView(*space, spaces, sessions, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleCouncilDetail(w http.ResponseWriter, r *http.Request) {
@@ -2064,7 +2065,7 @@ func (h *Handlers) handleCouncilDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CouncilDetailView(*space, spaces, *session, responses, h.viewUser(r)).Render(r.Context(), w)
+	CouncilDetailView(*space, spaces, *session, responses, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
@@ -2106,7 +2107,7 @@ func (h *Handlers) handleGovernance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	GovernanceView(*space, spaces, proposals, h.viewUser(r), isOwner, stateFilter, searchQuery, hasDelegated, delegateName, delegations).Render(r.Context(), w)
+	GovernanceView(*space, spaces, proposals, h.viewUser(r), isOwner, stateFilter, searchQuery, hasDelegated, delegateName, delegations, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -2167,7 +2168,7 @@ func (h *Handlers) handleConversationDetail(w http.ResponseWriter, r *http.Reque
 
 	user := h.viewUser(r)
 	nameMap := h.store.ResolveUserNames(r.Context(), node.Tags)
-	ConversationDetailView(*space, *node, messages, user, h.userID(r), hasAgent, agentPersona, nameMap, rxnMap).Render(r.Context(), w)
+	ConversationDetailView(*space, *node, messages, user, h.userID(r), hasAgent, agentPersona, nameMap, rxnMap, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // handleConversationMessages returns new messages since the given timestamp.
@@ -2308,7 +2309,7 @@ func (h *Handlers) handleNodeDetail(w http.ResponseWriter, r *http.Request) {
 	repostCounts := h.store.GetBulkRepostCounts(r.Context(), []string{nodeID})
 	reposted := uid != "" && h.store.HasReposted(r.Context(), uid, nodeID)
 
-	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks, endorseCount, endorsed, repostCounts[nodeID], reposted).Render(r.Context(), w)
+	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks, endorseCount, endorsed, repostCounts[nodeID], reposted, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────
