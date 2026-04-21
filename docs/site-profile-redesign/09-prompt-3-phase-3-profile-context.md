@@ -45,7 +45,7 @@ Phase 3 also locks in CEO decision #4: the resolver is pluggable. Phase 3 ships 
 - PR #20 (revert of accidentally-merged PR #16) MUST be in `origin/main`.
 - CI must be green on `main` — site repo pinned to hive submodule at commit `486db00`, submodule-path fix confirmed at site commit `8d7d809`.
 - Current branch at launch: `main` at HEAD, `git status` clean.
-- Both `phase-1-token-refactor-findings-v0.1.0.md` and `phase-2-tailwind-build-step-findings-v0.1.0.md` should be readable at repo root.
+- `docs/site-profile-redesign/phase-1-token-refactor-findings-v0.1.0.md` and `phase-2-tailwind-build-step-findings-v0.1.0.md` (at repo root) should both be readable.
 - `go test ./...` passes on `main`.
 - `make css` (from Phase 2) produces valid `static/css/site.css` on `main`.
 

@@ -4,7 +4,7 @@
 **Author:** Claude (via Claude Code)
 **Owner:** Michael Saucier
 **Status:** Phase 1 complete — merged as PR #18 on 2026-04-20 (merge commit `a3b0e2a`). Phase 2 shipped as PR #19, absorbing the two deferred items flagged in §E/§F.
-**Companion:** `docs/site-profile-redesign/07-prompt-1-phase-1-token-refactor.md`, `phase-1-token-map.md`
+**Companion:** `07-prompt-1-phase-1-token-refactor.md`, `phase-1-token-map.md`
 
 ## A. Audit results (Pass 1)
 
