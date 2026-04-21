@@ -49,8 +49,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 						<span class="text-sm text-warm-secondary truncate">{ space.Name }</span>
 					</div>
 					<div class="flex items-center gap-5 text-sm text-warm-muted">
-						<a href="/discover" class="hover:text-brand transition-colors hidden md:inline">Discover</a>
-						<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
+						for _, item := range p.GetHeaderNav() {
+							<a href={ templ.SafeURL(item.Path) } class="hover:text-brand transition-colors hidden md:inline">{ item.Label }</a>
+						}
 						if user.Name != "" && user.Name != "Anonymous" {
 							<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
 								<a href={ templ.SafeURL("/user/" + user.Name) } class="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -5173,9 +5174,9 @@ templ simpleHeader(user ViewUser, p *profile.Profile) {
 				{ p.GetBrandName() }
 			</a>
 			<div class="flex items-center gap-5 text-sm text-warm-muted">
-				<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
-				<a href="/hive" class="hover:text-brand transition-colors">Hive</a>
-				<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
+				for _, item := range p.GetHeaderNav() {
+					<a href={ templ.SafeURL(item.Path) } class="hover:text-brand transition-colors">{ item.Label }</a>
+				}
 				if user.Name != "" && user.Name != "Anonymous" {
 					<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
 						<a href={ templ.SafeURL("/user/" + user.Name) } class="flex items-center gap-2 hover:opacity-80 transition-opacity">
