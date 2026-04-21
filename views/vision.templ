@@ -1,9 +1,13 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
 
-templ VisionPage(layers []Layer) {
-	@Layout("Vision", "Thirteen layers of infrastructure addressing thirteen layers of suffering. Rigorously derived from first principles.") {
+	"github.com/lovyou-ai/site/profile"
+)
+
+templ VisionPage(layers []Layer, p *profile.Profile) {
+	@Layout("Vision", "Thirteen layers of infrastructure addressing thirteen layers of suffering. Rigorously derived from first principles.", p) {
 		<div class="max-w-3xl mx-auto px-6 py-12 space-y-12">
 			<!-- The Weight — prose vision -->
 			<section class="space-y-6">
@@ -71,8 +75,8 @@ templ VisionPage(layers []Layer) {
 }
 
 // VisionLayerPage shows a layer's derived goals from the DB.
-templ VisionLayerPage(layer Layer, goals []Goal, layers []Layer) {
-	@Layout("Layer " + formatLayerNum(layer.Number) + ": " + layer.Name, layer.Gap) {
+templ VisionLayerPage(layer Layer, goals []Goal, layers []Layer, p *profile.Profile) {
+	@Layout("Layer " + formatLayerNum(layer.Number) + ": " + layer.Name, layer.Gap, p) {
 		<div class="max-w-3xl mx-auto px-6 py-12 space-y-8">
 			<!-- Breadcrumb -->
 			<nav class="flex items-center gap-1.5 text-sm">
@@ -175,8 +179,8 @@ type VisionChild struct {
 	DoneCount  int
 }
 
-templ VisionGoalPage(current VisionBreadcrumb, body, state string, breadcrumbs []VisionBreadcrumb, children []VisionChild, crossRefs []VisionBreadcrumb) {
-	@Layout(current.Title, "") {
+templ VisionGoalPage(current VisionBreadcrumb, body, state string, breadcrumbs []VisionBreadcrumb, children []VisionChild, crossRefs []VisionBreadcrumb, p *profile.Profile) {
+	@Layout(current.Title, "", p) {
 		<div class="max-w-3xl mx-auto px-6 py-12 space-y-8">
 			<!-- Breadcrumb -->
 			<nav class="flex items-center gap-1.5 text-sm flex-wrap">

@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // MarketTask is an available task for the marketplace.
 type MarketTask struct {
@@ -14,8 +18,8 @@ type MarketTask struct {
 	AuthorReputation int // cached reputation score of the task author
 }
 
-templ MarketPage(tasks []MarketTask, priorityFilter string) {
-	@Layout("Market", "Available work on lovyou.ai — tasks you can claim and work on, or assign to an AI agent.") {
+templ MarketPage(tasks []MarketTask, priorityFilter string, p *profile.Profile) {
+	@Layout("Market", "Available work on lovyou.ai — tasks you can claim and work on, or assign to an AI agent.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Market</h1>

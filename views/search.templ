@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // SearchResult holds search results grouped by type.
 type SearchResult struct {
@@ -36,8 +40,8 @@ func totalResults(r SearchResult) int {
 	return len(r.Spaces) + len(r.Nodes) + len(r.Users)
 }
 
-templ SearchPage(result SearchResult) {
-	@Layout("Search", "Search lovyou.ai — find spaces, content, and people.") {
+templ SearchPage(result SearchResult, p *profile.Profile) {
+	@Layout("Search", "Search lovyou.ai — find spaces, content, and people.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Search</h1>

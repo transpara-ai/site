@@ -8,7 +8,11 @@ package views
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "time"
+import (
+	"time"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 type Post struct {
 	Slug    string
@@ -75,7 +79,7 @@ type Primitive struct {
 	Intelligent  string
 }
 
-func BlogIndex(posts []Post) templ.Component {
+func BlogIndex(posts []Post, p *profile.Profile) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -190,7 +194,7 @@ func BlogIndex(posts []Post) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -226,7 +230,7 @@ func blogCard(post Post) templ.Component {
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/blog/" + post.Slug))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 121, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 125, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -239,7 +243,7 @@ func blogCard(post Post) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(post.Date.Format("January 2006"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 122, Col: 74}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 126, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -252,7 +256,7 @@ func blogCard(post Post) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(post.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 123, Col: 61}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 127, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -265,7 +269,7 @@ func blogCard(post Post) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(post.Summary)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 124, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 128, Col: 48}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -279,7 +283,7 @@ func blogCard(post Post) templ.Component {
 	})
 }
 
-func BlogPost(post Post, nav PostNav) templ.Component {
+func BlogPost(post Post, nav PostNav, p *profile.Profile) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -319,7 +323,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(post.Date.Format("January 2006"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 135, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 139, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -332,7 +336,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(post.Title)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 136, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 140, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -350,7 +354,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 				var templ_7745c5c3_Var12 string
 				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(post.Summary)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 138, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 142, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
@@ -381,7 +385,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 				var templ_7745c5c3_Var13 templ.SafeURL
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/blog/" + nav.Prev.Slug))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 147, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 151, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
@@ -394,7 +398,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Prev.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 149, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 153, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -417,7 +421,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 				var templ_7745c5c3_Var15 templ.SafeURL
 				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/blog/" + nav.Next.Slug))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 155, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 159, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
@@ -430,7 +434,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 				var templ_7745c5c3_Var16 string
 				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(nav.Next.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 157, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/blog.templ`, Line: 161, Col: 88}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 				if templ_7745c5c3_Err != nil {
@@ -447,7 +451,7 @@ func BlogPost(post Post, nav PostNav) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(post.Title, post.Summary).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(post.Title, post.Summary, p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

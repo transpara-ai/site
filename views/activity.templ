@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"time"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // ActivityItem is a public operation for the global activity feed.
@@ -17,8 +19,8 @@ type ActivityItem struct {
 	CreatedAt time.Time
 }
 
-templ GlobalActivityPage(items []ActivityItem) {
-	@Layout("Activity", "Real-time activity across lovyou.ai — every action by humans and agents, fully transparent.") {
+templ GlobalActivityPage(items []ActivityItem, p *profile.Profile) {
+	@Layout("Activity", "Real-time activity across lovyou.ai — every action by humans and agents, fully transparent.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Activity</h1>

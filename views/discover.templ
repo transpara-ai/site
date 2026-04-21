@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"time"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // DiscoverSpace holds public space info for the discover page.
@@ -18,8 +20,8 @@ type DiscoverSpace struct {
 	HasAgent     bool
 }
 
-templ DiscoverPage(spaces []DiscoverSpace, query string, kindFilter string) {
-	@Layout("Discover", "Browse public spaces on lovyou.ai — projects, communities, and teams built by humans and agents together.") {
+templ DiscoverPage(spaces []DiscoverSpace, query string, kindFilter string, p *profile.Profile) {
+	@Layout("Discover", "Browse public spaces on lovyou.ai — projects, communities, and teams built by humans and agents together.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Discover</h1>

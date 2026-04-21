@@ -1,11 +1,15 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // ── Reference Index ─────────────────────────────────────────────
 
-templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage) {
-	@Layout("Reference", "201 primitives across 14 layers, 66 code graph primitives, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.") {
+templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage, p *profile.Profile) {
+	@Layout("Reference", "201 primitives across 14 layers, 66 code graph primitives, 15 graph operations, 13 domain grammars, and 28 agent primitives. The complete EventGraph ontology.", p) {
 		<div class="space-y-12">
 			<div>
 				<h1 class="font-display text-3xl font-light text-warm">Reference</h1>
@@ -180,8 +184,8 @@ templ ReferenceIndex(layers []Layer, agentPrims []Primitive, grammars []RefPage)
 
 // ── Higher-Order Operations Page ────────────────────────────────
 
-templ HigherOrderOpsPage(body string) {
-	@Layout("Higher-Order Operations", "Six operations on operations — iteration, product, pipeline, inverse, fixpoint, duality. The algebra of the cognitive grammar.") {
+templ HigherOrderOpsPage(body string, p *profile.Profile) {
+	@Layout("Higher-Order Operations", "Six operations on operations — iteration, product, pipeline, inverse, fixpoint, duality. The algebra of the cognitive grammar.", p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -214,8 +218,8 @@ templ HigherOrderOpsPage(body string) {
 
 // ── Code Graph Page ─────────────────────────────────────────────
 
-templ CodeGraphPage(body string) {
-	@Layout("Code Graph", "66 primitives for describing any application as semantic atoms — Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social, Audio.") {
+templ CodeGraphPage(body string, p *profile.Profile) {
+	@Layout("Code Graph", "66 primitives for describing any application as semantic atoms — Data, Logic, IO, UI, Aesthetic, Accessibility, Temporal, Resilience, Structural, Social, Audio.", p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -248,8 +252,8 @@ templ CodeGraphPage(body string) {
 
 // ── Base Grammar Page ───────────────────────────────────────────
 
-templ BaseGrammarPage(body string) {
-	@Layout("Graph Grammar", "The universal vocabulary — 15 operations on the event graph. Every domain grammar is a composition of these base operations.") {
+templ BaseGrammarPage(body string, p *profile.Profile) {
+	@Layout("Graph Grammar", "The universal vocabulary — 15 operations on the event graph. Every domain grammar is a composition of these base operations.", p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -282,8 +286,8 @@ templ BaseGrammarPage(body string) {
 
 // ── Cognitive Grammar Page ──────────────────────────────────────
 
-templ CognitiveGrammarPage(body string) {
-	@Layout("Cognitive Grammar", "The grammar that produces grammars — 3 base operations (Derive, Traverse, Need), 9 compositions via self-application, fixed-point closure.") {
+templ CognitiveGrammarPage(body string, p *profile.Profile) {
+	@Layout("Cognitive Grammar", "The grammar that produces grammars — 3 base operations (Derive, Traverse, Need), 9 compositions via self-application, fixed-point closure.", p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -310,8 +314,8 @@ templ CognitiveGrammarPage(body string) {
 
 // ── Layer Page ─────────────────────────────────────────────────
 
-templ LayerPage(layer Layer, layers []Layer) {
-	@Layout(fmt.Sprintf("Layer %d: %s", layer.Number, layer.Name), layerDescription(layer.Number)) {
+templ LayerPage(layer Layer, layers []Layer, p *profile.Profile) {
+	@Layout(fmt.Sprintf("Layer %d: %s", layer.Number, layer.Name), layerDescription(layer.Number), p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -390,8 +394,8 @@ templ LayerPage(layer Layer, layers []Layer) {
 
 // ── Agent Primitives Page ──────────────────────────────────────
 
-templ AgentPrimitivesPage(prims []Primitive) {
-	@Layout("Agent Primitives", "28 primitives defining what an agent is and can do — structural, operational, relational, and modal dimensions.") {
+templ AgentPrimitivesPage(prims []Primitive, p *profile.Profile) {
+	@Layout("Agent Primitives", "28 primitives defining what an agent is and can do — structural, operational, relational, and modal dimensions.", p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -417,8 +421,8 @@ templ AgentPrimitivesPage(prims []Primitive) {
 
 // ── Primitive Page ──────────────────────────────────────────────
 
-templ PrimitivePage(prim Primitive) {
-	@Layout(prim.Name, prim.Description) {
+templ PrimitivePage(prim Primitive, p *profile.Profile) {
+	@Layout(prim.Name, prim.Description, p) {
 		<article class="space-y-6">
 			<div>
 				if prim.Layer >= 0 {
@@ -559,8 +563,8 @@ func specLabel(p Primitive, field string) string {
 
 // ── Grammar Pages ───────────────────────────────────────────────
 
-templ GrammarIndex(grammars []RefPage) {
-	@Layout("Layer Grammars", "13 domain-specific grammars — each layer's vocabulary composed from the 15 base graph operations.") {
+templ GrammarIndex(grammars []RefPage, p *profile.Profile) {
+	@Layout("Layer Grammars", "13 domain-specific grammars — each layer's vocabulary composed from the 15 base graph operations.", p) {
 		<div class="space-y-8">
 			<div>
 				<a href="/reference" class="text-sm text-brand hover:underline">&larr; Reference</a>
@@ -588,8 +592,8 @@ templ GrammarIndex(grammars []RefPage) {
 	}
 }
 
-templ GrammarPage(page RefPage, grammars []RefPage) {
-	@Layout(page.Title, page.Summary) {
+templ GrammarPage(page RefPage, grammars []RefPage, p *profile.Profile) {
+	@Layout(page.Title, page.Summary, p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/reference/grammars" class="text-sm text-brand hover:underline">&larr; All grammars</a>
