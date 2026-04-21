@@ -15,7 +15,12 @@
    Single source of truth. Previously duplicated between
    views/layout.templ and graph/views.templ themeBlock(). */
 @theme {
-  --color-brand: #e8a0b8;
+  /* --color-brand resolves through --accent at runtime so profile-aware
+     pages can override the brand color without a CSS rebuild. The hex
+     is the default-profile fallback for any surface that forgets to set
+     --accent (e.g. pre-profile email templates, or a future page that
+     renders outside the shells). Phase 4. */
+  --color-brand: var(--accent, #e8a0b8);
   --color-brand-dark: #d4899f;
   --color-void: #09090b;
   --color-surface: #111113;

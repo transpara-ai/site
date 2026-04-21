@@ -27,7 +27,7 @@ templ themeBlock() {
 
 templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -536,7 +536,7 @@ templ governanceIcon() {
 
 templ Welcome(user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -610,7 +610,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 
 templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int, taskFilter string, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -1029,7 +1029,7 @@ templ overviewLensLink(slug, lens, label, subtitle string) {
 
 templ NotificationsView(notifs []Notification, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -5076,7 +5076,7 @@ templ CommentItem(node Node) {
 
 templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>

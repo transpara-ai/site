@@ -10,7 +10,7 @@ import (
 // phase timeline (HTMX-polled), and recent commits.
 templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>

@@ -92,6 +92,20 @@ func TestRegistry_profilesDiverge(t *testing.T) {
 	}
 }
 
+func TestGetSlug_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetSlug(), Default().Slug; got != want {
+		t.Errorf("nil.GetSlug() = %q, want %q", got, want)
+	}
+}
+
+func TestGetSlug_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetSlug(), "transpara"; got != want {
+		t.Errorf("transpara.GetSlug() = %q, want %q", got, want)
+	}
+}
+
 func TestGetBrandName_nilProfile_returnsDefault(t *testing.T) {
 	var p *Profile
 	if got, want := p.GetBrandName(), Default().BrandName; got != want {

@@ -16,7 +16,7 @@ type SiteUser struct {
 // default.
 templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>

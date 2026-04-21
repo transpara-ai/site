@@ -67,6 +67,17 @@ func All() []*Profile {
 	return out
 }
 
+// GetSlug returns the profile slug, falling back to the default on nil.
+// Templates that emit slug-bearing attributes (e.g. data-profile) must
+// route through this accessor so a nil *Profile renders default-profile
+// identity instead of nil-panicking.
+func (p *Profile) GetSlug() string {
+	if p == nil {
+		return Default().Slug
+	}
+	return p.Slug
+}
+
 // GetBrandName returns the brand name for rendering, falling back to
 // the default profile's brand name if the receiver is nil. Templates
 // must call this instead of reading p.BrandName directly so that any
