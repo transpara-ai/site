@@ -4,8 +4,7 @@
 **Author:** Claude (via Claude Code)
 **Owner:** Michael Saucier
 **Status:** Phase 2 complete — pending PR review
-**Companion:** `docs/site-profile-redesign/08-prompt-2-phase-2-tailwind-build-step.md`,
-`phase-2-build-plan.md`
+**Companion:** `08-prompt-2-phase-2-tailwind-build-step.md`, `phase-2-build-plan.md`
 
 ---
 
