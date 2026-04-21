@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/lovyou-ai/site/graph"
+	"github.com/lovyou-ai/site/profile"
 )
 
 // DiagEntry is a phase diagnostic event from loop/diagnostics.jsonl.
@@ -241,7 +242,7 @@ func HiveDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	graph.HivePage(ls, entries, commits, graph.ViewUser{}).Render(r.Context(), w)
+	graph.HivePage(ls, entries, commits, graph.ViewUser{}, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // HiveFeed handles GET /hive/feed — returns JSON of the last maxFeedEntries phase history entries.

@@ -1,10 +1,14 @@
 package graph
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // HivePage renders the /hive dashboard — iteration badge, phase pill, last build,
 // phase timeline (HTMX-polled), and recent commits.
-templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser) {
+templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>

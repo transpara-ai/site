@@ -4136,7 +4136,7 @@ func (h *Handlers) handleHive(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	HivePage(ls, entries, commits, h.viewUser(r)).Render(ctx, w)
+	HivePage(ls, entries, commits, h.viewUser(r), profile.FromContext(ctx)).Render(ctx, w)
 }
 
 // handleHiveStatus renders the main content partial for HTMX polling (every 5s).
