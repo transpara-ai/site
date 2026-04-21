@@ -3,6 +3,7 @@ package views_test
 import (
 	"bytes"
 	"context"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -10,25 +11,42 @@ import (
 	"github.com/lovyou-ai/site/views"
 )
 
-// TestBoundedDiff_LayoutAcrossProfiles is the Phase 4 leakage alarm.
+// navLinkRunRE matches one or more consecutive nav-style <a> tags
+// (internal-path href + the shared `hover:text-brand transition-colors`
+// class signature that every profile-driven nav link carries). It does
+// NOT match the footer GitHub link (href starts with "https://", not
+// "/") or the "My Work" auth button (different class string), so those
+// always-present-in-both-outputs anchors stay visible in the
+// normalized HTML and pin the surrounding structure.
+var navLinkRunRE = regexp.MustCompile(
+	`(?:<a href="/[^"]*" class="hover:text-brand transition-colors[^"]*">[^<]*</a>\s*)+`,
+)
+
+// TestBoundedDiff_LayoutAcrossProfiles is the Phase 4/5 leakage alarm.
 //
 // It renders views.Layout twice — once per registered profile — and
 // asserts two things:
 //
 //  1. Raw outputs DIFFER. If the two profiles produce byte-identical
-//     HTML, Phase 4's visible divergence didn't actually land
-//     (or a future refactor accidentally undid it).
-//  2. After normalizing every known per-profile field to a placeholder
-//     token, the outputs are byte-IDENTICAL. If anything else leaks
-//     into the HTML (a new per-profile field someone added without
-//     updating this test, a stray hardcoded brand string, a
-//     profile-conditional block no one documented), the normalized
-//     outputs diverge and this test fails loudly.
+//     HTML, profile divergence didn't actually land (or a future
+//     refactor accidentally undid it).
+//  2. After normalizing every known per-profile rendering surface to
+//     a placeholder token, the outputs are byte-IDENTICAL. If
+//     anything else leaks into the HTML (a new per-profile field
+//     someone added without updating this test, a stray hardcoded
+//     brand string, a profile-conditional block no one documented),
+//     the normalized outputs diverge and this test fails loudly.
 //
-// The normalization set is the canonical list of divergence points
-// for Phase 4: BrandName, LogoPath, AccentColor, Slug. New fields
-// added to Profile must either be added here or explicitly
-// justified as non-rendering.
+// The normalization set is the canonical list of divergence points:
+//   - BrandName, LogoPath, AccentColor (Phase 4 scalars)
+//   - Slug, scoped to the data-profile attribute (Phase 4)
+//   - Contiguous runs of profile-driven nav links (Phase 5) — regex
+//     collapses the whole run to {{NAV_LINKS}} because the number
+//     of links legitimately differs between profiles, so per-link
+//     replacement cannot produce equal-length normalized strings.
+//
+// New fields added to Profile must either be added here or
+// explicitly justified as non-rendering.
 func TestBoundedDiff_LayoutAcrossProfiles(t *testing.T) {
 	lovyou := profile.Lookup(profile.DefaultSlug)
 	if lovyou == nil {
@@ -63,6 +81,13 @@ func TestBoundedDiff_LayoutAcrossProfiles(t *testing.T) {
 		s = strings.ReplaceAll(s, p.BrandName, "{{BRAND}}")
 		s = strings.ReplaceAll(s, p.LogoPath, "{{LOGO}}")
 		s = strings.ReplaceAll(s, p.AccentColor, "{{ACCENT}}")
+		// Collapse any run of profile-driven nav links into a single
+		// placeholder — link counts differ legitimately per profile,
+		// so per-link replacement can't produce equal-length output.
+		// Applied after the scalar normalizations so a future brand
+		// name that happens to equal an href path segment still gets
+		// canonicalised before the regex runs.
+		s = navLinkRunRE.ReplaceAllString(s, "{{NAV_LINKS}}")
 		return s
 	}
 
