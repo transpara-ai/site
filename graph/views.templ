@@ -531,7 +531,7 @@ templ governanceIcon() {
 
 // ── Welcome (new users with no spaces) ──────────────────────────
 
-templ Welcome(user ViewUser) {
+templ Welcome(user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -605,7 +605,7 @@ templ Welcome(user ViewUser) {
 
 // ── Space index ─────────────────────────────────────────────────
 
-templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int, taskFilter string) {
+templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConversation, agentOps []DashboardOp, user ViewUser, defaultSpaceSlug string, agents []string, unreadCount int, taskFilter string, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -615,7 +615,7 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
+			@simpleHeader(user, p)
 			<main class="flex-1 max-w-5xl mx-auto px-6 py-8 w-full">
 				<div class="flex items-center justify-between mb-8">
 					<h1 class="font-display text-3xl font-light text-warm">My Work</h1>
@@ -757,7 +757,7 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 					</div>
 				</div>
 			</main>
-			@simpleFooter()
+			@simpleFooter(p)
 			@commandPalette()
 		</body>
 	</html>
@@ -862,7 +862,7 @@ templ SpaceOnboarding(user ViewUser) {
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
+			@simpleHeader(user, nil)
 			<main class="flex-1 flex items-center justify-center px-6 py-12">
 				<div class="max-w-md w-full bg-surface rounded-xl border border-edge shadow-sm p-8 text-center space-y-6">
 					<div>
@@ -911,7 +911,7 @@ templ SpaceOnboarding(user ViewUser) {
 					</div>
 				</div>
 			</main>
-			@simpleFooter()
+			@simpleFooter(nil)
 			@commandPalette()
 		</body>
 	</html>
@@ -1024,7 +1024,7 @@ templ overviewLensLink(slug, lens, label, subtitle string) {
 
 // ── Notifications ────────────────────────────────────────────────
 
-templ NotificationsView(notifs []Notification, user ViewUser) {
+templ NotificationsView(notifs []Notification, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -1034,7 +1034,7 @@ templ NotificationsView(notifs []Notification, user ViewUser) {
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
+			@simpleHeader(user, p)
 			<main class="flex-1 max-w-3xl mx-auto px-6 py-8 w-full">
 				<div class="flex items-center justify-between mb-6">
 					<h1 class="font-display text-2xl font-light text-warm">Notifications</h1>
@@ -1070,7 +1070,7 @@ templ NotificationsView(notifs []Notification, user ViewUser) {
 					</div>
 				}
 			</main>
-			@simpleFooter()
+			@simpleFooter(p)
 			@commandPalette()
 		</body>
 	</html>
@@ -5071,7 +5071,7 @@ templ CommentItem(node Node) {
 
 // ── API Keys ─────────────────────────────────────────────────────
 
-templ APIKeysView(keys []ViewAPIKey, user ViewUser) {
+templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -5082,7 +5082,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser) {
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
+			@simpleHeader(user, p)
 			<main class="flex-1 max-w-2xl mx-auto px-4 md:px-6 py-12 w-full">
 				<h1 class="text-2xl font-light text-warm mb-2">API Keys</h1>
 				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with lovyou.ai programmatically.</p>
@@ -5147,7 +5147,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser) {
      https://lovyou.ai/app/your-space/feed</code></pre>
 				</div>
 			</main>
-			@simpleFooter()
+			@simpleFooter(p)
 			@commandPalette()
 		</body>
 	</html>
@@ -5155,7 +5155,14 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser) {
 
 // ── Shared components ───────────────────────────────────────────
 
-templ simpleHeader(user ViewUser) {
+// §G resolution (Phase 4): orphan pages keep their existing
+// structure. Profile-aware branding flows through
+// simpleHeader/simpleFooter args, not through shell absorption.
+// SpaceOnboarding is dead code and excluded from the wiring.
+// The p arg is plumbed but intentionally unread in this prompt —
+// field reads land in the next phase, matching Phase 3's
+// plumbing-first discipline.
+templ simpleHeader(user ViewUser, p *profile.Profile) {
 	<header class="border-b border-edge bg-surface">
 		<nav class="max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
 			<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic">lovyou.ai</a>
@@ -5187,7 +5194,7 @@ templ simpleHeader(user ViewUser) {
 	</header>
 }
 
-templ simpleFooter() {
+templ simpleFooter(p *profile.Profile) {
 	<footer class="border-t border-edge bg-surface">
 		<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 			<div>

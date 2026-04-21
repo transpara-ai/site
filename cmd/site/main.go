@@ -333,7 +333,11 @@ func main() {
 						CreatedAt: k.CreatedAt.Format("Jan 2, 2006"),
 					})
 				}
-				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}).Render(r.Context(), w)
+				p := profile.FromContext(r.Context())
+				if p == nil {
+					p = profile.Default()
+				}
+				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}, p).Render(r.Context(), w)
 			}))
 
 			writeWrap = authService.RequireAuth

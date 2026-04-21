@@ -591,9 +591,14 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	p := profile.FromContext(ctx)
+	if p == nil {
+		p = profile.Default()
+	}
+
 	if len(spaces) == 0 {
 		// New users: show welcome page to create their first space.
-		Welcome(h.viewUser(r)).Render(ctx, w)
+		Welcome(h.viewUser(r), p).Render(ctx, w)
 		return
 	}
 
@@ -609,7 +614,7 @@ func (h *Handlers) handleSpaceIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	unread := h.store.UnreadCount(ctx, uid)
-	Dashboard(spaces, tasks, convos, agentOps, h.viewUser(r), defaultSlug, agents, unread, taskFilter).Render(ctx, w)
+	Dashboard(spaces, tasks, convos, agentOps, h.viewUser(r), defaultSlug, agents, unread, taskFilter, p).Render(ctx, w)
 }
 
 func (h *Handlers) handleNotifications(w http.ResponseWriter, r *http.Request) {
@@ -619,7 +624,12 @@ func (h *Handlers) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	notifs, _ := h.store.ListNotifications(ctx, uid, 50)
 	h.store.MarkNotificationsRead(ctx, uid)
 
-	NotificationsView(notifs, h.viewUser(r)).Render(ctx, w)
+	p := profile.FromContext(ctx)
+	if p == nil {
+		p = profile.Default()
+	}
+
+	NotificationsView(notifs, h.viewUser(r), p).Render(ctx, w)
 }
 
 func (h *Handlers) handleCreateSpace(w http.ResponseWriter, r *http.Request) {
