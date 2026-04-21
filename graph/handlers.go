@@ -4177,7 +4177,11 @@ func (h *Handlers) handleHiveStatus(w http.ResponseWriter, r *http.Request) {
 	if ls.Iteration > iterCount {
 		iterCount = ls.Iteration
 	}
-	HiveStatusPartial(posts, stats, roles, tasks, totalOps, lastActive, iterCount, ls).Render(ctx, w)
+	p := profile.FromContext(ctx)
+	if p == nil {
+		p = profile.Default()
+	}
+	HiveStatusPartial(posts, stats, roles, tasks, totalOps, lastActive, iterCount, ls, p).Render(ctx, w)
 }
 
 // handleHiveDiagnostic accepts POST /api/hive/diagnostic from the hive runner.

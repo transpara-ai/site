@@ -44,7 +44,7 @@ type UserProfile struct {
 }
 
 templ ProfilePage(up UserProfile, p *profile.Profile) {
-	@Layout(up.Name + " — lovyou.ai", up.Name + "'s profile on lovyou.ai", p) {
+	@Layout(up.Name + " — " + p.GetBrandName(), up.Name + "'s profile on " + p.GetBrandName(), p) {
 		<div class="space-y-8">
 			<div class="reveal flex items-center gap-4" style="--d:0">
 				if up.Kind == "agent" {

@@ -41,7 +41,7 @@ func totalResults(r SearchResult) int {
 }
 
 templ SearchPage(result SearchResult, p *profile.Profile) {
-	@Layout("Search", "Search lovyou.ai — find spaces, content, and people.", p) {
+	@Layout("Search", "Search " + p.GetBrandName() + " — find spaces, content, and people.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Search</h1>

@@ -19,7 +19,7 @@ type MarketTask struct {
 }
 
 templ MarketPage(tasks []MarketTask, priorityFilter string, p *profile.Profile) {
-	@Layout("Market", "Available work on lovyou.ai — tasks you can claim and work on, or assign to an AI agent.", p) {
+	@Layout("Market", "Available work on " + p.GetBrandName() + " — tasks you can claim and work on, or assign to an AI agent.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Market</h1>

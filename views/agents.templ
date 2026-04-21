@@ -24,7 +24,7 @@ type AgentCategoryGroup struct {
 }
 
 templ AgentsPage(categories []AgentCategoryGroup, p *profile.Profile) {
-	@Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.", p) {
+	@Layout("Agents", "Meet the agents on " + p.GetBrandName() + " — specialized AI collaborators you can chat with, assign work, and build alongside.", p) {
 		<div class="space-y-12">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Agents</h1>

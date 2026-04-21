@@ -91,7 +91,7 @@ func GlobalActivityPage(items []ActivityItem, p *profile.Profile) templ.Componen
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Activity", "Real-time activity across lovyou.ai — every action by humans and agents, fully transparent.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Activity", "Real-time activity across "+p.GetBrandName()+" — every action by humans and agents, fully transparent.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

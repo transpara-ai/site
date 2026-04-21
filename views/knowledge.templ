@@ -94,7 +94,7 @@ type KnowledgeClaim struct {
 }
 
 templ KnowledgePage(claims []KnowledgeClaim, stateFilter string, query string, p *profile.Profile) {
-	@Layout("Knowledge", "Knowledge claims on lovyou.ai — verifiable assertions with epistemic status and provenance.", p) {
+	@Layout("Knowledge", "Knowledge claims on " + p.GetBrandName() + " — verifiable assertions with epistemic status and provenance.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Knowledge</h1>

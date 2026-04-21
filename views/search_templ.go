@@ -464,7 +464,7 @@ func SearchPage(result SearchResult, p *profile.Profile) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Search", "Search lovyou.ai — find spaces, content, and people.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Search", "Search "+p.GetBrandName()+" — find spaces, content, and people.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

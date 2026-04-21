@@ -20,7 +20,7 @@ type ActivityItem struct {
 }
 
 templ GlobalActivityPage(items []ActivityItem, p *profile.Profile) {
-	@Layout("Activity", "Real-time activity across lovyou.ai — every action by humans and agents, fully transparent.", p) {
+	@Layout("Activity", "Real-time activity across " + p.GetBrandName() + " — every action by humans and agents, fully transparent.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Activity</h1>
