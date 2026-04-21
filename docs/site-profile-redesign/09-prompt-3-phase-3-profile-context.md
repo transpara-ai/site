@@ -1,11 +1,11 @@
 # Prompt 3 — Phase 3: Profile Context
 
-**Version:** 0.1.0 · **Date:** 2026-04-21
+**Version:** 0.1.1 · **Date:** 2026-04-21
 **Author:** Claude Opus 4.7
 **Owner:** Michael Saucier
 **Status:** Ready to execute — copy into Claude Code session after Phase 2 PR merges
 **Versioning:** Versioned as part of the site-profile-redesign set. Major for structural changes to the prompt scope; minor for additional work items; patch for corrections and clarifications.
-**Companion:** `01-site-map-discovery.md` (v0.2.0), `02-display-profile-system.md` (v0.3.0), `03-transpara-profile-design.md` (v0.3.0), `04-transpara-profile-wireframes.md` (v0.3.0), `05-transpara-home-prototype.html` (v0.1.2), `06a-site-profile-redesign-recon-prompt.md` (v0.1.0), `06b-site-profile-redesign-recon-findings-v0.1.0.md`, `07-prompt-1-phase-1-token-refactor.md` (v0.1.0), `08-prompt-2-phase-2-tailwind-build-step.md` (v0.1.0), `phase-1-token-refactor-findings-v0.1.0.md`, `phase-2-tailwind-build-step-findings-v0.1.0.md`
+**Companion:** `01-site-map-discovery.md` (v0.2.0), `02-display-profile-system.md` (v0.3.0), `03-transpara-profile-design.md` (v0.3.0), `04-transpara-profile-wireframes.md` (v0.3.0), `05-transpara-home-prototype.html` (v0.1.2), `06a-site-profile-redesign-recon-prompt.md` (v0.1.0), `06b-site-profile-redesign-recon-findings-v0.1.0.md`, `07-prompt-1-phase-1-token-refactor.md` (v0.1.0), `08-prompt-2-phase-2-tailwind-build-step.md` (v0.1.0), `docs/site-profile-redesign/phase-1-token-refactor-findings-v0.1.0.md`, `docs/site-profile-redesign/phase-2-tailwind-build-step-findings-v0.1.0.md`
 
 ---
 
@@ -13,6 +13,7 @@
 
 | Version | Date | Description |
 |---------|------|-------------|
+| 0.1.1 | 2026-04-21 | Path correction: Companion references to the Phase 1 and Phase 2 findings docs prefixed with `docs/site-profile-redesign/` to reflect the relocation done in PR #21. (Precondition paths were already corrected inside PR #21 itself.) No scope change. |
 | 0.1.0 | 2026-04-21 | Initial Phase 3 prompt. Scope: introduce a `Profile` abstraction with request-time resolution via pluggable resolver (CEO decision #4), plumb `Profile` through context to templ layouts as struct param, register two profiles (`lovyou-ai`, `transpara`) with identical rendering, gate behind `PROFILE_SYSTEM_DISABLED` feature flag. No visual change. **Commit trailer convention updated:** Paperclip is removed from this project; Phase 3 uses `Co-Authored-By: transpara-ai <transpara-ai@transpara.com>`. |
 
 ---
