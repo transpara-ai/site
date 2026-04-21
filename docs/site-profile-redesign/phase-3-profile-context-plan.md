@@ -4,7 +4,7 @@
 **Author:** Claude (via Claude Code)
 **Owner:** Michael Saucier
 **Status:** Pass 1 complete — ready for Pass 2 execution
-**Companion:** `docs/site-profile-redesign/09-prompt-3-phase-3-profile-context.md` (v0.1.1)
+**Companion:** `09-prompt-3-phase-3-profile-context.md` (v0.1.1)
 
 ---
 
