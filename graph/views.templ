@@ -540,7 +540,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Welcome — lovyou.ai</title>
+			<title>Welcome — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm min-h-screen">
@@ -614,7 +614,7 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>My Work — lovyou.ai</title>
+			<title>My Work — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -1033,7 +1033,7 @@ templ NotificationsView(notifs []Notification, user ViewUser, p *profile.Profile
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Notifications — lovyou.ai</title>
+			<title>Notifications — { p.GetBrandName() }</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -5080,7 +5080,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>API Keys — lovyou.ai</title>
+			<title>API Keys — { p.GetBrandName() }</title>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 			@themeBlock()
 		</head>
@@ -5088,7 +5088,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 			@simpleHeader(user, p)
 			<main class="flex-1 max-w-2xl mx-auto px-4 md:px-6 py-12 w-full">
 				<h1 class="text-2xl font-light text-warm mb-2">API Keys</h1>
-				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with lovyou.ai programmatically.</p>
+				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with { p.GetBrandName() } programmatically.</p>
 				<!-- Create new key -->
 				<div class="bg-surface rounded-lg border border-edge p-6 mb-8">
 					<h2 class="text-sm font-medium text-warm mb-4">Create new key</h2>
