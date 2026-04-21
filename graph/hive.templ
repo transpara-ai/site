@@ -19,7 +19,7 @@ templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user V
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
-			@simpleHeader(user)
+			@simpleHeader(user, p)
 			<main class="flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10">
 				<!-- Header: large iteration counter + phase pill + last build title -->
 				<div class="space-y-4">
@@ -66,7 +66,7 @@ templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user V
 					</div>
 				}
 			</main>
-			@simpleFooter()
+			@simpleFooter(p)
 		</body>
 	</html>
 }
