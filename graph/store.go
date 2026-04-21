@@ -3378,7 +3378,7 @@ func (s *Store) ListReports(ctx context.Context, spaceID string) ([]Report, erro
 		var r Report
 		if err := rows.Scan(
 			&r.ID, &r.SpaceID, &r.NodeID, &r.Actor, &r.ActorID,
-			&r.ActorKind, &r.Op, &r.Payload, &r.CreatedAt,
+			&r.ActorKind, &r.Op.Op, &r.Payload, &r.CreatedAt,
 			&r.NodeTitle, &r.NodeKind,
 		); err != nil {
 			return nil, fmt.Errorf("scan report: %w", err)
