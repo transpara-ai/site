@@ -119,10 +119,17 @@ CREATE TABLE IF NOT EXISTS magic_link_tokens (
 	}
 
 	// Migrations for existing databases.
+	//
+	// Each package must add the columns IT reads or writes — the graph
+	// package's migrate also adds some of these (persona_name in particular),
+	// but `go test ./...` runs packages in parallel against a shared DB, so
+	// auth can race graph's migrate on a fresh schema. Idempotent ALTERs here
+	// keep auth self-sufficient.
 	migrations := []string{
 		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS agent_name TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS agent_id TEXT REFERENCES users(id) ON DELETE SET NULL`,
 		`ALTER TABLE users ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'human'`,
+		`ALTER TABLE users ADD COLUMN IF NOT EXISTS persona_name TEXT`,
 		`ALTER TABLE users ALTER COLUMN google_id DROP NOT NULL`,
 	}
 	for _, m := range migrations {
