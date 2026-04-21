@@ -11,6 +11,8 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 	"time"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // AgentPersonaItem holds display data for one agent on the public Agents page.
@@ -29,7 +31,7 @@ type AgentCategoryGroup struct {
 	Personas []AgentPersonaItem
 }
 
-func AgentsPage(categories []AgentCategoryGroup) templ.Component {
+func AgentsPage(categories []AgentCategoryGroup, p *profile.Profile) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -80,7 +82,7 @@ func AgentsPage(categories []AgentCategoryGroup) templ.Component {
 					var templ_7745c5c3_Var3 string
 					templ_7745c5c3_Var3, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(fmt.Sprintf("--d:%d", i))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 40, Col: 64}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 42, Col: 64}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 					if templ_7745c5c3_Err != nil {
@@ -93,7 +95,7 @@ func AgentsPage(categories []AgentCategoryGroup) templ.Component {
 					var templ_7745c5c3_Var4 string
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(cat.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 42, Col: 72}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 44, Col: 72}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -121,7 +123,7 @@ func AgentsPage(categories []AgentCategoryGroup) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.", p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -157,7 +159,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(agentInitial(p.Display))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 62, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 64, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -180,7 +182,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(p.Display)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 70, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 72, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -215,7 +217,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(p.Category)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 75, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 77, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -250,7 +252,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(agentStatusText(p.LastSeen))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 77, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 79, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -268,7 +270,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(p.Description)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 82, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 84, Col: 76}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -286,7 +288,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var15 templ.SafeURL
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/agents/" + p.Name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 85, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 87, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -299,7 +301,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		var templ_7745c5c3_Var16 templ.SafeURL
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/agents/" + p.Name + "/chat"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 88, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 90, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {

@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"time"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // QuestionItem is a question with its first agent answer for the public Q&A list.
@@ -91,8 +93,8 @@ type KnowledgeClaim struct {
 	CreatedAt  time.Time
 }
 
-templ KnowledgePage(claims []KnowledgeClaim, stateFilter string, query string) {
-	@Layout("Knowledge", "Knowledge claims on lovyou.ai — verifiable assertions with epistemic status and provenance.") {
+templ KnowledgePage(claims []KnowledgeClaim, stateFilter string, query string, p *profile.Profile) {
+	@Layout("Knowledge", "Knowledge claims on lovyou.ai — verifiable assertions with epistemic status and provenance.", p) {
 		<div class="space-y-8">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Knowledge</h1>

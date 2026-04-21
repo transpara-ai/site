@@ -8,6 +8,8 @@ package views
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
+import "github.com/lovyou-ai/site/profile"
+
 // AgentProfileData holds data for the public agent profile page.
 type AgentProfileData struct {
 	Name        string // slug, e.g. "philosopher"
@@ -17,7 +19,7 @@ type AgentProfileData struct {
 	PromptHTML  string // pre-rendered markdown HTML
 }
 
-func AgentProfilePage(p AgentProfileData) templ.Component {
+func AgentProfilePage(ap AgentProfileData, p *profile.Profile) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -55,9 +57,9 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(agentInitial(p.Display))
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(agentInitial(ap.Display))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 18, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 20, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -68,9 +70,9 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(p.Display)
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(ap.Display)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 22, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 24, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -80,7 +82,7 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var5 = []any{"text-[10px] px-1.5 py-0.5 rounded-full", agentCategoryClass(p.Category)}
+			var templ_7745c5c3_Var5 = []any{"text-[10px] px-1.5 py-0.5 rounded-full", agentCategoryClass(ap.Category)}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var5...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -103,9 +105,9 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(p.Category)
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(ap.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 25, Col: 19}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 27, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -115,15 +117,15 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if p.Description != "" {
+			if ap.Description != "" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<p class=\"text-warm-muted mt-1.5\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var8 string
-				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(p.Description)
+				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(ap.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 29, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 31, Col: 56}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -139,9 +141,9 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 templ.SafeURL
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/agents/" + p.Name + "/chat"))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/agents/" + ap.Name + "/chat"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 35, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 37, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -152,9 +154,9 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(p.Display)
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(ap.Display)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 37, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 39, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -164,12 +166,12 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			if p.PromptHTML != "" {
+			if ap.PromptHTML != "" {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"reveal-scroll prose\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.Raw(p.PromptHTML).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templ.Raw(ap.PromptHTML).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -184,7 +186,7 @@ func AgentProfilePage(p AgentProfileData) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Layout(p.Display, p.Description).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Layout(ap.Display, ap.Description, p).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

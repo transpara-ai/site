@@ -3,6 +3,8 @@ package views
 import (
 	"fmt"
 	"time"
+
+	"github.com/lovyou-ai/site/profile"
 )
 
 // AgentPersonaItem holds display data for one agent on the public Agents page.
@@ -21,8 +23,8 @@ type AgentCategoryGroup struct {
 	Personas []AgentPersonaItem
 }
 
-templ AgentsPage(categories []AgentCategoryGroup) {
-	@Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.") {
+templ AgentsPage(categories []AgentCategoryGroup, p *profile.Profile) {
+	@Layout("Agents", "Meet the agents on lovyou.ai — specialized AI collaborators you can chat with, assign work, and build alongside.", p) {
 		<div class="space-y-12">
 			<div class="reveal" style="--d:0">
 				<h1 class="font-display text-3xl font-light text-warm">Agents</h1>

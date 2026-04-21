@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // CompletedWork is a task someone finished, shown on their profile.
 type CompletedWork struct {
@@ -39,46 +43,46 @@ type UserProfile struct {
 	Spaces          []SpaceMembership
 }
 
-templ ProfilePage(profile UserProfile) {
-	@Layout(profile.Name + " — lovyou.ai", profile.Name + "'s profile on lovyou.ai") {
+templ ProfilePage(up UserProfile, p *profile.Profile) {
+	@Layout(up.Name + " — lovyou.ai", up.Name + "'s profile on lovyou.ai", p) {
 		<div class="space-y-8">
 			<div class="reveal flex items-center gap-4" style="--d:0">
-				if profile.Kind == "agent" {
+				if up.Kind == "agent" {
 					<span class="w-16 h-16 rounded-full bg-violet-500/10 text-violet-400 text-2xl font-bold flex items-center justify-center">
-						{ string([]rune(profile.Name)[:1]) }
+						{ string([]rune(up.Name)[:1]) }
 					</span>
 				} else {
 					<span class="w-16 h-16 rounded-full bg-brand/10 text-brand text-2xl font-bold flex items-center justify-center">
-						{ string([]rune(profile.Name)[:1]) }
+						{ string([]rune(up.Name)[:1]) }
 					</span>
 				}
 				<div>
-					<h1 class="font-display text-2xl font-light text-warm">{ profile.Name }</h1>
+					<h1 class="font-display text-2xl font-light text-warm">{ up.Name }</h1>
 					<div class="flex items-center gap-3 mt-1">
-						if profile.Kind == "agent" {
+						if up.Kind == "agent" {
 							<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
 						}
-						<span class="text-sm text-warm-muted">{ fmt.Sprintf("%d followers", profile.Followers) }</span>
-						<span class="text-sm text-warm-faint">{ fmt.Sprintf("%d following", profile.Following) }</span>
-						if profile.Endorsements > 0 {
-							<span class="text-sm text-brand">{ fmt.Sprintf("%d endorsements", profile.Endorsements) }</span>
+						<span class="text-sm text-warm-muted">{ fmt.Sprintf("%d followers", up.Followers) }</span>
+						<span class="text-sm text-warm-faint">{ fmt.Sprintf("%d following", up.Following) }</span>
+						if up.Endorsements > 0 {
+							<span class="text-sm text-brand">{ fmt.Sprintf("%d endorsements", up.Endorsements) }</span>
 						}
 					</div>
 				</div>
 			</div>
 			<!-- Follow + Endorse section -->
 			<div class="reveal flex items-center gap-4" style="--d:1">
-				if profile.ViewerLoggedIn {
+				if up.ViewerLoggedIn {
 					<div id="follow-btn">
-						if profile.IsFollowing {
-							<form method="POST" action={ templ.SafeURL("/user/" + profile.Name + "/follow") }>
+						if up.IsFollowing {
+							<form method="POST" action={ templ.SafeURL("/user/" + up.Name + "/follow") }>
 								<input type="hidden" name="action" value="unfollow"/>
 								<button type="submit" class="text-xs px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors font-medium">
 									Following
 								</button>
 							</form>
 						} else {
-							<form method="POST" action={ templ.SafeURL("/user/" + profile.Name + "/follow") }>
+							<form method="POST" action={ templ.SafeURL("/user/" + up.Name + "/follow") }>
 								<input type="hidden" name="action" value="follow"/>
 								<button type="submit" class="text-xs px-4 py-2 bg-surface border border-edge text-warm-muted rounded-lg hover:border-brand hover:text-brand transition-colors font-medium">
 									Follow
@@ -86,15 +90,15 @@ templ ProfilePage(profile UserProfile) {
 							</form>
 						}
 					</div>
-					if profile.HasEndorsed {
-						<form method="POST" action={ templ.SafeURL("/user/" + profile.Name + "/endorse") }>
+					if up.HasEndorsed {
+						<form method="POST" action={ templ.SafeURL("/user/" + up.Name + "/endorse") }>
 							<input type="hidden" name="action" value="unendorse"/>
 							<button type="submit" class="text-xs px-4 py-2 bg-brand/15 text-brand rounded-lg hover:bg-brand/25 transition-colors font-medium">
 								Endorsed
 							</button>
 						</form>
 					} else {
-						<form method="POST" action={ templ.SafeURL("/user/" + profile.Name + "/endorse") }>
+						<form method="POST" action={ templ.SafeURL("/user/" + up.Name + "/endorse") }>
 							<input type="hidden" name="action" value="endorse"/>
 							<button type="submit" class="text-xs px-4 py-2 bg-surface border border-edge text-warm-muted rounded-lg hover:border-brand hover:text-brand transition-colors font-medium">
 								Endorse
@@ -102,39 +106,39 @@ templ ProfilePage(profile UserProfile) {
 						</form>
 					}
 				}
-				if len(profile.Endorsers) > 0 {
+				if len(up.Endorsers) > 0 {
 					<div class="text-xs text-warm-faint">
 						Endorsed by
-						for i, name := range profile.Endorsers {
+						for i, name := range up.Endorsers {
 							<a href={ templ.SafeURL("/user/" + name) } class="text-warm-muted hover:text-brand transition-colors">{ name }</a>
-							if i < len(profile.Endorsers) - 1 {
+							if i < len(up.Endorsers) - 1 {
 								<span>, </span>
 							}
 						}
 					</div>
 				}
 			</div>
-			if profile.ReputationScore > 0 || profile.TasksCompleted > 0 {
+			if up.ReputationScore > 0 || up.TasksCompleted > 0 {
 				<div class="reveal" style="--d:2">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center gap-2 px-4 py-2 bg-surface border border-edge rounded-xl">
 							<span class="text-xs text-warm-faint">Rep</span>
-							<span class="text-lg font-semibold text-brand">{ fmt.Sprintf("%d", profile.ReputationScore) }</span>
+							<span class="text-lg font-semibold text-brand">{ fmt.Sprintf("%d", up.ReputationScore) }</span>
 						</div>
 						<span class="text-sm text-warm-muted">
-							{ fmt.Sprintf("%d tasks completed", profile.TasksCompleted) }
-							if profile.ReviewApprovals > 0 {
-								<span>, { fmt.Sprintf("%d approved", profile.ReviewApprovals) }</span>
+							{ fmt.Sprintf("%d tasks completed", up.TasksCompleted) }
+							if up.ReviewApprovals > 0 {
+								<span>, { fmt.Sprintf("%d approved", up.ReviewApprovals) }</span>
 							}
 						</span>
 					</div>
 				</div>
 			}
-			if len(profile.Spaces) > 0 {
+			if len(up.Spaces) > 0 {
 				<div class="reveal" style="--d:3">
 					<h2 class="text-lg font-medium text-warm mb-3">Spaces</h2>
 					<div class="flex flex-wrap gap-2">
-						for _, sp := range profile.Spaces {
+						for _, sp := range up.Spaces {
 							<a href={ templ.SafeURL("/app/" + sp.Slug) } class="flex items-center gap-1.5 px-3 py-1.5 bg-surface rounded-lg border border-edge hover:border-brand/40 transition-all text-sm">
 								<span class="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0"></span>
 								<span class="text-warm">{ sp.Name }</span>
@@ -143,11 +147,11 @@ templ ProfilePage(profile UserProfile) {
 					</div>
 				</div>
 			}
-			if len(profile.CompletedWork) > 0 {
+			if len(up.CompletedWork) > 0 {
 				<div class="reveal-scroll">
 					<h2 class="text-lg font-medium text-warm mb-4">Completed work</h2>
 					<div class="space-y-2">
-						for _, w := range profile.CompletedWork {
+						for _, w := range up.CompletedWork {
 							<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", w.SpaceSlug, w.ID)) } class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:border-brand/40 transition-all">
 								<span class="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0"></span>
 								<div class="flex-1 min-w-0">
@@ -160,11 +164,11 @@ templ ProfilePage(profile UserProfile) {
 					</div>
 				</div>
 			}
-			if len(profile.RecentOps) > 0 {
+			if len(up.RecentOps) > 0 {
 				<div class="reveal-scroll">
 					<h2 class="text-lg font-medium text-warm mb-4">Recent activity</h2>
 					<div class="space-y-1">
-						for _, item := range profile.RecentOps {
+						for _, item := range up.RecentOps {
 							@activityRow(item)
 						}
 					</div>

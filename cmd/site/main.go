@@ -19,6 +19,7 @@ import (
 	"github.com/lovyou-ai/site/auth"
 	"github.com/lovyou-ai/site/content"
 	"github.com/lovyou-ai/site/graph"
+	"github.com/lovyou-ai/site/profile"
 	"github.com/lovyou-ai/site/views"
 )
 
@@ -90,7 +91,7 @@ func main() {
 
 	// Vision.
 	mux.HandleFunc("GET /vision", func(w http.ResponseWriter, r *http.Request) {
-		views.VisionPage(layers).Render(r.Context(), w)
+		views.VisionPage(layers, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	var hiveSpaceID string // resolved lazily on first vision layer request
 
@@ -144,7 +145,7 @@ func main() {
 			}
 		}
 
-		views.VisionLayerPage(layer, goals, layers).Render(r.Context(), w)
+		views.VisionLayerPage(layer, goals, layers, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	mux.HandleFunc("GET /vision/goal/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -226,24 +227,25 @@ func main() {
 			views.VisionBreadcrumb{ID: goal.ID, Title: goal.Title, Kind: goal.Kind},
 			goal.Body, goal.State,
 			breadcrumbs, childNodes, crossRefs,
+			profile.FromContext(r.Context()),
 		).Render(r.Context(), w)
 	})
 
 	// Reference.
 	mux.HandleFunc("GET /reference", func(w http.ResponseWriter, r *http.Request) {
-		views.ReferenceIndex(layers, agentPrims, grammars).Render(r.Context(), w)
+		views.ReferenceIndex(layers, agentPrims, grammars, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/grammar", func(w http.ResponseWriter, r *http.Request) {
-		views.BaseGrammarPage(baseGrammar).Render(r.Context(), w)
+		views.BaseGrammarPage(baseGrammar, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/cognitive-grammar", func(w http.ResponseWriter, r *http.Request) {
-		views.CognitiveGrammarPage(cognitiveGrammar).Render(r.Context(), w)
+		views.CognitiveGrammarPage(cognitiveGrammar, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/higher-order-ops", func(w http.ResponseWriter, r *http.Request) {
-		views.HigherOrderOpsPage(higherOrderOps).Render(r.Context(), w)
+		views.HigherOrderOpsPage(higherOrderOps, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/code-graph", func(w http.ResponseWriter, r *http.Request) {
-		views.CodeGraphPage(codeGraph).Render(r.Context(), w)
+		views.CodeGraphPage(codeGraph, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/layers/{num}", func(w http.ResponseWriter, r *http.Request) {
 		num, err := strconv.Atoi(r.PathValue("num"))
@@ -252,30 +254,30 @@ func main() {
 			return
 		}
 		if layer, ok := layersByNum[num]; ok {
-			views.LayerPage(layer, layers).Render(r.Context(), w)
+			views.LayerPage(layer, layers, profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		http.NotFound(w, r)
 	})
 	mux.HandleFunc("GET /reference/agents", func(w http.ResponseWriter, r *http.Request) {
-		views.AgentPrimitivesPage(agentPrims).Render(r.Context(), w)
+		views.AgentPrimitivesPage(agentPrims, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/primitives/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 		if prim, ok := primsBySlug[slug]; ok {
-			views.PrimitivePage(prim).Render(r.Context(), w)
+			views.PrimitivePage(prim, profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		http.NotFound(w, r)
 	})
 	mux.HandleFunc("GET /reference/grammars", func(w http.ResponseWriter, r *http.Request) {
-		views.GrammarIndex(grammars).Render(r.Context(), w)
+		views.GrammarIndex(grammars, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 	mux.HandleFunc("GET /reference/grammars/{slug}", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
 		for _, g := range grammars {
 			if g.Slug == slug {
-				views.GrammarPage(g, grammars).Render(r.Context(), w)
+				views.GrammarPage(g, grammars, profile.FromContext(r.Context())).Render(r.Context(), w)
 				return
 			}
 		}
@@ -408,7 +410,7 @@ func main() {
 				Users: ps.Users, AgentOps: ps.AgentOps,
 				FeaturedSpaces: featured,
 				DemoSlug:       demoSlug,
-			}).Render(r.Context(), w)
+			}, profile.FromContext(r.Context())).Render(r.Context(), w)
 		}))
 
 		// Redirect old /work to /app.
@@ -447,7 +449,7 @@ func main() {
 				result.Users = append(result.Users, views.SearchUser{Name: u.Name, Kind: u.Kind})
 			}
 		}
-		views.SearchPage(result).Render(r.Context(), w)
+		views.SearchPage(result, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Command palette search (returns compact HTML fragment).
@@ -510,7 +512,7 @@ func main() {
 	// Discover page — list public spaces (no auth required).
 	mux.HandleFunc("GET /discover", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
-			views.DiscoverPage(nil, "", "").Render(r.Context(), w)
+			views.DiscoverPage(nil, "", "", profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		query := r.URL.Query().Get("q")
@@ -518,7 +520,7 @@ func main() {
 		spaces, err := graphStore.ListPublicSpaces(r.Context(), query)
 		if err != nil {
 			log.Printf("discover: %v", err)
-			views.DiscoverPage(nil, "", "").Render(r.Context(), w)
+			views.DiscoverPage(nil, "", "", profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		var ds []views.DiscoverSpace
@@ -538,19 +540,19 @@ func main() {
 				HasAgent:     sp.HasAgent,
 			})
 		}
-		views.DiscoverPage(ds, query, kindFilter).Render(r.Context(), w)
+		views.DiscoverPage(ds, query, kindFilter, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Agents page — public directory of active agent personas.
 	mux.HandleFunc("GET /agents", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
-			views.AgentsPage(nil).Render(r.Context(), w)
+			views.AgentsPage(nil, profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		personas, err := graphStore.ListAgentPersonas(r.Context())
 		if err != nil {
 			log.Printf("agents: %v", err)
-			views.AgentsPage(nil).Render(r.Context(), w)
+			views.AgentsPage(nil, profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		categoryOrder := []string{"care", "governance", "knowledge", "product", "outward", "resource"}
@@ -572,7 +574,7 @@ func main() {
 				})
 			}
 		}
-		views.AgentsPage(categories).Render(r.Context(), w)
+		views.AgentsPage(categories, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Agent profile page — public view of a single agent persona.
@@ -598,7 +600,7 @@ func main() {
 			Description: persona.Description,
 			Category:    persona.Category,
 			PromptHTML:  buf.String(),
-		}).Render(r.Context(), w)
+		}, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Chat with agent — creates a conversation in the agents space with the persona's role tag.
@@ -718,7 +720,7 @@ func main() {
 			CompletedWork: completedWork,
 			RecentOps: recentOps,
 			Spaces: spaces,
-		}).Render(r.Context(), w)
+		}, profile.FromContext(r.Context())).Render(r.Context(), w)
 	}))
 
 	// Endorse/unendorse a user (Layer 9 — Relationship).
@@ -790,7 +792,7 @@ func main() {
 	// Global activity — transparent audit trail (Layer 7).
 	mux.HandleFunc("GET /activity", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
-			views.GlobalActivityPage(nil).Render(r.Context(), w)
+			views.GlobalActivityPage(nil, profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		ops, err := graphStore.ListPublicActivity(r.Context(), 100)
@@ -810,13 +812,13 @@ func main() {
 				SpaceName: spaceName, SpaceSlug: spaceSlug, CreatedAt: o.CreatedAt,
 			})
 		}
-		views.GlobalActivityPage(items).Render(r.Context(), w)
+		views.GlobalActivityPage(items, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Market — available tasks across public spaces.
 	mux.HandleFunc("GET /market", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
-			views.MarketPage(nil, "").Render(r.Context(), w)
+			views.MarketPage(nil, "", profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		query := r.URL.Query().Get("q")
@@ -849,13 +851,13 @@ func main() {
 				AuthorReputation: repScores[n.AuthorID],
 			})
 		}
-		views.MarketPage(tasks, priority).Render(r.Context(), w)
+		views.MarketPage(tasks, priority, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Knowledge page — claims across public spaces (Layer 6).
 	mux.HandleFunc("GET /knowledge", func(w http.ResponseWriter, r *http.Request) {
 		if graphStore == nil {
-			views.KnowledgePage(nil, "", "").Render(r.Context(), w)
+			views.KnowledgePage(nil, "", "", profile.FromContext(r.Context())).Render(r.Context(), w)
 			return
 		}
 		stateFilter := r.URL.Query().Get("state")
@@ -873,7 +875,7 @@ func main() {
 				Challenges: c.Challenges, CreatedAt: c.CreatedAt,
 			})
 		}
-		views.KnowledgePage(vc, stateFilter, query).Render(r.Context(), w)
+		views.KnowledgePage(vc, stateFilter, query, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
 	// Health check for Fly.io.
@@ -993,10 +995,10 @@ func noCache(next http.Handler) http.Handler {
 
 func makeHandlers(posts []views.Post) (home, blogIndex, blogPost http.HandlerFunc) {
 	home = func(w http.ResponseWriter, r *http.Request) {
-		views.Home(views.HomeStats{}).Render(r.Context(), w)
+		views.Home(views.HomeStats{}, profile.FromContext(r.Context())).Render(r.Context(), w)
 	}
 	blogIndex = func(w http.ResponseWriter, r *http.Request) {
-		views.BlogIndex(posts).Render(r.Context(), w)
+		views.BlogIndex(posts, profile.FromContext(r.Context())).Render(r.Context(), w)
 	}
 	blogPost = func(w http.ResponseWriter, r *http.Request) {
 		slug := r.PathValue("slug")
@@ -1009,7 +1011,7 @@ func makeHandlers(posts []views.Post) (home, blogIndex, blogPost http.HandlerFun
 				if i < len(posts)-1 {
 					nav.Next = &posts[i+1]
 				}
-				views.BlogPost(post, nav).Render(r.Context(), w)
+				views.BlogPost(post, nav, profile.FromContext(r.Context())).Render(r.Context(), w)
 				return
 			}
 		}

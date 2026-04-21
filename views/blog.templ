@@ -1,6 +1,10 @@
 package views
 
-import "time"
+import (
+	"time"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 type Post struct {
 	Slug    string
@@ -67,8 +71,8 @@ type Primitive struct {
 	Intelligent  string
 }
 
-templ BlogIndex(posts []Post) {
-	@Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.") {
+templ BlogIndex(posts []Post, p *profile.Profile) {
+	@Layout("Blog", "A series on EventGraph, AI consciousness, and the architecture of accountable systems.", p) {
 		<div class="space-y-8">
 			<h1 class="reveal font-display text-3xl font-light text-warm" style="--d:0">Blog</h1>
 			<p class="text-warm-muted">
@@ -125,8 +129,8 @@ templ blogCard(post Post) {
 	</a>
 }
 
-templ BlogPost(post Post, nav PostNav) {
-	@Layout(post.Title, post.Summary) {
+templ BlogPost(post Post, nav PostNav, p *profile.Profile) {
+	@Layout(post.Title, post.Summary, p) {
 		<article class="space-y-6">
 			<div>
 				<a href="/blog" class="text-sm text-brand hover:underline">&larr; All posts</a>

@@ -1,6 +1,10 @@
 package views
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/lovyou-ai/site/profile"
+)
 
 // FeaturedSpace is a public space shown on the landing page.
 type FeaturedSpace struct {
@@ -22,8 +26,8 @@ type HomeStats struct {
 	DemoSlug       string // slug of the public demo space, "" if not seeded
 }
 
-templ Home(stats HomeStats) {
-	@Layout("Home", "A place where humans and AI take care of each other — and build whatever they need together.") {
+templ Home(stats HomeStats, p *profile.Profile) {
+	@Layout("Home", "A place where humans and AI take care of each other — and build whatever they need together.", p) {
 		<div class="space-y-20">
 			<!-- Hero — 8 seconds to answer: what is this, why should I care -->
 			<section class="text-center space-y-8 py-20 md:py-28 ember-glow">

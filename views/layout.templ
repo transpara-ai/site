@@ -1,5 +1,7 @@
 package views
 
+import "github.com/lovyou-ai/site/profile"
+
 // SiteUser holds the current user for the shared header.
 // Empty Name means anonymous/not logged in.
 type SiteUser struct {
@@ -7,7 +9,12 @@ type SiteUser struct {
 	Picture string
 }
 
-templ Layout(title, description string, user ...SiteUser) {
+// Layout accepts a *profile.Profile as part of the Phase 3 plumbing
+// pass: profile reaches the chrome but is intentionally unread. Phase 4
+// is where layouts begin branching on profile.Slug. Until then, passing
+// a differently-slugged Profile must produce byte-identical HTML to the
+// default.
+templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
