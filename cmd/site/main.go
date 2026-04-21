@@ -943,7 +943,19 @@ func main() {
 
 	addr := ":" + p
 	log.Printf("lovyou.ai listening on %s", addr)
-	if err := http.ListenAndServe(addr, canonicalHost(noCache(mux))); err != nil {
+
+	// Profile middleware slots between noCache and the mux so every route
+	// handler sees a non-nil *profile.Profile in its request context.
+	// Outer wraps run first (canonicalHost → noCache) to short-circuit
+	// bad-host / cached requests before paying resolution cost. Adding a
+	// future resolver (subdomain, cookie, host header) is one line in the
+	// Chain literal below — that's the extensibility contract of Phase 3.
+	profileChain := profile.Chain{
+		profile.QueryParamResolver{},
+		profile.DefaultResolver{},
+	}
+	handler := canonicalHost(noCache(profile.Middleware(profileChain)(mux)))
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
 }
