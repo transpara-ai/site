@@ -12,6 +12,7 @@ package assets
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"os"
 	"sync"
 )
@@ -26,11 +27,14 @@ var (
 // CSSURL returns the versioned URL for site.css. The version is the
 // first 8 hex chars of the sha256 of the file contents, computed once
 // per process at first call. If the file can't be read, the version
-// falls back to "dev" so pages still render in degraded local setups.
+// falls back to "dev" so pages still render in degraded local setups
+// — the read error is logged once so a broken deploy is observable
+// rather than silently serving a frozen "dev" suffix forever.
 func CSSURL() string {
 	cssVersionOnce.Do(func() {
 		data, err := os.ReadFile(cssPath)
 		if err != nil {
+			log.Printf("assets: cache-busting disabled, falling back to ?v=dev — read %s: %v", cssPath, err)
 			cssVersion = "dev"
 			return
 		}
