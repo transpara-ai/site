@@ -5205,15 +5205,12 @@ templ simpleFooter(p *profile.Profile) {
 		<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 			<div>
 				<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
-				<p class="text-[10px] text-warm-faint mt-1">Humans and agents, building together.</p>
+				<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Humans and agents, building together.") }</p>
 			</div>
 			<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
-				<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
-				<a href="/hive" class="hover:text-brand transition-colors">Hive</a>
-				<a href="/market" class="hover:text-brand transition-colors">Market</a>
-				<a href="/knowledge" class="hover:text-brand transition-colors">Knowledge</a>
-				<a href="/blog" class="hover:text-brand transition-colors">Blog</a>
-				<a href="/reference" class="hover:text-brand transition-colors">Reference</a>
+				for _, item := range p.GetFooterNav() {
+					<a href={ templ.SafeURL(item.Path) } class="hover:text-brand transition-colors">{ item.Label }</a>
+				}
 				<a href="https://github.com/lovyou-ai" class="hover:text-brand transition-colors" target="_blank" rel="noopener">GitHub</a>
 			</div>
 		</div>
