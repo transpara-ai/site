@@ -80,7 +80,7 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 				<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 					<div>
 						<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
-						<p class="text-[10px] text-warm-faint mt-1">Humans and agents, building together.</p>
+						<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Humans and agents, building together.") }</p>
 					</div>
 					<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
 						for _, item := range p.GetFooterNav() {
