@@ -12,9 +12,7 @@ templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user V
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>The Hive — { p.GetBrandName() }</title>
+			@metaTags("The Hive", p.GetCopy("hive.description", "Live status of the autonomous civilization-build agents."), p)
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 			@themeBlock()
 		</head>

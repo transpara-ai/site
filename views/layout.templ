@@ -1,6 +1,9 @@
 package views
 
-import "github.com/lovyou-ai/site/profile"
+import (
+	"github.com/lovyou-ai/site/assets"
+	"github.com/lovyou-ai/site/profile"
+)
 
 // SiteUser holds the current user for the shared header.
 // Empty Name means anonymous/not logged in.
@@ -36,7 +39,7 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 			<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet"/>
-			<link rel="stylesheet" href="/static/css/site.css"/>
+			<link rel="stylesheet" href={ assets.CSSURL() }/>
 			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">

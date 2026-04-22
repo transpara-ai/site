@@ -99,16 +99,23 @@ var registry = map[string]*Profile{
 		// sentences whose tone differs sharply from the default
 		// profile's. Anything not in this map renders the
 		// fallback string the call site supplies — same as today.
-		// Keep this set small (~5-10 keys) until a real i18n
+		// Keep this set small (~10-15 keys) until a real i18n
 		// system absorbs it; this is a pattern proof, not a
 		// translation infrastructure.
 		Copy: map[string]string{
-			"tagline":            "Operations intelligence for the people on the floor.",
-			"home.hero.subtitle": "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
-			"home.subhero.body":  "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
-			"discover.empty":     "No shared workspaces yet.",
-			"welcome.subtitle":   "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
-			"apikeys.desc":       "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
+			"tagline":                 "Operations intelligence for the people on the floor.",
+			"home.description":        "Autonomous agents read your plant data and surface what matters — before it costs you a shift.",
+			"home.hero.title.lead":    "See what the plant",
+			"home.hero.title.accent":  "is telling you.",
+			"home.hero.subtitle":      "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
+			"home.subhero.body":       "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
+			"app.description":         "Your team's work on the plant — tasks, conversations, and agent activity in one place.",
+			"hive.description":        "Live view of the agents working on the plant — real-time activity and coordination across the floor.",
+			"welcome.description":     "Set up your first workspace and start asking questions of the plant data.",
+			"notifications.description": "Recent activity across your plant workspaces.",
+			"discover.empty":          "No shared workspaces yet.",
+			"welcome.subtitle":        "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
+			"apikeys.desc":            "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
 		},
 	},
 }

@@ -27,13 +27,13 @@ type HomeStats struct {
 }
 
 templ Home(stats HomeStats, p *profile.Profile) {
-	@Layout("Home", "A place where humans and AI take care of each other — and build whatever they need together.", p) {
+	@Layout("Home", p.GetCopy("home.description", "A place where humans and AI take care of each other — and build whatever they need together."), p) {
 		<div class="space-y-20">
 			<!-- Hero — 8 seconds to answer: what is this, why should I care -->
 			<section class="text-center space-y-8 py-20 md:py-28 ember-glow">
 				<h1 class="reveal font-display text-5xl md:text-6xl lg:text-7xl font-light leading-[1.1] tracking-tight text-warm" style="--d:0">
-					Your team has<br/>
-					<span class="text-brand italic">an AI colleague.</span>
+					{ p.GetCopy("home.hero.title.lead", "Your team has") }<br/>
+					<span class="text-brand italic">{ p.GetCopy("home.hero.title.accent", "an AI colleague.") }</span>
 				</h1>
 				<p class="reveal text-lg md:text-xl text-warm-muted max-w-2xl mx-auto leading-relaxed" style="--d:1">
 					{ p.GetCopy("home.hero.subtitle", "Assign tasks to an AI agent. It thinks, plans, builds, and reports back — on the same board your team uses. Not a chatbot. A colleague.") }
