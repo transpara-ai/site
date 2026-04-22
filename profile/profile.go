@@ -103,12 +103,15 @@ var registry = map[string]*Profile{
 		// system absorbs it; this is a pattern proof, not a
 		// translation infrastructure.
 		Copy: map[string]string{
-			"tagline":            "Operations intelligence for the people on the floor.",
-			"home.hero.subtitle": "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
-			"home.subhero.body":  "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
-			"discover.empty":     "No shared workspaces yet.",
-			"welcome.subtitle":   "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
-			"apikeys.desc":       "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
+			"tagline":                 "Operations intelligence for the people on the floor.",
+			"home.description":        "Autonomous agents read your plant data and surface what matters — before it costs you a shift.",
+			"home.hero.title.lead":    "See what the plant",
+			"home.hero.title.accent":  "is telling you.",
+			"home.hero.subtitle":      "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
+			"home.subhero.body":       "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
+			"discover.empty":          "No shared workspaces yet.",
+			"welcome.subtitle":        "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
+			"apikeys.desc":            "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
 		},
 	},
 }
