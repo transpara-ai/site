@@ -22,6 +22,22 @@ var navLinkRunRE = regexp.MustCompile(
 	`(?:<a href="/[^"]*" class="hover:text-brand transition-colors[^"]*">[^<]*</a>\s*)+`,
 )
 
+// copyKeysInLayout enumerates the (key, fallback) pairs whose rendered
+// output actually appears inside views.Layout. The test renders only
+// Layout — Welcome / Home / APIKeysView / Discover / etc. each carry
+// their own Copy keys, but their text doesn't appear in the Layout
+// shell, so the normaliser doesn't need to handle them. Adding more
+// keys here is the right move when the bounded-diff test grows to
+// render additional templates.
+//
+// Each entry records the FALLBACK that the lovyou-ai (default)
+// profile renders. The transpara override for the same key is read
+// from the registry at test time. Both sides get rewritten to the
+// same {{COPY_<key>}} placeholder so they normalise identically.
+var copyKeysInLayout = map[string]string{
+	"tagline": "Humans and agents, building together.",
+}
+
 // TestBoundedDiff_LayoutAcrossProfiles is the Phase 4/5 leakage alarm.
 //
 // It renders views.Layout twice — once per registered profile — and
@@ -44,6 +60,10 @@ var navLinkRunRE = regexp.MustCompile(
 //     collapses the whole run to {{NAV_LINKS}} because the number
 //     of links legitimately differs between profiles, so per-link
 //     replacement cannot produce equal-length normalized strings.
+//   - Copy overrides (Phase 5) — for each key whose output appears
+//     in Layout's render scope, the fallback (rendered by lovyou)
+//     and the override (rendered by transpara) both rewrite to
+//     {{COPY_<key>}}.
 //
 // New fields added to Profile must either be added here or
 // explicitly justified as non-rendering.
@@ -81,6 +101,20 @@ func TestBoundedDiff_LayoutAcrossProfiles(t *testing.T) {
 		s = strings.ReplaceAll(s, p.BrandName, "{{BRAND}}")
 		s = strings.ReplaceAll(s, p.LogoPath, "{{LOGO}}")
 		s = strings.ReplaceAll(s, p.AccentColor, "{{ACCENT}}")
+		// Copy overrides: for each key whose rendered text appears
+		// in the Layout shell, replace both the fallback (rendered
+		// by lovyou) and the override (rendered by transpara) with
+		// the same placeholder. The override comes from the live
+		// registry so a registry edit never silently desyncs the
+		// test; the fallback is hardcoded above as the contract
+		// pin between Layout's call site and this test.
+		for key, fallback := range copyKeysInLayout {
+			placeholder := "{{COPY_" + key + "}}"
+			s = strings.ReplaceAll(s, fallback, placeholder)
+			if override, ok := p.Copy[key]; ok {
+				s = strings.ReplaceAll(s, override, placeholder)
+			}
+		}
 		// Collapse any run of profile-driven nav links into a single
 		// placeholder — link counts differ legitimately per profile,
 		// so per-link replacement can't produce equal-length output.
