@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -145,6 +146,124 @@ func TestGetAccentColor_validProfile_returnsField(t *testing.T) {
 	p := Lookup("transpara")
 	if got, want := p.GetAccentColor(), "#0ea5e9"; got != want {
 		t.Errorf("transpara.GetAccentColor() = %q, want %q", got, want)
+	}
+}
+
+func TestGetHeaderNav_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	got := p.GetHeaderNav()
+	want := Default().HeaderNav
+	if len(got) == 0 {
+		t.Fatal("nil.GetHeaderNav() returned empty slice; expected default fallback")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("nil.GetHeaderNav() len = %d, want %d", len(got), len(want))
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("nil.GetHeaderNav()[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+func TestGetHeaderNav_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetHeaderNav()
+	if len(got) == 0 {
+		t.Fatal("transpara.GetHeaderNav() returned empty slice")
+	}
+	// transpara is intentionally narrower than default — if this
+	// test ever flips to equal-length, something merged the two
+	// nav sets by accident.
+	if len(got) >= len(Default().HeaderNav) {
+		t.Errorf("transpara header nav len = %d, expected fewer than default's %d", len(got), len(Default().HeaderNav))
+	}
+	if got[0].Path != "/discover" {
+		t.Errorf("transpara header nav[0].Path = %q, want %q", got[0].Path, "/discover")
+	}
+}
+
+func TestGetFooterNav_nilProfile_returnsDefault(t *testing.T) {
+	var p *Profile
+	got := p.GetFooterNav()
+	want := Default().FooterNav
+	if len(got) == 0 {
+		t.Fatal("nil.GetFooterNav() returned empty slice; expected default fallback")
+	}
+	if len(got) != len(want) {
+		t.Fatalf("nil.GetFooterNav() len = %d, want %d", len(got), len(want))
+	}
+}
+
+func TestGetFooterNav_validProfile_returnsField(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetFooterNav()
+	if len(got) == 0 {
+		t.Fatal("transpara.GetFooterNav() returned empty slice")
+	}
+	if len(got) >= len(Default().FooterNav) {
+		t.Errorf("transpara footer nav len = %d, expected fewer than default's %d", len(got), len(Default().FooterNav))
+	}
+}
+
+func TestHeaderNav_emptyFieldFallsBackToDefault(t *testing.T) {
+	// A registered profile with an empty HeaderNav slice should
+	// render the default profile's nav rather than an empty nav
+	// bar. Protects against a configuration mistake producing a
+	// visibly broken page.
+	p := &Profile{Slug: "test", HeaderNav: nil}
+	got := p.GetHeaderNav()
+	if len(got) != len(Default().HeaderNav) {
+		t.Errorf("empty-HeaderNav profile returned len %d, want default len %d", len(got), len(Default().HeaderNav))
+	}
+}
+
+func TestHeaderNav_profilesDiverge(t *testing.T) {
+	// The whole point of Phase 5 is that different profiles have
+	// different nav. If this fails, the registry somehow tied.
+	l := Lookup(DefaultSlug).HeaderNav
+	p := Lookup("transpara").HeaderNav
+	if len(l) == len(p) {
+		t.Errorf("registered HeaderNav lengths collide: %d == %d", len(l), len(p))
+	}
+}
+
+func TestGetCopy_nilProfile_returnsFallback(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetCopy("any.key", "fallback text"), "fallback text"; got != want {
+		t.Errorf("nil.GetCopy() = %q, want %q", got, want)
+	}
+}
+
+func TestGetCopy_missingKey_returnsFallback(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetCopy("definitely.not.a.real.key", "the inline default"), "the inline default"; got != want {
+		t.Errorf("transpara.GetCopy(missing) = %q, want %q", got, want)
+	}
+}
+
+func TestGetCopy_existingKey_returnsValue(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetCopy("tagline", "FALLBACK_NOT_USED")
+	if got == "" {
+		t.Fatal("transpara.GetCopy('tagline') returned empty")
+	}
+	if got == "FALLBACK_NOT_USED" {
+		t.Fatal("transpara.GetCopy('tagline') returned the fallback; expected the override")
+	}
+	if strings.Contains(got, "Humans and agents") {
+		t.Errorf("transpara.GetCopy('tagline') returned default-profile copy %q; expected Transpara override", got)
+	}
+}
+
+func TestGetCopy_defaultProfile_relyOnFallback(t *testing.T) {
+	// The default profile intentionally has no Copy map — every key
+	// returns the fallback, which matches today's hardcoded text.
+	// This guards against accidentally adding a default-profile
+	// override that would silently change copy.
+	p := Lookup(DefaultSlug)
+	if p.Copy != nil {
+		t.Errorf("default profile has %d Copy overrides; expected nil so fallbacks render unchanged", len(p.Copy))
 	}
 }
 

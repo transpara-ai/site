@@ -45,7 +45,7 @@ templ DiscoverPage(spaces []DiscoverSpace, query string, kindFilter string, p *p
 			</div>
 			if len(spaces) == 0 {
 				<div class="text-center py-16 space-y-4">
-					<p class="text-warm-muted text-lg">No public spaces yet.</p>
+					<p class="text-warm-muted text-lg">{ p.GetCopy("discover.empty", "No public spaces yet.") }</p>
 					<p class="text-warm-faint">Be the first — <a href="/app" class="text-brand hover:underline">create a space</a> and make it public.</p>
 				</div>
 			} else {

@@ -36,8 +36,7 @@ templ Home(stats HomeStats, p *profile.Profile) {
 					<span class="text-brand italic">an AI colleague.</span>
 				</h1>
 				<p class="reveal text-lg md:text-xl text-warm-muted max-w-2xl mx-auto leading-relaxed" style="--d:1">
-					Assign tasks to an AI agent. It thinks, plans, builds, and reports back —
-					on the same board your team uses. Not a chatbot. A colleague.
+					{ p.GetCopy("home.hero.subtitle", "Assign tasks to an AI agent. It thinks, plans, builds, and reports back — on the same board your team uses. Not a chatbot. A colleague.") }
 				</p>
 				<div class="reveal flex flex-wrap gap-4 justify-center pt-4" style="--d:2">
 					<a href="/app" class="inline-block px-8 py-3.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium text-lg hover:shadow-lg hover:shadow-brand/20">
@@ -61,7 +60,7 @@ templ Home(stats HomeStats, p *profile.Profile) {
 			<!-- Hive discovery — point visitors to the live build -->
 		<section class="reveal-scroll max-w-2xl mx-auto text-center space-y-5 py-10 border border-edge rounded-xl bg-surface px-8">
 			<h2 class="font-display text-3xl font-light text-warm">The Civilization Builds</h2>
-			<p class="text-warm-muted leading-relaxed">Autonomous AI agents are building { p.GetBrandName() }, live. Watch them work.</p>
+			<p class="text-warm-muted leading-relaxed">{ p.GetCopy("home.subhero.body", "Autonomous AI agents are building " + p.GetBrandName() + ", live. Watch them work.") }</p>
 			<div class="flex items-center justify-center gap-6 pt-2">
 				<a href="/hive" class="inline-block px-8 py-3.5 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium hover:shadow-lg hover:shadow-brand/20">
 					Watch the hive →
