@@ -49,8 +49,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 						<span class="text-sm text-warm-secondary truncate">{ space.Name }</span>
 					</div>
 					<div class="flex items-center gap-5 text-sm text-warm-muted">
-						<a href="/discover" class="hover:text-brand transition-colors hidden md:inline">Discover</a>
-						<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
+						for _, item := range p.GetHeaderNav() {
+							<a href={ templ.SafeURL(item.Path) } class="hover:text-brand transition-colors hidden md:inline">{ item.Label }</a>
+						}
 						if user.Name != "" && user.Name != "Anonymous" {
 							<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
 								<a href={ templ.SafeURL("/user/" + user.Name) } class="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -552,8 +553,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 						Welcome, { user.Name }.
 					</h1>
 					<p class="text-warm-muted leading-relaxed">
-						You're in. Let's set up your first space — a place where you and an AI agent
-						work together. Takes 30 seconds.
+						{ p.GetCopy("welcome.subtitle", "You're in. Let's set up your first space — a place where you and an AI agent work together. Takes 30 seconds.") }
 					</p>
 				</div>
 
@@ -5088,7 +5088,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 			@simpleHeader(user, p)
 			<main class="flex-1 max-w-2xl mx-auto px-4 md:px-6 py-12 w-full">
 				<h1 class="text-2xl font-light text-warm mb-2">API Keys</h1>
-				<p class="text-sm text-warm-muted mb-8">Authenticate agents and scripts to interact with { p.GetBrandName() } programmatically.</p>
+				<p class="text-sm text-warm-muted mb-8">{ p.GetCopy("apikeys.desc", "Authenticate agents and scripts to interact with " + p.GetBrandName() + " programmatically.") }</p>
 				<!-- Create new key -->
 				<div class="bg-surface rounded-lg border border-edge p-6 mb-8">
 					<h2 class="text-sm font-medium text-warm mb-4">Create new key</h2>
@@ -5173,9 +5173,9 @@ templ simpleHeader(user ViewUser, p *profile.Profile) {
 				{ p.GetBrandName() }
 			</a>
 			<div class="flex items-center gap-5 text-sm text-warm-muted">
-				<a href="/discover" class="hover:text-brand transition-colors">Discover</a>
-				<a href="/hive" class="hover:text-brand transition-colors">Hive</a>
-				<a href="/blog" class="hover:text-brand transition-colors hidden md:inline">Blog</a>
+				for _, item := range p.GetHeaderNav() {
+					<a href={ templ.SafeURL(item.Path) } class="hover:text-brand transition-colors">{ item.Label }</a>
+				}
 				if user.Name != "" && user.Name != "Anonymous" {
 					<div class="flex items-center gap-2 md:ml-1 md:pl-3 md:border-l md:border-edge">
 						<a href={ templ.SafeURL("/user/" + user.Name) } class="flex items-center gap-2 hover:opacity-80 transition-opacity">
