@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -372,6 +373,10 @@ func main() {
 		graphStore.EnsureAgentsSpace(context.Background())
 		graphStore.SeedAgentPersonas(context.Background())
 		graphHandlers := graph.NewHandlers(graphStore, readWrap, writeWrap)
+		if hiveRepo := os.Getenv("HIVE_REPO_PATH"); hiveRepo != "" {
+			graphHandlers.SetLoopDir(filepath.Join(hiveRepo, "loop"))
+			log.Printf("hive loop dir: %s", filepath.Join(hiveRepo, "loop"))
+		}
 		graphHandlers.Register(mux)
 		log.Println("app enabled (DATABASE_URL set)")
 

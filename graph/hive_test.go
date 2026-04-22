@@ -428,19 +428,18 @@ func TestGetHiveStats_Partial(t *testing.T) {
 func TestHiveDashboard(t *testing.T) {
 	dir := t.TempDir()
 
-	// diagnostics.jsonl — three realistic entries.
-	diagnostics := `{"timestamp":"2026-03-27T10:00:00Z","phase":"Builder","iteration":7,"event":"build_start"}
-{"timestamp":"2026-03-27T10:05:00Z","phase":"Builder","iteration":7,"event":"build_progress","detail":"editing handlers.go"}
-{"timestamp":"2026-03-27T10:10:00Z","phase":"Builder","iteration":7,"event":"build_complete","cost":0.42}
+	// diagnostics.jsonl — iteration=line count, phase=last entry's phase.
+	// Seven entries so iteration renders as 7, last entry's phase is "Builder".
+	diagnostics := `{"timestamp":"2026-03-27T09:30:00Z","phase":"scout","outcome":"done"}
+{"timestamp":"2026-03-27T09:40:00Z","phase":"strategist","outcome":"done"}
+{"timestamp":"2026-03-27T09:50:00Z","phase":"planner","outcome":"done"}
+{"timestamp":"2026-03-27T10:00:00Z","phase":"allocator","outcome":"done"}
+{"timestamp":"2026-03-27T10:05:00Z","phase":"cto","outcome":"approved"}
+{"timestamp":"2026-03-27T10:07:00Z","phase":"critic","outcome":"pass"}
+{"timestamp":"2026-03-27T10:10:00Z","phase":"Builder","outcome":"done","cost":0.42}
 `
 	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(diagnostics), 0600); err != nil {
 		t.Fatalf("write diagnostics.jsonl: %v", err)
-	}
-
-	// state.md — current iteration and phase.
-	stateMd := "Iteration: 7\nPhase: Builder\n"
-	if err := os.WriteFile(filepath.Join(dir, "state.md"), []byte(stateMd), 0600); err != nil {
-		t.Fatalf("write state.md: %v", err)
 	}
 
 	// build.md — current build title and cost.

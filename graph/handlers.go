@@ -50,23 +50,40 @@ type LoopState struct {
 	BuildCost  float64 // parsed from build.md
 }
 
-// readLoopState reads Iteration and Phase from state.md and the build title from build.md.
-// Returns zero value if dir is empty or files are missing.
+// readLoopState collects LoopState for the authed hive views from the
+// hive repo's loop/ directory. Iteration and Phase come from
+// loop/diagnostics.jsonl (newline count + last entry's phase); build
+// title and cost still come from loop/build.md. state.md is no longer
+// read — the Reflector's narrative format ("Last updated: Iteration N")
+// doesn't match the line-prefix parser the site used, which was
+// silently zeroing the display on a working hive.
+//
+// Returns zero value if dir is empty or files are missing. This is the
+// local-dev path; production supplements with DB-backed counts in the
+// handler, so a zero here on Fly is expected and fine.
 func readLoopState(dir string) LoopState {
 	if dir == "" {
 		return LoopState{}
 	}
 	var s LoopState
-	if data, err := os.ReadFile(filepath.Join(dir, "state.md")); err == nil {
-		scanner := bufio.NewScanner(strings.NewReader(string(data)))
-		for scanner.Scan() {
-			line := scanner.Text()
-			if after, ok := strings.CutPrefix(line, "Iteration:"); ok {
-				if n, err := strconv.Atoi(strings.TrimSpace(after)); err == nil {
-					s.Iteration = n
-				}
-			} else if after, ok := strings.CutPrefix(line, "Phase:"); ok {
-				s.Phase = strings.TrimSpace(after)
+	if data, err := os.ReadFile(filepath.Join(dir, "diagnostics.jsonl")); err == nil {
+		for _, b := range data {
+			if b == '\n' {
+				s.Iteration++
+			}
+		}
+		lines := strings.Split(string(data), "\n")
+		for i := len(lines) - 1; i >= 0; i-- {
+			line := strings.TrimSpace(lines[i])
+			if line == "" {
+				continue
+			}
+			var entry struct {
+				Phase string `json:"phase"`
+			}
+			if err := json.Unmarshal([]byte(line), &entry); err == nil {
+				s.Phase = entry.Phase
+				break
 			}
 		}
 	}

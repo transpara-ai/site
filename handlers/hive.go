@@ -68,25 +68,47 @@ func hiveLoopDir() string {
 	return filepath.Join(d, "loop")
 }
 
-// readHiveState extracts Iteration and Phase from loop/state.md.
-// Returns zero values if the file is missing or unparseable.
-func readHiveState(loopDir string) (iter int, phase string) {
+// readHiveSummary returns the current iteration count and phase for the
+// dashboard header, sourced from loop/diagnostics.jsonl.
+//
+// Iteration = newline-count of the jsonl file. This matches the hive's
+// own canonical counter (pkg/runner/pipeline_tree.go: countDiagnostics)
+// and advances exactly once per phase event written by the daemon, so
+// the number the dashboard shows is the number the hive itself uses.
+//
+// Phase = the `phase` field of the most recent well-formed entry. The
+// scan walks backwards so a partially-written tail (mid-flush crash)
+// falls through to the last complete event instead of blanking out.
+//
+// Returns zero values if the file is missing or contains no well-formed
+// entries. state.md is no longer read here — drift between what the
+// Reflector wrote there and what the site's parser expected was
+// producing iteration=0 on a working hive.
+func readHiveSummary(loopDir string) (iter int, phase string) {
 	if loopDir == "" {
 		return 0, ""
 	}
-	data, err := os.ReadFile(filepath.Join(loopDir, "state.md"))
+	data, err := os.ReadFile(filepath.Join(loopDir, "diagnostics.jsonl"))
 	if err != nil {
 		return 0, ""
 	}
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if after, ok := strings.CutPrefix(line, "Iteration:"); ok {
-			if n, err := strconv.Atoi(strings.TrimSpace(after)); err == nil {
-				iter = n
-			}
-		} else if after, ok := strings.CutPrefix(line, "Phase:"); ok {
-			phase = strings.TrimSpace(after)
+	for _, b := range data {
+		if b == '\n' {
+			iter++
+		}
+	}
+	lines := strings.Split(string(data), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		var entry struct {
+			Phase string `json:"phase"`
+		}
+		if err := json.Unmarshal([]byte(line), &entry); err == nil {
+			phase = entry.Phase
+			break
 		}
 	}
 	return iter, phase
@@ -190,7 +212,7 @@ func readHiveCommits(repoDir string) []string {
 func buildHiveDashboardData() HiveDashboardData {
 	loopDir := hiveLoopDir()
 	repoDir := hiveRepoDir()
-	iter, phase := readHiveState(loopDir)
+	iter, phase := readHiveSummary(loopDir)
 	title, cost := readHiveBuild(loopDir)
 	history := readHiveDiagnostics(loopDir, maxDiagEntries)
 	commits := readHiveCommits(repoDir)

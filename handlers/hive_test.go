@@ -10,25 +10,63 @@ import (
 	"testing"
 )
 
-// TestReadHiveState verifies Iteration and Phase extraction from state.md.
-func TestReadHiveState(t *testing.T) {
+// TestReadHiveSummary verifies Iteration (line count) and Phase (last
+// entry's phase field) extraction from diagnostics.jsonl.
+func TestReadHiveSummary(t *testing.T) {
 	dir := t.TempDir()
-
-	if err := os.WriteFile(filepath.Join(dir, "state.md"), []byte("Iteration: 42\nPhase: Critic\n"), 0600); err != nil {
+	content := `{"phase":"scout","outcome":"done","timestamp":"2026-01-01T00:00:00Z"}
+{"phase":"builder","outcome":"pass","timestamp":"2026-01-02T00:00:00Z"}
+{"phase":"critic","outcome":"revise","timestamp":"2026-01-03T00:00:00Z"}
+`
+	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(content), 0600); err != nil {
 		t.Fatal(err)
 	}
-	iter, phase := readHiveState(dir)
-	if iter != 42 {
-		t.Errorf("iter = %d, want 42", iter)
+	iter, phase := readHiveSummary(dir)
+	if iter != 3 {
+		t.Errorf("iter = %d, want 3 (line count)", iter)
 	}
-	if phase != "Critic" {
-		t.Errorf("phase = %q, want Critic", phase)
+	if phase != "critic" {
+		t.Errorf("phase = %q, want 'critic' (last entry's phase)", phase)
 	}
 }
 
-// TestReadHiveState_MissingFile returns zero values when state.md is absent.
-func TestReadHiveState_MissingFile(t *testing.T) {
-	iter, phase := readHiveState(t.TempDir())
+// TestReadHiveSummary_MissingFile returns zero values when diagnostics.jsonl is absent.
+func TestReadHiveSummary_MissingFile(t *testing.T) {
+	iter, phase := readHiveSummary(t.TempDir())
+	if iter != 0 || phase != "" {
+		t.Errorf("got (%d, %q), want (0, '')", iter, phase)
+	}
+}
+
+// TestReadHiveSummary_MalformedTail verifies that a partial/malformed last
+// line (mid-flush crash) falls through to the previous well-formed entry
+// for phase — the count still includes the malformed line since the hive's
+// counter increments per write-attempt.
+func TestReadHiveSummary_MalformedTail(t *testing.T) {
+	dir := t.TempDir()
+	content := `{"phase":"scout","outcome":"done","timestamp":"2026-01-01T00:00:00Z"}
+{"phase":"builder","outcome":"pass","timestamp":"2026-01-02T00:00:00Z"}
+{"phase":"critic","outcom
+`
+	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	iter, phase := readHiveSummary(dir)
+	if iter != 3 {
+		t.Errorf("iter = %d, want 3 (newline count, malformed line still counts)", iter)
+	}
+	if phase != "builder" {
+		t.Errorf("phase = %q, want 'builder' (walked back past malformed tail)", phase)
+	}
+}
+
+// TestReadHiveSummary_EmptyFile returns zero values for a present but empty file.
+func TestReadHiveSummary_EmptyFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(""), 0600); err != nil {
+		t.Fatal(err)
+	}
+	iter, phase := readHiveSummary(dir)
 	if iter != 0 || phase != "" {
 		t.Errorf("got (%d, %q), want (0, '')", iter, phase)
 	}
@@ -225,7 +263,10 @@ func TestHiveDashboard_Returns200(t *testing.T) {
 	if err := os.Mkdir(loopDir, 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(loopDir, "state.md"), []byte("Iteration: 5\nPhase: Builder\n"), 0600); err != nil {
+	diagnostics := `{"phase":"scout","outcome":"done","timestamp":"2026-01-01T00:00:00Z"}
+{"phase":"builder","outcome":"pass","timestamp":"2026-01-02T00:00:00Z"}
+`
+	if err := os.WriteFile(filepath.Join(loopDir, "diagnostics.jsonl"), []byte(diagnostics), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(loopDir, "build.md"), []byte("# Ship the feature\n\nCost: $0.30\n"), 0600); err != nil {
