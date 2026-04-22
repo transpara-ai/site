@@ -22,6 +22,27 @@ templ themeBlock() {
 	<link rel="stylesheet" href={ assets.CSSURL() }/>
 }
 
+// metaTags emits the full <head> meta set for graph-package orphan
+// pages (/hive, /app, /app/notifications). Mirrors the og/twitter
+// surface that views.Layout emits for public pages, so shares on those
+// URLs produce rich cards with the profile-correct brand name, title,
+// and description.
+templ metaTags(title, description string, p *profile.Profile) {
+	<meta charset="UTF-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>{ title + " — " + p.GetBrandName() }</title>
+	if description != "" {
+		<meta name="description" content={ description }/>
+		<meta property="og:description" content={ description }/>
+		<meta name="twitter:description" content={ description }/>
+	}
+	<meta property="og:title" content={ title + " — " + p.GetBrandName() }/>
+	<meta property="og:type" content="website"/>
+	<meta property="og:site_name" content={ p.GetBrandName() }/>
+	<meta name="twitter:card" content="summary"/>
+	<meta name="twitter:title" content={ title + " — " + p.GetBrandName() }/>
+}
+
 // ── AppLayout ───────────────────────────────────────────────────
 //
 // Two-column layout: sidebar (spaces + lens nav) + main content.
@@ -613,9 +634,7 @@ templ Dashboard(spaces []Space, tasks []DashboardTask, convos []DashboardConvers
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>My Work — { p.GetBrandName() }</title>
+			@metaTags("My Work", p.GetCopy("app.description", "Your tasks, conversations, and recent agent activity across your spaces."), p)
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -1032,9 +1051,7 @@ templ NotificationsView(notifs []Notification, user ViewUser, p *profile.Profile
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Notifications — { p.GetBrandName() }</title>
+			@metaTags("Notifications", p.GetCopy("notifications.description", "Recent activity across your spaces."), p)
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
