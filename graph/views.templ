@@ -561,9 +561,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
-			<meta charset="UTF-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Welcome — { p.GetBrandName() }</title>
+			@metaTags("Welcome", p.GetCopy("welcome.description", "Set up your first shared space and start working with an AI colleague."), p)
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm min-h-screen">
