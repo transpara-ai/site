@@ -12,6 +12,38 @@ import (
 	"time"
 )
 
+// TestReadLoopState_NonTerminatedTail verifies iteration counts the
+// final line even when diagnostics.jsonl doesn't end with \n — the
+// trip-wire for drift from the hive's newline-terminated convention.
+func TestReadLoopState_NonTerminatedTail(t *testing.T) {
+	dir := t.TempDir()
+	// Three entries, last one missing its trailing newline.
+	content := `{"phase":"scout","outcome":"done","timestamp":"2026-01-01T00:00:00Z"}
+{"phase":"builder","outcome":"pass","timestamp":"2026-01-02T00:00:00Z"}
+{"phase":"critic","outcome":"revise","timestamp":"2026-01-03T00:00:00Z"}`
+	if err := os.WriteFile(filepath.Join(dir, "diagnostics.jsonl"), []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	ls := readLoopState(dir)
+	if ls.Iteration != 3 {
+		t.Errorf("Iteration = %d, want 3 (final non-terminated line should count)", ls.Iteration)
+	}
+	if ls.Phase != "critic" {
+		t.Errorf("Phase = %q, want 'critic' (last entry)", ls.Phase)
+	}
+}
+
+// TestReadLoopState_Empty returns zero value for an empty/missing dir.
+func TestReadLoopState_Empty(t *testing.T) {
+	if ls := readLoopState(""); ls.Iteration != 0 || ls.Phase != "" {
+		t.Errorf("empty dir: got %+v, want zero value", ls)
+	}
+	dir := t.TempDir()
+	if ls := readLoopState(dir); ls.Iteration != 0 || ls.Phase != "" {
+		t.Errorf("tempdir without files: got %+v, want zero value", ls)
+	}
+}
+
 // TestParseCostDollars verifies cost extraction from post bodies.
 func TestParseCostDollars(t *testing.T) {
 	cases := []struct {

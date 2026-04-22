@@ -58,6 +58,13 @@ type LoopState struct {
 // doesn't match the line-prefix parser the site used, which was
 // silently zeroing the display on a working hive.
 //
+// Iteration count matches the hive's own canonical counter
+// (pkg/runner/pipeline_tree.go: countDiagnostics — newline bytes). Guard
+// for the edge case where the file's final line isn't newline-terminated
+// (crash mid-write, or a future batching change in the hive's writer):
+// if data is non-empty and doesn't end in \n, count that trailing line.
+// Without the guard the dashboard would silently under-report by one.
+//
 // Returns zero value if dir is empty or files are missing. This is the
 // local-dev path; production supplements with DB-backed counts in the
 // handler, so a zero here on Fly is expected and fine.
@@ -71,6 +78,9 @@ func readLoopState(dir string) LoopState {
 			if b == '\n' {
 				s.Iteration++
 			}
+		}
+		if len(data) > 0 && data[len(data)-1] != '\n' {
+			s.Iteration++
 		}
 		lines := strings.Split(string(data), "\n")
 		for i := len(lines) - 1; i >= 0; i-- {
