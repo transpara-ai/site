@@ -24,8 +24,11 @@ type NavItem struct {
 // AccentColor drive the visible chrome. HeaderNav and FooterNav drive
 // the profile-aware nav surfaces — the public Layout, simpleHeader
 // (orphan pages), and appLayout (app chrome) all read HeaderNav; the
-// public Layout footer reads FooterNav. Name is retained for backward
-// compatibility with earlier phases — new code should read BrandName.
+// public Layout footer reads FooterNav. Copy is a sparse string
+// override map (key → value); templates call p.GetCopy(key, fallback)
+// and the profile only overrides the specific keys it cares about.
+// Name is retained for backward compatibility with earlier phases —
+// new code should read BrandName.
 type Profile struct {
 	Slug        string // resolution key
 	Name        string // display label (kept for backward compat)
@@ -33,8 +36,9 @@ type Profile struct {
 	LogoPath    string // path to logo asset (e.g. /static/logo-lovyou.svg)
 	AccentColor string // hex color for CSS --accent property
 
-	HeaderNav []NavItem // items rendered in the top chrome nav
-	FooterNav []NavItem // items rendered in the public layout footer
+	HeaderNav []NavItem         // items rendered in the top chrome nav
+	FooterNav []NavItem         // items rendered in the public layout footer
+	Copy      map[string]string // sparse string overrides keyed by call-site key
 }
 
 // DefaultSlug is the slug that resolves when no other resolver matches.
@@ -90,6 +94,21 @@ var registry = map[string]*Profile{
 		FooterNav: []NavItem{
 			{Label: "Discover", Path: "/discover"},
 			{Label: "Blog", Path: "/blog"},
+		},
+		// Copy overrides target a small set of brand-bearing
+		// sentences whose tone differs sharply from the default
+		// profile's. Anything not in this map renders the
+		// fallback string the call site supplies — same as today.
+		// Keep this set small (~5-10 keys) until a real i18n
+		// system absorbs it; this is a pattern proof, not a
+		// translation infrastructure.
+		Copy: map[string]string{
+			"tagline":            "Operations intelligence for the people on the floor.",
+			"home.hero.subtitle": "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
+			"home.subhero.body":  "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
+			"discover.empty":     "No shared workspaces yet.",
+			"welcome.subtitle":   "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
+			"apikeys.desc":       "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
 		},
 	},
 }
@@ -174,4 +193,23 @@ func (p *Profile) GetFooterNav() []NavItem {
 		return Default().FooterNav
 	}
 	return p.FooterNav
+}
+
+// GetCopy returns the override registered for key on this profile, or
+// fallback if no override exists. The fallback parameter means the
+// call site provides its own default text inline — templates never
+// have to know which keys exist, and a profile only declares the keys
+// it actually wants to override.
+//
+// Nil receiver and nil/empty Copy map both return the fallback,
+// matching the rest of the accessor family's "missing → default
+// rendering" discipline.
+func (p *Profile) GetCopy(key, fallback string) string {
+	if p == nil || p.Copy == nil {
+		return fallback
+	}
+	if v, ok := p.Copy[key]; ok {
+		return v
+	}
+	return fallback
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -224,6 +225,45 @@ func TestHeaderNav_profilesDiverge(t *testing.T) {
 	p := Lookup("transpara").HeaderNav
 	if len(l) == len(p) {
 		t.Errorf("registered HeaderNav lengths collide: %d == %d", len(l), len(p))
+	}
+}
+
+func TestGetCopy_nilProfile_returnsFallback(t *testing.T) {
+	var p *Profile
+	if got, want := p.GetCopy("any.key", "fallback text"), "fallback text"; got != want {
+		t.Errorf("nil.GetCopy() = %q, want %q", got, want)
+	}
+}
+
+func TestGetCopy_missingKey_returnsFallback(t *testing.T) {
+	p := Lookup("transpara")
+	if got, want := p.GetCopy("definitely.not.a.real.key", "the inline default"), "the inline default"; got != want {
+		t.Errorf("transpara.GetCopy(missing) = %q, want %q", got, want)
+	}
+}
+
+func TestGetCopy_existingKey_returnsValue(t *testing.T) {
+	p := Lookup("transpara")
+	got := p.GetCopy("tagline", "FALLBACK_NOT_USED")
+	if got == "" {
+		t.Fatal("transpara.GetCopy('tagline') returned empty")
+	}
+	if got == "FALLBACK_NOT_USED" {
+		t.Fatal("transpara.GetCopy('tagline') returned the fallback; expected the override")
+	}
+	if strings.Contains(got, "Humans and agents") {
+		t.Errorf("transpara.GetCopy('tagline') returned default-profile copy %q; expected Transpara override", got)
+	}
+}
+
+func TestGetCopy_defaultProfile_relyOnFallback(t *testing.T) {
+	// The default profile intentionally has no Copy map — every key
+	// returns the fallback, which matches today's hardcoded text.
+	// This guards against accidentally adding a default-profile
+	// override that would silently change copy.
+	p := Lookup(DefaultSlug)
+	if p.Copy != nil {
+		t.Errorf("default profile has %d Copy overrides; expected nil so fallbacks render unchanged", len(p.Copy))
 	}
 }
 
