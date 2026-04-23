@@ -14,15 +14,15 @@
 
 | Repo                 | Branch                  | Last commit                                                                  | Clean? |
 | -------------------- | ----------------------- | ---------------------------------------------------------------------------- | ------ |
-| lovyou-ai-site       | `fix/test-suite-hygiene`| `3987801` 2026-04-20 test(graph): apply cancelled-ctx cleanup fix           | yes    |
-| lovyou-ai-work       | `main`                  | `bab6149` 2026-04-20 feat(work-server): embed telemetry dashboard from summary (#19) | yes    |
-| lovyou-ai-summary    | `main`                  | `fd4f089` 2026-04-19 feat(dashboard): consume phases[].agents from backend (#50) | yes    |
+| site       | `fix/test-suite-hygiene`| `3987801` 2026-04-20 test(graph): apply cancelled-ctx cleanup fix           | yes    |
+| work       | `main`                  | `bab6149` 2026-04-20 feat(work-server): embed telemetry dashboard from summary (#19) | yes    |
+| summary    | `main`                  | `fd4f089` 2026-04-19 feat(dashboard): consume phases[].agents from backend (#50) | yes    |
 
 All three remotes verified: `origin = github.com/transpara-ai/<repo>.git` (safe forks). `upstream = lovyou-ai/*` is present on site + work with push URL sabotaged to `DISABLE_PUSH_TO_UPSTREAM`. No org-boundary violation in recon scope.
 
 ---
 
-## A. lovyou-ai-site
+## A. site
 
 ### A.1 Stack
 
@@ -95,13 +95,13 @@ I could not cross-check directly against Artifact 01 (not attached). Below is th
 ### A.6 Deployment + config
 
 - **Production:** Fly.io via `fly deploy`. `fly.toml` declares app = `lovyou-ai`, region = `syd`, VM = 8 GB / 2 perf CPUs, HTTP 80/443 with force-HTTPS, `/health` check every 30s.
-- **Local (nucbuntu-style):** `deploy.sh` runs `templ generate` → `go build` → `setcap` (port 80) → `systemctl --user restart lovyou-ai-site`. Systemd unit is **not versioned in the repo** — lives at `/usr/lib/systemd/user/lovyou-ai-site.service` on the host.
+- **Local (nucbuntu-style):** `deploy.sh` runs `templ generate` → `go build` → `setcap` (port 80) → `systemctl --user restart site`. Systemd unit is **not versioned in the repo** — lives at `/usr/lib/systemd/user/site.service` on the host.
 - **Env vars at startup:** `PORT` (default 8080), `DATABASE_URL` (optional), `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `AUTH_REDIRECT_URL` (optional — anonymous if unset), `HIVE_WEBHOOK_URL` (optional), `CLAUDE_CODE_OAUTH_TOKEN` (optional), `HIVE_REPO_PATH` (default `../hive`).
 - **No config files** — 12-factor, env-var only.
 
 ---
 
-## B. lovyou-ai-work
+## B. work
 
 ### B.1 Telemetry API surface
 
@@ -154,7 +154,7 @@ All telemetry routes registered in `cmd/work-server/main.go:736–753`:
 
 ---
 
-## C. lovyou-ai-summary
+## C. summary
 
 ### C.1 Dashboard artifact
 
@@ -162,7 +162,7 @@ All telemetry routes registered in `cmd/work-server/main.go:736–753`:
 - Self-contained: all CSS inlined (~760 lines in `<style>`, ~750 class rules), all JS inlined (~2600 lines in an IIFE `<script>`).
 - **Zero external dependencies** — no CDN `<link>` / `<script src>`, no frameworks (React / Vue / D3 / Chart.js), no icon fonts, no images. Uses system font stacks.
 - **Asset paths: N/A** — nothing to rewrite. This is the rare case of a zero-asset dashboard.
-- **Relationship to work-server:** byte-identical copy at `lovyou-ai-work/dashboard/dashboard.html` (3453 lines, `diff -q` empty). Treated as a git-subtree-style copy; work-server embeds it via `//go:embed`.
+- **Relationship to work-server:** byte-identical copy at `work/dashboard/dashboard.html` (3453 lines, `diff -q` empty). Treated as a git-subtree-style copy; work-server embeds it via `//go:embed`.
 
 ### C.2 Embed-friendliness
 
@@ -198,9 +198,9 @@ All telemetry routes registered in `cmd/work-server/main.go:736–753`:
 ### D.1 Existing design-system traces
 
 - **No shared design-system / tokens / theme package across the three repos.** Each repo styles independently.
-- `lovyou-ai-site` does NOT consume any sibling repo via Go modules.
-- `lovyou-ai-work` imports `github.com/lovyou-ai/eventgraph/go` with a local `replace` to `../eventgraph/go` — unrelated to styling.
-- `lovyou-ai-summary` has no Go/npm dependencies at all (zero-dep dashboard.html).
+- `site` does NOT consume any sibling repo via Go modules.
+- `work` imports `github.com/lovyou-ai/eventgraph/go` with a local `replace` to `../eventgraph/go` — unrelated to styling.
+- `summary` has no Go/npm dependencies at all (zero-dep dashboard.html).
 - **No "profile", "theme", "brand", or "skin" concept exists in any repo.** The 12-token `@theme` block in site's `layout.templ` is the closest thing, but it's one hard-coded palette, not a profile system. The design's proposal to add one is net-new, not duplicating anything.
 
 ### D.2 Git branch posture
@@ -209,16 +209,16 @@ Captured at top of doc. All three repos clean; site is on a feature branch (`fix
 
 ### D.3 CI/CD
 
-- **lovyou-ai-site:** `.github/workflows/ci.yml` — runs on push/PR to `main`. Go 1.25, installs templ, generates persona status + templ files, `git diff --exit-code` against generated files, then (presumably) build + test. Deploys via Fly.io — **no deploy step in CI**, deploy is manual/local (`fly deploy` or `deploy.sh`).
-- **lovyou-ai-work:** `.github/workflows/` directory **does not exist**. No CI, no CD in this repo. All deploy mechanisms external to the repo (likely systemd on nucbuntu).
-- **lovyou-ai-summary:** `.github/workflows/deploy.yml` — on push of `dashboard.html` to `main`, POSTs to `{WORK_SERVER_URL}/telemetry/refresh` to trigger a refresh on work-server. **THIS WORKFLOW IS STALE** — PR #19 on work-server removed the `POST /telemetry/refresh` endpoint. The workflow will 404 on every push. The dashboard is now embedded in work-server at build time (`//go:embed`), so the refresh hook is obsolete. (See §E correction 8.)
+- **site:** `.github/workflows/ci.yml` — runs on push/PR to `main`. Go 1.25, installs templ, generates persona status + templ files, `git diff --exit-code` against generated files, then (presumably) build + test. Deploys via Fly.io — **no deploy step in CI**, deploy is manual/local (`fly deploy` or `deploy.sh`).
+- **work:** `.github/workflows/` directory **does not exist**. No CI, no CD in this repo. All deploy mechanisms external to the repo (likely systemd on nucbuntu).
+- **summary:** `.github/workflows/deploy.yml` — on push of `dashboard.html` to `main`, POSTs to `{WORK_SERVER_URL}/telemetry/refresh` to trigger a refresh on work-server. **THIS WORKFLOW IS STALE** — PR #19 on work-server removed the `POST /telemetry/refresh` endpoint. The workflow will 404 on every push. The dashboard is now embedded in work-server at build time (`//go:embed`), so the refresh hook is obsolete. (See §E correction 8.)
 
 ### D.4 Blockers
 
 The 8-step plan in Artifact 02 §6 (which I don't have visibility into) has at least one **major unstated assumption** that recon contradicts:
 
 **BLOCKER 1 (HIGH SEVERITY): `/hive` already renders content unrelated to Mission Control.**
-The design appears to assume `/hive` in the site is (or will become) a Mission Control-style dashboard. Reality: `site:/hive` is a **Phase Timeline / recent-commits editorial page** that reads from the hive loop state (`loop/state.md`, `loop/build.md`, `loop/diagnostics.jsonl`) and DB (`hive_diagnostics`, `nodes`, `ops`). The Mission Control dashboard lives in **`lovyou-ai-work` at `:8080/telemetry/`**, a separate binary on a separate port. Before proceeding, Michael must answer: does the Transpara `/hive` (a) replace the Phase Timeline with Mission Control, (b) surface both as sub-views, or (c) keep Phase Timeline and expose Mission Control elsewhere (`/hive/mission-control`, `/telemetry`, etc.)?
+The design appears to assume `/hive` in the site is (or will become) a Mission Control-style dashboard. Reality: `site:/hive` is a **Phase Timeline / recent-commits editorial page** that reads from the hive loop state (`loop/state.md`, `loop/build.md`, `loop/diagnostics.jsonl`) and DB (`hive_diagnostics`, `nodes`, `ops`). The Mission Control dashboard lives in **`work` at `:8080/telemetry/`**, a separate binary on a separate port. Before proceeding, Michael must answer: does the Transpara `/hive` (a) replace the Phase Timeline with Mission Control, (b) surface both as sub-views, or (c) keep Phase Timeline and expose Mission Control elsewhere (`/hive/mission-control`, `/telemetry`, etc.)?
 
 **BLOCKER 2 (HIGH SEVERITY): Embed-detection regex couples mount path to `/telemetry`.**
 The dashboard enables "embedded mode" (cookie auth, same-origin API base) only when `window.location.pathname` matches `/\/telemetry\/?$/`. A site-side reverse proxy mounted at `/hive` will serve the HTML, the browser will see pathname `/hive`, the regex will fail, and the dashboard will render the configuration card asking for api/key — silently broken UX, not a server-side error. Three fixes: (a) mount the proxy at `/telemetry` exactly (sidestepping `/hive`), (b) patch the regex in the served HTML via a response rewriter, (c) patch the regex in summary/ source (touches the upstream-shared artifact; risky).
@@ -259,7 +259,7 @@ Since Artifacts 01–05 were not visible in this session, corrections are phrase
 
 7. **Artifact 04 / 05 (wireframes + prototype)** — if any wireframe shows the Mission Control dashboard inline in the site's `/hive` page (not in an iframe), verify the choice. Embedding the dashboard's 3453-line self-contained HTML *inline* in a templ component is technically possible but loses the clean separation that makes iframe attractive.
 
-8. **Cross-artifact cleanup** — `lovyou-ai-summary/.github/workflows/deploy.yml` still pings `POST /telemetry/refresh`, a route removed in work PR #19. Suggest either deleting the workflow or updating it to trigger a work-server rebuild instead. (Not a design-artifact correction per se — a codebase correction adjacent to the recon.)
+8. **Cross-artifact cleanup** — `summary/.github/workflows/deploy.yml` still pings `POST /telemetry/refresh`, a route removed in work PR #19. Suggest either deleting the workflow or updating it to trigger a work-server rebuild instead. (Not a design-artifact correction per se — a codebase correction adjacent to the recon.)
 
 9. **Artifact 02 §6 (build-system assumption)** — if the plan assumes a Tailwind build step exists today (for token extraction / purge / output CSS file), correct: there is none. Tokens live in `@theme { ... }` inline in `layout.templ`, and Tailwind compiles in the browser via the CDN script. Either (a) keep the in-browser approach and profile-swap by re-rendering `layout.templ`, or (b) migrate to a Tailwind build step as part of Phase 1 — the latter is a real scope-add, not a drop-in.
 
@@ -271,8 +271,8 @@ Since Artifacts 01–05 were not visible in this session, corrections are phrase
 - For the Transpara profile, is `site:/hive` meant to *become* Mission Control (replacing Phase Timeline), *add* Mission Control as a tab/sub-route, or *coexist* with Mission Control at a different path?
 - Should the profile system cover all three chrome variants (public / `/app` / `/hive`), or only the public layout?
 - Is the Tailwind-in-browser CDN approach staying, or is Phase 1 of the migration the right place to introduce a real Tailwind build step?
-- Do you want me to file an issue against `lovyou-ai-summary` for the stale `deploy.yml` referencing the removed `/telemetry/refresh` route, or leave it until after the redesign?
-- Are `lovyou-ai-work` and `lovyou-ai-summary` in scope for any profile-system wiring, or is the profile purely a `lovyou-ai-site` concern?
+- Do you want me to file an issue against `summary` for the stale `deploy.yml` referencing the removed `/telemetry/refresh` route, or leave it until after the redesign?
+- Are `work` and `summary` in scope for any profile-system wiring, or is the profile purely a `site` concern?
 - When Artifact 02 §7 says "reverse-proxy + shell injection", does "shell injection" mean wrapping the proxied dashboard in the site's layout (`views.Layout`)? If so, the iframe option entirely avoids that complexity — worth a second look.
 
 ---

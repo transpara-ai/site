@@ -103,11 +103,11 @@ Both logo files exist at the paths the registry references. No empty or missing 
 
 | Repo | Relevant hits | Assessment |
 |---|---|---|
-| `lovyou-ai-hive` | Internal loop / council docs reference `lovyou.ai` | clean — no user-facing templates |
-| `lovyou-ai-work` | Design docs mention the civilization; `dashboard/dashboard.html:802` hardcodes `<span class="topbar-brand">Transpara-AI</span>` | clean — dashboard already Transpara-branded (internal mission-control board, not the public site) |
-| `lovyou-ai-eventgraph` | Blog posts, CODE_OF_CONDUCT, SECURITY reference `lovyou.ai` | clean — public docs reflect the org identity by design; not profile-configurable |
-| `lovyou-ai-agent` | Only agent persona design prompts | clean |
-| `lovyou-ai-summary` | `dashboard.html:802` shows `Transpara-AI` topbar; `README.md:1` is `# lovyou.ai — Summary`; design docs reference the civilization | clean — static architecture poster, explicitly separate from the profile system per `lovyou-ai-work/docs/designs/telemetry-mission-control-design-v0.4.1.md:26` ("not the branded LovYou deployment on Fly.io, and not the static GitHub Pages architecture poster") |
+| `hive` | Internal loop / council docs reference `lovyou.ai` | clean — no user-facing templates |
+| `work` | Design docs mention the civilization; `dashboard/dashboard.html:802` hardcodes `<span class="topbar-brand">Transpara-AI</span>` | clean — dashboard already Transpara-branded (internal mission-control board, not the public site) |
+| `eventgraph` | Blog posts, CODE_OF_CONDUCT, SECURITY reference `lovyou.ai` | clean — public docs reflect the org identity by design; not profile-configurable |
+| `agent` | Only agent persona design prompts | clean |
+| `summary` | `dashboard.html:802` shows `Transpara-AI` topbar; `README.md:1` is `# lovyou.ai — Summary`; design docs reference the civilization | clean — static architecture poster, explicitly separate from the profile system per `work/docs/designs/telemetry-mission-control-design-v0.4.1.md:26` ("not the branded LovYou deployment on Fly.io, and not the static GitHub Pages architecture poster") |
 
 No cross-repo surfaces need the profile system plumbed through. Each external repo has a clear identity and is a separate deployment.
 
@@ -131,7 +131,7 @@ Prioritised:
 Single-session audit driven by an inline prompt covering four parts:
 
 - **Part 1** — `gh pr list` + `git branch -r` / `git branch` across all six `lovyou-ai-*` repos.
-- **Part 2** — deep audit on `lovyou-ai-site`: branch hygiene on `main`, doc inventory, repo-root cleanliness, profile-package integrity, full `templ generate` + `go build` + `go test` + `go vet` toolchain, hardcoded-`lovyou.ai` grep across all `*.templ`, bounded-diff test in isolation, registry completeness check.
+- **Part 2** — deep audit on `site`: branch hygiene on `main`, doc inventory, repo-root cleanliness, profile-package integrity, full `templ generate` + `go build` + `go test` + `go vet` toolchain, hardcoded-`lovyou.ai` grep across all `*.templ`, bounded-diff test in isolation, registry completeness check.
 - **Part 3** — cross-repo grep for `lovyou.ai` / `brand` / `profile` in `*.go`, `*.md`, `*.html`, `*.tsx`, `*.ts` on the other five repos, filtering for user-facing surfaces.
 - **Part 4** — structured report.
 

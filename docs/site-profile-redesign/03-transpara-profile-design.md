@@ -247,7 +247,7 @@ graph TD
 
 ### 6.2 `/hive` — Mission Control (iframe)
 
-Under the Transpara profile, `/hive` is a **thin Transpara shell wrapping an iframe** to `http://nucbuntu:8080/telemetry/`. The outer chrome (header, theme toggle, footer) belongs to the site; the inner content is the embedded Mission Control dashboard owned by `lovyou-ai-work`.
+Under the Transpara profile, `/hive` is a **thin Transpara shell wrapping an iframe** to `http://nucbuntu:8080/telemetry/`. The outer chrome (header, theme toggle, footer) belongs to the site; the inner content is the embedded Mission Control dashboard owned by `work`.
 
 **Implementation components:**
 
@@ -268,10 +268,10 @@ Under the Transpara profile, `/hive` is a **thin Transpara shell wrapping an ifr
 
 The embedded dashboard has its own color scheme baked into its inlined CSS. It does **not** follow the Transpara theme toggle. Under Transpara dark mode with a light dashboard inside (or vice versa), the boundary is visible at the iframe edge. Two paths to fix (both deferred):
 
-1. Add a `?theme=light|dark` query param to the iframe URL. Requires a PR to `lovyou-ai-work/dashboard/dashboard.html` (+ its byte-identical copy in `lovyou-ai-summary/dashboard.html`) to read the param and swap its internal palette.
+1. Add a `?theme=light|dark` query param to the iframe URL. Requires a PR to `work/dashboard/dashboard.html` (+ its byte-identical copy in `summary/dashboard.html`) to read the param and swap its internal palette.
 2. Match the Transpara shell's accent color to the dashboard's existing palette so the seam looks intentional. Cosmetic-only.
 
-For v1, accept the seam. File a roadmap issue against `lovyou-ai-work`.
+For v1, accept the seam. File a roadmap issue against `work`.
 
 **Transpara shell chrome around the iframe:**
 
@@ -341,7 +341,7 @@ This is the pragmatic meaning of "full profile participation" from the CEO's sco
 | `CodeBlock` | Monospace code with syntax highlighting | ✓ — swap syntax theme on toggle |
 | `FooterMinimal` | Single line: © · GitHub · Status | ✓ |
 
-The dashboard internals (`StatCard`, `PhaseList`, `AgentStatusRow`, `EventStreamItem`, `TabbedInspector`) belong to `lovyou-ai-work/dashboard/dashboard.html` and are **not** site components. Under the Transpara profile, these render inside the iframe from their original codebase. The site does not reimplement them.
+The dashboard internals (`StatCard`, `PhaseList`, `AgentStatusRow`, `EventStreamItem`, `TabbedInspector`) belong to `work/dashboard/dashboard.html` and are **not** site components. Under the Transpara profile, these render inside the iframe from their original codebase. The site does not reimplement them.
 
 ---
 

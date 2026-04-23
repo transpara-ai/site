@@ -8,7 +8,7 @@ package views
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/lovyou-ai/site/profile"
+import "github.com/transpara-ai/site/profile"
 
 // AgentProfileData holds data for the public agent profile page.
 type AgentProfileData struct {

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lovyou-ai/site/auth"
+	"github.com/transpara-ai/site/auth"
 )
 
 // TestKnowledgePublic verifies unauthenticated GET /app/{slug}/knowledge returns 200

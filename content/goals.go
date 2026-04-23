@@ -1,6 +1,6 @@
 package content
 
-import "github.com/lovyou-ai/site/views"
+import "github.com/transpara-ai/site/views"
 
 // LoadGoals returns the derived goals for all layers.
 // These are permanent — derived from The Weight (suffering) + primitives (capability).

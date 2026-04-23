@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/profile"
 )
 
 // WithDefault returns a context carrying the default Profile. Use in

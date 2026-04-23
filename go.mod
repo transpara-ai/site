@@ -1,4 +1,4 @@
-module github.com/lovyou-ai/site
+module github.com/transpara-ai/site
 
 go 1.25.0
 

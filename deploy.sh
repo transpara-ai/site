@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/transpara-ai/repos/lovyou-ai-site"
+REPO="$HOME/transpara-ai/repos/site"
 
 step() { echo "==> $1"; }
 fail() { echo "FAIL: $1" >&2; exit 1; }
@@ -22,7 +22,7 @@ step "setcap"
 sudo /usr/sbin/setcap 'cap_net_bind_service=+ep' ./site || fail "setcap"
 
 step "restart service"
-systemctl --user restart lovyou-ai-site || fail "systemctl restart"
+systemctl --user restart site || fail "systemctl restart"
 
 step "health check"
 sleep 2

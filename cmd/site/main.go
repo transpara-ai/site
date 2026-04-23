@@ -17,11 +17,11 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/yuin/goldmark"
 
-	"github.com/lovyou-ai/site/auth"
-	"github.com/lovyou-ai/site/content"
-	"github.com/lovyou-ai/site/graph"
-	"github.com/lovyou-ai/site/profile"
-	"github.com/lovyou-ai/site/views"
+	"github.com/transpara-ai/site/auth"
+	"github.com/transpara-ai/site/content"
+	"github.com/transpara-ai/site/graph"
+	"github.com/transpara-ai/site/profile"
+	"github.com/transpara-ai/site/views"
 )
 
 func main() {

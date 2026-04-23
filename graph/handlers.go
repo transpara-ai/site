@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lovyou-ai/site/auth"
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/auth"
+	"github.com/transpara-ai/site/profile"
 )
 
 // anonUserID is the sentinel value returned by userID() when no session exists.

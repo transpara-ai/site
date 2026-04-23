@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lovyou-ai/site/auth"
+	"github.com/transpara-ai/site/auth"
 )
 
 // TestNewUserJourney simulates a complete new user experience:

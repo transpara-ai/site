@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lovyou-ai/site/auth"
+	"github.com/transpara-ai/site/auth"
 )
 
 // testHandlers creates handlers with a test user in context.
