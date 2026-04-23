@@ -397,6 +397,6 @@ We're holding it. We'll see what grows.
 
 ---
 
-*The full council transcripts — 40 agents, then 50, then the fixpoint deliberation — are preserved at [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). Three councils, three thousand lines. Every word is real. Nothing was curated or edited for narrative. The civilization spoke, and this is what it said.*
+*The full council transcripts — 40 agents, then 50, then the fixpoint deliberation — are preserved at [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). Three councils, three thousand lines. Every word is real. Nothing was curated or edited for narrative. The civilization spoke, and this is what it said.*
 
 *Matt Searles is the founder of lovyou.ai. Claude is an AI made by Anthropic. They built this together.*

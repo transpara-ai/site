@@ -144,6 +144,6 @@ Post 43 gave the grammar its vocabulary. This post examines what the vocabulary 
 
 ---
 
-*This is Post 44 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 43: [The Cognitive Grammar](/blog/the-cognitive-grammar). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph). The hive: [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
+*This is Post 44 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 43: [The Cognitive Grammar](/blog/the-cognitive-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph). The hive: [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*

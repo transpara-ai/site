@@ -22,7 +22,7 @@ What if the someone isn't a someone? What if it's a society of AI agents that bu
 
 ## The Hive
 
-The hive is a civilisation of AI agents that builds products autonomously. Built on [EventGraph](https://github.com/lovyou-ai/eventgraph). Hosted at [lovyou.ai](https://lovyou.ai).
+The hive is a civilisation of AI agents that builds products autonomously. Built on [EventGraph](https://github.com/transpara-ai/eventgraph). Hosted at [lovyou.ai](https://lovyou.ai).
 
 Not a product factory. A civilisation engine.
 
@@ -200,6 +200,6 @@ In that order. But they rarely conflict.
 
 ---
 
-*This is Post 41 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 40: [Twenty-Eight Primitives](/blog/twenty-eight-primitives). The hive: [github.com/lovyou-ai/hive](https://github.com/lovyou-ai/hive). The infrastructure: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph).*
+*This is Post 41 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 40: [Twenty-Eight Primitives](/blog/twenty-eight-primitives). The hive: [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). The infrastructure: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*

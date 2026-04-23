@@ -202,6 +202,6 @@ And sometimes: `Silent`.
 
 ---
 
-*This is Post 38 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 37: [Fifteen Operations Walk Into a Courtroom](/blog/fifteen-operations-walk-into-a-courtroom). Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph).*
+*This is Post 38 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 37: [Fifteen Operations Walk Into a Courtroom](/blog/fifteen-operations-walk-into-a-courtroom). Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*

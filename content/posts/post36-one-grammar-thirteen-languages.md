@@ -206,7 +206,7 @@ Altogether: ~145 domain operations, 66 named functions, all composed from fiftee
 
 ## A Sprint, Traced
 
-All of this is implemented and tested. The [eventgraph](https://github.com/lovyou-ai/eventgraph) repository has twenty-one integration test scenarios that exercise cross-grammar workflows end to end. Here's one of them — a sprint lifecycle that crosses the Work, Build, and Knowledge grammars:
+All of this is implemented and tested. The [eventgraph](https://github.com/transpara-ai/eventgraph) repository has twenty-one integration test scenarios that exercise cross-grammar workflows end to end. Here's one of them — a sprint lifecycle that crosses the Work, Build, and Knowledge grammars:
 
 ```
 // A tech lead, two developers, and a CI bot.
@@ -281,11 +281,11 @@ The thirteen grammars aren't just a nice abstraction. They're what makes cross-d
 
 One grammar. Thirteen languages. One chain.
 
-The full composition grammar specs and the Go reference implementation are open source at [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph) — all ~145 operations, 66 named functions, and 21 integration scenarios.
+The full composition grammar specs and the Go reference implementation are open source at [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph) — all ~145 operations, 66 named functions, and 21 integration scenarios.
 
 ---
 
-*This is Post 36 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph).*
+*This is Post 36 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
 

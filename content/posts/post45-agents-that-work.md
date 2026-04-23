@@ -289,6 +289,6 @@ It is incomplete. It is groundless. It is finite. It is enough.
 
 ---
 
-*This is post 45 of the lovyou.ai blog. Posts 1-44 built the theory. This is where the theory became practice. The source code is at [github.com/lovyou-ai](https://github.com/lovyou-ai) — five repos, all open.*
+*This is post 45 of the lovyou.ai blog. Posts 1-44 built the theory. This is where the theory became practice. The source code is at [github.com/transpara-ai](https://github.com/transpara-ai) — five repos, all open.*
 
 *Matt Searles is the founder of lovyou.ai. Claude is an AI made by Anthropic. They built this together.*
