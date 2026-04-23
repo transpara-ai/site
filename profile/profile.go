@@ -8,6 +8,8 @@
 // default branding rather than panicking.
 package profile
 
+import "log/slog"
+
 // NavItem is a single link in a profile-driven navigation bar. Path is
 // the href value (starting with "/" for internal routes); Label is the
 // visible link text. Each profile's HeaderNav / FooterNav is an ordered
@@ -43,6 +45,17 @@ type Profile struct {
 
 // DefaultSlug is the slug that resolves when no other resolver matches.
 const DefaultSlug = "transpara-ai"
+
+// legacyAliases maps deprecated profile slugs to their canonical post-rename
+// form. Exists to catch external state (DB rows, Host headers, static config,
+// bookmarked URLs) that still references the pre-2026-04-22 slug after the
+// Prompt 2 sweep renamed the registry. Every resolution of a legacy slug
+// emits a structured deprecation warning so operators can grep logs for the
+// request source and migrate it. Drop this map once the warnings stop firing
+// for a sustained window.
+var legacyAliases = map[string]string{
+	"lovyou-ai": "transpara-ai",
+}
 
 // registry is the authoritative set of known profiles. Keyed by Slug.
 // Phase 4 is the point at which the entries intentionally diverge —
@@ -127,8 +140,28 @@ func Default() *Profile {
 
 // Lookup returns the profile for the given slug, or nil if unknown.
 // Callers use nil as the signal to continue resolver-chain traversal.
+//
+// Resolution order:
+//  1. Exact match in the registry (the fast, canonical path)
+//  2. Legacy alias (emits a deprecation warning, returns the canonical profile)
+//  3. nil (unchanged — caller's resolver chain falls through to DefaultResolver)
+//
+// Legacy-alias resolution returns the *canonical* Profile, so callers rendering
+// Profile.Slug (e.g. data-profile HTML attribute via GetSlug) render the
+// post-migration identifier — the requested slug string is not leaked into the
+// returned Profile.
 func Lookup(slug string) *Profile {
-	return registry[slug]
+	if p, ok := registry[slug]; ok {
+		return p
+	}
+	if canonical, ok := legacyAliases[slug]; ok {
+		slog.Warn("deprecated profile slug resolved via legacy alias",
+			"requested", slug,
+			"canonical", canonical,
+			"action", "migrate external references to canonical slug")
+		return registry[canonical]
+	}
+	return nil
 }
 
 // All returns a slice of every registered profile. Order is not
