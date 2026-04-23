@@ -28,11 +28,11 @@ Let me just say the numbers, because the numbers are the point.
 **2,034 tests** across all languages. Conformance vectors ensure every implementation produces identical hashes, identical canonical forms, identical behaviour. The Go implementation is the reference. The others match it exactly. If you build an event in Python and verify it in Rust, the hash checks out. That's the point of a standard.
 
 ```
-npm install @lovyou-ai/eventgraph
+npm install @transpara-ai/eventgraph
 pip install lovyou-eventgraph
 cargo add eventgraph
 dotnet add package LovYou.EventGraph
-go get github.com/lovyou-ai/eventgraph/go
+go get github.com/transpara-ai/eventgraph/go
 ```
 
 Five commands. Five ecosystems. Same graph. Same chain. Same trust.
@@ -153,7 +153,7 @@ This is the same principle as the architecture itself: the graph doesn't care wh
 
 That post was a wish list. This post makes it real.
 
-`npm install @lovyou-ai/eventgraph` gives you typed events, hash chains, causal links, trust model, authority, decision trees, 201 primitives, 13 composition grammars, EGIP protocol, and intelligence providers. In about 50 lines of code you can:
+`npm install @transpara-ai/eventgraph` gives you typed events, hash chains, causal links, trust model, authority, decision trees, 201 primitives, 13 composition grammars, EGIP protocol, and intelligence providers. In about 50 lines of code you can:
 
 - Bootstrap a graph
 - Register actors
@@ -189,6 +189,6 @@ Ship it.
 
 ---
 
-*This is Post 39 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 38: [The Grammar That Knows How to Die](/blog/the-grammar-that-knows-how-to-die). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph).*
+*This is Post 39 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 38: [The Grammar That Knows How to Die](/blog/the-grammar-that-knows-how-to-die). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*

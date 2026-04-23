@@ -42,15 +42,15 @@ type Profile struct {
 }
 
 // DefaultSlug is the slug that resolves when no other resolver matches.
-const DefaultSlug = "lovyou-ai"
+const DefaultSlug = "transpara-ai"
 
 // registry is the authoritative set of known profiles. Keyed by Slug.
 // Phase 4 is the point at which the entries intentionally diverge —
 // different BrandName, different LogoPath, different AccentColor
 // produce visibly different chrome per request.
 var registry = map[string]*Profile{
-	"lovyou-ai": {
-		Slug:        "lovyou-ai",
+	"transpara-ai": {
+		Slug:        "transpara-ai",
 		Name:        "lovyou.ai",
 		BrandName:   "lovyou.ai",
 		LogoPath:    "/static/logo-lovyou.svg",

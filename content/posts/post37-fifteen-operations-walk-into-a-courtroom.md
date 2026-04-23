@@ -26,7 +26,7 @@ They usually didn't.
 
 ## One Chain
 
-Here's the same scenario on the event graph. This is running code — one of twenty-one integration test scenarios in the [eventgraph](https://github.com/lovyou-ai/eventgraph) repository. Four grammars, six named functions, one chain:
+Here's the same scenario on the event graph. This is running code — one of twenty-one integration test scenarios in the [eventgraph](https://github.com/transpara-ai/eventgraph) repository. Four grammars, six named functions, one chain:
 
 ```
 // An AI auditor, a data officer, two affected parties, a community committee.
@@ -170,7 +170,7 @@ One grammar. Thirteen languages. One chain. And the chain remembers what people 
 
 ---
 
-*This is Post 37 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/lovyou-ai/eventgraph](https://github.com/lovyou-ai/eventgraph).*
+*This is Post 37 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
 *Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
 
