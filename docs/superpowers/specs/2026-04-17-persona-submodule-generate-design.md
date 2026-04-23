@@ -29,7 +29,7 @@ The previous attempt (PR #14) solved this by *copying* each hive agent's metadat
 ## Architecture
 
 ```
-lovyou-ai-site/
+site/
 ├── .gitmodules                          # NEW
 ├── .dockerignore                        # MODIFIED: add third_party/
 ├── third_party/

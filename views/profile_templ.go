@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/profile"
 )
 
 // CompletedWork is a task someone finished, shown on their profile.

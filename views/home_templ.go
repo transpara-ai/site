@@ -11,7 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"fmt"
 
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/profile"
 )
 
 // FeaturedSpace is a public space shown on the landing page.

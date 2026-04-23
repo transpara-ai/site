@@ -119,7 +119,7 @@ Mirrors `docs.transpara.com`: thin promo banner, centered hero + single CTA, 6-c
 
 ## 3. Wireframe 2 — `/hive` (Transpara Mission Control via iframe)
 
-Under the Transpara profile, `/hive` is a **thin site shell wrapping an iframe** to `http://nucbuntu:8080/telemetry/`. The outer chrome — header, page-strip, footer — belongs to the site and follows the Transpara profile and theme toggle. The inner rectangle is an iframe whose content is owned and rendered by `lovyou-ai-work`. We do not wireframe the iframe's internals here because we do not own them.
+Under the Transpara profile, `/hive` is a **thin site shell wrapping an iframe** to `http://nucbuntu:8080/telemetry/`. The outer chrome — header, page-strip, footer — belongs to the site and follows the Transpara profile and theme toggle. The inner rectangle is an iframe whose content is owned and rendered by `work`. We do not wireframe the iframe's internals here because we do not own them.
 
 ```
 ╔════════════════════════════════════════════════════════════════════════════╗
@@ -137,7 +137,7 @@ Under the Transpara profile, `/hive` is a **thin site shell wrapping an iframe**
 ║  │                                                                    │    ║
 ║  │                                                                    │    ║
 ║  │          ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░          │    ║
-║  │          ░  Dashboard content — owned by lovyou-ai-work   ░        │    ║
+║  │          ░  Dashboard content — owned by work   ░        │    ║
 ║  │          ░  Renders in the dashboard's own color scheme   ░        │    ║
 ║  │          ░  and layout. See §2.4 for what lives inside.   ░        │    ║
 ║  │          ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░          │    ║
@@ -165,7 +165,7 @@ Under the Transpara profile, `/hive` is a **thin site shell wrapping an iframe**
 
 ### 2.4 What lives inside the iframe (not our wireframe)
 
-For orientation only. The dashboard at `work:8080/telemetry/` already renders these blocks, owned by `lovyou-ai-work`:
+For orientation only. The dashboard at `work:8080/telemetry/` already renders these blocks, owned by `work`:
 
 - Expansion Phases list with Tier A/B/C/D badges
 - Agent Status table (actor · state · model · iterations · trust · last-seen)
@@ -173,7 +173,7 @@ For orientation only. The dashboard at `work:8080/telemetry/` already renders th
 - Event Stream with SSE live updates
 - Tabbed inspector: Concept Stack · Repository Strata · Role Tiers · Governance
 
-These are defined in the dashboard's own HTML/CSS/JS (3453 lines, self-contained, zero external deps). Under the Transpara profile we **rent** this rendering — we do not duplicate, rebuild, or re-style it. The right place to improve dashboard internals is a PR to `lovyou-ai-work/dashboard/dashboard.html`.
+These are defined in the dashboard's own HTML/CSS/JS (3453 lines, self-contained, zero external deps). Under the Transpara profile we **rent** this rendering — we do not duplicate, rebuild, or re-style it. The right place to improve dashboard internals is a PR to `work/dashboard/dashboard.html`.
 
 ---
 
@@ -264,7 +264,7 @@ Layout is identical; only the palette swaps. Wireframe 1 above is the light vers
 
 ### 5.2 Dark variant of `/hive` — honest about the seam
 
-`/hive` in dark mode is where the iframe boundary becomes visually obvious. The Transpara shell (nav, page-strip, footer) follows the theme toggle. The iframe content does NOT — the dashboard renders in its own fixed palette, baked into `lovyou-ai-work/dashboard/dashboard.html`.
+`/hive` in dark mode is where the iframe boundary becomes visually obvious. The Transpara shell (nav, page-strip, footer) follows the theme toggle. The iframe content does NOT — the dashboard renders in its own fixed palette, baked into `work/dashboard/dashboard.html`.
 
 Two realities:
 
@@ -308,7 +308,7 @@ Two realities:
 
 **Mitigation strategies (both deferred to post-v1):**
 
-1. **Pass `?theme=light|dark` to the iframe URL.** Requires a PR to `lovyou-ai-work/dashboard/dashboard.html` to read the param and swap its palette. The byte-identical copy in `lovyou-ai-summary/dashboard.html` would need the same change.
+1. **Pass `?theme=light|dark` to the iframe URL.** Requires a PR to `work/dashboard/dashboard.html` to read the param and swap its palette. The byte-identical copy in `summary/dashboard.html` would need the same change.
 2. **Match the Transpara accent to the dashboard palette.** Cosmetic only — makes the seam look intentional rather than accidental.
 
 For v1, accept the seam. Document it. File a roadmap issue.

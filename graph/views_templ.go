@@ -17,8 +17,8 @@ import (
 
 	"github.com/yuin/goldmark"
 
-	"github.com/lovyou-ai/site/assets"
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/assets"
+	"github.com/transpara-ai/site/profile"
 )
 
 // ── Theme block (shared across app layouts) ─────────────────────

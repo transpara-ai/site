@@ -95,7 +95,7 @@ call sites.
 - **go test:** pass (all packages). `auth`, `graph`, `handlers`, `cmd/gen-persona-status`
   all green; no test broken or added.
 - **docker build:** pass end-to-end
-  (`docker build -t lovyou-ai-site:phase-2 .`). Final image 601 MB, within rounding
+  (`docker build -t site:phase-2 .`). Final image 601 MB, within rounding
   distance of the pre-Phase-2 image (only change to /static is the 65 KB site.css).
 - **deploy.sh dry-run:** no `--dry-run` flag exists; traced mentally. Sequence is
   `make css → templ generate → go build → setcap → systemctl restart → health check`.

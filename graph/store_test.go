@@ -11,7 +11,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/lovyou-ai/site/graph/personas"
+	"github.com/transpara-ai/site/graph/personas"
 )
 
 // testDB returns a test database connection. Skips if DATABASE_URL is not set.

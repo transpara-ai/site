@@ -9,8 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"github.com/lovyou-ai/site/assets"
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/assets"
+	"github.com/transpara-ai/site/profile"
 )
 
 // SiteUser holds the current user for the shared header.

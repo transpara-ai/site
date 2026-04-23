@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/lovyou-ai/site/graph/personas"
+	"github.com/transpara-ai/site/graph/personas"
 )
 
 //go:embed personas/*.md

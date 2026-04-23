@@ -60,7 +60,7 @@ If any of these are not true, stop and notify Michael.
 2. **Enable skills:**
    - `frontend-design` — for context on layout and templ patterns.
    - `hive-lifecycle` — not needed, keep available.
-3. **Launch from `lovyou-ai-site` repo root.**
+3. **Launch from `site` repo root.**
 4. **Verify PR #19 is merged** (`git log --oneline origin/main | head -5` should show the Phase 2 merge commit and the PR #20 revert).
 5. **Paste the PROMPT block below.**
 
@@ -73,7 +73,7 @@ If any of these are not true, stop and notify Michael.
 
 ROLE
 You are executing Phase 3 of the site profile redesign for the
-lovyou-ai-site repo. Phase 1 (token refactor) and Phase 2 (Tailwind
+site repo. Phase 1 (token refactor) and Phase 2 (Tailwind
 build step + @theme consolidation + 4 state/priority tokens) are
 complete and merged to main. You have the design set (Artifacts
 01–05), Prompts 1 and 2 (Artifacts 07 and 08), and both Phase 1 and
@@ -147,7 +147,7 @@ OUT OF SCOPE (do not touch):
   Profile reaches the handler that emits the iframe, but do not
   modify the iframe itself.
 - auth/auth.go — still out of scope as in Phase 1.
-- lovyou-ai-work and lovyou-ai-summary repos — single-repo phase.
+- work and summary repos — single-repo phase.
 - Fly.io deployment. deploy.sh runs unchanged.
 - Unrelated fixes, cleanups, or refactors. If you notice
   something sketchy, note it in findings §F and move on.
@@ -472,7 +472,7 @@ APPROACH HINTS
 
 FINAL CHECK BEFORE YOU START
 
-- [ ] Working directory is lovyou-ai-site repo root
+- [ ] Working directory is site repo root
 - [ ] Current branch is main at the PR #19 merge commit (or
       later, if PR #20 revert is present)
 - [ ] Git status is clean

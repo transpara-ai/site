@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/profile"
 )
 
 // AgentPersonaItem holds display data for one agent on the public Agents page.

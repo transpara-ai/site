@@ -13,7 +13,7 @@
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.1.0 | 2026-04-20 | Initial recon prompt covering three repos (lovyou-ai-site, lovyou-ai-work, lovyou-ai-summary), four recon target areas, findings-doc deliverable, five-line summary format. Read-only by construction. |
+| 0.1.0 | 2026-04-20 | Initial recon prompt covering three repos (site, work, summary), four recon target areas, findings-doc deliverable, five-line summary format. Read-only by construction. |
 
 ---
 
@@ -23,7 +23,7 @@
 2. **Enable skills/plugins:**
    - `frontend-design` — for context when analyzing the existing frontend.
    - `hive-lifecycle` — if recon touches a running hive state (it shouldn't, but be ready).
-3. **Launch from the parent directory** that has `lovyou-ai-site`, `lovyou-ai-work`, and `lovyou-ai-summary` as siblings. `$REPOS_ROOT` below is a placeholder for that path.
+3. **Launch from the parent directory** that has `site`, `work`, and `summary` as siblings. `$REPOS_ROOT` below is a placeholder for that path.
 4. **Paste the PROMPT block below** into the session.
 
 ---
@@ -52,9 +52,9 @@ The three repos you're investigating are siblings under the current
 working directory:
 
   $REPOS_ROOT/
-    ├── lovyou-ai-site/        ← PRIMARY refactor target
-    ├── lovyou-ai-work/        ← /hive data source (telemetry API)
-    └── lovyou-ai-summary/     ← existing telemetry dashboard
+    ├── site/        ← PRIMARY refactor target
+    ├── work/        ← /hive data source (telemetry API)
+    └── summary/     ← existing telemetry dashboard
 
 Your job is to surface surprises. Every major agent we've built (SysMon,
 Allocator, CTO, Spawner) required v1.0.0 → v1.1.0+ corrections after
@@ -77,7 +77,7 @@ CONSTRAINTS (non-negotiable)
 
 RECON TARGETS
 
-─── A. lovyou-ai-site (the refactor target) ──────────────────────────
+─── A. site (the refactor target) ──────────────────────────
 
 A.1 Stack identification
 - Read `go.mod`, `package.json`, `Makefile`, `Dockerfile`, any build
@@ -133,7 +133,7 @@ A.6 Deployment + config
 - What environment variables does it read at startup?
 - Is there a config file? Where?
 
-─── B. lovyou-ai-work (the /hive data source) ───────────────────────
+─── B. work (the /hive data source) ───────────────────────
 
 B.1 Telemetry API surface
 - List every HTTP endpoint exposed by the work-server.
@@ -157,7 +157,7 @@ B.3 CORS + port
 - Can the site server reach work-server via loopback (127.0.0.1:8080)
   on nucbuntu?
 
-─── C. lovyou-ai-summary (the existing dashboard) ────────────────────
+─── C. summary (the existing dashboard) ────────────────────
 
 C.1 Dashboard artifact
 - Locate the HTML file(s) that render the Transpara-AI Mission Control
@@ -225,7 +225,7 @@ say so explicitly.
   **Status:** Recon complete — design correction pending
   **Companion:** site-profile-redesign-recon-prompt-v0.1.0.md
 
-  ## A. lovyou-ai-site
+  ## A. site
   ### A.1 Stack
   ### A.2 Theming surface
   ### A.3 Shell + layout structure
@@ -233,12 +233,12 @@ say so explicitly.
   ### A.5 /hive current implementation
   ### A.6 Deployment + config
 
-  ## B. lovyou-ai-work
+  ## B. work
   ### B.1 Telemetry API surface
   ### B.2 Auth model
   ### B.3 CORS + port
 
-  ## C. lovyou-ai-summary
+  ## C. summary
   ### C.1 Dashboard artifact
   ### C.2 Embed-friendliness
   ### C.3 Polling cadence + data dependencies

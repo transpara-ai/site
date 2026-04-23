@@ -264,7 +264,7 @@ flowchart TD
 
 ## 7. The Transpara `/hive`: wiring to telemetry
 
-`http://nucbuntu:8080/telemetry/` is a complete Transpara-AI mission-control dashboard (phases, agent status, event stream, hive health, concept stack, repository strata, role tiers, governance), served by `lovyou-ai-work` and embedded into its binary via `//go:embed`. Recon (v0.1.0 findings) reveals specific constraints that change the calculus from the v0.2.1 draft.
+`http://nucbuntu:8080/telemetry/` is a complete Transpara-AI mission-control dashboard (phases, agent status, event stream, hive health, concept stack, repository strata, role tiers, governance), served by `work` and embedded into its binary via `//go:embed`. Recon (v0.1.0 findings) reveals specific constraints that change the calculus from the v0.2.1 draft.
 
 ```mermaid
 graph TD
@@ -286,7 +286,7 @@ graph TD
 
 ### Why Option 2 wins (recon findings)
 
-The dashboard at `lovyou-ai-summary/dashboard.html` (3453 lines, self-contained, zero external asset dependencies) has a hard-coded embed-detection regex in its own JavaScript:
+The dashboard at `summary/dashboard.html` (3453 lines, self-contained, zero external asset dependencies) has a hard-coded embed-detection regex in its own JavaScript:
 
 ```javascript
 var embedded = /\/telemetry\/?$/.test(window.location.pathname);
@@ -310,7 +310,7 @@ Option 1 becomes viable only if the proxy mounts at `/telemetry` *exactly* (over
 
 The embedded dashboard renders in its own color scheme, which does **not** follow the Transpara profile's theme toggle. Under Transpara dark mode with a light dashboard inside, the seam is visible. Two future options:
 
-1. **Pass `?theme=light|dark`** to the iframe URL; dashboard reads it and swaps its internal palette. Requires a work-server PR to `lovyou-ai-work/dashboard/dashboard.html` (also affects `lovyou-ai-summary/dashboard.html` since they're byte-identical copies).
+1. **Pass `?theme=light|dark`** to the iframe URL; dashboard reads it and swaps its internal palette. Requires a work-server PR to `work/dashboard/dashboard.html` (also affects `summary/dashboard.html` since they're byte-identical copies).
 2. **Accept the seam for v1** and document it as a roadmap item. The iframe boundary is visually explicit, so users understand they're looking at an embedded system.
 
 Recommendation: ship Option 2 with the seam, file a roadmap issue for dashboard theme-param support.
@@ -354,7 +354,7 @@ Questions resolved by CEO decisions on 2026-04-20 are marked ✓. Still-open ite
 2. **Transpara brand assets** — logo / wordmark / favicon: ready assets, or plain text wordmark + placeholder mark for v1? The HTML prototype (Artifact 05) ships with a procedural "T" mark as a placeholder.
 3. **Dashboard theme coupling** — the embedded Mission Control dashboard renders in its own fixed color scheme and does not follow the Transpara theme toggle. Accept the seam for v1, or prioritize a work-server PR to support `?theme=light|dark` on the dashboard URL?
 4. **Lovyou-ai explicit shell declarations** — the updated profile YAML (§4) now shows `shells: { public: editorial, app: app-dense, hive: phase-timeline }` for lovyou-ai. The `app-dense` and `phase-timeline` shell names are new labels; no code change required for lovyou-ai, just explicit naming. Confirm this naming is acceptable.
-5. **Cleanup fallout** — `lovyou-ai-summary/.github/workflows/deploy.yml` still POSTs to the removed `/telemetry/refresh` endpoint. File an issue now, or defer?
+5. **Cleanup fallout** — `summary/.github/workflows/deploy.yml` still POSTs to the removed `/telemetry/refresh` endpoint. File an issue now, or defer?
 
 ---
 

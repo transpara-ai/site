@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lovyou-ai/site/profile"
+	"github.com/transpara-ai/site/profile"
 )
 
 // QuestionItem is a question with its first agent answer for the public Q&A list.

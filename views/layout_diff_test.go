@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lovyou-ai/site/profile"
-	"github.com/lovyou-ai/site/views"
+	"github.com/transpara-ai/site/profile"
+	"github.com/transpara-ai/site/views"
 )
 
 // navLinkRunRE matches one or more consecutive nav-style <a> tags

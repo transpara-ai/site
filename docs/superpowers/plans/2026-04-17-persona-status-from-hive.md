@@ -46,7 +46,7 @@ Expected: `{"state":"CLOSED","headRefName":"feat/persona-status-sync"}`.
 
 - [ ] **Step 1: Add the submodule**
 
-Run from repo root (`/Transpara/transpara-ai/data/repos/lovyou-ai-site`):
+Run from repo root (`/Transpara/transpara-ai/data/repos/site`):
 
 ```bash
 git submodule add https://github.com/transpara-ai/hive.git third_party/hive
@@ -96,7 +96,7 @@ git add .gitmodules third_party/hive .dockerignore
 git commit -m "$(cat <<'EOF'
 feat: add hive as git submodule at third_party/hive
 
-Pins lovyou-ai-site to a specific transpara-ai/hive commit. The site
+Pins site to a specific transpara-ai/hive commit. The site
 binary does not depend on this submodule at runtime; only `go generate`
 reads it. .dockerignore excludes it from build images.
 
@@ -225,7 +225,7 @@ var HiveStatus = map[string]string{
 - [ ] **Step 2: Run tests; verify they fail because `main` package has no `scan` / `render` / `entry`**
 
 ```bash
-cd /Transpara/transpara-ai/data/repos/lovyou-ai-site
+cd /Transpara/transpara-ai/data/repos/site
 go test ./cmd/gen-persona-status/...
 ```
 

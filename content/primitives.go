@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lovyou-ai/site/views"
+	"github.com/transpara-ai/site/views"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 )

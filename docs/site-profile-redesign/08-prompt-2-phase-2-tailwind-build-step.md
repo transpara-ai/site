@@ -56,7 +56,7 @@ If PR #18 is not yet merged, stop and notify Michael.
 2. **Enable skills:**
    - `frontend-design` — for context on Tailwind build patterns.
    - `hive-lifecycle` — not needed, keep available.
-3. **Launch from `lovyou-ai-site` repo root.**
+3. **Launch from `site` repo root.**
 4. **Verify PR #18 is merged** (`git log --oneline origin/main | head -5` should show the merge commit).
 5. **Paste the PROMPT block below.**
 
@@ -69,7 +69,7 @@ If PR #18 is not yet merged, stop and notify Michael.
 
 ROLE
 You are executing Phase 2 of the site profile redesign for the
-lovyou-ai-site repo. Phase 1 (token refactor) is complete and
+site repo. Phase 1 (token refactor) is complete and
 merged to main; Phase 2 builds on that foundation. You have the
 design set (Artifacts 01–05), Prompt 1 (Artifact 07), and the
 Phase 1 findings doc attached.
@@ -131,7 +131,7 @@ OUT OF SCOPE (do not touch):
 - Any visual design change beyond what the token promotion produces
   (which should be visually null if tokens are chosen correctly).
 - New components or new routes.
-- lovyou-ai-work and lovyou-ai-summary repos — single-repo phase.
+- work and summary repos — single-repo phase.
 - Fly.io deployment. deploy.sh changes must keep the existing flow
   intact; you're inserting `make css` as a new step, not restructuring.
 - Production deploy — do not run deploy.sh or fly deploy.
@@ -249,7 +249,7 @@ PASS 3 — VERIFY
    output.
 3. `go build ./cmd/site/` succeeds.
 4. `go test ./...` — all existing tests pass.
-5. Docker build: `docker build -t lovyou-ai-site:phase-2 .`
+5. Docker build: `docker build -t site:phase-2 .`
    succeeds end-to-end. Do not run the resulting image against
    production anything.
 6. `deploy.sh --dry-run` (or equivalent; if deploy.sh has no
@@ -403,7 +403,7 @@ APPROACH HINTS
 
 FINAL CHECK BEFORE YOU START
 
-- [ ] Working directory is lovyou-ai-site repo root
+- [ ] Working directory is site repo root
 - [ ] Current branch is main at the PR #18 merge commit
 - [ ] Artifacts 01–05 + 07 + Phase 1 findings are attached
 - [ ] You will create feat/phase-2-tailwind-build-step

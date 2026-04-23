@@ -13,7 +13,7 @@
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.1.0 | 2026-04-20 | Initial Phase 1 prompt. Scope: token refactor in `lovyou-ai-site` only. Target: rewrite ~40 hardcoded hex values to `var(--color-...)` references against the existing 12-token `@theme` block. No build-system changes, no new abstractions, no visual regression. |
+| 0.1.0 | 2026-04-20 | Initial Phase 1 prompt. Scope: token refactor in `site` only. Target: rewrite ~40 hardcoded hex values to `var(--color-...)` references against the existing 12-token `@theme` block. No build-system changes, no new abstractions, no visual regression. |
 
 ---
 
@@ -43,7 +43,7 @@ Phase 1 is **deliberately small**. It's the safest possible starting move: no be
 2. **Enable skills:**
    - `frontend-design` — for context on token patterns.
    - `hive-lifecycle` — not needed for Phase 1 but keep available.
-3. **Launch from the `lovyou-ai-site` repo root** (Phase 1 is single-repo; no need to launch from parent).
+3. **Launch from the `site` repo root** (Phase 1 is single-repo; no need to launch from parent).
 4. **Paste the PROMPT block below.**
 
 ---
@@ -55,14 +55,14 @@ Phase 1 is **deliberately small**. It's the safest possible starting move: no be
 
 ROLE
 You are executing Phase 1 of the site profile redesign for the
-lovyou-ai-site repo. This is the first implementation step after
+site repo. This is the first implementation step after
 the recon-and-design phase. You are working against a well-defined
 spec (Artifacts 01–05 attached) with recon findings that have
 already been incorporated into v0.3.0 of the design.
 
 GOAL
 Rewrite every hardcoded hex color value in the CSS surface of
-lovyou-ai-site to use CSS custom properties (`var(--color-...)`)
+site to use CSS custom properties (`var(--color-...)`)
 from the existing 12-token @theme block in views/layout.templ.
 No visual change should be detectable. This is a pure refactor.
 
@@ -94,7 +94,7 @@ OUT OF SCOPE (do not touch):
   like `bg-[#1a2230]`. Leave these for Phase 2 when the build
   step lands; arbitrary values require the build pipeline anyway.
 - The cmd/site/main.go file and other Go logic — pure CSS refactor.
-- `lovyou-ai-work` and `lovyou-ai-summary` repos — Phase 1 is
+- `work` and `summary` repos — Phase 1 is
   single-repo.
 - Build infrastructure (Dockerfile, Makefile, deploy.sh) —
   Phase 2 work.
@@ -292,7 +292,7 @@ APPROACH HINTS
 
 FINAL CHECK BEFORE YOU START
 
-- [ ] Working directory is lovyou-ai-site repo root
+- [ ] Working directory is site repo root
 - [ ] Git status is clean (or at least, nothing you will lose)
 - [ ] Artifacts 01–05 + recon findings are attached
 - [ ] Current branch is NOT main; create feat/phase-1-token-refactor
