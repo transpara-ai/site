@@ -3,9 +3,11 @@ package graph
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -249,7 +251,7 @@ const maxHiveDiagEntries = 10
 // Handlers serves the unified product HTTP endpoints.
 type Handlers struct {
 	store     *Store
-	mind      *Mind // optional — triggers auto-reply on conversation messages
+	mind      *Mind                               // optional — triggers auto-reply on conversation messages
 	readWrap  func(http.HandlerFunc) http.Handler // optional auth (reads)
 	writeWrap func(http.HandlerFunc) http.Handler // required auth (writes)
 	loopDir   string                              // optional — path to loop/ dir for reading iteration state
@@ -294,6 +296,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Space lenses (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}", h.readWrap(h.handleSpaceDefault))
 	mux.Handle("GET /app/{slug}/board", h.readWrap(h.handleBoard))
+	mux.Handle("GET /app/{slug}/refinery", h.readWrap(h.handleRefinery))
+	mux.Handle("POST /app/{slug}/refinery/intake", h.writeWrap(h.handleRefineryIntake))
 	mux.Handle("POST /app/{slug}/checklist/dismiss", h.writeWrap(h.handleChecklistDismiss))
 	mux.Handle("GET /app/{slug}/feed", h.readWrap(h.handleFeed))
 	mux.Handle("GET /app/{slug}/threads", h.readWrap(h.handleThreads))
@@ -317,6 +321,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /app/{slug}/document/{id}/edit", h.writeWrap(h.handleDocumentEdit))
 	mux.Handle("GET /app/{slug}/questions", h.readWrap(h.handleQuestions))
 	mux.Handle("GET /app/{slug}/questions/{id}", h.readWrap(h.handleQuestionDetail))
+	mux.Handle("GET /app/{slug}/questions/{id}/answers", h.readWrap(h.handleQuestionAnswers))
 	mux.Handle("GET /app/{slug}/council", h.readWrap(h.handleCouncil))
 	mux.Handle("GET /app/{slug}/council/{id}", h.readWrap(h.handleCouncilDetail))
 
@@ -326,6 +331,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Node detail (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}/node/{id}", h.readWrap(h.handleNodeDetail))
+	mux.Handle("GET /app/{slug}/node/{id}/activity", h.readWrap(h.handleNodeActivity))
 
 	// Grammar operations (requires auth).
 	mux.Handle("POST /app/{slug}/op", h.writeWrap(h.handleOp))
@@ -336,6 +342,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Hive diagnostics ingestion (requires auth — used by hive runner).
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
+	mux.Handle("POST /api/hive/refinery/state", h.writeWrap(h.handleHiveRefineryState))
+	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
+	mux.Handle("GET /api/hive/webhook-deliveries", h.readWrap(h.handleHiveWebhookDeliveries))
 
 	// Node children (for HTMX polling).
 	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
@@ -343,6 +352,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Node mutations (requires auth).
 	mux.Handle("POST /app/{slug}/node/{id}/state", h.writeWrap(h.handleNodeState))
 	mux.Handle("POST /app/{slug}/node/{id}/update", h.writeWrap(h.handleNodeUpdate))
+	mux.Handle("POST /app/{slug}/node/{id}/investigate-gaps", h.writeWrap(h.handleNodeInvestigateGaps))
 	mux.Handle("DELETE /app/{slug}/node/{id}", h.writeWrap(h.handleNodeDelete))
 
 	// Hive dashboard — public, no auth required.
@@ -410,7 +420,7 @@ func (h *Handlers) spaceFromRequest(r *http.Request) (*Space, error) {
 	if space.OwnerID == uid {
 		return space, nil
 	}
-	if space.Visibility == VisibilityPublic && uid != anonUserID {
+	if space.Visibility == VisibilityPublic && uid != "" {
 		return space, nil
 	}
 	return nil, ErrNotFound
@@ -1052,6 +1062,453 @@ func (h *Handlers) handleBoard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	BoardView(*space, spaces, columns, h.viewUser(r), isOwner, agents, q, assigneeFilter, projects, projectFilter, showFirstCompletionToast, showChecklist, hasTask, hasAgentTask, hasCompletion, taskCount, elapsedStr, showWelcome, welcomeMembers, showInviteCard, inviteToken, profile.FromContext(r.Context())).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleRefinery(w http.ResponseWriter, r *http.Request) {
+	space, isOwner, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	spaces, _ := h.store.ListSpaces(r.Context(), h.userID(r))
+	searchQuery := strings.TrimSpace(r.URL.Query().Get("q"))
+	specs, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		Kind:     KindSpec,
+		ParentID: "root",
+		Query:    searchQuery,
+		Limit:    200,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"space": space, "specs": specs})
+		return
+	}
+
+	lineage := h.refineryLineageByRoot(r.Context(), specs)
+	RefineryView(*space, spaces, groupSpecsByRefineryStage(specs), lineage, h.viewUser(r), isOwner, searchQuery, profile.FromContext(r.Context())).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleRefineryIntake(w http.ResponseWriter, r *http.Request) {
+	space, err := h.spaceFromRequest(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := r.ParseMultipartForm(16 << 20); err != nil && !errors.Is(err, http.ErrNotMultipart) {
+		http.Error(w, "parse intake: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	question := strings.TrimSpace(r.FormValue("question"))
+	outcome := strings.TrimSpace(r.FormValue("outcome"))
+	manualBody := strings.TrimSpace(r.FormValue("body"))
+	artifacts, err := readMarkdownIntakeArtifacts(r, 5, 2<<20)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if question == "" && outcome == "" && manualBody == "" && len(artifacts) == 0 {
+		http.Error(w, "question, outcome, pasted markdown, or markdown file required", http.StatusBadRequest)
+		return
+	}
+
+	title := intakeTitle(question, outcome, manualBody, artifacts)
+	duplicates, _ := h.findPotentialDuplicateIntakes(ctx, space.ID, title)
+	kind, state, body := classifyRefineryIntake(question, outcome, manualBody, artifacts, duplicates)
+	persistedState := SpecStateIntakeRaw
+	if kind == KindQuestion {
+		persistedState = StateOpen
+		body = strings.Replace(body, "- Persisted state: "+SpecStateIntakeRaw, "- Persisted state: "+StateOpen, 1)
+	}
+	node, err := h.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       kind,
+		Title:      title,
+		Body:       body,
+		State:      persistedState,
+		Priority:   PriorityMedium,
+		Author:     h.userName(r),
+		AuthorID:   h.userID(r),
+		AuthorKind: h.userKind(r),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"classifier_kind":   kind,
+		"recommended_state": state,
+		"persisted_state":   persistedState,
+		"duplicate_count":   len(duplicates),
+		"artifact_count":    len(artifacts),
+		"question":          question,
+		"desired_outcome":   outcome,
+		"rationale":         refineryClassifierRationale(kind, state, duplicates, artifacts),
+	})
+	h.store.RecordOp(ctx, space.ID, node.ID, h.userName(r), h.userID(r), "intake", payload)
+
+	for _, artifact := range artifacts {
+		child, err := h.store.CreateNode(ctx, CreateNodeParams{
+			SpaceID:    space.ID,
+			ParentID:   node.ID,
+			Kind:       KindDocument,
+			Title:      artifact.Name,
+			Body:       artifact.Body,
+			State:      StateOpen,
+			Priority:   PriorityMedium,
+			Author:     h.userName(r),
+			AuthorID:   h.userID(r),
+			AuthorKind: h.userKind(r),
+			Causes:     []string{node.ID},
+		})
+		if err == nil {
+			attachPayload, _ := json.Marshal(map[string]any{
+				"parent_id": node.ID,
+				"filename":  artifact.Name,
+				"hash":      sha256HexString([]byte(artifact.Body)),
+			})
+			h.store.RecordOp(ctx, space.ID, child.ID, h.userName(r), h.userID(r), "attach", attachPayload)
+		}
+	}
+
+	if kind == KindQuestion {
+		if h.mind != nil {
+			h.recordQuestionStatus(ctx, space.ID, node.ID, "Question received. A lightweight answer is being generated.")
+			go h.mind.OnQuestionAsked(space.ID, space.Slug, node)
+		} else {
+			h.recordQuestionStatus(ctx, space.ID, node.ID, "Question received. No answering backend is configured for lightweight Q&A.")
+		}
+	} else if kind == KindSpec && refineryColumnState(state) == SpecStateInvestigate {
+		if task, missing, err := h.ensureRefineryGapInvestigation(ctx, *space, *node, "Agents", "agents", "agent"); err == nil && task != nil {
+			log.Printf("[refinery] auto-started gap investigation for %s missing=%s task=%s", node.ID, missing, task.ID)
+		} else if err != nil {
+			log.Printf("[refinery] auto-start gap investigation failed for %s: %v", node.ID, err)
+		}
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusCreated, map[string]any{"node": node, "duplicates": duplicates})
+		return
+	}
+	redirectPath := "/app/" + space.Slug + "/refinery?q=" + url.QueryEscape(node.Title)
+	if kind == KindQuestion {
+		redirectPath = "/app/" + space.Slug + "/questions/" + node.ID
+	}
+	http.Redirect(w, r, redirectPath, http.StatusSeeOther)
+}
+
+func (h *Handlers) recordQuestionStatus(ctx context.Context, spaceID, questionID, message string) {
+	status, err := h.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    spaceID,
+		ParentID:   questionID,
+		Kind:       KindComment,
+		Body:       message,
+		State:      StateOpen,
+		Priority:   PriorityLow,
+		Author:     "System",
+		AuthorID:   "system",
+		AuthorKind: "system",
+	})
+	if err == nil {
+		payload, _ := json.Marshal(map[string]string{"status": "question_status"})
+		h.store.RecordOp(ctx, spaceID, status.ID, "System", "system", "respond", payload)
+	}
+}
+
+func (h *Handlers) handleHiveRefineryState(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		SpaceID string `json:"space_id"`
+		NodeID  string `json:"node_id"`
+		State   string `json:"state"`
+		Reason  string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.SpaceID = strings.TrimSpace(req.SpaceID)
+	req.NodeID = strings.TrimSpace(req.NodeID)
+	req.State = strings.TrimSpace(req.State)
+	req.Reason = strings.TrimSpace(req.Reason)
+	if req.SpaceID == "" || req.NodeID == "" || req.State == "" {
+		http.Error(w, "space_id, node_id, and state required", http.StatusBadRequest)
+		return
+	}
+
+	node, err := h.store.GetNode(r.Context(), req.NodeID)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if node.SpaceID != req.SpaceID {
+		http.Error(w, "node does not belong to requested space", http.StatusBadRequest)
+		return
+	}
+	if node.State == req.State {
+		writeJSON(w, http.StatusOK, map[string]any{"node": node, "changed": false})
+		return
+	}
+
+	if err := h.store.UpdateNodeState(r.Context(), req.NodeID, req.State); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	statePayload, _ := json.Marshal(map[string]string{
+		"from_state": node.State,
+		"to_state":   req.State,
+		"reason":     req.Reason,
+		"source":     "hive.refinery.automation",
+	})
+	opName := "progress"
+	if req.State == StateDone || req.State == SpecStateWorkShipped {
+		opName = "complete"
+	} else if req.State == StateReview {
+		opName = "review"
+	}
+	op, _ := h.store.RecordOp(r.Context(), req.SpaceID, req.NodeID, h.userName(r), h.userID(r), opName, statePayload)
+	updated, _ := h.store.GetNode(r.Context(), req.NodeID)
+	writeJSON(w, http.StatusOK, map[string]any{"node": updated, "op": op, "changed": true})
+}
+
+type intakeArtifact struct {
+	Name string
+	Body string
+}
+
+func readMarkdownIntakeArtifacts(r *http.Request, maxFiles int, maxBytes int64) ([]intakeArtifact, error) {
+	if r.MultipartForm == nil || r.MultipartForm.File == nil {
+		return nil, nil
+	}
+	files := r.MultipartForm.File["artifact"]
+	if len(files) > maxFiles {
+		return nil, fmt.Errorf("too many artifacts: maximum %d", maxFiles)
+	}
+	artifacts := make([]intakeArtifact, 0, len(files))
+	for _, fh := range files {
+		name := filepath.Base(fh.Filename)
+		lower := strings.ToLower(name)
+		if !strings.HasSuffix(lower, ".md") && !strings.HasSuffix(lower, ".markdown") {
+			return nil, fmt.Errorf("%s is not a markdown file", name)
+		}
+		if fh.Size > maxBytes {
+			return nil, fmt.Errorf("%s exceeds the %d byte artifact limit", name, maxBytes)
+		}
+		f, err := fh.Open()
+		if err != nil {
+			return nil, fmt.Errorf("open %s: %w", name, err)
+		}
+		data, err := io.ReadAll(io.LimitReader(f, maxBytes+1))
+		f.Close()
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", name, err)
+		}
+		if int64(len(data)) > maxBytes {
+			return nil, fmt.Errorf("%s exceeds the %d byte artifact limit", name, maxBytes)
+		}
+		artifacts = append(artifacts, intakeArtifact{Name: name, Body: string(data)})
+	}
+	return artifacts, nil
+}
+
+func refineryClassifierRationale(kind, state string, duplicates []Node, artifacts []intakeArtifact) string {
+	switch {
+	case kind == KindQuestion:
+		return "trivial question detected; route through lightweight Q&A while preserving raw intake provenance"
+	case len(duplicates) > 0:
+		return "potential duplicate intake detected; human confirmation is required before autonomous progression"
+	case state == SpecStateDraft:
+		return "normative sections detected; recommend draft spec while persisted state remains raw intake"
+	case state == SpecStateInvestigate:
+		return "artifact or substantial scope detected; recommend investigation without blocking ingestion"
+	case len(artifacts) > 0:
+		return "artifact attached; preserve evidence and classify for refinery progression"
+	default:
+		return "raw intake requires clarification before drafting"
+	}
+}
+
+func sha256HexString(b []byte) string {
+	sum := sha256.Sum256(b)
+	return fmt.Sprintf("sha256:%x", sum[:])
+}
+
+func intakeTitle(question, outcome, manualBody string, artifacts []intakeArtifact) string {
+	for _, candidate := range []string{question, firstNonEmptyLine(outcome), firstMarkdownHeading(manualBody)} {
+		if candidate != "" {
+			return truncatePlain(candidate, 120)
+		}
+	}
+	if len(artifacts) > 0 {
+		if heading := firstMarkdownHeading(artifacts[0].Body); heading != "" {
+			return truncatePlain(heading, 120)
+		}
+		return truncatePlain(artifacts[0].Name, 120)
+	}
+	return "Untitled intake"
+}
+
+func classifyRefineryIntake(question, outcome, manualBody string, artifacts []intakeArtifact, duplicates []Node) (string, string, string) {
+	combined := strings.TrimSpace(strings.Join([]string{question, outcome, manualBody}, "\n\n"))
+	for _, artifact := range artifacts {
+		combined += "\n\n" + artifact.Body
+	}
+	kind := KindSpec
+	state := SpecStateRequirementClarify
+	if isTrivialQuestion(question, outcome, manualBody, artifacts) {
+		kind = KindQuestion
+		state = StateOpen
+	} else if len(duplicates) > 0 {
+		state = SpecStateNeedsAttention
+	} else if len(artifacts) > 0 || len(combined) > 1200 || looksLikeSpec(combined) {
+		state = SpecStateInvestigate
+		if hasNormativeSections(combined) {
+			state = SpecStateDraft
+		}
+	}
+
+	var b strings.Builder
+	if question != "" {
+		b.WriteString("## Intake Question\n\n")
+		b.WriteString(question + "\n\n")
+	}
+	if outcome != "" {
+		b.WriteString("## Desired Outcome\n\n")
+		b.WriteString(outcome + "\n\n")
+	}
+	if manualBody != "" {
+		b.WriteString("## Pasted Markdown\n\n")
+		b.WriteString(manualBody + "\n\n")
+	}
+	if len(artifacts) > 0 {
+		b.WriteString("## Uploaded Artifacts\n\n")
+		for _, artifact := range artifacts {
+			b.WriteString("- " + artifact.Name + "\n")
+		}
+		b.WriteString("\n")
+	}
+	b.WriteString("## Classifier Notes\n\n")
+	b.WriteString("- Intake kind: " + kind + "\n")
+	b.WriteString("- Persisted state: " + SpecStateIntakeRaw + "\n")
+	b.WriteString("- Recommended next state: " + state + "\n")
+	if len(duplicates) > 0 {
+		b.WriteString("- Needs attention: potential redundancy with existing intake. Confirm whether to merge, supersede, or proceed independently.\n")
+	}
+	if kind == KindSpec && state == SpecStateRequirementClarify {
+		b.WriteString("- Clarify: human direction is likely needed before a vetted draft spec can be produced.\n")
+	}
+	if state == SpecStateInvestigate {
+		b.WriteString("- Investigate: artifact or scope appears substantial; agent analysis should continue without blocking ingestion.\n")
+	}
+	return kind, state, strings.TrimSpace(b.String())
+}
+
+func (h *Handlers) findPotentialDuplicateIntakes(ctx context.Context, spaceID, title string) ([]Node, error) {
+	needle := normalizeIntakeTitle(title)
+	if needle == "" {
+		return nil, nil
+	}
+	var matches []Node
+	for _, kind := range []string{KindSpec, KindQuestion} {
+		nodes, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: spaceID, Kind: kind, ParentID: "root", Limit: 200})
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range nodes {
+			existing := normalizeIntakeTitle(n.Title)
+			if existing == needle || (len(needle) > 16 && strings.Contains(existing, needle)) || (len(existing) > 16 && strings.Contains(needle, existing)) {
+				matches = append(matches, n)
+			}
+		}
+	}
+	return matches, nil
+}
+
+func normalizeIntakeTitle(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(s, " ")
+	return strings.Join(strings.Fields(s), " ")
+}
+
+func isTrivialQuestion(question, outcome, manualBody string, artifacts []intakeArtifact) bool {
+	if len(artifacts) > 0 || manualBody != "" || outcome != "" {
+		return false
+	}
+	q := strings.TrimSpace(question)
+	words := strings.Fields(q)
+	if len(words) == 0 || len(words) > 14 {
+		return false
+	}
+	if strings.HasSuffix(q, "?") {
+		return true
+	}
+	first := strings.ToLower(words[0])
+	switch first {
+	case "why", "what", "how", "when", "where", "who", "which", "can", "could", "should", "would", "is", "are", "do", "does", "did":
+		return true
+	default:
+		return false
+	}
+}
+
+func looksLikeSpec(s string) bool {
+	lower := strings.ToLower(s)
+	for _, marker := range []string{"# ", "definition of done", "acceptance criteria", "test plan", "requirements", "invariants", "architecture"} {
+		if strings.Contains(lower, marker) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasNormativeSections(s string) bool {
+	lower := strings.ToLower(s)
+	return strings.Contains(lower, "definition of done") && (strings.Contains(lower, "test plan") || strings.Contains(lower, "acceptance criteria"))
+}
+
+func firstMarkdownHeading(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		}
+	}
+	return ""
+}
+
+func firstNonEmptyLine(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			return line
+		}
+	}
+	return ""
+}
+
+func truncatePlain(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) <= max {
+		return s
+	}
+	return strings.TrimSpace(s[:max-1]) + "…"
 }
 
 func formatElapsed(d time.Duration) string {
@@ -2032,6 +2489,62 @@ func (h *Handlers) handleQuestionDetail(w http.ResponseWriter, r *http.Request) 
 	QuestionDetailView(*space, spaces, *question, answers, h.viewUser(r), isOwner, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleQuestionAnswers(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	id := r.PathValue("id")
+	question, err := h.store.GetNode(r.Context(), id)
+	if errors.Is(err, ErrNotFound) || (err == nil && question.Kind != KindQuestion) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if question.SpaceID != space.ID {
+		http.NotFound(w, r)
+		return
+	}
+	answers, err := h.store.ListNodes(r.Context(), ListNodesParams{
+		SpaceID:  space.ID,
+		ParentID: id,
+		Limit:    200,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	renderQuestionAnswersHTML(w, space.Slug, question.ID, answers)
+}
+
+func renderQuestionAnswersHTML(w io.Writer, spaceSlug, questionID string, answers []Node) {
+	fmt.Fprintf(w, `<div id="question-answers" class="space-y-4" hx-get="/app/%s/questions/%s/answers" hx-trigger="every 3s" hx-swap="outerHTML">`, html.EscapeString(spaceSlug), html.EscapeString(questionID))
+	fmt.Fprintf(w, `<h2 class="text-sm font-semibold text-warm-muted">Answers (%d)</h2>`, len(answers))
+	for _, a := range answers {
+		body := strings.ReplaceAll(html.EscapeString(a.Body), "\n", "<br>")
+		author := html.EscapeString(a.Author)
+		date := html.EscapeString(a.CreatedAt.Format("Jan 2, 2006"))
+		if a.AuthorKind == "agent" {
+			fmt.Fprintf(w, `<div class="bg-violet-950/20 rounded-lg border border-violet-500/20 p-4 space-y-2"><div class="flex items-center gap-2 mb-1"><span class="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"></circle></svg>%s</span><span class="text-xs text-warm-faint">agent · %s</span></div><p class="text-sm text-warm-secondary whitespace-pre-wrap">%s</p></div>`, author, date, body)
+		} else {
+			fmt.Fprintf(w, `<div class="bg-surface rounded-lg border border-edge p-4 space-y-2"><p class="text-sm text-warm-secondary whitespace-pre-wrap">%s</p><div class="flex items-center gap-3 text-xs text-warm-faint"><span>%s</span><span>%s</span></div></div>`, body, author, date)
+		}
+	}
+	if len(answers) == 0 {
+		fmt.Fprint(w, `<p class="text-sm text-warm-faint italic">No answers yet.</p>`)
+	}
+	fmt.Fprint(w, `</div>`)
+}
+
 func (h *Handlers) handleCouncil(w http.ResponseWriter, r *http.Request) {
 	space, _, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
@@ -2261,6 +2774,399 @@ func (h *Handlers) handleConversationMessages(w http.ResponseWriter, r *http.Req
 	}
 }
 
+type nodeActivityEvent struct {
+	At      time.Time
+	Kind    string
+	Actor   string
+	Summary string
+	Payload json.RawMessage
+}
+
+func (h *Handlers) handleNodeActivity(w http.ResponseWriter, r *http.Request) {
+	space, _, err := h.spaceForRead(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	nodeID := r.PathValue("id")
+	node, err := h.store.GetNode(r.Context(), nodeID)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if node.SpaceID != space.ID {
+		http.NotFound(w, r)
+		return
+	}
+	children, err := h.store.ListNodes(r.Context(), ListNodesParams{SpaceID: space.ID, ParentID: nodeID, Limit: 200})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	visibleChildren, err := h.collectNodeDescendants(r.Context(), space.ID, children, 3, 500)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ops, err := h.store.ListNodeOps(r.Context(), nodeID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	dependencies, _ := h.store.ListDependencies(r.Context(), nodeID)
+	blockers, _ := h.store.ListBlockers(r.Context(), nodeID)
+	var childOps []Op
+	for _, child := range visibleChildren {
+		opsForChild, err := h.store.ListNodeOps(r.Context(), child.ID)
+		if err == nil {
+			childOps = append(childOps, opsForChild...)
+		}
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	renderNodeActivityHTML(w, space.Slug, *node, visibleChildren, ops, childOps, dependencies, blockers)
+}
+
+func (h *Handlers) collectNodeDescendants(ctx context.Context, spaceID string, roots []Node, maxDepth, limit int) ([]Node, error) {
+	if maxDepth <= 1 || len(roots) == 0 {
+		return roots, nil
+	}
+	result := append([]Node{}, roots...)
+	frontier := append([]Node{}, roots...)
+	seen := make(map[string]bool, len(roots))
+	for _, n := range roots {
+		seen[n.ID] = true
+	}
+	for depth := 1; depth < maxDepth && len(frontier) > 0 && len(result) < limit; depth++ {
+		var next []Node
+		for _, parent := range frontier {
+			children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: spaceID, ParentID: parent.ID, Limit: 100})
+			if err != nil {
+				return result, err
+			}
+			for _, child := range children {
+				if seen[child.ID] {
+					continue
+				}
+				seen[child.ID] = true
+				result = append(result, child)
+				next = append(next, child)
+				if len(result) >= limit {
+					return result, nil
+				}
+			}
+		}
+		frontier = next
+	}
+	return result, nil
+}
+
+func (h *Handlers) handleNodeInvestigateGaps(w http.ResponseWriter, r *http.Request) {
+	space, err := h.spaceFromRequest(r)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodeID := r.PathValue("id")
+	node, err := h.store.GetNode(r.Context(), nodeID)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if node.SpaceID != space.ID {
+		http.NotFound(w, r)
+		return
+	}
+	if node.State == "deleted" {
+		http.Error(w, "cannot investigate a deleted refinery item", http.StatusConflict)
+		return
+	}
+
+	actor := h.userName(r)
+	actorID := h.userID(r)
+	actorKind := h.userKind(r)
+	task, missing, err := h.ensureRefineryGapInvestigation(r.Context(), *space, *node, actor, actorID, actorKind)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if task != nil {
+		agentID := task.AssigneeID
+		if agentID != "" {
+			h.notify(r.Context(), agentID, actor, "", space.ID, "dispatched a refinery gap investigation to the Hive: "+node.Title)
+		}
+	}
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusCreated, map[string]any{"task": task, "missing_gates": missing, "assigned_to": task.Assignee})
+		return
+	}
+	http.Redirect(w, r, "/app/"+space.Slug+"/refinery?q="+url.QueryEscape(node.Title), http.StatusSeeOther)
+}
+
+func (h *Handlers) ensureRefineryGapInvestigation(ctx context.Context, space Space, node Node, actor, actorID, actorKind string) (*Node, string, error) {
+	agentID, agentName, err := h.store.GetFirstAgent(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	if agentID == "" {
+		return nil, "", fmt.Errorf("no agent is available to investigate refinery gaps")
+	}
+
+	missing := refineryMissingSections(node.Body)
+	if missing == "None detected." {
+		missing = "open investigation questions"
+	}
+	title := "Investigate refinery gaps: " + node.Title
+	children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: space.ID, ParentID: node.ID, Limit: 200})
+	if err != nil {
+		return nil, "", err
+	}
+	for _, child := range children {
+		if child.Kind == KindTask && child.State != StateDone && child.State != "deleted" && child.Title == title {
+			return &child, missing, nil
+		}
+	}
+
+	taskBody := buildRefineryGapInvestigationBody(node, missing)
+	task, err := h.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		ParentID:   node.ID,
+		Kind:       KindTask,
+		Title:      title,
+		Body:       taskBody,
+		State:      StateOpen,
+		Priority:   PriorityHigh,
+		Assignee:   agentName,
+		AssigneeID: agentID,
+		Author:     actor,
+		AuthorID:   actorID,
+		AuthorKind: actorKind,
+		Causes:     []string{node.ID},
+	})
+	if err != nil {
+		return nil, "", err
+	}
+
+	payloadBytes, _ := json.Marshal(map[string]any{
+		"source":        "refinery.gap_investigation",
+		"kind":          KindTask,
+		"priority":      PriorityHigh,
+		"description":   taskBody,
+		"parent_id":     node.ID,
+		"parent_title":  node.Title,
+		"task_title":    task.Title,
+		"missing_gates": missing,
+		"assignee":      agentName,
+	})
+	_, _ = h.store.RecordOp(ctx, space.ID, task.ID, actor, actorID, "intend", payloadBytes)
+
+	fromState := node.State
+	if shouldMoveToInvestigateForGap(fromState) {
+		if err := h.store.UpdateNodeState(ctx, node.ID, SpecStateInvestigate); err == nil {
+			progressPayload, _ := json.Marshal(map[string]any{
+				"from_state": fromState,
+				"to_state":   SpecStateInvestigate,
+				"reason":     "missing gates were converted into an explicit investigation work order",
+				"task_id":    task.ID,
+			})
+			_, _ = h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "progress", progressPayload)
+		}
+	}
+	return task, missing, nil
+}
+
+func buildRefineryGapInvestigationBody(node Node, missing string) string {
+	return fmt.Sprintf(`## Investigation Trigger
+This task was spawned because the parent refinery item has missing or insufficient gates: %s.
+
+## Parent Spec
+Title: %s
+State at spawn: %s
+
+## Required Investigation Output
+1. Inspect the parent spec body and any attached artifacts.
+2. Determine whether the missing gates are genuinely absent or only poorly named.
+3. Draft concrete content for Definition of Done, Acceptance Criteria, and Test Plan where needed.
+4. Identify unresolved ambiguities that must return to Clarify rather than being guessed.
+5. Record findings as visible child output under the parent item, with rationale and source evidence.
+
+## Guardrails
+Do not treat missing gates as a terminal blocker. Treat them as gap-requirements for investigation. Preserve provenance and make the next recommended FSM state explicit.`, missing, node.Title, node.State)
+}
+
+func shouldMoveToInvestigateForGap(state string) bool {
+	switch refineryColumnState(state) {
+	case SpecStateIntakeRaw, SpecStateRequirementClarify, SpecStateDraft, SpecStateReview, SpecStateNeedsAttention:
+		return true
+	default:
+		return false
+	}
+}
+
+func renderNodeActivityHTML(w io.Writer, spaceSlug string, node Node, children []Node, ops []Op, childOps []Op, dependencies []Node, blockers []Node) {
+	fmt.Fprintf(w, `<div class="space-y-4" data-activity-node="%s">`, html.EscapeString(node.ID))
+	fmt.Fprint(w, `<div class="grid grid-cols-2 gap-2 text-xs">`)
+	renderActivityStatusCard(w, "Current state", stateLabel(node.State))
+	assignee := "No agent or human assigned"
+	if strings.TrimSpace(node.Assignee) != "" {
+		assignee = node.Assignee
+		if node.AssigneeKind != "" {
+			assignee += " (" + node.AssigneeKind + ")"
+		}
+	}
+	renderActivityStatusCard(w, "Assigned to", assignee)
+	renderActivityStatusCard(w, "Child records", fmt.Sprintf("%d total", len(children)))
+	renderActivityStatusCard(w, "Blocking deps", fmt.Sprintf("%d active", len(blockers)))
+	fmt.Fprint(w, `</div>`)
+
+	fmt.Fprint(w, `<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs">`)
+	fmt.Fprint(w, `<p class="font-medium text-warm mb-2">Active work</p>`)
+	activeCount := 0
+	for _, child := range children {
+		if child.Kind == KindTask && child.State != StateDone && child.State != "deleted" {
+			activeCount++
+			renderActivityChild(w, spaceSlug, child)
+		}
+	}
+	if activeCount == 0 {
+		fmt.Fprint(w, `<p class="text-warm-faint">No active work is currently attached. Completed Hive output, artifacts, and historical child records are listed below.</p>`)
+	}
+	fmt.Fprint(w, `</div>`)
+
+	fmt.Fprint(w, `<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs">`)
+	fmt.Fprint(w, `<p class="font-medium text-warm mb-2">Artifacts and child records</p>`)
+	if len(children) == 0 {
+		fmt.Fprint(w, `<p class="text-warm-faint">No child artifacts, tasks, or comments are attached.</p>`)
+	} else {
+		for _, child := range children {
+			renderActivityChild(w, spaceSlug, child)
+		}
+	}
+	fmt.Fprint(w, `</div>`)
+
+	fmt.Fprint(w, `<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs">`)
+	fmt.Fprint(w, `<p class="font-medium text-warm mb-2">Blockers</p>`)
+	missing := refineryMissingSections(node.Body)
+	if missing != "None detected." {
+		fmt.Fprintf(w, `<p class="mb-2 text-amber-200">Missing spec gates: %s</p>`, html.EscapeString(missing))
+	}
+	if len(blockers) == 0 && missing == "None detected." {
+		fmt.Fprint(w, `<p class="text-warm-faint">No active dependency blockers detected.</p>`)
+	}
+	for _, blocker := range blockers {
+		renderActivityChild(w, spaceSlug, blocker)
+	}
+	if len(dependencies) > 0 {
+		fmt.Fprint(w, `<p class="mt-3 mb-1 text-warm-faint uppercase tracking-wide text-[10px]">All dependencies</p>`)
+		for _, dep := range dependencies {
+			renderActivityChild(w, spaceSlug, dep)
+		}
+	}
+	fmt.Fprint(w, `</div>`)
+
+	events := make([]nodeActivityEvent, 0, len(ops)+len(childOps))
+	for _, op := range ops {
+		events = append(events, nodeActivityEvent{At: op.CreatedAt, Kind: op.Op, Actor: op.Actor, Summary: summarizeActivityOp(op), Payload: op.Payload})
+	}
+	for _, op := range childOps {
+		events = append(events, nodeActivityEvent{At: op.CreatedAt, Kind: op.Op, Actor: op.Actor, Summary: summarizeActivityOp(op), Payload: op.Payload})
+	}
+	sort.Slice(events, func(i, j int) bool { return events[i].At.After(events[j].At) })
+	fmt.Fprint(w, `<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs">`)
+	fmt.Fprint(w, `<p class="font-medium text-warm mb-2">Provenance timeline</p>`)
+	if len(events) == 0 {
+		fmt.Fprint(w, `<p class="text-warm-faint">No operations recorded for this item yet.</p>`)
+	} else {
+		fmt.Fprint(w, `<div class="space-y-2">`)
+		for _, ev := range events {
+			fmt.Fprintf(w, `<div class="border-l border-brand/30 pl-3 py-1"><div class="flex items-center justify-between gap-2"><span class="text-warm">%s</span><span class="text-warm-faint">%s</span></div><p class="text-warm-muted mt-1">%s</p><p class="text-[10px] text-warm-faint mt-1">%s</p></div>`, html.EscapeString(ev.Kind), html.EscapeString(ev.At.Format("Jan 2 15:04:05")), html.EscapeString(ev.Summary), html.EscapeString(nonEmpty(ev.Actor, "system")))
+		}
+		fmt.Fprint(w, `</div>`)
+	}
+	fmt.Fprint(w, `</div>`)
+	fmt.Fprint(w, `</div>`)
+}
+
+func renderActivityStatusCard(w io.Writer, label, value string) {
+	fmt.Fprintf(w, `<div class="rounded-lg border border-edge bg-surface p-2"><p class="text-warm-faint uppercase tracking-wide text-[10px]">%s</p><p class="text-warm mt-1">%s</p></div>`, html.EscapeString(label), html.EscapeString(value))
+}
+
+func renderActivityChild(w io.Writer, spaceSlug string, child Node) {
+	title := child.Title
+	if title == "" {
+		title = truncatePlain(child.Body, 90)
+	}
+	if title == "" {
+		title = child.Kind
+	}
+	actor := child.Author
+	if child.Assignee != "" {
+		actor = "assigned to " + child.Assignee
+	}
+	fmt.Fprintf(w, `<a href="/app/%s/node/%s" class="block rounded-lg border border-edge bg-surface px-3 py-2 mb-2 hover:border-brand/40"><div class="flex items-center justify-between gap-2"><span class="text-warm">%s</span><span class="text-warm-faint">%s</span></div>`, html.EscapeString(spaceSlug), html.EscapeString(child.ID), html.EscapeString(title), html.EscapeString(stateLabel(child.State)))
+	if child.Kind == KindComment && strings.TrimSpace(child.Body) != "" {
+		fmt.Fprintf(w, `<p class="mt-1 text-[11px] leading-relaxed text-warm-muted">%s</p>`, html.EscapeString(truncatePlain(child.Body, 260)))
+	}
+	fmt.Fprintf(w, `<div class="flex items-center gap-2 mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-brand/10 text-brand">%s</span><span class="text-[10px] text-warm-faint">%s</span></div></a>`, html.EscapeString(child.Kind), html.EscapeString(actor))
+}
+
+func summarizeActivityOp(op Op) string {
+	if len(op.Payload) > 0 && string(op.Payload) != "null" {
+		var m map[string]any
+		if json.Unmarshal(op.Payload, &m) == nil {
+			switch op.Op {
+			case "intake":
+				return fmt.Sprintf("Classified as %s; recommended %s. %s", valueString(m["classifier_kind"]), valueString(m["recommended_state"]), valueString(m["rationale"]))
+			case "attach":
+				return fmt.Sprintf("Attached %s with %s.", valueString(m["filename"]), valueString(m["hash"]))
+			case "progress", "review", "complete":
+				return fmt.Sprintf("Moved from %s to %s. %s", valueString(m["from_state"]), valueString(m["to_state"]), valueString(m["reason"]))
+			case "delete":
+				return fmt.Sprintf("Soft-delete transition from %s to %s. %s", valueString(m["from_state"]), valueString(m["to_state"]), valueString(m["reason"]))
+			case "intend":
+				if valueString(m["source"]) == "refinery.gap_investigation" {
+					return fmt.Sprintf("Started gap investigation task %q for missing gates: %s. Assigned to %s.", valueString(m["task_title"]), valueString(m["missing_gates"]), valueString(m["assignee"]))
+				}
+			case "hive_mirror":
+				return fmt.Sprintf("Mirrored %s from Hive/EventGraph. Hive task: %s. State: %s.", valueString(m["event_type"]), valueString(m["hive_task_id"]), valueString(m["state"]))
+			case "respond":
+				return "Recorded a response/comment attached to this item."
+			}
+		}
+	}
+	return "Recorded " + op.Op + " operation."
+}
+
+func valueString(v any) string {
+	if v == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(v))
+}
+
+func nonEmpty(s, fallback string) string {
+	if strings.TrimSpace(s) == "" {
+		return fallback
+	}
+	return s
+}
+
 func (h *Handlers) handleNodeDetail(w http.ResponseWriter, r *http.Request) {
 	space, isOwner, err := h.spaceForRead(r)
 	if errors.Is(err, ErrNotFound) {
@@ -2391,7 +3297,7 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		nodeKind := r.FormValue("kind")
-		if nodeKind != KindProject && nodeKind != KindGoal && nodeKind != KindRole && nodeKind != KindTeam && nodeKind != KindPolicy && nodeKind != KindDocument && nodeKind != KindQuestion && nodeKind != KindProposal {
+		if nodeKind != KindProject && nodeKind != KindGoal && nodeKind != KindRole && nodeKind != KindTeam && nodeKind != KindPolicy && nodeKind != KindDocument && nodeKind != KindQuestion && nodeKind != KindProposal && nodeKind != KindSpec {
 			nodeKind = KindTask // default
 		}
 		var intentCauses []string
@@ -3760,7 +4666,12 @@ func (h *Handlers) handleNodeState(w http.ResponseWriter, r *http.Request) {
 	} else if newState == StateReview {
 		opName = "review"
 	}
-	op, _ := h.store.RecordOp(r.Context(), space.ID, nodeID, h.userName(r), h.userID(r), opName, nil)
+	statePayload, _ := json.Marshal(map[string]string{
+		"from_state": node.State,
+		"to_state":   newState,
+		"reason":     strings.TrimSpace(r.FormValue("reason")),
+	})
+	op, _ := h.store.RecordOp(r.Context(), space.ID, nodeID, h.userName(r), h.userID(r), opName, statePayload)
 
 	// Notify assignee on state change.
 	uid := h.userID(r)
@@ -3845,6 +4756,8 @@ func (h *Handlers) handleNodeUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) handleNodeDelete(w http.ResponseWriter, r *http.Request) {
+	populateFormFromJSON(r)
+	_ = r.ParseForm()
 	space, err := h.spaceFromRequest(r)
 	if errors.Is(err, ErrNotFound) {
 		http.NotFound(w, r)
@@ -3856,13 +4769,37 @@ func (h *Handlers) handleNodeDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nodeID := r.PathValue("id")
-	if err := h.store.DeleteNode(r.Context(), nodeID); err != nil {
+	node, err := h.store.GetNode(r.Context(), nodeID)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if node.SpaceID != space.ID {
+		http.Error(w, "node does not belong to requested space", http.StatusBadRequest)
+		return
+	}
+	if err := h.store.SoftDeleteNodePreservingContent(r.Context(), nodeID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	reason := strings.TrimSpace(r.FormValue("reason"))
+	if reason == "" {
+		reason = strings.TrimSpace(r.URL.Query().Get("reason"))
+	}
+	payload, _ := json.Marshal(map[string]string{
+		"from_state": node.State,
+		"to_state":   "deleted",
+		"reason":     reason,
+		"mode":       "soft_delete_preserve_content",
+	})
+	op, _ := h.store.RecordOp(r.Context(), space.ID, nodeID, h.userName(r), h.userID(r), "delete", payload)
 
 	if wantsJSON(r) {
-		writeJSON(w, http.StatusOK, map[string]any{"deleted": nodeID})
+		writeJSON(w, http.StatusOK, map[string]any{"deleted": nodeID, "soft_delete": true, "op": op})
 		return
 	}
 	if isHTMX(r) {
@@ -3882,6 +4819,20 @@ type BoardColumn struct {
 	State string
 	Label string
 	Nodes []Node
+}
+
+type RefineryLineage struct {
+	RootID                   string
+	LatestVersion            string
+	LatestVersionID          string
+	LatestTitle              string
+	LatestState              string
+	LatestMissing            string
+	PreviousVersion          string
+	VersionCount             int
+	ActiveInvestigationID    string
+	ActiveInvestigationTitle string
+	MovementSummary          string
 }
 
 func groupByState(nodes []Node) []BoardColumn {
@@ -3908,6 +4859,155 @@ func groupByState(nodes []Node) []BoardColumn {
 		})
 	}
 	return columns
+}
+
+func groupSpecsByRefineryStage(nodes []Node) []BoardColumn {
+	columns := []BoardColumn{
+		{State: SpecStateIntakeRaw, Label: "Intake"},
+		{State: SpecStateRequirementClarify, Label: "Clarify"},
+		{State: SpecStateInvestigate, Label: "Investigate"},
+		{State: SpecStateDraft, Label: "Draft Spec"},
+		{State: SpecStateReview, Label: "Review"},
+		{State: SpecStateNormative, Label: "Normative"},
+		{State: SpecStateNeedsAttention, Label: "Needs Attention"},
+		{State: SpecStateWorkReady, Label: "Build"},
+		{State: SpecStateParked, Label: "Parked"},
+		{State: SpecStateWorkShipped, Label: "Shipped"},
+	}
+	byState := map[string]*BoardColumn{}
+	for i := range columns {
+		byState[columns[i].State] = &columns[i]
+	}
+	for _, n := range nodes {
+		key := refineryColumnState(n.State)
+		if col, ok := byState[key]; ok {
+			col.Nodes = append(col.Nodes, n)
+		}
+	}
+	return columns
+}
+
+func (h *Handlers) refineryLineageByRoot(ctx context.Context, roots []Node) map[string]RefineryLineage {
+	result := make(map[string]RefineryLineage, len(roots))
+	for _, root := range roots {
+		children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: root.SpaceID, ParentID: root.ID, Limit: 500})
+		if err != nil {
+			continue
+		}
+		result[root.ID] = buildRefineryLineage(root, children)
+	}
+	return result
+}
+
+func buildRefineryLineage(root Node, children []Node) RefineryLineage {
+	lineage := RefineryLineage{
+		RootID:          root.ID,
+		LatestMissing:   refineryMissingSections(root.Body),
+		MovementSummary: "No SemVer refinement yet",
+	}
+
+	var latest *Node
+	var latestVersion semverParts
+	versionCount := 0
+	for i := range children {
+		if children[i].Kind != KindSpec {
+			continue
+		}
+		version, ok := parseRefineryVersion(children[i])
+		if !ok {
+			continue
+		}
+		versionCount++
+		if latest == nil || compareSemver(version, latestVersion) > 0 {
+			latest = &children[i]
+			latestVersion = version
+		}
+	}
+
+	lineage.VersionCount = versionCount
+	if latest != nil {
+		lineage.LatestVersion = latestVersion.raw
+		lineage.LatestVersionID = latest.ID
+		lineage.LatestTitle = latest.Title
+		lineage.LatestState = latest.State
+		lineage.LatestMissing = refineryMissingSections(latest.Body)
+		if previous := previousRefineryVersion(children, latestVersion); previous != nil {
+			if parsed, ok := parseRefineryVersion(*previous); ok {
+				lineage.PreviousVersion = parsed.raw
+			}
+		}
+		lineage.MovementSummary = fmt.Sprintf("SemVer advanced to v%s (%s)", latestVersion.raw, refineryStateLabel(latest.State))
+		if lineage.LatestMissing != "None detected." {
+			lineage.MovementSummary += "; gaps remain: " + lineage.LatestMissing
+		}
+	}
+
+	for i := range children {
+		child := children[i]
+		if child.Kind != KindTask || child.State == StateDone || child.State == "deleted" {
+			continue
+		}
+		if latest != nil && containsString(child.Causes, latest.ID) {
+			lineage.ActiveInvestigationID = child.ID
+			lineage.ActiveInvestigationTitle = child.Title
+			break
+		}
+		if latest == nil && strings.HasPrefix(child.Title, "Investigate refinery gaps:") {
+			lineage.ActiveInvestigationID = child.ID
+			lineage.ActiveInvestigationTitle = child.Title
+			break
+		}
+	}
+	if lineage.ActiveInvestigationTitle != "" {
+		lineage.MovementSummary += "; active investigation: " + lineage.ActiveInvestigationTitle
+	}
+	return lineage
+}
+
+func previousRefineryVersion(children []Node, latest semverParts) *Node {
+	var previous *Node
+	var previousVersion semverParts
+	for i := range children {
+		if children[i].Kind != KindSpec {
+			continue
+		}
+		version, ok := parseRefineryVersion(children[i])
+		if !ok || compareSemver(version, latest) >= 0 {
+			continue
+		}
+		if previous == nil || compareSemver(version, previousVersion) > 0 {
+			previous = &children[i]
+			previousVersion = version
+		}
+	}
+	return previous
+}
+
+func refineryColumnState(state string) string {
+	switch state {
+	case SpecStateIntakeRaw, SpecStateIntakeTriaged, StateOpen, "":
+		return SpecStateIntakeRaw
+	case SpecStateRequirementDraft, SpecStateRequirementClarify:
+		return SpecStateRequirementClarify
+	case SpecStateInvestigate:
+		return SpecStateInvestigate
+	case SpecStateDraft:
+		return SpecStateDraft
+	case SpecStateReview, StateReview:
+		return SpecStateReview
+	case SpecStateNormative:
+		return SpecStateNormative
+	case SpecStateNeedsAttention:
+		return SpecStateNeedsAttention
+	case SpecStateParked:
+		return SpecStateParked
+	case SpecStateWorkReady, SpecStateWorkImplementing, SpecStateWorkVerifying, StateActive, StateBlocked:
+		return SpecStateWorkReady
+	case SpecStateWorkShipped, SpecStateWorkLearned, StateDone, StateClosed:
+		return SpecStateWorkShipped
+	default:
+		return SpecStateIntakeRaw
+	}
 }
 
 // Member holds aggregated activity data for the People lens.
@@ -4286,6 +5386,433 @@ func (h *Handlers) handleHiveEscalation(w http.ResponseWriter, r *http.Request) 
 		"Hive ESCALATION: "+req.Reason)
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "escalated", "task_id": req.TaskID})
+}
+
+// handleHiveMirror accepts POST /api/hive/mirror from the Civilization runtime.
+// It mirrors canonical EventGraph task progress back onto the Site node that
+// originated the work, so the operator console does not invent parallel work.
+type hiveMirrorRequest struct {
+	NodeID       string `json:"node_id"`
+	HiveTaskID   string `json:"hive_task_id"`
+	HiveChainRef string `json:"hive_chain_ref"`
+	EventType    string `json:"event_type"`
+	State        string `json:"state"`
+	Summary      string `json:"summary"`
+}
+
+func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
+	var req hiveMirrorRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(req.NodeID) == "" {
+		http.Error(w, "node_id required", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	node, err := h.store.GetNode(ctx, req.NodeID)
+	if errors.Is(err, ErrNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nextState := strings.TrimSpace(req.State)
+	if nextState == "" && req.EventType == "work.task.completed" {
+		nextState = StateDone
+	}
+	if nextState != "" && node.State != "deleted" {
+		if err := h.store.UpdateNodeState(ctx, node.ID, nextState); err != nil {
+			http.Error(w, "update node state: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	payload, _ := json.Marshal(map[string]string{
+		"source":         "hive.eventgraph.mirror",
+		"event_type":     req.EventType,
+		"hive_task_id":   req.HiveTaskID,
+		"hive_chain_ref": req.HiveChainRef,
+		"state":          nextState,
+	})
+	_, _ = h.store.RecordOp(ctx, node.SpaceID, node.ID, "Hive", "hive", "hive_mirror", payload)
+
+	if strings.TrimSpace(req.Summary) != "" {
+		commentTitle := "Hive EventGraph progress"
+		if req.EventType == "work.task.completed" {
+			commentTitle = "Hive EventGraph completion"
+		}
+		if !h.hasDuplicateHiveMirrorComment(ctx, *node, commentTitle, req.Summary) {
+			comment, err := h.store.CreateNode(ctx, CreateNodeParams{
+				SpaceID:    node.SpaceID,
+				ParentID:   node.ID,
+				Kind:       KindComment,
+				Title:      commentTitle,
+				Body:       req.Summary,
+				State:      StateOpen,
+				Priority:   PriorityMedium,
+				Author:     "Hive",
+				AuthorID:   "hive",
+				AuthorKind: "agent",
+			})
+			if err != nil {
+				http.Error(w, "create mirror comment: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			commentPayload, _ := json.Marshal(map[string]string{
+				"source":         "hive.eventgraph.mirror",
+				"event_type":     req.EventType,
+				"hive_task_id":   req.HiveTaskID,
+				"hive_chain_ref": req.HiveChainRef,
+			})
+			_, _ = h.store.RecordOp(ctx, node.SpaceID, comment.ID, "Hive", "hive", "hive_mirror", commentPayload)
+		}
+	}
+
+	versionID := ""
+	if req.EventType == "work.task.completed" && strings.TrimSpace(req.Summary) != "" {
+		versionedSpec, err := h.createRefineryVersionFromHiveMirror(ctx, *node, req)
+		if err != nil {
+			http.Error(w, "create versioned refinement: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if versionedSpec != nil {
+			versionID = versionedSpec.ID
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":         "mirrored",
+		"node_id":        node.ID,
+		"hive_chain_ref": req.HiveChainRef,
+		"version_id":     versionID,
+	})
+}
+
+// handleHiveWebhookDeliveries exposes Site-to-Hive delivery exceptions and retry state.
+func (h *Handlers) handleHiveWebhookDeliveries(w http.ResponseWriter, r *http.Request) {
+	status := strings.TrimSpace(r.URL.Query().Get("status"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	deliveries, err := h.store.ListWebhookDeliveries(r.Context(), status, limit)
+	if err != nil {
+		http.Error(w, "list webhook deliveries: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"deliveries": deliveries})
+}
+
+func (h *Handlers) hasDuplicateHiveMirrorComment(ctx context.Context, node Node, title, summary string) bool {
+	children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: node.SpaceID, ParentID: node.ID, Limit: 500})
+	if err != nil {
+		return false
+	}
+	trimmedSummary := strings.TrimSpace(summary)
+	for _, child := range children {
+		if child.Kind == KindComment && child.Title == title && strings.TrimSpace(child.Body) == trimmedSummary {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *Handlers) createRefineryVersionFromHiveMirror(ctx context.Context, source Node, req hiveMirrorRequest) (*Node, error) {
+	root, err := h.findRefineryRootSpec(ctx, source)
+	if err != nil {
+		return nil, err
+	}
+	if root == nil {
+		return nil, nil
+	}
+
+	children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: root.SpaceID, ParentID: root.ID, Limit: 500})
+	if err != nil {
+		return nil, err
+	}
+	missing := refineryMissingSections(req.Summary)
+	for _, child := range children {
+		if child.Kind != KindSpec {
+			continue
+		}
+		if req.HiveChainRef != "" && strings.Contains(child.Body, "hive_chain_ref: "+req.HiveChainRef) {
+			if missing != "None detected." {
+				if _, err := h.createFollowupVersionGapTask(ctx, *root, child, missing); err != nil {
+					return nil, err
+				}
+			}
+			return &child, nil
+		}
+		if req.HiveTaskID != "" && strings.Contains(child.Body, "hive_task_id: "+req.HiveTaskID) {
+			if missing != "None detected." {
+				if _, err := h.createFollowupVersionGapTask(ctx, *root, child, missing); err != nil {
+					return nil, err
+				}
+			}
+			return &child, nil
+		}
+	}
+
+	version, previous := nextRefineryVersion(children)
+	body := buildRefineryVersionBody(*root, previous, source, req, version)
+	state := SpecStateRequirementClarify
+	if missing == "None detected." {
+		state = SpecStateDraft
+	}
+
+	versionedSpec, err := h.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    root.SpaceID,
+		ParentID:   root.ID,
+		Kind:       KindSpec,
+		Title:      fmt.Sprintf("%s v%s", root.Title, version),
+		Body:       body,
+		State:      state,
+		Priority:   PriorityHigh,
+		Author:     "Hive",
+		AuthorID:   "hive",
+		AuthorKind: "agent",
+		Causes:     []string{root.ID, source.ID},
+		Tags:       []string{"refinery-version", "hive-mirror"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	previousID := ""
+	if previous != nil {
+		previousID = previous.ID
+	}
+	payload, _ := json.Marshal(map[string]string{
+		"source":              "hive.eventgraph.versioned_refinement",
+		"event_type":          req.EventType,
+		"hive_task_id":        req.HiveTaskID,
+		"hive_chain_ref":      req.HiveChainRef,
+		"root_spec_id":        root.ID,
+		"source_node_id":      source.ID,
+		"previous_version_id": previousID,
+		"version":             version,
+		"state":               state,
+	})
+	_, _ = h.store.RecordOp(ctx, root.SpaceID, versionedSpec.ID, "Hive", "hive", "hive_mirror", payload)
+
+	if missing != "None detected." {
+		if _, err := h.createFollowupVersionGapTask(ctx, *root, *versionedSpec, missing); err != nil {
+			return nil, err
+		}
+	}
+
+	return versionedSpec, nil
+}
+
+func (h *Handlers) createFollowupVersionGapTask(ctx context.Context, root Node, version Node, missing string) (*Node, error) {
+	children, err := h.store.ListNodes(ctx, ListNodesParams{SpaceID: root.SpaceID, ParentID: root.ID, Limit: 500})
+	if err != nil {
+		return nil, err
+	}
+	for _, child := range children {
+		if child.Kind == KindTask && child.State != "deleted" && containsString(child.Causes, version.ID) && strings.HasPrefix(child.Title, "Investigate refinery gaps:") {
+			return nil, nil
+		}
+	}
+
+	taskBody := fmt.Sprintf(`## Investigation Trigger
+Version %s was created from Hive/EventGraph output, but it is still missing or insufficient for these normative gates: %s.
+
+## Version Under Investigation
+Title: %s
+Node ID: %s
+State at spawn: %s
+
+## Required Investigation Output
+1. Inspect the versioned spec artifact and its root intake/spec.
+2. Fill the missing gates only when the evidence supports them.
+3. If a gate cannot be completed, name the exact ambiguity, missing source, or violated invariant.
+4. Produce the next candidate version content as Hive completion output, not by mutating the parent artifact.
+5. Preserve the Version Lineage and recommend the next FSM state.
+
+## Guardrails
+Do not rewrite the root intake/spec or any previous version. Each refinement is a new SemVer artifact and a matter of record.`, version.Title, missing, version.Title, version.ID, version.State)
+
+	task, err := h.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    root.SpaceID,
+		ParentID:   root.ID,
+		Kind:       KindTask,
+		Title:      "Investigate refinery gaps: " + version.Title,
+		Body:       taskBody,
+		State:      StateOpen,
+		Priority:   PriorityHigh,
+		Assignee:   "Agents",
+		Author:     "Hive",
+		AuthorID:   "hive",
+		AuthorKind: "agent",
+		Causes:     []string{root.ID, version.ID},
+		Tags:       []string{"refinery-gap", "version-followup"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	payload, _ := json.Marshal(map[string]string{
+		"source":          "refinery.version_gap_investigation",
+		"kind":            KindTask,
+		"priority":        PriorityHigh,
+		"description":     taskBody,
+		"parent_id":       root.ID,
+		"version_id":      version.ID,
+		"missing_gates":   missing,
+		"recommended_fsm": SpecStateInvestigate,
+	})
+	_, _ = h.store.RecordOp(ctx, root.SpaceID, task.ID, "Hive", "hive", "intend", payload)
+	return task, nil
+}
+
+func (h *Handlers) findRefineryRootSpec(ctx context.Context, node Node) (*Node, error) {
+	current := node
+	var nearestSpec *Node
+	for {
+		if current.Kind == KindSpec {
+			copied := current
+			nearestSpec = &copied
+		}
+		if current.ParentID == "" {
+			return nearestSpec, nil
+		}
+		parent, err := h.store.GetNode(ctx, current.ParentID)
+		if errors.Is(err, ErrNotFound) {
+			return nearestSpec, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		current = *parent
+	}
+}
+
+type semverParts struct {
+	major int
+	minor int
+	patch int
+	raw   string
+}
+
+func nextRefineryVersion(children []Node) (string, *Node) {
+	var latest *Node
+	var latestVersion semverParts
+	for i := range children {
+		if children[i].Kind != KindSpec {
+			continue
+		}
+		version, ok := parseRefineryVersion(children[i])
+		if !ok {
+			continue
+		}
+		if latest == nil || compareSemver(version, latestVersion) > 0 {
+			latest = &children[i]
+			latestVersion = version
+		}
+	}
+	if latest == nil {
+		return "0.1.0", nil
+	}
+	return fmt.Sprintf("%d.%d.0", latestVersion.major, latestVersion.minor+1), latest
+}
+
+func parseRefineryVersion(node Node) (semverParts, bool) {
+	bodyRE := regexp.MustCompile(`(?m)^refinery_version:\s*([0-9]+)\.([0-9]+)\.([0-9]+)\s*$`)
+	if match := bodyRE.FindStringSubmatch(node.Body); len(match) == 4 {
+		return semverFromMatch(match)
+	}
+	titleRE := regexp.MustCompile(`\bv([0-9]+)\.([0-9]+)\.([0-9]+)\b`)
+	if match := titleRE.FindStringSubmatch(node.Title); len(match) == 4 {
+		return semverFromMatch(match)
+	}
+	return semverParts{}, false
+}
+
+func semverFromMatch(match []string) (semverParts, bool) {
+	major, err1 := strconv.Atoi(match[1])
+	minor, err2 := strconv.Atoi(match[2])
+	patch, err3 := strconv.Atoi(match[3])
+	if err1 != nil || err2 != nil || err3 != nil {
+		return semverParts{}, false
+	}
+	return semverParts{
+		major: major,
+		minor: minor,
+		patch: patch,
+		raw:   fmt.Sprintf("%d.%d.%d", major, minor, patch),
+	}, true
+}
+
+func compareSemver(a, b semverParts) int {
+	if a.major != b.major {
+		return a.major - b.major
+	}
+	if a.minor != b.minor {
+		return a.minor - b.minor
+	}
+	return a.patch - b.patch
+}
+
+func containsString(values []string, needle string) bool {
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+	return false
+}
+
+func buildRefineryVersionBody(root Node, previous *Node, source Node, req hiveMirrorRequest, version string) string {
+	previousID := "none"
+	previousVersion := "none"
+	if previous != nil {
+		previousID = previous.ID
+		if parsed, ok := parseRefineryVersion(*previous); ok {
+			previousVersion = parsed.raw
+		}
+	}
+
+	missing := refineryMissingSections(req.Summary)
+	gateAssessment := "This version contains all currently required normative gate headings in the Hive investigation output and is ready to enter Draft Spec review."
+	if missing != "None detected." {
+		gateAssessment = "This version is not draft-ready. The next refinement must investigate or clarify these missing gates: " + missing + "."
+	}
+
+	return fmt.Sprintf(`---
+refinery_version: %s
+root_spec_id: %s
+previous_version_id: %s
+previous_version: %s
+source_node_id: %s
+hive_task_id: %s
+hive_chain_ref: %s
+event_type: %s
+created_by: hive
+created_at: %s
+---
+
+# %s v%s
+
+## Version Lineage
+- Root intake/spec: %s
+- Previous version: %s (%s)
+- Source Site node: %s
+- Hive task: %s
+- EventGraph ref: %s
+
+## Investigation Result
+%s
+
+## Gate Assessment
+%s
+
+## Provenance Rule
+This artifact is a versioned refinement. It does not rewrite or replace the parent intake/spec. The parent remains a matter of record; this version advances the lineage from rough input toward a vetted, ship-ready normative spec.
+`, version, root.ID, previousID, previousVersion, source.ID, req.HiveTaskID, req.HiveChainRef, req.EventType, time.Now().UTC().Format(time.RFC3339), root.Title, version, root.ID, previousID, previousVersion, source.ID, req.HiveTaskID, req.HiveChainRef, strings.TrimSpace(req.Summary), gateAssessment)
 }
 
 // handleHiveFeed renders the phase timeline partial for HTMX polling — public, no auth required.

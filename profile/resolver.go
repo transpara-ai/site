@@ -2,6 +2,11 @@ package profile
 
 import "net/http"
 
+// CookieName stores the operator-selected profile for subsequent same-host
+// navigation. QueryParamResolver remains the explicit override; this cookie
+// is only the persistence layer after that override is chosen.
+const CookieName = "lovyou_profile"
+
 // Resolver maps an incoming request to a Profile, or returns nil to
 // defer to the next resolver in a chain. The interface is deliberately
 // small: every future resolver (subdomain, cookie, host header, …)
@@ -22,6 +27,20 @@ func (QueryParamResolver) Resolve(r *http.Request) *Profile {
 		return nil
 	}
 	return Lookup(slug)
+}
+
+// CookieResolver resolves a Profile from the profile persistence cookie.
+// Empty, missing, or unknown cookie values return nil so the chain may
+// continue to the default resolver.
+type CookieResolver struct{}
+
+// Resolve reads the persisted profile slug from CookieName.
+func (CookieResolver) Resolve(r *http.Request) *Profile {
+	c, err := r.Cookie(CookieName)
+	if err != nil || c.Value == "" {
+		return nil
+	}
+	return Lookup(c.Value)
 }
 
 // DefaultResolver always returns the default profile. Place it last in

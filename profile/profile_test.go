@@ -315,6 +315,48 @@ func TestQueryParamResolver(t *testing.T) {
 	}
 }
 
+func TestCookieResolver(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: "transpara"})
+	p := CookieResolver{}.Resolve(req)
+	if p == nil || p.Slug != "transpara" {
+		t.Fatalf("CookieResolver = %+v, want transpara", p)
+	}
+}
+
+func TestMiddleware_persistsQueryProfileCookie(t *testing.T) {
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
+	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/?profile=transpara", nil)
+	handler.ServeHTTP(rec, req)
+
+	cookies := rec.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected profile cookie to be set")
+	}
+	found := false
+	for _, c := range cookies {
+		if c.Name == CookieName && c.Value == "transpara" && c.Path == "/" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("profile cookie not found in %#v", cookies)
+	}
+}
+
+func TestChain_cookieResolverPersistsSelection(t *testing.T) {
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
+	req := httptest.NewRequest(http.MethodGet, "/app/demo/refinery", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: "transpara"})
+	p := chain.Resolve(req)
+	if p == nil || p.Slug != "transpara" {
+		t.Fatalf("chain.Resolve cookie = %+v, want transpara", p)
+	}
+}
+
 func TestDefaultResolver_alwaysDefault(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/?profile=nonsense", nil)
 	p := DefaultResolver{}.Resolve(req)

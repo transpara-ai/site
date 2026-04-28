@@ -5,7 +5,8 @@
   "description": "Tailwind v4 build chain for site. Not a published package.",
   "scripts": {
     "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/site.css --minify",
-    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/site.css --watch"
+    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/site.css --watch",
+    "verify": "make verify"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",

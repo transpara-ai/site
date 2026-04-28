@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -90,6 +91,7 @@ func (m *Mind) OnQuestionAsked(spaceID, spaceSlug string, question *Node) {
 	agentID, agentName, err := m.store.GetFirstAgent(ctx)
 	if err != nil || agentID == "" {
 		log.Printf("mind: no agent available to answer question %s", question.ID)
+		m.recordQuestionAnswerStatus(ctx, spaceID, question.ID, "No answering agent is currently available for this question.")
 		return
 	}
 
@@ -108,6 +110,7 @@ func (m *Mind) OnQuestionAsked(spaceID, spaceSlug string, question *Node) {
 	response, err := m.callClaude(ctx, systemPrompt, messages)
 	if err != nil {
 		log.Printf("mind: answer question %q: %v", question.Title, err)
+		m.recordQuestionAnswerStatus(ctx, spaceID, question.ID, fmt.Sprintf("Answer generation failed: %s. The question was preserved; configure a valid answering backend and retry.", userFacingMindError(err)))
 		return
 	}
 
@@ -127,6 +130,41 @@ func (m *Mind) OnQuestionAsked(spaceID, spaceSlug string, question *Node) {
 
 	m.store.RecordOp(ctx, spaceID, node.ID, agentName, agentID, "respond", nil)
 	log.Printf("mind: answered question %q as %s (node %s)", question.Title, agentName, node.ID)
+}
+
+func userFacingMindError(err error) string {
+	msg := strings.TrimSpace(err.Error())
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "invalid authentication credentials") || strings.Contains(lower, "401"):
+		return "the configured Claude credential is invalid"
+	case strings.Contains(lower, "executable file not found"):
+		return "the Claude CLI is not installed or not on PATH"
+	case strings.Contains(lower, "empty response"):
+		return "the model returned an empty response"
+	case msg == "":
+		return "unknown model backend error"
+	default:
+		return msg
+	}
+}
+
+func (m *Mind) recordQuestionAnswerStatus(ctx context.Context, spaceID, questionID, message string) {
+	node, err := m.store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    spaceID,
+		ParentID:   questionID,
+		Kind:       KindComment,
+		Body:       message,
+		Author:     "System",
+		AuthorID:   "system",
+		AuthorKind: "system",
+	})
+	if err != nil {
+		log.Printf("mind: create question status for %s: %v", questionID, err)
+		return
+	}
+	payload, _ := json.Marshal(map[string]string{"status": "question_answer_status"})
+	m.store.RecordOp(ctx, spaceID, node.ID, "System", "system", "respond", payload)
 }
 
 // buildQuestionAnswerPrompt builds the system prompt for answering a question,
@@ -371,9 +409,9 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 
 // workPlan is the structured output from the Mind when working on a task.
 type workPlan struct {
-	Comment  string       `json:"comment"`
-	Subtasks []workItem   `json:"subtasks"`
-	Status   string       `json:"status"` // "active" or "done"
+	Comment  string     `json:"comment"`
+	Subtasks []workItem `json:"subtasks"`
+	Status   string     `json:"status"` // "active" or "done"
 }
 
 // workItem is a subtask in a work plan, optionally with dependencies.
@@ -585,7 +623,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 
 // memoryExtract is a single memory extracted from a conversation exchange.
 type memoryExtract struct {
-	Kind       string `json:"kind"`       // "fact" | "preference" | "context"
+	Kind       string `json:"kind"` // "fact" | "preference" | "context"
 	Content    string `json:"content"`
 	Importance int    `json:"importance"` // 1-5
 }
@@ -914,6 +952,21 @@ func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []cla
 	return result
 }
 
+func claudeChildEnv(token string) []string {
+	env := os.Environ()
+	filtered := env[:0]
+	for _, entry := range env {
+		if strings.HasPrefix(entry, "CLAUDE_CODE_OAUTH_TOKEN=") {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+	if strings.EqualFold(os.Getenv("SITE_FORCE_CLAUDE_CODE_OAUTH_TOKEN"), "true") && strings.TrimSpace(token) != "" {
+		filtered = append(filtered, "CLAUDE_CODE_OAUTH_TOKEN="+token)
+	}
+	return filtered
+}
+
 func (m *Mind) callClaude(ctx context.Context, systemPrompt string, messages []claudeMessage) (string, error) {
 	if m.callClaudeOverride != nil {
 		return m.callClaudeOverride(ctx, systemPrompt, messages)
@@ -929,9 +982,10 @@ func (m *Mind) callClaude(ctx context.Context, systemPrompt string, messages []c
 	cmd := exec.CommandContext(ctx, "claude",
 		"-p", prompt.String(),
 		"--output-format", "text",
-		"--model", "claude-sonnet-4-6",
+		"--model", "sonnet",
+		"--no-session-persistence",
 	)
-	cmd.Env = append(cmd.Environ(), "CLAUDE_CODE_OAUTH_TOKEN="+m.token)
+	cmd.Env = claudeChildEnv(m.token)
 
 	out, err := cmd.Output()
 	if err != nil {

@@ -1,10 +1,12 @@
 package graph
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -195,6 +197,25 @@ func TestHandlerOp(t *testing.T) {
 		}
 	})
 
+	t.Run("intend_kind_spec", func(t *testing.T) {
+		payload := `{"op":"intend","title":"Raw refinery input","kind":"spec","body":"# Mission\n\nNeed a refined spec."}`
+		req := httptest.NewRequest("POST", "/app/handler-op-test/op", strings.NewReader(payload))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
+		}
+		var result map[string]any
+		json.NewDecoder(w.Body).Decode(&result)
+		node := result["node"].(map[string]any)
+		if node["kind"] != KindSpec {
+			t.Errorf("kind = %v, want %v", node["kind"], KindSpec)
+		}
+	})
+
 	t.Run("express_json", func(t *testing.T) {
 		body := `{"op":"express","title":"Test Post","body":"Hello world"}`
 		req := httptest.NewRequest("POST", "/app/handler-op-test/op", strings.NewReader(body))
@@ -325,9 +346,9 @@ func TestHandlerConversationDetail(t *testing.T) {
 
 func TestParseMessageSearch(t *testing.T) {
 	tests := []struct {
-		input      string
-		wantBody   string
-		wantFrom   string
+		input    string
+		wantBody string
+		wantFrom string
 	}{
 		{"hello world", "hello world", ""},
 		{"from:alice", "", "alice"},
@@ -556,6 +577,224 @@ func TestHandlerDocuments(t *testing.T) {
 			t.Errorf("first result title = %v, want Searchable Wiki Page", first["title"])
 		}
 	})
+}
+
+func TestHandlerRefinery(t *testing.T) {
+	h, store, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	if old, _ := store.GetSpaceBySlug(t.Context(), "handler-refinery-test"); old != nil {
+		store.DeleteSpace(t.Context(), old.ID)
+	}
+	space, err := store.CreateSpace(t.Context(), "handler-refinery-test", "Refinery Test", "", "test-user-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
+
+	_, err = store.CreateNode(t.Context(), CreateNodeParams{
+		SpaceID:  space.ID,
+		Kind:     KindSpec,
+		Title:    "Refine rough request",
+		Body:     "Definition of done and test plan still missing.",
+		State:    SpecStateIntakeRaw,
+		Author:   "Tester",
+		AuthorID: "test-user-1",
+	})
+	if err != nil {
+		t.Fatalf("create spec node: %v", err)
+	}
+	_, err = store.CreateNode(t.Context(), CreateNodeParams{
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		Title:    "Normal task",
+		State:    StateOpen,
+		Author:   "Tester",
+		AuthorID: "test-user-1",
+	})
+	if err != nil {
+		t.Fatalf("create task node: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/app/handler-refinery-test/refinery", nil)
+	req.Header.Set("Accept", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	var result struct {
+		Specs []Node `json:"specs"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(result.Specs) != 1 {
+		t.Fatalf("spec count = %d, want 1", len(result.Specs))
+	}
+	if result.Specs[0].Kind != KindSpec {
+		t.Errorf("kind = %q, want %q", result.Specs[0].Kind, KindSpec)
+	}
+}
+
+func TestHandlerRefineryIntake(t *testing.T) {
+	h, store, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	if old, _ := store.GetSpaceBySlug(t.Context(), "handler-refinery-intake-test"); old != nil {
+		store.DeleteSpace(t.Context(), old.ID)
+	}
+	space, err := store.CreateSpace(t.Context(), "handler-refinery-intake-test", "Refinery Intake Test", "", "test-user-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
+
+	t.Run("trivial_question_persists_as_raw_intake_with_question_recommendation", func(t *testing.T) {
+		body, contentType := multipartBody(t, map[string]string{"question": "Why is the sky blue?"}, nil)
+		req := httptest.NewRequest("POST", "/app/handler-refinery-intake-test/refinery/intake", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Accept", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
+		}
+		var result struct {
+			Node Node `json:"node"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if result.Node.Kind != KindQuestion {
+			t.Fatalf("kind = %q, want %q", result.Node.Kind, KindQuestion)
+		}
+		if result.Node.State != SpecStateIntakeRaw {
+			t.Fatalf("state = %q, want %q", result.Node.State, SpecStateIntakeRaw)
+		}
+		if !strings.Contains(result.Node.Body, "Recommended next state: "+StateOpen) {
+			t.Fatalf("body missing recommended state: %s", result.Node.Body)
+		}
+	})
+
+	t.Run("markdown_artifact_persists_as_raw_intake_with_investigate_recommendation", func(t *testing.T) {
+		files := map[string]string{"draft.md": "# Complex Platform Spec\n\nNeeds detailed architecture analysis."}
+		body, contentType := multipartBody(t, map[string]string{"outcome": "Turn this into a vetted delivery spec."}, files)
+		req := httptest.NewRequest("POST", "/app/handler-refinery-intake-test/refinery/intake", body)
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Accept", "application/json")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusCreated {
+			t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
+		}
+		var result struct {
+			Node Node `json:"node"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if result.Node.Kind != KindSpec {
+			t.Fatalf("kind = %q, want %q", result.Node.Kind, KindSpec)
+		}
+		if result.Node.State != SpecStateIntakeRaw {
+			t.Fatalf("state = %q, want %q", result.Node.State, SpecStateIntakeRaw)
+		}
+		if !strings.Contains(result.Node.Body, "Recommended next state: "+SpecStateInvestigate) {
+			t.Fatalf("body missing recommended state: %s", result.Node.Body)
+		}
+		children, err := store.ListNodes(t.Context(), ListNodesParams{SpaceID: space.ID, ParentID: result.Node.ID})
+		if err != nil {
+			t.Fatalf("list children: %v", err)
+		}
+		if len(children) != 1 || children[0].Kind != KindDocument || children[0].Title != "draft.md" {
+			t.Fatalf("child artifact = %#v, want one draft.md document", children)
+		}
+	})
+}
+
+func TestHandlerHiveRefineryState(t *testing.T) {
+	h, store, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	if old, _ := store.GetSpaceBySlug(t.Context(), "handler-hive-refinery-state-test"); old != nil {
+		store.DeleteSpace(t.Context(), old.ID)
+	}
+	space, err := store.CreateSpace(t.Context(), "handler-hive-refinery-state-test", "Hive Refinery State Test", "", "test-user-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
+
+	node, err := store.CreateNode(t.Context(), CreateNodeParams{
+		SpaceID:  space.ID,
+		Kind:     KindSpec,
+		Title:    "Classifier-ready spec",
+		Body:     "# Mission\n\nCreate a thing.",
+		State:    SpecStateIntakeRaw,
+		Author:   "Tester",
+		AuthorID: "test-user-1",
+	})
+	if err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	body := strings.NewReader(fmt.Sprintf(`{"space_id":%q,"node_id":%q,"state":%q,"reason":"classifier recommendation"}`, space.ID, node.ID, SpecStateDraft))
+	req := httptest.NewRequest("POST", "/api/hive/refinery/state", body)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	updated, err := store.GetNode(t.Context(), node.ID)
+	if err != nil {
+		t.Fatalf("get node: %v", err)
+	}
+	if updated.State != SpecStateDraft {
+		t.Fatalf("state = %q, want %q", updated.State, SpecStateDraft)
+	}
+	ops, err := store.ListOps(t.Context(), space.ID, 10)
+	if err != nil {
+		t.Fatalf("list ops: %v", err)
+	}
+	if len(ops) == 0 || ops[0].Op != "progress" || !strings.Contains(string(ops[0].Payload), "hive.refinery.automation") {
+		t.Fatalf("latest op = %#v, want progress op from hive automation", ops)
+	}
+}
+
+func multipartBody(t *testing.T, fields map[string]string, files map[string]string) (*bytes.Buffer, string) {
+	t.Helper()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for k, v := range fields {
+		if err := writer.WriteField(k, v); err != nil {
+			t.Fatalf("write field: %v", err)
+		}
+	}
+	for name, content := range files {
+		part, err := writer.CreateFormFile("artifact", name)
+		if err != nil {
+			t.Fatalf("create file: %v", err)
+		}
+		if _, err := part.Write([]byte(content)); err != nil {
+			t.Fatalf("write file: %v", err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart: %v", err)
+	}
+	return body, writer.FormDataContentType()
 }
 
 func TestHandlerQuestions(t *testing.T) {

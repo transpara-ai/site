@@ -35,8 +35,27 @@ func Middleware(resolver Resolver) func(http.Handler) http.Handler {
 				if p == nil {
 					p = Default()
 				}
+				persistQueryProfile(w, r)
 			}
 			next.ServeHTTP(w, r.WithContext(WithProfile(r.Context(), p)))
 		})
 	}
+}
+
+func persistQueryProfile(w http.ResponseWriter, r *http.Request) {
+	slug := r.URL.Query().Get("profile")
+	if slug == "" {
+		return
+	}
+	p := Lookup(slug)
+	if p == nil {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     CookieName,
+		Value:    p.Slug,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 90,
+		SameSite: http.SameSiteLaxMode,
+	})
 }

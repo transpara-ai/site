@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -99,6 +101,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 				<div class="flex px-2 py-1.5 gap-1 overflow-x-auto">
 					<a href="/app" class="px-2.5 py-1 text-[11px] rounded-md bg-elevated text-warm-faint whitespace-nowrap">Home</a>
 					@mobileLensTab(space.Slug, "board", "Board", activeLens)
+					@mobileLensTab(space.Slug, "refinery", "Refinery", activeLens)
 					@mobileLensTab(space.Slug, "conversations", "Chat", activeLens)
 					@mobileLensTab(space.Slug, "feed", "Feed", activeLens)
 					@mobileLensTab(space.Slug, "people", "People", activeLens)
@@ -150,8 +153,9 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 						<!-- Core — what every user needs -->
 						<div>
 							<nav class="space-y-0.5">
-								@lensLink(space.Slug, "board", "Board", activeLens, boardIcon())
-								@lensLink(space.Slug, "conversations", "Chat", activeLens, conversationsIcon())
+									@lensLink(space.Slug, "board", "Board", activeLens, boardIcon())
+									@lensLink(space.Slug, "refinery", "Refinery", activeLens, refineryIcon())
+									@lensLink(space.Slug, "conversations", "Chat", activeLens, conversationsIcon())
 								@lensLink(space.Slug, "feed", "Feed", activeLens, feedIcon())
 								@lensLink(space.Slug, "people", "People", activeLens, peopleIcon())
 								@lensLink(space.Slug, "agents", "Agents", activeLens, agentsIcon())
@@ -443,6 +447,12 @@ templ mobileLensTab(spaceSlug, lens, label, activeLens string) {
 templ boardIcon() {
 	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+	</svg>
+}
+
+templ refineryIcon() {
+	<svg class="w-4 h-4 text-warm-faint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M7 4v6m10-6v6M6 14h12M9 11v6m6-6v6M8 20h8"></path>
 	</svg>
 }
 
@@ -1562,6 +1572,7 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 			@inviteTeammatesCard(space.Slug, inviteToken)
 		}
 		@ahaAgentToast()
+		@toggleTaskCard()
 		<div class="p-4 md:p-6 h-full flex flex-col">
 			<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
 				<div class="min-w-0">
@@ -1619,7 +1630,7 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 			if boardEmpty(columns) && user.Name != "" && user.Name != "Anonymous" && searchQuery == "" && assigneeFilter == "" && projectFilter == "" {
 				@boardOnboarding(space.Slug, agents)
 			} else {
-				<div class="flex gap-4 flex-1 overflow-x-auto pb-4">
+				<div id="refinery-board" class="flex gap-4 flex-1 overflow-x-auto pb-4">
 					for _, col := range columns {
 						@boardColumn(space.Slug, col, user.Name != "" && user.Name != "Anonymous", agents)
 					}
@@ -1641,9 +1652,277 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 			</script>
 		</div>
 	}
-}
+	}
 
-templ ahaAgentToast() {
+	templ RefineryView(space Space, spaces []Space, columns []BoardColumn, lineage map[string]RefineryLineage, user ViewUser, isOwner bool, searchQuery string, p *profile.Profile) {
+		@appLayout(space, spaces, "refinery", user, p) {
+			<div class="p-4 md:p-6 h-full flex flex-col">
+				<div class="flex items-center justify-between mb-4 md:mb-6 gap-2">
+					<div class="min-w-0">
+						<h1 class="font-display text-xl md:text-2xl font-light text-warm truncate">Requirements Refinery</h1>
+						<p class="text-sm text-warm-muted mt-0.5">Progress rough input into normative specs with definition of done and test plans.</p>
+					</div>
+					<button
+						onclick="openRefineryIntake()"
+						title="New intake"
+						class="h-9 w-9 flex items-center justify-center rounded-full bg-brand text-void hover:bg-brand-dark transition-colors text-xl leading-none font-light shadow-lg shadow-brand/20"
+					>+</button>
+				</div>
+				<div class="flex flex-wrap items-center gap-2 mb-3">
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/board") }
+						class="text-xs px-3 py-1 rounded-full border border-edge text-warm-muted hover:border-brand/30">Task Board</a>
+					<a href={ templ.SafeURL("/app/" + space.Slug + "/refinery") }
+						class="text-xs px-3 py-1 rounded-full border bg-brand/10 border-brand/30 text-warm">Refinery</a>
+					<span id="refinery-selected-count" class="text-[10px] text-warm-faint ml-2">0 selected</span>
+					<button type="button" onclick="setRefinerySelectedCollapsed(true)" class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted hover:text-warm hover:border-brand/40">Collapse selected</button>
+					<button type="button" onclick="setRefinerySelectedCollapsed(false)" class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted hover:text-warm hover:border-brand/40">Expand selected</button>
+					<button type="button" onclick="setRefineryAllCollapsed(true)" class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted hover:text-warm hover:border-brand/40">Collapse all</button>
+					<button type="button" onclick="setRefineryAllCollapsed(false)" class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted hover:text-warm hover:border-brand/40">Expand all</button>
+				</div>
+				@refineryIntakeDrawer(space.Slug)
+				@refineryDetailDrawer()
+				@refineryBoardInteractions()
+				@toggleTaskCard()
+				if searchQuery != "" {
+					<div class="mb-3 rounded-lg border border-brand/25 bg-brand/10 px-3 py-2 text-xs text-warm-secondary">
+						Showing matching refinery items for <span class="text-warm font-medium">{ searchQuery }</span>. The item may have already moved out of Intake according to the classifier and automation gates.
+					</div>
+				}
+				<form action={ templ.SafeURL("/app/" + space.Slug + "/refinery") } method="GET" class="flex gap-2 mb-3 flex-shrink-0">
+					<input
+						type="text"
+						name="q"
+						value={ searchQuery }
+						placeholder="Search requirements..."
+						class="flex-1 px-3 py-1.5 bg-elevated border border-edge rounded-lg text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"
+					/>
+					if searchQuery != "" {
+						<a href={ templ.SafeURL("/app/" + space.Slug + "/refinery") } class="px-2 py-1.5 text-xs text-warm-faint hover:text-brand transition-colors flex items-center">Clear</a>
+					}
+				</form>
+				<div class="flex gap-4 flex-1 overflow-x-auto pb-4">
+					for _, col := range columns {
+						@refineryColumn(space.Slug, col, lineage)
+					}
+				</div>
+			</div>
+		}
+	}
+
+	templ refineryColumn(spaceSlug string, col BoardColumn, lineage map[string]RefineryLineage) {
+		<section
+			class="flex-shrink-0 w-72 bg-elevated/50 rounded-xl border border-edge p-3 transition-colors"
+			data-refinery-state={ col.State }
+			ondragover="event.preventDefault();this.classList.add('border-brand/60','bg-brand/5')"
+			ondragleave="this.classList.remove('border-brand/60','bg-brand/5')"
+			ondrop="dropRefineryCard(event,this)"
+		>
+			<div class="flex items-center justify-between mb-3">
+				<div>
+					<h2 class="text-sm font-medium text-warm">{ col.Label }</h2>
+					<p class="text-[10px] text-warm-faint">{ refineryStageHint(col.State) }</p>
+					<button type="button" data-refinery-column-toggle="true" onclick="toggleRefineryColumn(event,this)" class="mt-1 inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded border border-edge text-warm-faint hover:text-warm" title="Collapse or expand this column">
+						<span data-refinery-column-caret>⌃</span><span>cards</span>
+					</button>
+				</div>
+				<span class="text-[10px] px-2 py-0.5 rounded-full bg-surface text-warm-faint">{ fmt.Sprintf("%d", len(col.Nodes)) }</span>
+			</div>
+			<div class="space-y-2">
+				if len(col.Nodes) == 0 {
+					<div class="text-xs text-warm-faint border border-dashed border-edge rounded-lg p-4 text-center">No artifacts</div>
+				}
+				for _, node := range col.Nodes {
+					@RefineryCard(node, spaceSlug, lineage[node.ID])
+				}
+			</div>
+		</section>
+	}
+
+	templ RefineryCard(node Node, spaceSlug string, lineage RefineryLineage) {
+		<article
+			id={ "refinery-card-" + node.ID }
+			class="block bg-surface rounded-lg border border-edge p-3 hover:border-brand/40 hover:shadow-lg hover:shadow-brand/10 transition-all duration-200 cursor-grab active:cursor-grabbing"
+			draggable="true"
+			data-refinery-card="true"
+			data-node-id={ node.ID }
+			data-state={ refineryColumnState(node.State) }
+			data-state-url={ fmt.Sprintf("/app/%s/node/%s/state", spaceSlug, node.ID) }
+			data-delete-url={ fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID) }
+			ondragstart="dragRefineryCard(event,this)"
+			ondragend="endRefineryDrag()"
+		>
+			<div class="flex items-start justify-between gap-2">
+				<div class="min-w-0">
+					<div class="flex items-center gap-1.5 mb-1">
+						<input type="checkbox" class="refinery-card-select h-3 w-3 rounded border-edge bg-elevated text-brand" onchange="toggleRefinerySelection(event,this)" onclick="event.stopPropagation()" title="Select card"/>
+						<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", refineryStateClass(node.State) }>{ refineryStateLabel(node.State) }</span>
+						if node.Priority != "" {
+							<span class="text-[10px] text-warm-faint">{ node.Priority }</span>
+						}
+						if node.ChildCount > 0 {
+							<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">{ fmt.Sprintf("%d artifact(s)", node.ChildCount) }</span>
+						}
+						<button
+							type="button"
+							class={ "text-[10px] px-1.5 py-0.5 rounded-full hover:bg-brand/20", templ.KV("bg-red-500/15 text-red-300 hover:bg-red-500/25", refineryColumnState(node.State) == SpecStateNeedsAttention), templ.KV("bg-brand/10 text-brand", refineryColumnState(node.State) != SpecStateNeedsAttention) }
+							data-title={ node.Title }
+							data-state={ refineryStateLabel(node.State) }
+							data-raw-state={ node.State }
+							data-body={ node.Body }
+							data-missing={ refineryMissingSections(node.Body) }
+							data-blockers={ refineryBlockingCharacteristics(node) }
+							data-previous={ refineryPreviousStateLabel(node.State) }
+							data-next={ refineryPredictedNextStateLabel(node.State, node.Body) }
+							data-gates={ refineryGateSummary(node) }
+							data-lineage={ refineryLineageDetail(lineage) }
+							data-url={ fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID) }
+							data-activity-url={ fmt.Sprintf("/app/%s/node/%s/activity", spaceSlug, node.ID) }
+							data-investigate-url={ fmt.Sprintf("/app/%s/node/%s/investigate-gaps", spaceSlug, node.ID) }
+							onclick="openRefineryDetailFromButton(this)"
+						>{ refineryGateButtonLabel(node.State) }</button>
+					</div>
+					<div class="flex items-start justify-between gap-2">
+						<div class="min-w-0">
+							<h3 class="text-sm font-medium text-warm leading-snug">{ node.Title }</h3>
+							if lineage.LatestVersion != "" {
+								<div class="mt-1 flex flex-wrap items-center gap-1.5">
+									<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">{ "v" + lineage.LatestVersion }</span>
+									<span class={ "text-[10px] px-1.5 py-0.5 rounded-full", refineryStateClass(lineage.LatestState) }>{ refineryStateLabel(lineage.LatestState) }</span>
+									if lineage.ActiveInvestigationTitle != "" {
+										<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-200 border border-amber-500/20">investigating next gaps</span>
+									}
+								</div>
+								<p class="mt-1 text-[10px] leading-snug text-brand">{ lineage.MovementSummary }</p>
+							} else {
+								<p class="mt-1 text-[10px] leading-snug text-warm-faint">No SemVer refinement yet</p>
+							}
+						</div>
+						<div class="flex shrink-0 gap-1"><button type="button" data-refinery-collapse-button="true" class="h-6 w-6 inline-flex items-center justify-center rounded-full border border-edge text-warm-faint hover:text-warm hover:border-brand/40" onclick="toggleRefineryCard(event, this)" aria-label="Collapse card" title="Collapse or expand card">⌃</button><button type="button" class="text-[10px] px-1.5 py-0.5 rounded-full border border-red-500/30 text-red-300 hover:bg-red-500/10" onclick="softDeleteRefineryCard(event, this)" title="Soft-delete this card">Delete</button></div>
+					</div>
+				</div>
+			</div>
+			<div class="refinery-card-details">
+				if node.Body != "" {
+					<p class="text-[11px] text-warm-faint mt-2 leading-relaxed line-clamp-3">{ truncate(node.Body, 180) }</p>
+				}
+				<div class="mt-3 flex items-center justify-between gap-2">
+					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, node.ID)) } class="text-[10px] text-warm-faint hover:text-brand">{ refinementCompletenessHint(node.Body) }</a>
+					<span class="text-[10px] text-warm-faint">Drag to move</span>
+				</div>
+			</div>
+		</article>
+	}
+
+	templ refineryIntakeDrawer(spaceSlug string) {
+		<div id="refinery-intake-backdrop" class="hidden fixed inset-0 z-40 bg-void/50 backdrop-blur-sm" onclick="closeRefineryIntake()"></div>
+		<aside id="refinery-intake-panel" class="fixed top-0 right-0 z-50 h-full w-full max-w-xl translate-x-full transition-transform duration-300 bg-surface border-l border-edge shadow-2xl flex flex-col">
+			<div class="p-5 border-b border-edge flex items-start justify-between gap-4">
+				<div>
+					<p class="text-xs uppercase tracking-[0.2em] text-brand">New Intake</p>
+					<h2 class="font-display text-2xl font-light text-warm mt-1">Feed the refinery</h2>
+					<p class="text-xs text-warm-muted mt-1">Questions route cheaply; substantial specs move into Clarify or Investigate.</p>
+				</div>
+				<button type="button" onclick="closeRefineryIntake()" class="text-warm-faint hover:text-warm text-2xl leading-none">×</button>
+			</div>
+			<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/refinery/intake") } enctype="multipart/form-data" class="p-5 space-y-5 overflow-y-auto flex-1">
+				<div>
+					<label class="block text-xs font-medium text-warm-muted mb-1">One-line question</label>
+					<input name="question" placeholder="Why is the sky blue?" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-warm-muted mb-1">Desired outcome</label>
+					<textarea name="outcome" rows="4" placeholder="Describe what successful refinement or delivery should accomplish." class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"></textarea>
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-warm-muted mb-1">Optional pasted markdown</label>
+					<textarea name="body" rows="6" placeholder="# Draft spec
+
+Paste rough notes, partial designs, or vetted requirements here." class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand font-mono"></textarea>
+				</div>
+				<label id="refinery-drop-zone" class="block border border-dashed border-brand/40 rounded-2xl p-6 bg-brand/5 hover:bg-brand/10 transition-colors cursor-pointer text-center">
+					<input id="refinery-artifact-input" name="artifact" type="file" accept=".md,.markdown,text/markdown" multiple class="hidden" onchange="updateRefineryFileList(this)"/>
+					<span class="block text-sm text-warm">Drop markdown artifacts here</span>
+					<span class="block text-xs text-warm-faint mt-1">or browse to file. Up to 5 markdown files.</span>
+					<span id="refinery-file-list" class="block text-xs text-brand mt-3"></span>
+				</label>
+				<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs text-warm-muted leading-relaxed">
+					The Civilization Soul, Invariants, and existing normative references remain authoritative. Intake text is evidence for classification, not a replacement for governing references.
+				</div>
+				<div class="flex justify-end gap-2 pt-2">
+					<button type="button" onclick="closeRefineryIntake()" class="px-3 py-2 rounded-lg border border-edge text-sm text-warm-muted hover:text-warm">Cancel</button>
+					<button type="submit" class="px-4 py-2 rounded-lg bg-brand text-void text-sm font-medium hover:bg-brand-dark">Submit intake</button>
+				</div>
+			</form>
+		</aside>
+		<script>
+		function openRefineryIntake(){document.getElementById('refinery-intake-backdrop').classList.remove('hidden');document.getElementById('refinery-intake-panel').classList.remove('translate-x-full')}
+		function closeRefineryIntake(){document.getElementById('refinery-intake-backdrop').classList.add('hidden');document.getElementById('refinery-intake-panel').classList.add('translate-x-full')}
+		function updateRefineryFileList(input){var el=document.getElementById('refinery-file-list');if(!el)return;el.textContent=Array.from(input.files||[]).map(function(f){return f.name}).join(', ')}
+		(function(){var zone=document.getElementById('refinery-drop-zone');var input=document.getElementById('refinery-artifact-input');if(!zone||!input)return;['dragenter','dragover'].forEach(function(evt){zone.addEventListener(evt,function(e){e.preventDefault();zone.classList.add('bg-brand/10')})});['dragleave','drop'].forEach(function(evt){zone.addEventListener(evt,function(e){e.preventDefault();zone.classList.remove('bg-brand/10')})});zone.addEventListener('drop',function(e){input.files=e.dataTransfer.files;updateRefineryFileList(input)})})();
+		(function(){if(window.__refineryRefreshTimer)clearInterval(window.__refineryRefreshTimer);window.__refineryRefreshTimer=setInterval(function(){if(document.hidden)return;var intake=document.getElementById('refinery-intake-panel');var detail=document.getElementById('refinery-detail-panel');if(intake&&!intake.classList.contains('translate-x-full'))return;if(detail&&!detail.classList.contains('translate-x-full'))return;window.location.reload()},30000)})();
+		</script>
+	}
+
+	templ refineryDetailDrawer() {
+		<div id="refinery-detail-backdrop" class="hidden fixed inset-0 z-40 bg-void/40" onclick="closeRefineryDetail()"></div>
+		<aside id="refinery-detail-panel" class="fixed top-0 right-0 z-50 h-full w-full max-w-lg translate-x-full transition-transform duration-300 bg-surface border-l border-edge shadow-2xl flex flex-col">
+			<div class="p-5 border-b border-edge flex items-start justify-between gap-4">
+				<div>
+					<p id="refinery-detail-state" class="text-xs uppercase tracking-[0.2em] text-red-300">Needs Attention</p>
+					<h2 id="refinery-detail-title" class="font-display text-xl font-light text-warm mt-1">Blocked refinery item</h2>
+				</div>
+				<button type="button" onclick="closeRefineryDetail()" class="text-warm-faint hover:text-warm text-2xl leading-none">×</button>
+			</div>
+			<div class="p-5 space-y-4 overflow-y-auto">
+				<div class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-100 leading-relaxed">
+					<p class="font-medium mb-1">SemVer movement</p>
+					<p id="refinery-detail-lineage"></p>
+				</div>
+				<div class="grid grid-cols-2 gap-3 text-xs">
+					<div class="rounded-xl border border-edge bg-elevated/60 p-3">
+						<p class="text-warm-faint uppercase tracking-wide text-[10px]">Previous</p>
+						<p id="refinery-detail-previous" class="text-warm mt-1"></p>
+					</div>
+					<div class="rounded-xl border border-edge bg-elevated/60 p-3">
+						<p class="text-warm-faint uppercase tracking-wide text-[10px]">Predicted Next</p>
+						<p id="refinery-detail-next" class="text-warm mt-1"></p>
+					</div>
+				</div>
+				<div class="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-100 leading-relaxed">
+					<p class="font-medium mb-1">Gate status</p>
+					<p id="refinery-detail-gates"></p>
+				</div>
+				<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs text-warm-muted leading-relaxed">
+					<p class="font-medium text-warm mb-1">Missing sections</p>
+					<p id="refinery-detail-missing"></p>
+				</div>
+				<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs text-warm-muted leading-relaxed">
+					<p class="font-medium text-warm mb-1">Blocking characteristics</p>
+					<p id="refinery-detail-blockers"></p>
+				</div>
+				<div class="rounded-xl border border-edge bg-elevated/60 p-3 text-xs text-warm-muted leading-relaxed">
+					<div class="flex items-center justify-between gap-2 mb-2">
+						<p class="font-medium text-warm">Live activity</p>
+						<div class="flex items-center gap-2">
+							<button id="refinery-detail-investigate" type="button" class="hidden text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand hover:bg-brand/10" onclick="startRefineryGapInvestigation(event)">Start gap investigation</button>
+							<span id="refinery-detail-activity-status" class="text-[10px] text-warm-faint">loading</span>
+						</div>
+					</div>
+					<div id="refinery-detail-activity" class="text-warm-muted">Select a card to load activity.</div>
+				</div>
+				<pre id="refinery-detail-body" class="whitespace-pre-wrap text-xs text-warm-muted bg-elevated border border-edge rounded-xl p-3"></pre>
+				<a id="refinery-detail-url" href="#" class="inline-flex px-3 py-2 rounded-lg bg-brand text-void text-sm font-medium hover:bg-brand-dark">Open full record</a>
+			</div>
+		</aside>
+		<script>
+		function loadRefineryActivity(url){var target=document.getElementById('refinery-detail-activity');var status=document.getElementById('refinery-detail-activity-status');if(!target||!url)return;if(status)status.textContent='loading';fetch(url,{headers:{'Accept':'text/html'}}).then(function(resp){if(!resp.ok)throw new Error('activity failed');return resp.text()}).then(function(html){target.innerHTML=html;if(status)status.textContent='live'}).catch(function(){target.textContent='Could not load activity for this item.';if(status)status.textContent='error'})}
+		function openRefineryDetailFromButton(btn){document.getElementById('refinery-detail-title').textContent=btn.dataset.title||'Refinery item';document.getElementById('refinery-detail-state').textContent=btn.dataset.state||'Refinery state';document.getElementById('refinery-detail-lineage').textContent=btn.dataset.lineage||'No SemVer refinement has been recorded yet.';document.getElementById('refinery-detail-previous').textContent=btn.dataset.previous||'Unknown';document.getElementById('refinery-detail-next').textContent=btn.dataset.next||'Unknown';document.getElementById('refinery-detail-gates').textContent=btn.dataset.gates||'No gate details available.';document.getElementById('refinery-detail-missing').textContent=btn.dataset.missing||'None detected.';document.getElementById('refinery-detail-blockers').textContent=btn.dataset.blockers||'None detected.';document.getElementById('refinery-detail-body').textContent=btn.dataset.body||'';document.getElementById('refinery-detail-url').href=btn.dataset.url||'#';var panel=document.getElementById('refinery-detail-panel');panel.dataset.activityUrl=btn.dataset.activityUrl||'';panel.dataset.investigateUrl=btn.dataset.investigateUrl||'';var investigate=document.getElementById('refinery-detail-investigate');if(investigate){var hasGaps=(btn.dataset.missing||'None detected.')!=='None detected.';investigate.classList.toggle('hidden',!hasGaps||!btn.dataset.investigateUrl);investigate.textContent='Start gap investigation'}document.getElementById('refinery-detail-backdrop').classList.remove('hidden');panel.classList.remove('translate-x-full');loadRefineryActivity(btn.dataset.activityUrl||'');if(window.__refineryActivityTimer)clearInterval(window.__refineryActivityTimer);window.__refineryActivityTimer=setInterval(function(){var panel=document.getElementById('refinery-detail-panel');if(!panel||panel.classList.contains('translate-x-full'))return;loadRefineryActivity(panel.dataset.activityUrl||'')},5000)}
+		function startRefineryGapInvestigation(event){event.preventDefault();var panel=document.getElementById('refinery-detail-panel');var btn=document.getElementById('refinery-detail-investigate');var status=document.getElementById('refinery-detail-activity-status');if(!panel||!panel.dataset.investigateUrl)return;if(btn){btn.disabled=true;btn.textContent='Starting...'}if(status)status.textContent='starting';fetch(panel.dataset.investigateUrl,{method:'POST',headers:{'Accept':'application/json'}}).then(function(resp){if(!resp.ok)throw new Error('investigation failed');return resp.json()}).then(function(){if(btn){btn.textContent='Investigation started'}loadRefineryActivity(panel.dataset.activityUrl||'');setTimeout(function(){if(panel&&!panel.classList.contains('translate-x-full'))loadRefineryActivity(panel.dataset.activityUrl||'')},6000)}).catch(function(){if(btn){btn.disabled=false;btn.textContent='Start gap investigation'}if(status)status.textContent='error';alert('Could not start gap investigation. No task was created.')})}
+		function closeRefineryDetail(){document.getElementById('refinery-detail-backdrop').classList.add('hidden');document.getElementById('refinery-detail-panel').classList.add('translate-x-full');if(window.__refineryActivityTimer){clearInterval(window.__refineryActivityTimer);window.__refineryActivityTimer=null}}
+		</script>
+	}
+
+	templ ahaAgentToast() {
 	<div id="aha-agent-toast" class="hidden fixed bottom-4 right-4 z-50 bg-elevated border border-brand/30 rounded-xl shadow-lg p-4 max-w-xs">
 		<div class="flex items-start gap-3">
 			<div class="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
@@ -1796,6 +2075,103 @@ templ newTaskInline(spaceSlug string, agents []AgentPersona) {
 	</div>
 }
 
+		script refineryBoardInteractions() {
+			window.refineryDragCard = null;
+			window.refineryCardList = function(scope){return Array.from((scope || document).querySelectorAll('article[data-refinery-card="true"]'))};
+			window.setRefineryCardCollapsed = function(card, collapsed){
+				if(!card)return;
+				var details = card.querySelector('.refinery-card-details');
+				var btn = card.querySelector('[data-refinery-collapse-button]');
+				if(details)details.classList.toggle('hidden', collapsed);
+				card.dataset.collapsed = collapsed ? 'true' : 'false';
+				if(btn){btn.textContent = collapsed ? '⌄' : '⌃';btn.setAttribute('aria-label', collapsed ? 'Expand card' : 'Collapse card')}
+			};
+			window.toggleRefineryCard = function(event, btn){
+				event.preventDefault();
+				event.stopPropagation();
+				var card = btn.closest('article[data-refinery-card="true"]');
+				window.setRefineryCardCollapsed(card, !(card && card.dataset.collapsed === 'true'));
+			};
+			window.toggleRefinerySelection = function(event, input){
+				event.stopPropagation();
+				var card = input.closest('article[data-refinery-card="true"]');
+				if(card){card.dataset.selected = input.checked ? 'true' : 'false';card.classList.toggle('ring-1', input.checked);card.classList.toggle('ring-brand/50', input.checked)}
+				window.updateRefinerySelectedCount();
+			};
+			window.updateRefinerySelectedCount = function(){
+				var count = document.querySelectorAll('article[data-refinery-card="true"] .refinery-card-select:checked').length;
+				var el = document.getElementById('refinery-selected-count');
+				if(el)el.textContent = count + ' selected';
+			};
+			window.setRefinerySelectedCollapsed = function(collapsed){
+				document.querySelectorAll('article[data-refinery-card="true"] .refinery-card-select:checked').forEach(function(input){window.setRefineryCardCollapsed(input.closest('article[data-refinery-card="true"]'), collapsed)});
+			};
+			window.setRefineryColumnCollapsed = function(event, btn, collapsed){
+				event.preventDefault();
+				event.stopPropagation();
+				var col = btn.closest('[data-refinery-state]');
+				window.refineryCardList(col).forEach(function(card){window.setRefineryCardCollapsed(card, collapsed)});
+				col.dataset.collapsed = collapsed ? 'true' : 'false';
+				var caret = btn.querySelector('[data-refinery-column-caret]');
+				if(caret)caret.textContent = collapsed ? '⌄' : '⌃';
+			};
+			window.toggleRefineryColumn = function(event, btn){
+				var col = btn.closest('[data-refinery-state]');
+				var collapsed = !(col && col.dataset.collapsed === 'true');
+				window.setRefineryColumnCollapsed(event, btn, collapsed);
+			};
+			window.setRefineryAllCollapsed = function(collapsed){
+				window.refineryCardList(document).forEach(function(card){window.setRefineryCardCollapsed(card, collapsed)});
+			};
+			window.softDeleteRefineryCard = function(event, btn){
+				event.preventDefault();
+				event.stopPropagation();
+				var card = btn.closest('article[data-refinery-card="true"]');
+				if(!card)return;
+				var title = (card.querySelector('h3') || {}).textContent || 'this card';
+				if(!confirm('Soft-delete "' + title.trim() + '"? The record and EventGraph references will be preserved.'))return;
+				fetch(card.dataset.deleteUrl + '?reason=' + encodeURIComponent('operator soft-delete from refinery board'), {
+					method: 'DELETE',
+					headers: {'Accept': 'application/json'}
+				}).then(function(resp){
+					if(!resp.ok){throw new Error('soft delete failed')}
+					card.remove();
+					window.updateRefinerySelectedCount();
+				}).catch(function(){alert('Could not soft-delete card. No state was changed.')});
+			};
+			window.dragRefineryCard = function(event, card){
+				window.refineryDragCard = card;
+				event.dataTransfer.effectAllowed = 'move';
+				event.dataTransfer.setData('text/plain', card.dataset.nodeId || '');
+				card.classList.add('opacity-50','scale-[0.98]');
+			};
+			window.endRefineryDrag = function(){
+				if(window.refineryDragCard){window.refineryDragCard.classList.remove('opacity-50','scale-[0.98]')}
+				document.querySelectorAll('[data-refinery-state]').forEach(function(col){col.classList.remove('border-brand/60','bg-brand/5')});
+				window.refineryDragCard = null;
+			};
+			window.dropRefineryCard = function(event, column){
+				event.preventDefault();
+				column.classList.remove('border-brand/60','bg-brand/5');
+				var card = window.refineryDragCard;
+				if(!card)return;
+				var nextState = column.dataset.refineryState;
+				if(!nextState || card.dataset.state === nextState){window.endRefineryDrag();return;}
+				fetch(card.dataset.stateUrl, {
+					method: 'POST',
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+					body: 'state=' + encodeURIComponent(nextState) + '&reason=' + encodeURIComponent('operator drag-and-drop on refinery board')
+				}).then(function(resp){
+					if(!resp.ok){throw new Error('state update failed')}
+					window.location.reload();
+				}).catch(function(){
+					card.classList.remove('opacity-50','scale-[0.98]');
+					alert('Could not move card. The state was not changed.');
+				});
+			};
+			window.updateRefinerySelectedCount();
+		}
+
 script inlineStateChange(spaceSlug string, nodeID string) {
 	var sel = event.target;
 	fetch('/app/' + spaceSlug + '/node/' + nodeID + '/state', {
@@ -1864,6 +2240,34 @@ script editMessage(msgID string, currentBody string) {
 	}
 }
 
+script toggleTaskCard() {
+	window.toggleTaskCard = function(event, btn) {
+		event.preventDefault();
+		event.stopPropagation();
+		var shell = btn.closest('.group');
+		var details = shell && shell.querySelector('.task-card-details');
+		if (!details) return;
+		var collapsed = details.classList.toggle('hidden');
+		btn.textContent = collapsed ? '⌄' : '⌃';
+	};
+	window.softDeleteTaskCard = function(event, btn) {
+		event.preventDefault();
+		event.stopPropagation();
+		var shell = btn.closest('.group');
+		var card = shell && shell.querySelector('[data-node-id][data-space-slug]');
+		if (!card) return;
+		var title = (card.querySelector('span.text-sm') || {}).textContent || 'this task';
+		if (!confirm('Soft-delete "' + title.trim() + '"? The row and history will be preserved.')) return;
+		fetch('/app/' + card.dataset.spaceSlug + '/node/' + card.dataset.nodeId + '?reason=' + encodeURIComponent('operator soft-delete from task board'), {
+			method: 'DELETE',
+			headers: {'Accept': 'application/json'}
+		}).then(function(resp){
+			if (!resp.ok) throw new Error('soft delete failed');
+			shell.remove();
+		}).catch(function(){alert('Could not soft-delete task. No state was changed.')});
+	};
+}
+
 script toggleForm(id string) {
 	var el = document.getElementById(id);
 	if (!el) return;
@@ -1879,6 +2283,7 @@ templ TaskCard(node Node, spaceSlug string) {
 	<div class="relative group">
 		<!-- Hover action bar -->
 		<div class="absolute -top-3 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex gap-1">
+			<button type="button" class="h-6 w-6 rounded-md bg-surface border border-edge hover:border-brand/50 hover:bg-brand/10 flex items-center justify-center transition-colors text-xs text-warm-muted hover:text-brand font-medium" title="Collapse or expand" onclick="toggleTaskCard(event,this)">⌃</button><button type="button" class="h-6 px-1.5 rounded-md bg-surface border border-red-500/30 hover:bg-red-500/10 flex items-center justify-center transition-colors text-[10px] text-red-300 font-medium" title="Soft-delete" onclick="softDeleteTaskCard(event,this)">Delete</button>
 			if node.AssigneeID == "" && node.State == StateOpen {
 				<form method="POST" action={ templ.SafeURL("/app/" + spaceSlug + "/op") } class="inline">
 					<input type="hidden" name="op" value="claim"/>
@@ -1929,6 +2334,7 @@ templ TaskCard(node Node, spaceSlug string) {
 			}
 			<span class={ "text-sm font-medium leading-snug", templ.KV("text-warm", node.State != StateDone), templ.KV("line-through text-warm-muted", node.State == StateDone) }>{ node.Title }</span>
 		</div>
+		<div class="task-card-details">
 		if node.Body != "" {
 			<p class="text-[11px] text-warm-faint mt-1 ml-4 leading-relaxed line-clamp-2">{ truncate(node.Body, 120) }</p>
 		}
@@ -1992,16 +2398,8 @@ templ TaskCard(node Node, spaceSlug string) {
 					{ fmt.Sprintf("%d blocked", node.BlockerCount) }
 				</span>
 			}
-			<select
-				class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full border-0 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity ml-auto", stateBgClass(node.State) }
-				onclick="event.preventDefault();event.stopPropagation()"
-				onchange={ inlineStateChange(spaceSlug, node.ID) }
-			>
-				<option value={ StateOpen } selected?={ node.State == StateOpen }>Open</option>
-				<option value={ StateActive } selected?={ node.State == StateActive }>Active</option>
-				<option value={ StateReview } selected?={ node.State == StateReview }>Review</option>
-				<option value={ StateDone } selected?={ node.State == StateDone }>Done</option>
-			</select>
+			<span class="text-[10px] text-warm-faint ml-auto">Drag to move</span>
+		</div>
 		</div>
 	</a>
 	</div>
@@ -2786,7 +3184,7 @@ templ QuestionDetailView(space Space, spaces []Space, question Node, answers []N
 					<span>{ question.CreatedAt.Format("Jan 2, 2006") }</span>
 				</div>
 			</div>
-			<div class="space-y-4">
+			<div id="question-answers" class="space-y-4" hx-get={ templ.SafeURL("/app/" + space.Slug + "/questions/" + question.ID + "/answers") } hx-trigger="every 3s" hx-swap="outerHTML">
 				<h2 class="text-sm font-semibold text-warm-muted">Answers ({ fmt.Sprintf("%d", len(answers)) })</h2>
 				for _, a := range answers {
 					if a.AuthorKind == "agent" {
@@ -5489,6 +5887,8 @@ func lensTooltip(lens string) string {
 	switch lens {
 	case "board":
 		return "Track and prioritize tasks by status"
+	case "refinery":
+		return "Progress rough requests into normative, testable specs"
 	case "conversations":
 		return "Direct conversations with teammates and agents"
 	case "feed":
@@ -5507,6 +5907,249 @@ func lensTooltip(lens string) string {
 		return "Completed tasks — what shipped and when"
 	default:
 		return ""
+	}
+}
+
+func refineryStageHint(state string) string {
+	switch state {
+	case SpecStateIntakeRaw:
+		return "raw and triaged input"
+	case SpecStateRequirementClarify:
+		return "requirements need shape"
+	case SpecStateInvestigate:
+		return "agent research and exposition"
+	case SpecStateDraft:
+		return "structured but not vetted"
+	case SpecStateReview:
+		return "critic and guardian gate"
+	case SpecStateNormative:
+		return "build-authorizing reference"
+	case SpecStateNeedsAttention:
+		return "human unblock needed"
+	case SpecStateParked:
+		return "awaiting deeper intervention"
+	case SpecStateWorkReady:
+		return "implementation and verification"
+	case SpecStateWorkShipped:
+		return "shipped and learned"
+	default:
+		return ""
+	}
+}
+
+func refineryStateLabel(state string) string {
+	switch refineryColumnState(state) {
+	case SpecStateIntakeRaw:
+		return "intake"
+	case SpecStateRequirementClarify:
+		return "clarify"
+	case SpecStateInvestigate:
+		return "investigate"
+	case SpecStateDraft:
+		return "draft"
+	case SpecStateReview:
+		return "review"
+	case SpecStateNormative:
+		return "normative"
+	case SpecStateNeedsAttention:
+		return "attention"
+	case SpecStateParked:
+		return "parked"
+	case SpecStateWorkReady:
+		return "build"
+	case SpecStateWorkShipped:
+		return "shipped"
+	default:
+		return "intake"
+	}
+}
+
+func refineryStateClass(state string) string {
+	switch refineryColumnState(state) {
+	case SpecStateNormative:
+		return "bg-emerald-500/15 text-emerald-400"
+	case SpecStateReview:
+		return "bg-amber-500/15 text-amber-400"
+	case SpecStateWorkReady:
+		return "bg-sky-500/15 text-sky-400"
+	case SpecStateWorkShipped:
+		return "bg-brand/15 text-brand"
+	case SpecStateNeedsAttention:
+		return "bg-red-500/15 text-red-300"
+	case SpecStateParked:
+		return "bg-zinc-500/15 text-zinc-300"
+	case SpecStateInvestigate:
+		return "bg-cyan-500/15 text-cyan-300"
+	case SpecStateDraft:
+		return "bg-violet-500/15 text-violet-400"
+	default:
+		return "bg-warm-faint/20 text-warm-muted"
+	}
+}
+
+func refinementCompletenessHint(body string) string {
+	lower := strings.ToLower(body)
+	missing := 0
+	for _, section := range []string{"definition of done", "test plan", "acceptance criteria"} {
+		if !strings.Contains(lower, section) {
+			missing++
+		}
+	}
+	if missing == 0 {
+		return "DoD + tests present"
+	}
+	return fmt.Sprintf("%d key section(s) missing", missing)
+}
+
+func refineryLineageDetail(lineage RefineryLineage) string {
+	if lineage.LatestVersion == "" {
+		return "No SemVer refinement has been recorded yet. The root intake/spec remains the only artifact of record."
+	}
+	parts := []string{
+		fmt.Sprintf("Latest artifact: v%s (%s)", lineage.LatestVersion, refineryStateLabel(lineage.LatestState)),
+		fmt.Sprintf("Version count: %d", lineage.VersionCount),
+	}
+	if lineage.PreviousVersion != "" {
+		parts = append(parts, "Previous version: v"+lineage.PreviousVersion)
+	}
+	if lineage.LatestMissing != "" {
+		parts = append(parts, "Latest gate gaps: "+lineage.LatestMissing)
+	}
+	if lineage.ActiveInvestigationTitle != "" {
+		parts = append(parts, "Active follow-up: "+lineage.ActiveInvestigationTitle)
+	}
+	return strings.Join(parts, " | ")
+}
+
+func refineryGateButtonLabel(state string) string {
+	if refineryColumnState(state) == SpecStateNeedsAttention {
+		return "Needs Attention"
+	}
+	return "Gate details"
+}
+
+func refineryMissingSections(body string) string {
+	var missing []string
+	for _, section := range []string{"Definition of Done", "Test Plan", "Acceptance Criteria"} {
+		if !hasMarkdownSection(body, section) {
+			missing = append(missing, section)
+		}
+	}
+	if len(missing) == 0 {
+		return "None detected."
+	}
+	return strings.Join(missing, ", ")
+}
+
+func hasMarkdownSection(body, section string) bool {
+	pattern := `(?im)^\s{0,3}#{1,6}\s+` + regexp.QuoteMeta(section) + `\s*[:#-]*\s*$`
+	if regexp.MustCompile(pattern).MatchString(body) {
+		return true
+	}
+	htmlPattern := `(?im)<h[1-6][^>]*>\s*` + regexp.QuoteMeta(section) + `\s*</h[1-6]>`
+	return regexp.MustCompile(htmlPattern).MatchString(body)
+}
+
+func refineryBlockingCharacteristics(node Node) string {
+	var blockers []string
+	state := refineryColumnState(node.State)
+	if state == SpecStateNeedsAttention {
+		blockers = append(blockers, "Human decision required before autonomous progression")
+	}
+	if missing := refineryMissingSections(node.Body); missing != "None detected." {
+		blockers = append(blockers, "Spec is not build-authorizing: missing "+missing)
+	}
+	if node.ChildCount == 0 && state == SpecStateInvestigate {
+		blockers = append(blockers, "Investigation has no attached evidence artifact yet")
+	}
+	if len(blockers) == 0 {
+		return "No blocking characteristics detected by the current static gate."
+	}
+	return strings.Join(blockers, "; ")
+}
+
+func refineryPreviousStateLabel(state string) string {
+	switch refineryColumnState(state) {
+	case SpecStateIntakeRaw:
+		return "None: initial intake"
+	case SpecStateRequirementClarify:
+		return "Intake"
+	case SpecStateInvestigate:
+		return "Clarify"
+	case SpecStateDraft:
+		return "Investigate"
+	case SpecStateReview:
+		return "Draft Spec"
+	case SpecStateNormative:
+		return "Review"
+	case SpecStateNeedsAttention:
+		return "Gate violation or ambiguity"
+	case SpecStateWorkReady:
+		return "Normative"
+	case SpecStateParked:
+		return "Needs Attention"
+	case SpecStateWorkShipped:
+		return "Build"
+	default:
+		return "Unknown"
+	}
+}
+
+func refineryPredictedNextStateLabel(state, body string) string {
+	switch refineryColumnState(state) {
+	case SpecStateIntakeRaw:
+		return "Clarify or Investigate after classification"
+	case SpecStateRequirementClarify:
+		return "Investigate once ambiguities are framed"
+	case SpecStateInvestigate:
+		if refineryMissingSections(body) == "None detected." {
+			return "Draft Spec"
+		}
+		return "Clarify after missing sections are identified"
+	case SpecStateDraft:
+		return "Review after automated spec checks pass"
+	case SpecStateReview:
+		return "Normative after critic/guardian pass"
+	case SpecStateNormative:
+		return "Build"
+	case SpecStateNeedsAttention:
+		return "Clarify, Investigate, or Parked after human direction"
+	case SpecStateWorkReady:
+		return "Shipped after implementation and verification"
+	case SpecStateParked:
+		return "Clarify when human intervention resumes"
+	case SpecStateWorkShipped:
+		return "Learned"
+	default:
+		return "Unknown"
+	}
+}
+
+func refineryGateSummary(node Node) string {
+	state := refineryColumnState(node.State)
+	missing := refineryMissingSections(node.Body)
+	switch state {
+	case SpecStateInvestigate:
+		if missing == "None detected." {
+			return "Investigation can progress toward Draft Spec once research conclusions are captured."
+		}
+		return "Investigation is not ready for Draft Spec because required normative sections are missing: " + missing + "."
+	case SpecStateDraft:
+		if missing == "None detected." {
+			return "Draft Spec has the minimum normative sections and should enter automated review gates."
+		}
+		return "Draft Spec should not enter Review until these sections are added: " + missing + "."
+	case SpecStateReview:
+		return "Review should pass only after critic, guardian, definition-of-done, and test-plan checks are satisfied."
+	case SpecStateNormative:
+		return "Normative specs authorize build work only while remaining consistent with the Soul, Invariants, and governing references."
+	case SpecStateNeedsAttention:
+		return "Human input is required to resolve redundancy, ambiguity, or guardrail tension before autonomous progression resumes."
+	default:
+		if missing != "None detected." {
+			return "Minimum normative sections are incomplete: " + missing + "."
+		}
+		return "Minimum static gate passes; later automated gates are not yet wired in this UI slice."
 	}
 }
 

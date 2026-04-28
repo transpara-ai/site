@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -57,7 +58,28 @@ const (
 	KindPolicy       = "policy"
 	KindDocument     = "document"
 	KindQuestion     = "question"
+	KindSpec         = "spec"
 	KindCouncil      = "council"
+)
+
+// Requirements refinery states. These are stored in nodes.state for KindSpec
+// nodes and intentionally do not replace the task-board states.
+const (
+	SpecStateIntakeRaw          = "intake.raw"
+	SpecStateIntakeTriaged      = "intake.triaged"
+	SpecStateRequirementDraft   = "requirement.draft"
+	SpecStateRequirementClarify = "requirement.clarifying"
+	SpecStateInvestigate        = "requirement.investigating"
+	SpecStateDraft              = "spec.draft"
+	SpecStateReview             = "spec.review"
+	SpecStateNormative          = "spec.normative"
+	SpecStateNeedsAttention     = "needs_attention"
+	SpecStateParked             = "parked"
+	SpecStateWorkReady          = "work.ready"
+	SpecStateWorkImplementing   = "work.implementing"
+	SpecStateWorkVerifying      = "work.verifying"
+	SpecStateWorkShipped        = "work.shipped"
+	SpecStateWorkLearned        = "work.learned"
 )
 
 // Claim epistemic states.
@@ -71,8 +93,8 @@ const (
 // Proposal states.
 const (
 	ProposalOpen   = "open"
-	ProposalPassed = "done"    // reuse "done" for passed proposals
-	ProposalFailed = "closed"  // reuse "closed" for failed/rejected
+	ProposalPassed = "done"   // reuse "done" for passed proposals
+	ProposalFailed = "closed" // reuse "closed" for failed/rejected
 )
 
 // Space kinds.
@@ -109,35 +131,35 @@ const (
 
 // Space is a container — project, community, or team.
 type Space struct {
-	ID                 string     `json:"id"`
-	Slug               string     `json:"slug"`
-	Name               string     `json:"name"`
-	Description        string     `json:"description"`
-	OwnerID            string     `json:"owner_id"`
-	Kind               string     `json:"kind"`
-	Visibility         string     `json:"visibility"`
-	ParentID           string     `json:"parent_id,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	FirstCompletionAt  *time.Time `json:"first_completion_at,omitempty"`
+	ID                string     `json:"id"`
+	Slug              string     `json:"slug"`
+	Name              string     `json:"name"`
+	Description       string     `json:"description"`
+	OwnerID           string     `json:"owner_id"`
+	Kind              string     `json:"kind"`
+	Visibility        string     `json:"visibility"`
+	ParentID          string     `json:"parent_id,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	FirstCompletionAt *time.Time `json:"first_completion_at,omitempty"`
 }
 
 // Node is a universal content unit — task, post, thread, or comment.
 type Node struct {
-	ID           string     `json:"id"`
-	SpaceID      string     `json:"space_id"`
-	ParentID     string     `json:"parent_id,omitempty"`
-	Kind         string     `json:"kind"`
-	Title        string     `json:"title"`
-	Body         string     `json:"body"`
-	State        string     `json:"state"`
-	Priority     string     `json:"priority"`
-	Assignee     string     `json:"assignee"`
-	AssigneeID   string     `json:"assignee_id"`              // user ID — source of truth for assignment
-	AssigneeKind string     `json:"assignee_kind"`            // "human" or "agent", resolved from users table
-	Author       string     `json:"author"`
-	AuthorID     string     `json:"author_id"`               // user ID — source of truth for identity
-	AuthorKind   string     `json:"author_kind"`              // "human" or "agent"
-	Tags         []string   `json:"tags"`
+	ID            string     `json:"id"`
+	SpaceID       string     `json:"space_id"`
+	ParentID      string     `json:"parent_id,omitempty"`
+	Kind          string     `json:"kind"`
+	Title         string     `json:"title"`
+	Body          string     `json:"body"`
+	State         string     `json:"state"`
+	Priority      string     `json:"priority"`
+	Assignee      string     `json:"assignee"`
+	AssigneeID    string     `json:"assignee_id"`   // user ID — source of truth for assignment
+	AssigneeKind  string     `json:"assignee_kind"` // "human" or "agent", resolved from users table
+	Author        string     `json:"author"`
+	AuthorID      string     `json:"author_id"`   // user ID — source of truth for identity
+	AuthorKind    string     `json:"author_kind"` // "human" or "agent"
+	Tags          []string   `json:"tags"`
 	Pinned        bool       `json:"pinned"`
 	ReplyToID     string     `json:"reply_to_id,omitempty"`     // message this is a reply to
 	ReplyToAuthor string     `json:"reply_to_author,omitempty"` // resolved at query time
@@ -147,14 +169,14 @@ type Node struct {
 	QuoteOfTitle  string     `json:"quote_of_title,omitempty"`  // resolved at query time
 	QuoteOfBody   string     `json:"quote_of_body,omitempty"`   // resolved at query time
 	DueDate       *time.Time `json:"due_date,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	Verdict      string     `json:"verdict"`      // "approve", "revise", "reject" — set by review op
-	Rating       int        `json:"rating"`        // 1-5 quality score — set by review op
-	ChildCount   int        `json:"child_count"`
-	ChildDone    int        `json:"child_done"`
-	BlockerCount int        `json:"blocker_count"`
-	Causes       []string   `json:"causes"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	Verdict       string     `json:"verdict"` // "approve", "revise", "reject" — set by review op
+	Rating        int        `json:"rating"`  // 1-5 quality score — set by review op
+	ChildCount    int        `json:"child_count"`
+	ChildDone     int        `json:"child_done"`
+	BlockerCount  int        `json:"blocker_count"`
+	Causes        []string   `json:"causes"`
 }
 
 // Op is a recorded grammar operation.
@@ -165,16 +187,35 @@ type Op struct {
 	NodeTitle string          `json:"node_title,omitempty"` // resolved from nodes table when available
 	Actor     string          `json:"actor"`
 	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
-	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
+	ActorKind string          `json:"actor_kind"` // "human" or "agent", resolved from users table
 	Op        string          `json:"op"`
 	Payload   json.RawMessage `json:"payload"`
 	CreatedAt time.Time       `json:"created_at"`
 }
 
+// WebhookDelivery records Site-to-Hive delivery state for visibility and retry.
+type WebhookDelivery struct {
+	ID            string     `json:"id"`
+	OpID          string     `json:"op_id"`
+	SpaceID       string     `json:"space_id"`
+	NodeID        string     `json:"node_id"`
+	NodeTitle     string     `json:"node_title"`
+	Op            string     `json:"op"`
+	Actor         string     `json:"actor"`
+	TargetURL     string     `json:"target_url"`
+	Status        string     `json:"status"`
+	Attempts      int        `json:"attempts"`
+	LastError     string     `json:"last_error"`
+	NextAttemptAt time.Time  `json:"next_attempt_at"`
+	DeliveredAt   *time.Time `json:"delivered_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
 // Reaction is a single emoji reaction on a node.
 type Reaction struct {
-	Emoji string `json:"emoji"`
-	Count int    `json:"count"`
+	Emoji string   `json:"emoji"`
+	Count int      `json:"count"`
 	Users []string `json:"users"` // user IDs who reacted with this emoji
 }
 
@@ -221,8 +262,8 @@ type ListNodesParams struct {
 // ────────────────────────────────────────────────────────────────────
 
 var (
-	ErrNotFound            = errors.New("not found")
-	ErrChildrenIncomplete  = errors.New("cannot complete task: incomplete children")
+	ErrNotFound           = errors.New("not found")
+	ErrChildrenIncomplete = errors.New("cannot complete task: incomplete children")
 )
 
 // ────────────────────────────────────────────────────────────────────
@@ -230,8 +271,10 @@ var (
 // ────────────────────────────────────────────────────────────────────
 
 // Store is a Postgres-backed store for the unified product.
-// OpSubscriber is called after every op is recorded. Fire-and-forget —
-// subscribers should not block. This is the pub/sub channel.
+// OpSubscriber is called after every op is recorded. Subscribers are invoked
+// synchronously and in registration order so downstream audit sinks observe the
+// same op order as the database. Subscriber implementations must keep their own
+// timeouts bounded.
 type OpSubscriber func(op *Op)
 
 type Store struct {
@@ -245,21 +288,67 @@ func (s *Store) OnOp(fn OpSubscriber) {
 	s.subscribers = append(s.subscribers, fn)
 }
 
-// WebhookSubscriber returns an OpSubscriber that POSTs each op as JSON
-// to the given URL. Fire-and-forget with a 5-second timeout.
-func WebhookSubscriber(url string) OpSubscriber {
-	client := &http.Client{Timeout: 5 * time.Second}
+// WebhookSubscriber returns an OpSubscriber that POSTs each op as JSON to the
+// given URL with a 5-second timeout. Failed deliveries are persisted for retry
+// instead of being silently dropped.
+func WebhookSubscriber(store *Store, url string) OpSubscriber {
 	return func(op *Op) {
-		data, err := json.Marshal(op)
-		if err != nil {
+		ctx := context.Background()
+		if err := deliverWebhookOp(ctx, url, op); err != nil {
+			log.Printf("[webhook] delivery failed op=%s target=%s: %v", op.ID, url, err)
+			_ = store.RecordWebhookDeliveryFailure(ctx, url, op.ID, err)
 			return
 		}
-		resp, err := client.Post(url, "application/json", bytes.NewReader(data))
-		if err != nil {
-			return
-		}
-		resp.Body.Close()
+		_ = store.MarkWebhookDeliveryDelivered(ctx, url, op.ID)
 	}
+}
+
+func deliverWebhookOp(ctx context.Context, url string, op *Op) error {
+	data, err := json.Marshal(op)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var body bytes.Buffer
+		_, _ = body.ReadFrom(resp.Body)
+		msg := strings.TrimSpace(body.String())
+		if len(msg) > 300 {
+			msg = msg[:300]
+		}
+		if msg == "" {
+			msg = resp.Status
+		}
+		return fmt.Errorf("webhook status %s: %s", resp.Status, msg)
+	}
+	return nil
+}
+
+// StartWebhookRetryLoop retries failed webhook deliveries until the process exits.
+func (s *Store) StartWebhookRetryLoop(ctx context.Context, url string) {
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := s.RetryDueWebhookDeliveries(ctx, url, 25); err != nil {
+					log.Printf("[webhook] retry scan failed target=%s: %v", url, err)
+				}
+			}
+		}
+	}()
 }
 
 // NewStore wraps an existing database connection and runs migrations.
@@ -311,6 +400,20 @@ CREATE TABLE IF NOT EXISTS ops (
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    id              TEXT PRIMARY KEY,
+    op_id           TEXT NOT NULL REFERENCES ops(id) ON DELETE CASCADE,
+    target_url      TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    attempts        INT NOT NULL DEFAULT 0,
+    last_error      TEXT NOT NULL DEFAULT '',
+    next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delivered_at    TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (op_id, target_url)
+);
+
 CREATE INDEX IF NOT EXISTS idx_nodes_space ON nodes(space_id);
 CREATE INDEX IF NOT EXISTS idx_nodes_parent ON nodes(parent_id);
 CREATE INDEX IF NOT EXISTS idx_nodes_kind ON nodes(space_id, kind);
@@ -318,6 +421,8 @@ CREATE INDEX IF NOT EXISTS idx_nodes_state ON nodes(space_id, state);
 CREATE INDEX IF NOT EXISTS idx_ops_space ON ops(space_id);
 CREATE INDEX IF NOT EXISTS idx_ops_node ON ops(node_id);
 CREATE INDEX IF NOT EXISTS idx_ops_op ON ops(space_id, op);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status_next ON webhook_deliveries(status, next_attempt_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_op ON webhook_deliveries(op_id);
 
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
 ALTER TABLE spaces ADD COLUMN IF NOT EXISTS parent_id TEXT;
@@ -874,6 +979,8 @@ func (s *Store) ListNodes(ctx context.Context, p ListNodesParams) ([]Node, error
 		query += fmt.Sprintf(" AND n.state = $%d", argN)
 		args = append(args, p.State)
 		argN++
+	} else {
+		query += " AND n.state != 'deleted'"
 	}
 	if p.ParentID == "root" {
 		query += " AND n.parent_id IS NULL"
@@ -1475,13 +1582,205 @@ func (s *Store) RecordOp(ctx context.Context, spaceID, nodeID, actor, actorID, o
 	if err != nil {
 		return nil, fmt.Errorf("record op: %w", err)
 	}
+	if nodeID != "" {
+		_ = s.db.QueryRowContext(ctx, `SELECT title FROM nodes WHERE id = $1`, nodeID).Scan(&o.NodeTitle)
+	}
 
-	// Notify subscribers (pub/sub). Fire-and-forget — don't block the op.
+	// Notify subscribers in op order so audit sinks preserve provenance order.
 	for _, fn := range s.subscribers {
-		go fn(o)
+		fn(o)
 	}
 
 	return o, nil
+}
+
+func webhookRetryDelay(attempts int) time.Duration {
+	if attempts < 1 {
+		attempts = 1
+	}
+	delay := time.Duration(1<<minInt(attempts, 5)) * 10 * time.Second
+	if delay > 5*time.Minute {
+		return 5 * time.Minute
+	}
+	return delay
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// RecordWebhookDeliveryFailure persists a failed Site-to-Hive delivery so it is
+// visible and retryable.
+func (s *Store) RecordWebhookDeliveryFailure(ctx context.Context, targetURL, opID string, cause error) error {
+	if cause == nil {
+		cause = errors.New("unknown delivery failure")
+	}
+	msg := cause.Error()
+	if len(msg) > 2000 {
+		msg = msg[:2000]
+	}
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO webhook_deliveries (id, op_id, target_url, status, attempts, last_error, next_attempt_at, updated_at)
+		VALUES ($1, $2, $3, 'pending', 1, $4, NOW() + $5::interval, NOW())
+		ON CONFLICT (op_id, target_url) DO UPDATE SET
+			status = 'pending',
+			attempts = webhook_deliveries.attempts + 1,
+			last_error = EXCLUDED.last_error,
+			next_attempt_at = NOW() + ((LEAST(300, (POWER(2, LEAST(webhook_deliveries.attempts + 1, 5)) * 10))::INT || ' seconds')::interval),
+			updated_at = NOW()`,
+		newID(), opID, targetURL, msg, pgInterval(webhookRetryDelay(1)))
+	if err != nil {
+		return fmt.Errorf("record webhook delivery failure: %w", err)
+	}
+	return nil
+}
+
+func pgInterval(d time.Duration) string {
+	seconds := int(d.Seconds())
+	if seconds < 1 {
+		seconds = 1
+	}
+	return fmt.Sprintf("%d seconds", seconds)
+}
+
+// MarkWebhookDeliveryDelivered clears pending state for an op that eventually
+// reached Hive. Successful first attempts are not inserted, keeping the table
+// focused on operational exceptions.
+func (s *Store) MarkWebhookDeliveryDelivered(ctx context.Context, targetURL, opID string) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE webhook_deliveries
+		SET status = 'delivered', delivered_at = NOW(), last_error = '', next_attempt_at = NOW(), updated_at = NOW()
+		WHERE op_id = $1 AND target_url = $2`,
+		opID, targetURL)
+	if err != nil {
+		return fmt.Errorf("mark webhook delivery delivered: %w", err)
+	}
+	return nil
+}
+
+type pendingWebhookDelivery struct {
+	ID        string
+	TargetURL string
+	Attempts  int
+	Op        Op
+}
+
+// RetryDueWebhookDeliveries attempts pending deliveries whose retry time has
+// arrived. It marks success or schedules the next exponential backoff.
+func (s *Store) RetryDueWebhookDeliveries(ctx context.Context, targetURL string, limit int) error {
+	if limit <= 0 {
+		limit = 25
+	}
+	deliveries, err := s.listDueWebhookDeliveries(ctx, targetURL, limit)
+	if err != nil {
+		return err
+	}
+	for _, delivery := range deliveries {
+		if err := deliverWebhookOp(ctx, delivery.TargetURL, &delivery.Op); err != nil {
+			log.Printf("[webhook] retry failed delivery=%s op=%s target=%s attempts=%d: %v", delivery.ID, delivery.Op.ID, delivery.TargetURL, delivery.Attempts+1, err)
+			_ = s.updateWebhookDeliveryRetry(ctx, delivery.ID, delivery.Attempts+1, err)
+			continue
+		}
+		log.Printf("[webhook] retry delivered delivery=%s op=%s target=%s", delivery.ID, delivery.Op.ID, delivery.TargetURL)
+		_ = s.MarkWebhookDeliveryDelivered(ctx, delivery.TargetURL, delivery.Op.ID)
+	}
+	return nil
+}
+
+func (s *Store) listDueWebhookDeliveries(ctx context.Context, targetURL string, limit int) ([]pendingWebhookDelivery, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT d.id, d.target_url, d.attempts,
+		       o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		       o.actor, o.actor_id, COALESCE(u.kind, ''), o.op, o.payload, o.created_at
+		FROM webhook_deliveries d
+		JOIN ops o ON o.id = d.op_id
+		LEFT JOIN nodes n ON n.id = o.node_id
+		LEFT JOIN users u ON u.id = o.actor_id
+		WHERE d.status = 'pending'
+		  AND d.target_url = $1
+		  AND d.next_attempt_at <= NOW()
+		ORDER BY d.next_attempt_at ASC, d.created_at ASC
+		LIMIT $2`,
+		targetURL, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list due webhook deliveries: %w", err)
+	}
+	defer rows.Close()
+
+	deliveries := make([]pendingWebhookDelivery, 0)
+	for rows.Next() {
+		var d pendingWebhookDelivery
+		if err := rows.Scan(&d.ID, &d.TargetURL, &d.Attempts, &d.Op.ID, &d.Op.SpaceID, &d.Op.NodeID, &d.Op.NodeTitle, &d.Op.Actor, &d.Op.ActorID, &d.Op.ActorKind, &d.Op.Op, &d.Op.Payload, &d.Op.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan webhook delivery: %w", err)
+		}
+		deliveries = append(deliveries, d)
+	}
+	return deliveries, rows.Err()
+}
+
+func (s *Store) updateWebhookDeliveryRetry(ctx context.Context, deliveryID string, attempts int, cause error) error {
+	msg := "unknown delivery failure"
+	if cause != nil {
+		msg = cause.Error()
+	}
+	if len(msg) > 2000 {
+		msg = msg[:2000]
+	}
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE webhook_deliveries
+		SET attempts = $2,
+		    last_error = $3,
+		    next_attempt_at = NOW() + $4::interval,
+		    updated_at = NOW()
+		WHERE id = $1`,
+		deliveryID, attempts, msg, pgInterval(webhookRetryDelay(attempts)))
+	if err != nil {
+		return fmt.Errorf("update webhook delivery retry: %w", err)
+	}
+	return nil
+}
+
+// ListWebhookDeliveries returns recent delivery exceptions and retry state.
+func (s *Store) ListWebhookDeliveries(ctx context.Context, status string, limit int) ([]WebhookDelivery, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	args := []any{}
+	query := `
+		SELECT d.id, d.op_id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		       o.op, o.actor, d.target_url, d.status, d.attempts, d.last_error,
+		       d.next_attempt_at, d.delivered_at, d.created_at, d.updated_at
+		FROM webhook_deliveries d
+		JOIN ops o ON o.id = d.op_id
+		LEFT JOIN nodes n ON n.id = o.node_id`
+	if status != "" {
+		args = append(args, status)
+		query += " WHERE d.status = $1"
+	}
+	args = append(args, limit)
+	query += fmt.Sprintf(" ORDER BY d.updated_at DESC LIMIT $%d", len(args))
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list webhook deliveries: %w", err)
+	}
+	defer rows.Close()
+
+	deliveries := make([]WebhookDelivery, 0)
+	for rows.Next() {
+		var d WebhookDelivery
+		var deliveredAt sql.NullTime
+		if err := rows.Scan(&d.ID, &d.OpID, &d.SpaceID, &d.NodeID, &d.NodeTitle, &d.Op, &d.Actor, &d.TargetURL, &d.Status, &d.Attempts, &d.LastError, &d.NextAttemptAt, &deliveredAt, &d.CreatedAt, &d.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scan webhook delivery: %w", err)
+		}
+		if deliveredAt.Valid {
+			d.DeliveredAt = &deliveredAt.Time
+		}
+		deliveries = append(deliveries, d)
+	}
+	return deliveries, rows.Err()
 }
 
 // ListOps returns recent operations for a space.
@@ -1546,10 +1845,10 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 
 // PlatformStats returns aggregate counts for the platform.
 type PlatformStats struct {
-	Spaces     int
-	Tasks      int
-	Users      int
-	AgentOps   int
+	Spaces   int
+	Tasks    int
+	Users    int
+	AgentOps int
 }
 
 func (s *Store) GetPlatformStats(ctx context.Context) PlatformStats {
@@ -1742,7 +2041,7 @@ func (s *Store) GetUserProfile(ctx context.Context, name string) (*struct {
 // ComputeAndUpdateReputation recomputes a user's reputation score from their op
 // history across all spaces and stores it in users.reputation_score.
 // Formula: completed_tasks×1 + review_approvals×2 + review_revisions×0.5
-//          + endorsements×1.5 - review_rejections×1
+//   - endorsements×1.5 - review_rejections×1
 func (s *Store) ComputeAndUpdateReputation(ctx context.Context, userID string) error {
 	if userID == "" {
 		return nil
@@ -2254,6 +2553,22 @@ func (s *Store) SoftDeleteNode(ctx context.Context, nodeID string) error {
 	return nil
 }
 
+// SoftDeleteNodePreservingContent marks a node deleted without removing or mutating
+// title/body content. Use this for specs/tasks where historical references must
+// remain inspectable after deletion.
+func (s *Store) SoftDeleteNodePreservingContent(ctx context.Context, nodeID string) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE nodes SET state = 'deleted', updated_at = NOW() WHERE id = $1`, nodeID)
+	if err != nil {
+		return fmt.Errorf("soft delete node preserving content: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 // SetPinned sets the pinned status of a node.
 func (s *Store) SetPinned(ctx context.Context, nodeID string, pinned bool) error {
 	res, err := s.db.ExecContext(ctx,
@@ -2280,9 +2595,9 @@ func (s *Store) ListPinnedNodes(ctx context.Context, spaceID string) ([]Node, er
 // ChangelogEntry is a completed task with its completion op.
 type ChangelogEntry struct {
 	Node
-	CompletedBy   string    `json:"completed_by"`
-	CompletedByKind string  `json:"completed_by_kind"`
-	CompletedAt   time.Time `json:"completed_at"`
+	CompletedBy     string    `json:"completed_by"`
+	CompletedByKind string    `json:"completed_by_kind"`
+	CompletedAt     time.Time `json:"completed_at"`
 }
 
 // ListChangelog returns recently completed tasks in a space, most recent first.
@@ -2337,10 +2652,10 @@ type ProposalWithVotes struct {
 	Node
 	VotesYes       int    `json:"votes_yes"`
 	VotesNo        int    `json:"votes_no"`
-	QuorumPct      int    `json:"quorum_pct"`       // 0 = no quorum enforcement
-	VotingBody     string `json:"voting_body"`      // "all", "council", "team"
-	EffectiveVotes int    `json:"effective_votes"`  // direct + delegated vote count
-	EligibleCount  int    `json:"eligible_count"`   // eligible voter count for quorum display
+	QuorumPct      int    `json:"quorum_pct"`      // 0 = no quorum enforcement
+	VotingBody     string `json:"voting_body"`     // "all", "council", "team"
+	EffectiveVotes int    `json:"effective_votes"` // direct + delegated vote count
+	EligibleCount  int    `json:"eligible_count"`  // eligible voter count for quorum display
 }
 
 // ListProposals returns proposals in a space with vote counts.
