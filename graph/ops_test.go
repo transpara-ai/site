@@ -44,6 +44,68 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	}
 }
 
+func TestFetchOpsTelemetryIncludesPipelineReport(t *testing.T) {
+	var overviewAuth, reportAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/telemetry/overview":
+			overviewAuth = r.Header.Get("Authorization")
+			w.Write([]byte(`{
+				"timestamp":"2026-04-29T15:00:00Z",
+				"actors":[{"id":"actor-1","display_name":"Agent","actor_type":"agent","status":"active"}],
+				"agents":[{"role":"builder","state":"processing","model":"claude","last_message":"building","errors":0}],
+				"recent_events":[{"event_type":"pipeline.phase.completed","actor_role":"builder","summary":"emission done","at":"2026-04-29T15:00:00Z"}],
+				"phases":[{"phase":4,"label":"emission","status":"in_progress"}]
+			}`))
+		case "/telemetry/pipeline/report":
+			reportAuth = r.Header.Get("Authorization")
+			w.Write([]byte(`{"computed_at":"2026-04-29T15:00:01Z","report":{
+				"cycle_id":"pipeline-test",
+				"status":"complete",
+				"current_stage":"audit",
+				"current_phase":"observer",
+				"last_outcome":"audit.done",
+				"last_summary":"audit completed; 4 tasks remain open",
+				"updated_at":"2026-04-29T15:00:00Z",
+				"duration_secs":326.6,
+				"total_cost_usd":1.3908,
+				"total_tokens":28781,
+				"open_board_items":4,
+				"revise_count":0,
+				"emission_complete":true,
+				"human_status":"Cycle pipeline-test is complete.",
+				"phases":[{"phase":"builder","workflow_stage":"emission","outcome":"task.done","duration_secs":12,"cost_usd":0.5,"summary":"emission completed"}]
+			}}`))
+		default:
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "test-key")
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/telemetry", nil)
+
+	got := fetchOpsTelemetry(req)
+
+	if got.Error != "" || got.PipelineError != "" {
+		t.Fatalf("errors = overview:%q pipeline:%q", got.Error, got.PipelineError)
+	}
+	if overviewAuth != "Bearer test-key" || reportAuth != "Bearer test-key" {
+		t.Fatalf("auth headers = overview:%q report:%q", overviewAuth, reportAuth)
+	}
+	if got.Pipeline == nil {
+		t.Fatal("Pipeline = nil, want report")
+	}
+	if got.Pipeline.CycleID != "pipeline-test" || got.Pipeline.HumanStatus == "" {
+		t.Fatalf("pipeline report = %#v", got.Pipeline)
+	}
+	if len(got.Pipeline.Phases) != 1 || got.Pipeline.Phases[0].WorkflowStage != "emission" {
+		t.Fatalf("pipeline phases = %#v", got.Pipeline.Phases)
+	}
+}
+
 func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 	h, _, _ := testHandlers(t)
 	mux := http.NewServeMux()
