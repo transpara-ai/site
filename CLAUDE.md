@@ -87,3 +87,14 @@ Routes are registered in `cmd/site/main.go`. Pattern:
 - `/api/*` and authenticated pages → `graph/handlers.go` + `graph/store.go`
 - `/hive*` → `handlers/hive.go`
 - `/auth/*` → `auth/auth.go`
+
+### UI Ownership Boundary
+
+Site is the canonical browser UI for product, workspace, operator, telemetry,
+hive-status, work-status, and refinery surfaces. New user-visible workflow or
+operator screens should land here first, normally under `/app/*` or `/ops/*`.
+
+Sibling repos should expose durable APIs, events, diagnostics, or projections
+rather than new application UI. When Site needs data from `work`, `hive`, or
+`eventgraph`, add or consume a typed API/projection and render the operator
+experience in Site.
