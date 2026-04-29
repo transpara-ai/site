@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -558,6 +559,82 @@ func TestPostHiveDiagnostic_StoresAndServes(t *testing.T) {
 	}
 	if !strings.Contains(w2.Body.String(), "builder") {
 		t.Error("GET /hive/feed: body does not contain posted phase 'builder'")
+	}
+}
+
+func TestPostHiveMirror_StampsNodeAndRecordsOp(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	ctx := t.Context()
+
+	space, err := store.CreateSpace(ctx, "hive-mirror-test", "Hive Mirror Test", "", "owner-mirror", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(context.Background(), space.ID) })
+
+	node, err := store.CreateNode(ctx, CreateNodeParams{
+		SpaceID:    space.ID,
+		Kind:       KindTask,
+		Title:      "Mirror me",
+		Author:     "tester",
+		AuthorID:   "tester-id",
+		AuthorKind: "human",
+	})
+	if err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	payload := fmt.Sprintf(`{"node_id":%q,"hive_task_id":"task-123","hive_chain_ref":"event-456","event_type":"work.task.completed","state":"done","summary":"Completed in Hive"}`, node.ID)
+	req := httptest.NewRequest(http.MethodPost, "/api/hive/mirror", strings.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /api/hive/mirror: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	var got struct {
+		Status       string `json:"status"`
+		NodeID       string `json:"node_id"`
+		HiveTaskID   string `json:"hive_task_id"`
+		HiveChainRef string `json:"hive_chain_ref"`
+		OpID         string `json:"op_id"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.Status != "mirrored" || got.NodeID != node.ID || got.HiveTaskID != "task-123" || got.HiveChainRef != "event-456" || got.OpID == "" {
+		t.Fatalf("response = %+v", got)
+	}
+
+	var hiveTaskID, hiveChainRef, hiveEventType, state string
+	if err := store.db.QueryRowContext(ctx,
+		`SELECT hive_task_id, hive_chain_ref, hive_event_type, state FROM nodes WHERE id = $1`,
+		node.ID,
+	).Scan(&hiveTaskID, &hiveChainRef, &hiveEventType, &state); err != nil {
+		t.Fatalf("query mirrored node: %v", err)
+	}
+	if hiveTaskID != "task-123" || hiveChainRef != "event-456" || hiveEventType != "work.task.completed" || state != StateDone {
+		t.Fatalf("mirror columns = task:%q chain:%q type:%q state:%q", hiveTaskID, hiveChainRef, hiveEventType, state)
+	}
+}
+
+func TestPostHiveMirror_RequiresNodeAndChainRef(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/hive/mirror", strings.NewReader(`{"node_id":"n"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusBadRequest, w.Body.String())
 	}
 }
 

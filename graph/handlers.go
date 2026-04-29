@@ -341,6 +341,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Hive diagnostics ingestion (requires auth — used by hive runner).
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
+	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
 
 	// Node children (for HTMX polling).
 	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
@@ -4257,6 +4258,79 @@ func (h *Handlers) handleHiveDiagnostic(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+}
+
+// handleHiveMirror accepts Hive execution updates for Site-originated tasks.
+// It stamps the Site node with Hive chain references and records an audit op so
+// dashboards can trace the displayed task status back to Hive execution.
+func (h *Handlers) handleHiveMirror(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		NodeID       string `json:"node_id"`
+		HiveTaskID   string `json:"hive_task_id"`
+		HiveChainRef string `json:"hive_chain_ref"`
+		EventType    string `json:"event_type"`
+		State        string `json:"state"`
+		Summary      string `json:"summary"`
+	}
+	if err := json.NewDecoder(io.LimitReader(r.Body, 64*1024)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	req.NodeID = strings.TrimSpace(req.NodeID)
+	req.HiveTaskID = strings.TrimSpace(req.HiveTaskID)
+	req.HiveChainRef = strings.TrimSpace(req.HiveChainRef)
+	req.EventType = strings.TrimSpace(req.EventType)
+	req.State = strings.TrimSpace(req.State)
+	if req.NodeID == "" || req.HiveChainRef == "" {
+		http.Error(w, "node_id and hive_chain_ref required", http.StatusBadRequest)
+		return
+	}
+	if req.HiveTaskID == "" {
+		req.HiveTaskID = req.HiveChainRef
+	}
+
+	ctx := r.Context()
+	node, err := h.store.GetNode(ctx, req.NodeID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			http.Error(w, "node not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "get node: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err := h.store.StampNodeHiveMirror(ctx, req.NodeID, req.HiveTaskID, req.HiveChainRef, req.EventType); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			http.Error(w, "node not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "stamp mirror: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if req.State != "" {
+		if err := h.store.UpdateNodeState(ctx, req.NodeID, req.State); err != nil {
+			http.Error(w, "update node state: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	payload, _ := json.Marshal(req)
+	op, err := h.store.RecordOp(ctx, node.SpaceID, req.NodeID, "hive", h.userID(r), "mirror", payload)
+	if err != nil {
+		http.Error(w, "record mirror op: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	opID := ""
+	if op != nil {
+		opID = op.ID
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":         "mirrored",
+		"node_id":        req.NodeID,
+		"hive_task_id":   req.HiveTaskID,
+		"hive_chain_ref": req.HiveChainRef,
+		"op_id":          opID,
+	})
 }
 
 // handleHiveEscalation accepts POST /api/hive/escalation from the hive pipeline.
