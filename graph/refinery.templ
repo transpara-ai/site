@@ -6,7 +6,7 @@ import (
 	"github.com/transpara-ai/site/profile"
 )
 
-templ RefineryView(space Space, spaces []Space, columns []RefineryColumn, user ViewUser, p *profile.Profile) {
+templ RefineryView(space Space, spaces []Space, projection RefineryProjection, user ViewUser, p *profile.Profile) {
 	@appLayout(space, spaces, "refinery", user, p) {
 		<div class="p-4 md:p-6 h-full flex flex-col gap-4 overflow-hidden">
 			<div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -19,8 +19,30 @@ templ RefineryView(space Space, spaces []Space, columns []RefineryColumn, user V
 					Ops shell
 				</a>
 			</div>
+			<section class="border border-edge bg-surface rounded-lg p-3 grid gap-3 md:grid-cols-[1.8fr_repeat(4,minmax(0,1fr))] flex-none">
+				<div class="min-w-0">
+					<p class="text-xs font-medium text-warm">Status report</p>
+					<p class="text-xs text-warm-muted leading-relaxed mt-1">{ projection.HumanStatus }</p>
+				</div>
+				<div class="rounded-md bg-void/30 border border-edge p-2">
+					<p class="text-[10px] uppercase tracking-widest text-warm-faint">Open</p>
+					<p class="text-xl font-light text-warm mt-1">{ fmt.Sprintf("%d", projection.OpenCount) }</p>
+				</div>
+				<div class="rounded-md bg-void/30 border border-edge p-2">
+					<p class="text-[10px] uppercase tracking-widest text-warm-faint">Building</p>
+					<p class="text-xl font-light text-warm mt-1">{ fmt.Sprintf("%d", projection.ExecCounts["building"]) }</p>
+				</div>
+				<div class="rounded-md bg-void/30 border border-edge p-2">
+					<p class="text-[10px] uppercase tracking-widest text-warm-faint">Blocked</p>
+					<p class="text-xl font-light text-warm mt-1">{ fmt.Sprintf("%d", projection.ExecCounts["blocked"]) }</p>
+				</div>
+				<div class="rounded-md bg-void/30 border border-edge p-2">
+					<p class="text-[10px] uppercase tracking-widest text-warm-faint">Projected</p>
+					<p class="text-xs text-warm-muted mt-2">{ projection.ProjectedAt.Format("2006-01-02 15:04") }</p>
+				</div>
+			</section>
 			<div class="flex gap-3 flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-3 snap-x snap-mandatory">
-				for _, column := range columns {
+				for _, column := range projection.Columns {
 					<section class="border border-edge bg-surface rounded-lg w-[19rem] md:w-[21rem] flex-none min-h-0 flex flex-col snap-start">
 						<header class="px-3 py-3 border-b border-edge">
 							<div class="flex items-center justify-between gap-2">
@@ -113,7 +135,7 @@ templ RefineryView(space Space, spaces []Space, columns []RefineryColumn, user V
 				</div>
 			</aside>
 			<div id="refinery-detail-backdrop" onclick="closeRefineryDetail()" class="hidden fixed inset-0 z-30 bg-void/60"></div>
-			for _, column := range columns {
+			for _, column := range projection.Columns {
 				for _, item := range column.Items {
 					<template id={ "refinery-detail-" + item.ID }>
 						<div class="space-y-5">
