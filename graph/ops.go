@@ -66,20 +66,20 @@ type OpsTelemetryEvent struct {
 }
 
 type OpsWorkData struct {
-	WorkURL        string
-	GeneratedAt    string
-	Total          int
-	Open           int
-	Active         int
-	Blocked        int
-	Completed      int
-	HighPriority   int
-	Unassigned     int
-	EvidenceCount  int
-	WaivedCount    int
-	RecentTasks    []OpsWorkTask
-	BlockedTasks   []OpsWorkTask
-	Error          string
+	WorkURL       string
+	GeneratedAt   string
+	Total         int
+	Open          int
+	Active        int
+	Blocked       int
+	Completed     int
+	HighPriority  int
+	Unassigned    int
+	EvidenceCount int
+	WaivedCount   int
+	RecentTasks   []OpsWorkTask
+	BlockedTasks  []OpsWorkTask
+	Error         string
 }
 
 type OpsWorkTask struct {
