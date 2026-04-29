@@ -45,6 +45,9 @@ func TestBuildRefineryProjectionIncludesInstrumentation(t *testing.T) {
 	if projection.Counts["ready"] != 1 || projection.Counts["refining"] != 1 {
 		t.Fatalf("counts = %#v, want ready=1 refining=1", projection.Counts)
 	}
+	if projection.ExecCounts["building"] != 1 || projection.ExecCounts["unassigned"] != 1 {
+		t.Fatalf("execution counts = %#v, want building=1 unassigned=1", projection.ExecCounts)
+	}
 
 	var ready RefineryItem
 	for _, col := range projection.Columns {
@@ -61,6 +64,9 @@ func TestBuildRefineryProjectionIncludesInstrumentation(t *testing.T) {
 	}
 	if ready.ExecutionStatus != "building" {
 		t.Fatalf("ExecutionStatus = %q, want building", ready.ExecutionStatus)
+	}
+	if ready.State != "ready" || ready.RawState != StateActive {
+		t.Fatalf("states = (%q, %q), want (ready, %s)", ready.State, ready.RawState, StateActive)
 	}
 	if ready.Owner != "implementer" {
 		t.Fatalf("Owner = %q, want implementer", ready.Owner)

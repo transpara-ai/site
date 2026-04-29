@@ -31,6 +31,7 @@ type OpsPageData struct {
 	EmbedURL    string
 	EmbedLabel  string
 	Telemetry   *OpsTelemetryData
+	Work        *OpsWorkData
 	LegacyURL   string
 }
 
@@ -64,6 +65,40 @@ type OpsTelemetryEvent struct {
 	At        string `json:"at"`
 }
 
+type OpsWorkData struct {
+	WorkURL        string
+	GeneratedAt    string
+	Total          int
+	Open           int
+	Active         int
+	Blocked        int
+	Completed      int
+	HighPriority   int
+	Unassigned     int
+	EvidenceCount  int
+	WaivedCount    int
+	RecentTasks    []OpsWorkTask
+	BlockedTasks   []OpsWorkTask
+	Error          string
+}
+
+type OpsWorkTask struct {
+	ID            string `json:"id"`
+	Title         string `json:"title"`
+	Description   string `json:"description"`
+	Priority      string `json:"priority"`
+	Workspace     string `json:"workspace"`
+	Status        string `json:"status"`
+	Assignee      string `json:"assignee"`
+	Blocked       bool   `json:"blocked"`
+	ArtifactCount int    `json:"artifact_count"`
+	Waived        bool   `json:"waived"`
+}
+
+type opsWorkTasksResponse struct {
+	Tasks []OpsWorkTask `json:"tasks"`
+}
+
 type opsTelemetryOverview struct {
 	Timestamp string `json:"timestamp"`
 	Actors    []struct {
@@ -90,12 +125,13 @@ func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) handleOpsWork(w http.ResponseWriter, r *http.Request) {
+	legacyURL := legacyWorkURL(workUIBaseURL(r), "/")
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Work",
-		Description: "Legacy Work task dashboard, framed from the site operator shell until native rendering moves into site.",
+		Description: "Native Site task summary sourced from the Work API.",
 		Active:      "work",
-		EmbedURL:    legacyWorkURL(workUIBaseURL(r), "/"),
-		EmbedLabel:  "Work dashboard",
+		Work:        fetchOpsWork(r),
+		LegacyURL:   legacyURL,
 	})
 }
 
@@ -243,6 +279,68 @@ func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
 	return data
 }
 
+func fetchOpsWork(r *http.Request) *OpsWorkData {
+	workBase := serverWorkAPIBaseURL()
+	data := &OpsWorkData{
+		WorkURL:     legacyWorkURL(workBase, "/tasks"),
+		GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05"),
+	}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, data.WorkURL, nil)
+	if err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	if key := strings.TrimSpace(os.Getenv("WORK_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	} else {
+		req.Header.Set("Authorization", "Bearer dev")
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		data.Error = fmt.Sprintf("work tasks returned %s", resp.Status)
+		return data
+	}
+	var tasks opsWorkTasksResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	data.Total = len(tasks.Tasks)
+	for _, task := range tasks.Tasks {
+		switch strings.ToLower(task.Status) {
+		case "completed", "done", "closed":
+			data.Completed++
+		case "in_progress", "active", "assigned":
+			data.Active++
+			data.Open++
+		default:
+			data.Open++
+		}
+		if task.Blocked {
+			data.Blocked++
+			data.BlockedTasks = append(data.BlockedTasks, task)
+		}
+		if strings.EqualFold(task.Priority, "high") {
+			data.HighPriority++
+		}
+		if strings.TrimSpace(task.Assignee) == "" && !isCompletedWorkTask(task) {
+			data.Unassigned++
+		}
+		data.EvidenceCount += task.ArtifactCount
+		if task.Waived {
+			data.WaivedCount++
+		}
+	}
+	data.RecentTasks = takeWorkTasks(tasks.Tasks, 10)
+	data.BlockedTasks = takeWorkTasks(data.BlockedTasks, 6)
+	return data
+}
+
 func serverWorkAPIBaseURL() string {
 	if base := strings.TrimSpace(os.Getenv("WORK_API_BASE_URL")); base != "" {
 		return strings.TrimRight(base, "/")
@@ -251,6 +349,22 @@ func serverWorkAPIBaseURL() string {
 		return strings.TrimRight(base, "/")
 	}
 	return "http://localhost:8080"
+}
+
+func takeWorkTasks(tasks []OpsWorkTask, limit int) []OpsWorkTask {
+	if len(tasks) <= limit {
+		return tasks
+	}
+	return tasks[:limit]
+}
+
+func isCompletedWorkTask(task OpsWorkTask) bool {
+	switch strings.ToLower(task.Status) {
+	case "completed", "done", "closed":
+		return true
+	default:
+		return false
+	}
 }
 
 func takeTelemetryAgents(agents []OpsTelemetryAgent, limit int) []OpsTelemetryAgent {
