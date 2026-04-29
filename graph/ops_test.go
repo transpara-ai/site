@@ -3,6 +3,7 @@ package graph
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -40,5 +41,29 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	}
 	if len(got.BlockedTasks) != 1 || got.BlockedTasks[0].ID != "task-1" {
 		t.Fatalf("BlockedTasks = %#v, want task-1", got.BlockedTasks)
+	}
+}
+
+func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Hive summary") {
+		t.Fatal("GET /ops/hive: body does not contain native Hive summary")
+	}
+	if strings.Contains(body, "<iframe") {
+		t.Fatal("GET /ops/hive: body contains an iframe; operator route should be native")
+	}
+	if !strings.Contains(body, "Public dashboard") {
+		t.Fatal("GET /ops/hive: body does not link to the public /hive dashboard")
 	}
 }
