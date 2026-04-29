@@ -1,0 +1,193 @@
+package graph
+
+import (
+	"fmt"
+
+	"github.com/transpara-ai/site/profile"
+)
+
+templ RefineryView(space Space, spaces []Space, columns []RefineryColumn, user ViewUser, p *profile.Profile) {
+	@appLayout(space, spaces, "refinery", user, p) {
+		<div class="p-4 md:p-6 h-full flex flex-col gap-4 overflow-hidden">
+			<div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+				<div class="min-w-0">
+					<p class="text-xs font-medium text-brand uppercase tracking-widest">Refinery</p>
+					<h1 class="font-display text-xl md:text-2xl font-light text-warm truncate">{ space.Name }</h1>
+					<p class="text-sm text-warm-muted mt-1">Inbox -> Refining -> Review -> Ready -> Done. Build activity appears as execution status on Ready items.</p>
+				</div>
+				<a href={ templ.SafeURL("/ops/refinery") } class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors text-sm">
+					Ops shell
+				</a>
+			</div>
+			<div class="flex gap-3 flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-3 snap-x snap-mandatory">
+				for _, column := range columns {
+					<section class="border border-edge bg-surface rounded-lg w-[19rem] md:w-[21rem] flex-none min-h-0 flex flex-col snap-start">
+						<header class="px-3 py-3 border-b border-edge">
+							<div class="flex items-center justify-between gap-2">
+								<div class="flex items-center gap-2 min-w-0">
+									<h2 class="text-sm font-medium text-warm truncate">{ column.Label }</h2>
+									<span class="text-[10px] px-2 py-0.5 rounded-full bg-elevated text-warm-faint">{ fmt.Sprintf("%d", len(column.Items)) }</span>
+								</div>
+								if column.State == "inbox" {
+									<button
+										type="button"
+										title="Add intake item"
+										onclick="var f=document.getElementById('refinery-inbox-form'); if(f){f.classList.toggle('hidden'); var i=document.getElementById('refinery-inbox-title'); if(i && !f.classList.contains('hidden')) i.focus();}"
+										class="w-7 h-7 rounded-md bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center justify-center text-lg leading-none"
+									>+</button>
+								}
+							</div>
+							<p class="text-[11px] text-warm-faint mt-1 leading-relaxed">{ column.Description }</p>
+						</header>
+						<div class="p-2 space-y-2 overflow-y-auto">
+							if column.State == "inbox" {
+								<form
+									id="refinery-inbox-form"
+									method="POST"
+									action={ templ.SafeURL("/app/" + space.Slug + "/refinery/intake") }
+									class="hidden border border-brand/20 bg-brand/5 rounded-md p-2 space-y-2"
+								>
+									<input
+										id="refinery-inbox-title"
+										name="title"
+										type="text"
+										placeholder="New intake item"
+										class="w-full px-2.5 py-2 bg-void border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"
+										required
+									/>
+									<textarea
+										name="body"
+										placeholder="Notes"
+										rows="2"
+										class="w-full px-2.5 py-2 bg-void border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+									></textarea>
+									<div class="flex items-center justify-end gap-2">
+										<button type="button" onclick="document.getElementById('refinery-inbox-form').classList.add('hidden')" class="px-2.5 py-1.5 rounded-md text-xs text-warm-faint hover:text-warm-muted transition-colors">Cancel</button>
+										<button type="submit" class="px-2.5 py-1.5 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Add</button>
+									</div>
+								</form>
+							}
+							if len(column.Items) == 0 {
+								<p class="text-xs text-warm-faint px-2 py-4">No items</p>
+							}
+							for _, item := range column.Items {
+								<button
+									type="button"
+									data-refinery-detail-id={ item.ID }
+									class="refinery-card block w-full text-left border border-edge rounded-md bg-void/30 hover:border-brand/30 hover:bg-elevated/50 transition-colors p-3"
+								>
+									<div class="flex items-start justify-between gap-2">
+										<h3 class="text-sm font-medium text-warm leading-snug">{ item.Title }</h3>
+										<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand whitespace-nowrap">{ item.ExecutionStatus }</span>
+									</div>
+									<dl class="grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+										<dt class="text-warm-faint">State</dt>
+										<dd class="text-warm-muted">{ item.State }</dd>
+										<dt class="text-warm-faint">Owner</dt>
+										<dd class="text-warm-muted truncate">{ item.Owner }</dd>
+										<dt class="text-warm-faint">Updated</dt>
+										<dd class="text-warm-muted">{ item.UpdatedLabel }</dd>
+										<dt class="text-warm-faint">Evidence</dt>
+										<dd class="text-warm-muted">{ fmt.Sprintf("%d", item.EvidenceCount) }</dd>
+									</dl>
+									if item.BlockedReason != "" {
+										<p class="text-[11px] text-amber-300 mt-2">{ item.BlockedReason }</p>
+									}
+									<p class="text-[11px] text-warm-faint mt-2 leading-relaxed">{ item.NextAction }</p>
+								</button>
+							}
+						</div>
+					</section>
+				}
+			</div>
+			<aside id="refinery-detail-panel" class="fixed inset-y-0 right-0 z-40 w-full max-w-md translate-x-full transition-transform duration-200 ease-out border-l border-edge bg-surface shadow-2xl flex flex-col">
+				<header class="px-4 py-3 border-b border-edge flex items-center justify-between gap-3">
+					<div>
+						<p class="text-xs font-medium text-brand uppercase tracking-widest">Card detail</p>
+						<h2 id="refinery-detail-heading" class="text-lg font-medium text-warm">Select a card</h2>
+					</div>
+					<button type="button" onclick="closeRefineryDetail()" class="w-8 h-8 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors flex items-center justify-center" title="Close detail panel">x</button>
+				</header>
+				<div id="refinery-detail-content" class="flex-1 overflow-y-auto p-4 text-sm text-warm-muted">
+					Select a refinery card to inspect its status, owner, evidence, and next action.
+				</div>
+			</aside>
+			<div id="refinery-detail-backdrop" onclick="closeRefineryDetail()" class="hidden fixed inset-0 z-30 bg-void/60"></div>
+			for _, column := range columns {
+				for _, item := range column.Items {
+					<template id={ "refinery-detail-" + item.ID }>
+						<div class="space-y-5">
+							<div class="space-y-2">
+								<h3 class="text-xl font-medium text-warm leading-snug">{ item.Title }</h3>
+								<div class="flex items-center gap-2 flex-wrap">
+									<span class="text-[11px] px-2 py-1 rounded-full bg-brand/10 text-brand">{ item.ExecutionStatus }</span>
+									<span class="text-[11px] px-2 py-1 rounded-full bg-elevated text-warm-faint">{ column.Label }</span>
+								</div>
+							</div>
+							if item.Body != "" {
+								<div class="space-y-2">
+									<h4 class="text-xs font-medium text-warm-faint uppercase tracking-widest">Body</h4>
+									<p class="text-sm text-warm-muted whitespace-pre-wrap leading-relaxed">{ item.Body }</p>
+								</div>
+							}
+							<dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-2 text-sm">
+								<dt class="text-warm-faint">State</dt>
+								<dd class="text-warm-muted">{ item.State }</dd>
+								<dt class="text-warm-faint">Owner</dt>
+								<dd class="text-warm-muted">{ item.Owner }</dd>
+								<dt class="text-warm-faint">Updated</dt>
+								<dd class="text-warm-muted">{ item.UpdatedLabel }</dd>
+								<dt class="text-warm-faint">Evidence</dt>
+								<dd class="text-warm-muted">{ fmt.Sprintf("%d", item.EvidenceCount) }</dd>
+								<dt class="text-warm-faint">Source</dt>
+								<dd class="text-warm-muted break-all">{ item.SourceSystem } / { item.SourceID }</dd>
+							</dl>
+							if item.BlockedReason != "" {
+								<div class="rounded-md border border-amber-400/20 bg-amber-400/10 p-3">
+									<p class="text-xs font-medium text-amber-300">Blocked</p>
+									<p class="text-sm text-amber-200 mt-1">{ item.BlockedReason }</p>
+								</div>
+							}
+							<div class="rounded-md border border-edge bg-void/40 p-3">
+								<p class="text-xs font-medium text-warm-faint uppercase tracking-widest">Next action</p>
+								<p class="text-sm text-warm-muted mt-1">{ item.NextAction }</p>
+							</div>
+							<a href={ templ.SafeURL("/app/" + space.Slug + "/node/" + item.ID) } class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-sm font-medium hover:bg-brand-dark transition-colors">
+								Open full record
+							</a>
+						</div>
+					</template>
+				}
+			}
+			<script>
+			function openRefineryDetail(id) {
+				var panel = document.getElementById('refinery-detail-panel');
+				var backdrop = document.getElementById('refinery-detail-backdrop');
+				var content = document.getElementById('refinery-detail-content');
+				var heading = document.getElementById('refinery-detail-heading');
+				var template = document.getElementById('refinery-detail-' + id);
+				if (!panel || !content || !template) return;
+				content.innerHTML = template.innerHTML;
+				var title = content.querySelector('h3');
+				if (heading && title) heading.textContent = title.textContent;
+				panel.classList.remove('translate-x-full');
+				if (backdrop) backdrop.classList.remove('hidden');
+			}
+			function closeRefineryDetail() {
+				var panel = document.getElementById('refinery-detail-panel');
+				var backdrop = document.getElementById('refinery-detail-backdrop');
+				if (panel) panel.classList.add('translate-x-full');
+				if (backdrop) backdrop.classList.add('hidden');
+			}
+			document.addEventListener('keydown', function(event) {
+				if (event.key === 'Escape') closeRefineryDetail();
+			});
+			document.addEventListener('click', function(event) {
+				var card = event.target.closest('.refinery-card');
+				if (!card) return;
+				openRefineryDetail(card.getAttribute('data-refinery-detail-id'));
+			});
+			</script>
+		</div>
+	}
+}

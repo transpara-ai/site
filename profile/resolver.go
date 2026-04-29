@@ -2,6 +2,10 @@ package profile
 
 import "net/http"
 
+// CookieName is the browser cookie that remembers the active profile after a
+// user explicitly selects one with ?profile=<slug>.
+const CookieName = "site_profile"
+
 // Resolver maps an incoming request to a Profile, or returns nil to
 // defer to the next resolver in a chain. The interface is deliberately
 // small: every future resolver (subdomain, cookie, host header, …)
@@ -17,11 +21,30 @@ type QueryParamResolver struct{}
 
 // Resolve reads ?profile=<slug> and looks it up in the registry.
 func (QueryParamResolver) Resolve(r *http.Request) *Profile {
+	p, _ := profileFromQuery(r)
+	return p
+}
+
+func profileFromQuery(r *http.Request) (*Profile, bool) {
 	slug := r.URL.Query().Get("profile")
 	if slug == "" {
+		return nil, false
+	}
+	p := Lookup(slug)
+	return p, p != nil
+}
+
+// CookieResolver resolves a Profile from CookieName. Empty, missing, or
+// unknown cookie values return nil so earlier or later resolvers can decide.
+type CookieResolver struct{}
+
+// Resolve reads the persisted profile cookie and looks it up in the registry.
+func (CookieResolver) Resolve(r *http.Request) *Profile {
+	c, err := r.Cookie(CookieName)
+	if err != nil || c.Value == "" {
 		return nil
 	}
-	return Lookup(slug)
+	return Lookup(c.Value)
 }
 
 // DefaultResolver always returns the default profile. Place it last in

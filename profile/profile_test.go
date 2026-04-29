@@ -326,21 +326,70 @@ func TestDefaultResolver_alwaysDefault(t *testing.T) {
 	}
 }
 
+func TestCookieResolver(t *testing.T) {
+	cases := []struct {
+		name     string
+		cookie   *http.Cookie
+		wantNil  bool
+		wantSlug string
+	}{
+		{name: "missing cookie", wantNil: true},
+		{name: "empty cookie", cookie: &http.Cookie{Name: CookieName, Value: ""}, wantNil: true},
+		{name: "known slug", cookie: &http.Cookie{Name: CookieName, Value: "transpara"}, wantSlug: "transpara"},
+		{name: "unknown slug", cookie: &http.Cookie{Name: CookieName, Value: "nonsense"}, wantNil: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tc.cookie != nil {
+				req.AddCookie(tc.cookie)
+			}
+			p := CookieResolver{}.Resolve(req)
+			if tc.wantNil {
+				if p != nil {
+					t.Errorf("CookieResolver.Resolve = %+v, want nil", p)
+				}
+				return
+			}
+			if p == nil || p.Slug != tc.wantSlug {
+				t.Errorf("CookieResolver.Resolve = %+v, want slug %q", p, tc.wantSlug)
+			}
+		})
+	}
+}
+
 func TestChain_firstMatchWins(t *testing.T) {
 	chain := Chain{
 		QueryParamResolver{},
+		CookieResolver{},
 		DefaultResolver{},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/?profile=transpara", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: DefaultSlug})
 	p := chain.Resolve(req)
 	if p == nil || p.Slug != "transpara" {
 		t.Errorf("chain.Resolve = %+v, want slug 'transpara'", p)
 	}
 }
 
+func TestChain_usesCookieWhenQueryMissing(t *testing.T) {
+	chain := Chain{
+		QueryParamResolver{},
+		CookieResolver{},
+		DefaultResolver{},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: "transpara"})
+	p := chain.Resolve(req)
+	if p == nil || p.Slug != "transpara" {
+		t.Errorf("chain.Resolve with cookie = %+v, want slug 'transpara'", p)
+	}
+}
+
 func TestChain_fallsBackToDefault(t *testing.T) {
 	chain := Chain{
 		QueryParamResolver{},
+		CookieResolver{},
 		DefaultResolver{},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/?profile=nonsense", nil)
@@ -360,7 +409,7 @@ func TestChain_emptyFallsBackToDefault(t *testing.T) {
 }
 
 func TestMiddleware_attachesResolvedProfile(t *testing.T) {
-	chain := Chain{QueryParamResolver{}, DefaultResolver{}}
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
 	var captured *Profile
 	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		captured = FromContext(r.Context())
@@ -378,8 +427,59 @@ func TestMiddleware_attachesResolvedProfile(t *testing.T) {
 	}
 }
 
+func TestMiddleware_persistsValidQueryProfile(t *testing.T) {
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
+	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/?profile=transpara", nil)
+	handler.ServeHTTP(rec, req)
+
+	cookies := rec.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("middleware set %d cookies, want 1", len(cookies))
+	}
+	c := cookies[0]
+	if c.Name != CookieName || c.Value != "transpara" {
+		t.Fatalf("cookie = %s=%s, want %s=transpara", c.Name, c.Value, CookieName)
+	}
+	if c.Path != "/" || c.MaxAge <= 0 || !c.HttpOnly || c.SameSite != http.SameSiteLaxMode {
+		t.Errorf("cookie attributes = path %q maxAge %d httpOnly %v sameSite %v", c.Path, c.MaxAge, c.HttpOnly, c.SameSite)
+	}
+}
+
+func TestMiddleware_doesNotPersistUnknownQueryProfile(t *testing.T) {
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
+	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/?profile=nonsense", nil)
+	handler.ServeHTTP(rec, req)
+
+	if cookies := rec.Result().Cookies(); len(cookies) != 0 {
+		t.Fatalf("middleware set cookies for unknown profile: %+v", cookies)
+	}
+}
+
+func TestMiddleware_attachesCookieProfile(t *testing.T) {
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
+	var captured *Profile
+	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		captured = FromContext(r.Context())
+	}))
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: "transpara"})
+	handler.ServeHTTP(rec, req)
+
+	if captured == nil || captured.Slug != "transpara" {
+		t.Errorf("cookie middleware attached = %+v, want transpara", captured)
+	}
+}
+
 func TestMiddleware_defaultOnUnknownSlug(t *testing.T) {
-	chain := Chain{QueryParamResolver{}, DefaultResolver{}}
+	chain := Chain{QueryParamResolver{}, CookieResolver{}, DefaultResolver{}}
 	var captured *Profile
 	handler := Middleware(chain)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		captured = FromContext(r.Context())

@@ -3,6 +3,7 @@ package profile
 import (
 	"net/http"
 	"os"
+	"strings"
 )
 
 // disableEnvVar is the environment variable that, when set to any
@@ -35,8 +36,25 @@ func Middleware(resolver Resolver) func(http.Handler) http.Handler {
 				if p == nil {
 					p = Default()
 				}
+				persistProfileSelection(w, r)
 			}
 			next.ServeHTTP(w, r.WithContext(WithProfile(r.Context(), p)))
 		})
 	}
+}
+
+func persistProfileSelection(w http.ResponseWriter, r *http.Request) {
+	p, ok := profileFromQuery(r)
+	if !ok {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     CookieName,
+		Value:    p.Slug,
+		Path:     "/",
+		MaxAge:   365 * 24 * 60 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https"),
+	})
 }

@@ -249,7 +249,7 @@ const maxHiveDiagEntries = 10
 // Handlers serves the unified product HTTP endpoints.
 type Handlers struct {
 	store     *Store
-	mind      *Mind // optional — triggers auto-reply on conversation messages
+	mind      *Mind                               // optional — triggers auto-reply on conversation messages
 	readWrap  func(http.HandlerFunc) http.Handler // optional auth (reads)
 	writeWrap func(http.HandlerFunc) http.Handler // required auth (writes)
 	loopDir   string                              // optional — path to loop/ dir for reading iteration state
@@ -294,6 +294,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Space lenses (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /app/{slug}", h.readWrap(h.handleSpaceDefault))
 	mux.Handle("GET /app/{slug}/board", h.readWrap(h.handleBoard))
+	mux.Handle("GET /app/{slug}/refinery", h.readWrap(h.handleRefinery))
+	mux.Handle("POST /app/{slug}/refinery/intake", h.writeWrap(h.handleRefineryIntake))
 	mux.Handle("POST /app/{slug}/checklist/dismiss", h.writeWrap(h.handleChecklistDismiss))
 	mux.Handle("GET /app/{slug}/feed", h.readWrap(h.handleFeed))
 	mux.Handle("GET /app/{slug}/threads", h.readWrap(h.handleThreads))
@@ -333,6 +335,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Mind state (requires auth — used by cmd/post to sync loop state).
 	mux.Handle("PUT /api/mind-state", h.writeWrap(h.handleSetMindState))
 
+	// Refinery projection (optional auth — public spaces readable by anyone).
+	mux.Handle("GET /api/refinery/{slug}/projection", h.readWrap(h.handleRefineryProjection))
+
 	// Hive diagnostics ingestion (requires auth — used by hive runner).
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
@@ -350,6 +355,13 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /hive/feed", h.handleHiveFeed)
 	mux.HandleFunc("GET /hive/stats", h.handleHiveStats)
 	mux.HandleFunc("GET /hive/status", h.handleHiveStatus)
+
+	// Operator shell — site-owned entry points for legacy and native ops surfaces.
+	mux.Handle("GET /ops", h.readWrap(h.handleOps))
+	mux.Handle("GET /ops/work", h.readWrap(h.handleOpsWork))
+	mux.Handle("GET /ops/telemetry", h.readWrap(h.handleOpsTelemetry))
+	mux.Handle("GET /ops/hive", h.readWrap(h.handleOpsHive))
+	mux.Handle("GET /ops/refinery", h.readWrap(h.handleOpsRefinery))
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -2450,6 +2462,10 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			TaskCard(*node, space.Slug).Render(ctx, w)
 			return
 		}
+		if returnTo := safeLocalReturn(r.FormValue("return_to")); returnTo != "" {
+			http.Redirect(w, r, returnTo, http.StatusSeeOther)
+			return
+		}
 		boardURL := "/app/" + space.Slug + "/board"
 		if assigneeID != "" {
 			if isAgent, _ := h.store.HasAgentParticipant(ctx, []string{assigneeID}); isAgent {
@@ -3717,6 +3733,14 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, fmt.Sprintf("unknown op: %s", op), http.StatusBadRequest)
 	}
+}
+
+func safeLocalReturn(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" || !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") {
+		return ""
+	}
+	return path
 }
 
 // ────────────────────────────────────────────────────────────────────

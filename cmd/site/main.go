@@ -120,8 +120,8 @@ func main() {
 			layerTitle := fmt.Sprintf("Layer %d:", num)
 			// Find the layer's goal node by title prefix.
 			allGoals, _ := graphStore.ListNodes(r.Context(), graph.ListNodesParams{
-				SpaceID: hiveSpaceID,
-				Kind:    "goal",
+				SpaceID:  hiveSpaceID,
+				Kind:     "goal",
 				ParentID: "root",
 			})
 			for _, lg := range allGoals {
@@ -722,13 +722,13 @@ func main() {
 			ReputationScore: u.ReputationScore,
 			TasksCompleted:  tasksCompleted,
 			ReviewApprovals: reviewApprovals,
-			Endorsements: endorsements, Endorsers: endorsers,
+			Endorsements:    endorsements, Endorsers: endorsers,
 			HasEndorsed: hasEndorsed, ViewerLoggedIn: viewerLoggedIn,
 			Followers: followers, Following: following,
-			IsFollowing: isFollowing,
+			IsFollowing:   isFollowing,
 			CompletedWork: completedWork,
-			RecentOps: recentOps,
-			Spaces: spaces,
+			RecentOps:     recentOps,
+			Spaces:        spaces,
 		}, profile.FromContext(r.Context())).Render(r.Context(), w)
 	}))
 
@@ -961,6 +961,7 @@ func main() {
 	// Chain literal below — that's the extensibility contract of Phase 3.
 	profileChain := profile.Chain{
 		profile.QueryParamResolver{},
+		profile.CookieResolver{},
 		profile.DefaultResolver{},
 	}
 	handler := canonicalHost(noCache(profile.Middleware(profileChain)(mux)))
