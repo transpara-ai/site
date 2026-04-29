@@ -22,7 +22,7 @@ The goal is to make the UI surface maintainable: `site` owns browser-facing prod
 | `site` | `/`, `/discover`, `/blog`, `/reference`, `/agents`, `/market`, `/knowledge`, `/activity`, `/search` | Public/product site and shared discovery surfaces | Keep in `site` |
 | `site` | `/app`, `/app/{slug}`, `/app/{slug}/*` | Main product workspace UI | Keep in `site` |
 | `site` | `/app/{slug}/board`, refinery/journey views when enabled | Work intake, design, and status review UI | Keep in `site`; simplify FSM in a follow-up change |
-| `site` | `/hive`, `/hive/feed`, `/hive/stats`, `/hive/status` | Hive-facing operator/status pages | Keep short term; target `/ops/hive` |
+| `site` | `/hive`, `/hive/feed`, `/hive/stats`, `/hive/status` | Public live-build page and HTMX partials for the phase timeline | Keep as public/product UI; route operator status through `/ops/hive` |
 | `site` | `/api/palette`, `/api/members` | Site UI helper APIs | Keep in `site` |
 | `site` | `/api/hive/diagnostic`, `/api/hive/escalation`, `/api/mind-state` | Service ingress and status endpoints used by UI/runtime | Keep short term; document as ingress APIs before moving or renaming |
 | `work` | `/` | Inline work dashboard | Legacy UI; migrate to `site` `/ops/work` |
@@ -141,7 +141,7 @@ Every operator or refinery page rendered by `site` should expose enough state fo
 ## Open Risks
 
 1. The live refinery route at `http://nucbuntu:8201/app/journey-test/refinery?profile=transpara` must be reconciled with the checked-out `site` source before code changes are made to that page.
-2. `/hive` may be either public/product-facing or operator-facing. If it is operator-facing, it should move under `/ops/hive`.
+2. `/hive` is public/product-facing. Operator Hive status belongs under `/ops/hive`.
 3. The migration needs an auth and proxy decision for `site` pages that consume `work` APIs from the browser.
 4. Existing dashboards may link directly to `work` routes. Keep redirects or compatibility links during migration.
 

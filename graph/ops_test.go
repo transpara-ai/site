@@ -125,7 +125,7 @@ func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 	if strings.Contains(body, "<iframe") {
 		t.Fatal("GET /ops/hive: body contains an iframe; operator route should be native")
 	}
-	if !strings.Contains(body, "Public dashboard") {
-		t.Fatal("GET /ops/hive: body does not link to the public /hive dashboard")
+	if !strings.Contains(body, "Public live build") {
+		t.Fatal("GET /ops/hive: body does not link to the public /hive live-build page")
 	}
 }

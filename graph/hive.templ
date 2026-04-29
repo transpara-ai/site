@@ -6,8 +6,8 @@ import (
 	"github.com/transpara-ai/site/profile"
 )
 
-// HivePage renders the /hive dashboard — iteration badge, phase pill, last build,
-// phase timeline (HTMX-polled), and recent commits.
+// HivePage renders the public /hive live-build page. Operator Hive status belongs
+// under /ops/hive; this page is a product/public view into the civilization build.
 templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
@@ -21,6 +21,15 @@ templ HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user V
 			<main class="flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10">
 				<!-- Header: large iteration counter + phase pill + last build title -->
 				<div class="space-y-4">
+					<div class="border border-brand/20 bg-brand/10 rounded-lg px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+						<div>
+							<p class="text-xs font-medium text-brand uppercase tracking-widest">Public live build</p>
+							<p class="text-sm text-warm-muted mt-1">This page is the public phase timeline. Operator status and diagnostics live in the native Site operator shell.</p>
+						</div>
+						<a href="/ops/hive" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-sm font-medium hover:bg-brand-dark transition-colors">
+							Operator summary
+						</a>
+					</div>
 					<div class="flex items-end gap-5 flex-wrap">
 						if ls.Iteration > 0 {
 							<span class="text-7xl font-light text-brand tabular-nums leading-none">{ fmt.Sprintf("%d", ls.Iteration) }</span>

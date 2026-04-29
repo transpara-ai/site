@@ -14,8 +14,8 @@ import (
 	"github.com/transpara-ai/site/profile"
 )
 
-// HivePage renders the /hive dashboard — iteration badge, phase pill, last build,
-// phase timeline (HTMX-polled), and recent commits.
+// HivePage renders the public /hive live-build page. Operator Hive status belongs
+// under /ops/hive; this page is a product/public view into the civilization build.
 func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user ViewUser, p *profile.Profile) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -87,7 +87,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<main class=\"flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10\"><!-- Header: large iteration counter + phase pill + last build title --><div class=\"space-y-4\"><div class=\"flex items-end gap-5 flex-wrap\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<main class=\"flex-1 max-w-4xl mx-auto px-4 md:px-6 py-12 w-full space-y-10\"><!-- Header: large iteration counter + phase pill + last build title --><div class=\"space-y-4\"><div class=\"border border-brand/20 bg-brand/10 rounded-lg px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between\"><div><p class=\"text-xs font-medium text-brand uppercase tracking-widest\">Public live build</p><p class=\"text-sm text-warm-muted mt-1\">This page is the public phase timeline. Operator status and diagnostics live in the native Site operator shell.</p></div><a href=\"/ops/hive\" class=\"inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-sm font-medium hover:bg-brand-dark transition-colors\">Operator summary</a></div><div class=\"flex items-end gap-5 flex-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -99,7 +99,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", ls.Iteration))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 26, Col: 111}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 35, Col: 111}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -141,7 +141,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(ls.Phase)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 32, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 41, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -164,7 +164,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(ls.BuildTitle)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 38, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 47, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -182,7 +182,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("$%.2f", ls.BuildCost))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 41, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 50, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -223,7 +223,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(c.Hash)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 59, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 68, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -236,7 +236,7 @@ func HivePage(ls LoopState, entries []DiagEntry, commits []RecentCommit, user Vi
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(c.Subject)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 60, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/hive.templ`, Line: 69, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
