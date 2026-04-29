@@ -227,6 +227,12 @@ func TestGetHive_PublicNoAuth(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("GET /hive without auth: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
+	if !strings.Contains(w.Body.String(), "Public live build") {
+		t.Fatal("GET /hive: body does not identify /hive as the public live-build page")
+	}
+	if !strings.Contains(w.Body.String(), "Operator summary") {
+		t.Fatal("GET /hive: body does not link to /ops/hive operator summary")
+	}
 }
 
 // TestGetHive_ContainsHiveFeed verifies GET /hive returns 200 and includes the
