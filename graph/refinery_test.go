@@ -1,8 +1,13 @@
 package graph
 
 import (
+	"bytes"
+	"context"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/transpara-ai/site/profile"
 )
 
 func TestBuildRefineryProjectionIncludesInstrumentation(t *testing.T) {
@@ -148,5 +153,34 @@ func TestRefineryFSMKeepsExecutionOutOfColumns(t *testing.T) {
 				t.Fatalf("refineryExecutionStatus = %q, want %q", got, tc.status)
 			}
 		})
+	}
+}
+
+func TestRefineryViewRendersExecutionFilters(t *testing.T) {
+	projectedAt := time.Date(2026, 4, 29, 10, 0, 0, 0, time.UTC)
+	space := Space{ID: "space-1", Slug: "journey-test", Name: "Journey Test"}
+	projection := buildRefineryProjection(space, []Node{
+		{ID: "task-building", Title: "Build it", State: StateActive, UpdatedAt: projectedAt},
+		{ID: "task-blocked", Title: "Unblock it", State: StateBlocked, BlockerCount: 1, UpdatedAt: projectedAt},
+		{ID: "task-assigned", Title: "Assigned item", State: StateOpen, Assignee: "builder", UpdatedAt: projectedAt},
+	}, projectedAt)
+
+	var buf bytes.Buffer
+	if err := RefineryView(space, []Space{space}, projection, ViewUser{}, profile.Default()).Render(context.Background(), &buf); err != nil {
+		t.Fatal(err)
+	}
+	body := buf.String()
+	for _, want := range []string{
+		`data-refinery-filter="building"`,
+		`data-refinery-filter="blocked"`,
+		`data-refinery-filter="assigned"`,
+		`data-refinery-exec-status="building"`,
+		`data-refinery-exec-status="blocked"`,
+		`data-refinery-exec-status="assigned"`,
+		"Filter Ready items by execution status",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered refinery missing %q", want)
+		}
 	}
 }

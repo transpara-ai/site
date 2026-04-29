@@ -49,9 +49,9 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					}
 				</nav>
 				if data.Telemetry != nil {
-					@opsTelemetrySummary(data.Telemetry, data.LegacyURL)
+					@opsTelemetrySummary(data.Telemetry)
 				} else if data.Work != nil {
-					@opsWorkSummary(data.Work, data.LegacyURL)
+					@opsWorkSummary(data.Work)
 				} else if data.Hive != nil {
 					@opsHiveSummary(data.Hive, data.LegacyURL)
 				} else if data.EmbedURL != "" {
@@ -99,9 +99,9 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 	</html>
 }
 
-templ opsTelemetrySummary(t *OpsTelemetryData, legacyURL string) {
+templ opsTelemetrySummary(t *OpsTelemetryData) {
 	<section class="space-y-4">
-		<div class="border border-edge bg-surface rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+		<div class="border border-edge bg-surface rounded-lg p-4">
 			<div>
 				<h2 class="text-base font-medium text-warm">Telemetry summary</h2>
 				if t.GeneratedAt != "" {
@@ -111,9 +111,6 @@ templ opsTelemetrySummary(t *OpsTelemetryData, legacyURL string) {
 					<p class="text-sm text-red-300 mt-2">{ t.Error }</p>
 				}
 			</div>
-			<a href={ templ.SafeURL(legacyURL) } class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors text-sm" target="_blank" rel="noopener">
-				Legacy dashboard
-			</a>
 		</div>
 		if t.Error == "" {
 			<div class="grid gap-3 md:grid-cols-4">
@@ -309,9 +306,9 @@ templ opsHiveSummary(h *OpsHiveData, publicURL string) {
 	</section>
 }
 
-templ opsWorkSummary(w *OpsWorkData, legacyURL string) {
+templ opsWorkSummary(w *OpsWorkData) {
 	<section class="space-y-4">
-		<div class="border border-edge bg-surface rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+		<div class="border border-edge bg-surface rounded-lg p-4">
 			<div>
 				<h2 class="text-base font-medium text-warm">Work summary</h2>
 				if w.GeneratedAt != "" {
@@ -321,9 +318,6 @@ templ opsWorkSummary(w *OpsWorkData, legacyURL string) {
 					<p class="text-sm text-red-300 mt-2">{ w.Error }</p>
 				}
 			</div>
-			<a href={ templ.SafeURL(legacyURL) } class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors text-sm" target="_blank" rel="noopener">
-				Legacy dashboard
-			</a>
 		</div>
 		if w.Error == "" {
 			<div class="grid gap-3 md:grid-cols-4">
