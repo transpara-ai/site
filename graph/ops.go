@@ -2,6 +2,7 @@ package graph
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -39,6 +40,7 @@ type OpsPageData struct {
 
 type OpsTelemetryData struct {
 	WorkURL              string
+	PipelineURL          string
 	GeneratedAt          string
 	ActorCount           int
 	AgentCount           int
@@ -46,6 +48,8 @@ type OpsTelemetryData struct {
 	ProcessingAgentCount int
 	PhaseLabel           string
 	PhaseStatus          string
+	Pipeline             *OpsPipelineReport
+	PipelineError        string
 	RecentAgents         []OpsTelemetryAgent
 	RecentEvents         []OpsTelemetryEvent
 	Error                string
@@ -65,6 +69,50 @@ type OpsTelemetryEvent struct {
 	ActorRole string `json:"actor_role"`
 	Summary   string `json:"summary"`
 	At        string `json:"at"`
+}
+
+type OpsPipelineReport struct {
+	CycleID           string             `json:"cycle_id"`
+	Status            string             `json:"status"`
+	CurrentStage      string             `json:"current_stage"`
+	CurrentPhase      string             `json:"current_phase"`
+	LastOutcome       string             `json:"last_outcome"`
+	LastSummary       string             `json:"last_summary"`
+	StartedAt         string             `json:"started_at"`
+	UpdatedAt         string             `json:"updated_at"`
+	DurationSecs      float64            `json:"duration_secs"`
+	TotalCostUSD      float64            `json:"total_cost_usd"`
+	TotalInputTokens  int                `json:"total_input_tokens"`
+	TotalOutputTokens int                `json:"total_output_tokens"`
+	TotalTokens       int                `json:"total_tokens"`
+	OpenBoardItems    int                `json:"open_board_items"`
+	ReviseCount       int                `json:"revise_count"`
+	IntakeComplete    bool               `json:"intake_complete"`
+	DesignComplete    bool               `json:"design_complete"`
+	EmissionComplete  bool               `json:"emission_complete"`
+	Phases            []OpsPipelinePhase `json:"phases"`
+	HumanStatus       string             `json:"human_status"`
+}
+
+type OpsPipelinePhase struct {
+	CycleID       string  `json:"cycle_id"`
+	Phase         string  `json:"phase"`
+	WorkflowStage string  `json:"workflow_stage"`
+	Outcome       string  `json:"outcome"`
+	Repo          string  `json:"repo"`
+	TaskID        string  `json:"task_id"`
+	TaskTitle     string  `json:"task_title"`
+	DurationSecs  float64 `json:"duration_secs"`
+	CostUSD       float64 `json:"cost_usd"`
+	InputTokens   int     `json:"input_tokens"`
+	OutputTokens  int     `json:"output_tokens"`
+	BoardOpen     int     `json:"board_open"`
+	ReviseCount   int     `json:"revise_count"`
+	Summary       string  `json:"summary"`
+	Error         string  `json:"error"`
+	InputRef      string  `json:"input_ref"`
+	OutputRef     string  `json:"output_ref"`
+	RecordedAt    string  `json:"recorded_at"`
 }
 
 type OpsWorkData struct {
@@ -133,6 +181,13 @@ type opsTelemetryOverview struct {
 		Label  string `json:"label"`
 		Status string `json:"status"`
 	} `json:"phases"`
+}
+
+type opsPipelineReportResponse struct {
+	ComputedAt string             `json:"computed_at"`
+	Report     *OpsPipelineReport `json:"report"`
+	Error      string             `json:"error"`
+	Detail     string             `json:"detail"`
 }
 
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
@@ -317,18 +372,15 @@ func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
 	workBase := serverWorkAPIBaseURL()
 	data := &OpsTelemetryData{
-		WorkURL: legacyWorkURL(workBase, "/telemetry/overview"),
+		WorkURL:     legacyWorkURL(workBase, "/telemetry/overview"),
+		PipelineURL: legacyWorkURL(workBase, "/telemetry/pipeline/report"),
 	}
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, data.WorkURL, nil)
 	if err != nil {
 		data.Error = err.Error()
 		return data
 	}
-	if key := strings.TrimSpace(os.Getenv("WORK_API_KEY")); key != "" {
-		req.Header.Set("Authorization", "Bearer "+key)
-	} else {
-		req.Header.Set("Authorization", "Bearer dev")
-	}
+	setWorkAuth(req)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
@@ -371,7 +423,42 @@ func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
 	data.GeneratedAt = formatOpsTime(overview.Timestamp)
 	data.RecentAgents = takeTelemetryAgents(overview.Agents, 8)
 	data.RecentEvents = takeTelemetryEvents(overview.RecentEvents, 8)
+	if report, err := fetchOpsPipelineReport(r, data.PipelineURL); err != nil {
+		data.PipelineError = err.Error()
+	} else {
+		data.Pipeline = report
+	}
 	return data
+}
+
+func fetchOpsPipelineReport(r *http.Request, reportURL string) (*OpsPipelineReport, error) {
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, reportURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	setWorkAuth(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("work pipeline report returned %s", resp.Status)
+	}
+	var payload opsPipelineReportResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if payload.Report == nil {
+		if payload.Detail != "" {
+			return nil, errors.New(payload.Detail)
+		}
+		if payload.Error != "" {
+			return nil, errors.New(payload.Error)
+		}
+		return nil, nil
+	}
+	return payload.Report, nil
 }
 
 func fetchOpsWork(r *http.Request) *OpsWorkData {
@@ -385,11 +472,7 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 		data.Error = err.Error()
 		return data
 	}
-	if key := strings.TrimSpace(os.Getenv("WORK_API_KEY")); key != "" {
-		req.Header.Set("Authorization", "Bearer "+key)
-	} else {
-		req.Header.Set("Authorization", "Bearer dev")
-	}
+	setWorkAuth(req)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
@@ -434,6 +517,14 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 	data.RecentTasks = takeWorkTasks(tasks.Tasks, 10)
 	data.BlockedTasks = takeWorkTasks(data.BlockedTasks, 6)
 	return data
+}
+
+func setWorkAuth(req *http.Request) {
+	if key := strings.TrimSpace(os.Getenv("WORK_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+		return
+	}
+	req.Header.Set("Authorization", "Bearer dev")
 }
 
 func serverWorkAPIBaseURL() string {
@@ -484,6 +575,32 @@ func formatOpsTime(raw string) string {
 		return t.Format("2006-01-02 15:04:05")
 	}
 	return raw
+}
+
+func formatOpsDuration(seconds float64) string {
+	if seconds <= 0 {
+		return "0s"
+	}
+	if seconds < 60 {
+		return fmt.Sprintf("%.0fs", seconds)
+	}
+	if seconds < 3600 {
+		return fmt.Sprintf("%.1fm", seconds/60)
+	}
+	return fmt.Sprintf("%.1fh", seconds/3600)
+}
+
+func opsPipelineOutcomeClass(outcome string) string {
+	switch {
+	case strings.Contains(strings.ToLower(outcome), "pass"), strings.Contains(strings.ToLower(outcome), "done"):
+		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
+	case strings.Contains(strings.ToLower(outcome), "revise"), strings.Contains(strings.ToLower(outcome), "fail"), strings.Contains(strings.ToLower(outcome), "error"):
+		return "border-red-400/30 text-red-300 bg-red-400/10"
+	case strings.Contains(strings.ToLower(outcome), "progress"):
+		return "border-sky-400/30 text-sky-300 bg-sky-400/10"
+	default:
+		return "border-brand/30 text-brand bg-brand/10"
+	}
 }
 
 func opsAgentStateClass(state string) string {
