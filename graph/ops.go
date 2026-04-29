@@ -244,11 +244,7 @@ func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
 		GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05"),
 	}
 
-	entries, err := h.store.ListHiveDiagnostics(ctx, maxHiveDiagEntries)
-	if err != nil {
-		data.Error = err.Error()
-		return data
-	}
+	entries, _ := h.store.ListHiveDiagnostics(ctx, maxHiveDiagEntries)
 	if len(entries) == 0 {
 		entries = readDiagnostics(h.loopDir, maxHiveDiagEntries)
 	}
