@@ -50,6 +50,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 				</nav>
 				if data.Telemetry != nil {
 					@opsTelemetrySummary(data.Telemetry, data.LegacyURL)
+				} else if data.Work != nil {
+					@opsWorkSummary(data.Work, data.LegacyURL)
 				} else if data.EmbedURL != "" {
 					<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 						<div class="px-4 py-3 border-b border-edge flex items-center justify-between gap-3">
@@ -166,6 +168,106 @@ templ opsTelemetrySummary(t *OpsTelemetryData, legacyURL string) {
 			</div>
 		}
 	</section>
+}
+
+templ opsWorkSummary(w *OpsWorkData, legacyURL string) {
+	<section class="space-y-4">
+		<div class="border border-edge bg-surface rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+			<div>
+				<h2 class="text-base font-medium text-warm">Work summary</h2>
+				if w.GeneratedAt != "" {
+					<p class="text-xs text-warm-faint mt-1">Projected at { w.GeneratedAt }</p>
+				}
+				if w.Error != "" {
+					<p class="text-sm text-red-300 mt-2">{ w.Error }</p>
+				}
+			</div>
+			<a href={ templ.SafeURL(legacyURL) } class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors text-sm" target="_blank" rel="noopener">
+				Legacy dashboard
+			</a>
+		</div>
+		if w.Error == "" {
+			<div class="grid gap-3 md:grid-cols-4">
+				@opsMetric("Total", fmt.Sprintf("%d", w.Total), "tasks returned by Work")
+				@opsMetric("Open", fmt.Sprintf("%d", w.Open), "not completed")
+				@opsMetric("Blocked", fmt.Sprintf("%d", w.Blocked), "needs operator attention")
+				@opsMetric("Evidence", fmt.Sprintf("%d", w.EvidenceCount), "attached artifacts")
+			</div>
+			<div class="grid gap-3 md:grid-cols-4">
+				@opsMetric("Active", fmt.Sprintf("%d", w.Active), "assigned or in progress")
+				@opsMetric("Completed", fmt.Sprintf("%d", w.Completed), "closed out")
+				@opsMetric("High", fmt.Sprintf("%d", w.HighPriority), "high priority")
+				@opsMetric("Unassigned", fmt.Sprintf("%d", w.Unassigned), "needs owner")
+			</div>
+			<div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
+				<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+					<header class="px-4 py-3 border-b border-edge">
+						<h2 class="text-sm font-medium text-warm">Active queue</h2>
+						<p class="text-xs text-warm-faint mt-1">{ w.WorkURL }</p>
+					</header>
+					<div class="divide-y divide-edge">
+						if len(w.RecentTasks) == 0 {
+							<p class="px-4 py-6 text-sm text-warm-faint">No tasks returned.</p>
+						}
+						for _, task := range w.RecentTasks {
+							@opsWorkTaskRow(task)
+						}
+					</div>
+				</section>
+				<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+					<header class="px-4 py-3 border-b border-edge">
+						<h2 class="text-sm font-medium text-warm">Blocked</h2>
+						<p class="text-xs text-warm-faint mt-1">Tasks that need unblock action or dependency evidence.</p>
+					</header>
+					<div class="divide-y divide-edge">
+						if len(w.BlockedTasks) == 0 {
+							<p class="px-4 py-6 text-sm text-warm-faint">No blocked tasks.</p>
+						}
+						for _, task := range w.BlockedTasks {
+							@opsWorkTaskRow(task)
+						}
+					</div>
+				</section>
+			</div>
+		}
+	</section>
+}
+
+templ opsWorkTaskRow(task OpsWorkTask) {
+	<div class="px-4 py-3">
+		<div class="flex items-start justify-between gap-3">
+			<div class="min-w-0">
+				<h3 class="text-sm font-medium text-warm truncate">{ task.Title }</h3>
+				if task.Description != "" {
+					<p class="text-xs text-warm-muted mt-1 leading-relaxed line-clamp-2">{ task.Description }</p>
+				}
+				<p class="text-[11px] text-warm-faint mt-2">
+					{ task.ID }
+					if task.Workspace != "" {
+						<span> / { task.Workspace }</span>
+					}
+				</p>
+			</div>
+			<div class="shrink-0 flex flex-col items-end gap-1">
+				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">{ task.Status }</span>
+				if task.Blocked {
+					<span class="text-[10px] px-2 py-1 rounded-full border border-amber-400/30 text-amber-300 bg-amber-400/10 whitespace-nowrap">blocked</span>
+				}
+			</div>
+		</div>
+		<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+			<dt class="text-warm-faint">Priority</dt>
+			<dd class="text-warm-muted">{ task.Priority }</dd>
+			<dt class="text-warm-faint">Owner</dt>
+			if task.Assignee != "" {
+				<dd class="text-warm-muted truncate">{ task.Assignee }</dd>
+			} else {
+				<dd class="text-warm-faint">Unassigned</dd>
+			}
+			<dt class="text-warm-faint">Evidence</dt>
+			<dd class="text-warm-muted">{ fmt.Sprintf("%d", task.ArtifactCount) }</dd>
+		</dl>
+	</div>
 }
 
 templ opsMetric(label, value, hint string) {

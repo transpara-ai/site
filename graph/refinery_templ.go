@@ -388,127 +388,140 @@ func RefineryView(space Space, spaces []Space, columns []RefineryColumn, user Vi
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</dd><dt class=\"text-warm-faint\">Owner</dt><dd class=\"text-warm-muted\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</dd><dt class=\"text-warm-faint\">Raw state</dt><dd class=\"text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var24 string
-					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(item.Owner)
+					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(item.RawState)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 137, Col: 48}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 137, Col: 51}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</dd><dt class=\"text-warm-faint\">Updated</dt><dd class=\"text-warm-muted\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</dd><dt class=\"text-warm-faint\">Owner</dt><dd class=\"text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var25 string
-					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(item.UpdatedLabel)
+					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(item.Owner)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 139, Col: 55}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 139, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</dd><dt class=\"text-warm-faint\">Evidence</dt><dd class=\"text-warm-muted\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</dd><dt class=\"text-warm-faint\">Updated</dt><dd class=\"text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var26 string
-					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", item.EvidenceCount))
+					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(item.UpdatedLabel)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 141, Col: 75}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 141, Col: 55}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</dd><dt class=\"text-warm-faint\">Source</dt><dd class=\"text-warm-muted break-all\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</dd><dt class=\"text-warm-faint\">Evidence</dt><dd class=\"text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var27 string
-					templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(item.SourceSystem)
+					templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", item.EvidenceCount))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 143, Col: 65}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 143, Col: 75}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, " / ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</dd><dt class=\"text-warm-faint\">Source</dt><dd class=\"text-warm-muted break-all\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var28 string
-					templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(item.SourceID)
+					templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(item.SourceSystem)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 143, Col: 85}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 145, Col: 65}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</dd></dl>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, " / ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var29 string
+					templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(item.SourceID)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 145, Col: 85}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</dd></dl>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					if item.BlockedReason != "" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<div class=\"rounded-md border border-amber-400/20 bg-amber-400/10 p-3\"><p class=\"text-xs font-medium text-amber-300\">Blocked</p><p class=\"text-sm text-amber-200 mt-1\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<div class=\"rounded-md border border-amber-400/20 bg-amber-400/10 p-3\"><p class=\"text-xs font-medium text-amber-300\">Blocked</p><p class=\"text-sm text-amber-200 mt-1\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var29 string
-						templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(item.BlockedReason)
+						var templ_7745c5c3_Var30 string
+						templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(item.BlockedReason)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 148, Col: 68}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 150, Col: 68}
 						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</p></div>")
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</p></div>")
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "<div class=\"rounded-md border border-edge bg-void/40 p-3\"><p class=\"text-xs font-medium text-warm-faint uppercase tracking-widest\">Next action</p><p class=\"text-sm text-warm-muted mt-1\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<div class=\"rounded-md border border-edge bg-void/40 p-3\"><p class=\"text-xs font-medium text-warm-faint uppercase tracking-widest\">Next action</p><p class=\"text-sm text-warm-muted mt-1\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var30 string
-					templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(item.NextAction)
+					var templ_7745c5c3_Var31 string
+					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(item.NextAction)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 153, Col: 65}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</p></div><a href=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var31 templ.SafeURL
-					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/node/" + item.ID))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 155, Col: 73}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 155, Col: 65}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\" class=\"inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-sm font-medium hover:bg-brand-dark transition-colors\">Open full record</a></div></template>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</p></div><a href=\"")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var32 templ.SafeURL
+					templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/app/" + space.Slug + "/node/" + item.ID))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/refinery.templ`, Line: 157, Col: 73}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "\" class=\"inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-sm font-medium hover:bg-brand-dark transition-colors\">Open full record</a></div></template>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<script>\n\t\t\tfunction openRefineryDetail(id) {\n\t\t\t\tvar panel = document.getElementById('refinery-detail-panel');\n\t\t\t\tvar backdrop = document.getElementById('refinery-detail-backdrop');\n\t\t\t\tvar content = document.getElementById('refinery-detail-content');\n\t\t\t\tvar heading = document.getElementById('refinery-detail-heading');\n\t\t\t\tvar template = document.getElementById('refinery-detail-' + id);\n\t\t\t\tif (!panel || !content || !template) return;\n\t\t\t\tcontent.innerHTML = template.innerHTML;\n\t\t\t\tvar title = content.querySelector('h3');\n\t\t\t\tif (heading && title) heading.textContent = title.textContent;\n\t\t\t\tpanel.classList.remove('translate-x-full');\n\t\t\t\tif (backdrop) backdrop.classList.remove('hidden');\n\t\t\t}\n\t\t\tfunction closeRefineryDetail() {\n\t\t\t\tvar panel = document.getElementById('refinery-detail-panel');\n\t\t\t\tvar backdrop = document.getElementById('refinery-detail-backdrop');\n\t\t\t\tif (panel) panel.classList.add('translate-x-full');\n\t\t\t\tif (backdrop) backdrop.classList.add('hidden');\n\t\t\t}\n\t\t\tdocument.addEventListener('keydown', function(event) {\n\t\t\t\tif (event.key === 'Escape') closeRefineryDetail();\n\t\t\t});\n\t\t\tdocument.addEventListener('click', function(event) {\n\t\t\t\tvar card = event.target.closest('.refinery-card');\n\t\t\t\tif (!card) return;\n\t\t\t\topenRefineryDetail(card.getAttribute('data-refinery-detail-id'));\n\t\t\t});\n\t\t\t</script></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<script>\n\t\t\tfunction openRefineryDetail(id) {\n\t\t\t\tvar panel = document.getElementById('refinery-detail-panel');\n\t\t\t\tvar backdrop = document.getElementById('refinery-detail-backdrop');\n\t\t\t\tvar content = document.getElementById('refinery-detail-content');\n\t\t\t\tvar heading = document.getElementById('refinery-detail-heading');\n\t\t\t\tvar template = document.getElementById('refinery-detail-' + id);\n\t\t\t\tif (!panel || !content || !template) return;\n\t\t\t\tcontent.innerHTML = template.innerHTML;\n\t\t\t\tvar title = content.querySelector('h3');\n\t\t\t\tif (heading && title) heading.textContent = title.textContent;\n\t\t\t\tpanel.classList.remove('translate-x-full');\n\t\t\t\tif (backdrop) backdrop.classList.remove('hidden');\n\t\t\t}\n\t\t\tfunction closeRefineryDetail() {\n\t\t\t\tvar panel = document.getElementById('refinery-detail-panel');\n\t\t\t\tvar backdrop = document.getElementById('refinery-detail-backdrop');\n\t\t\t\tif (panel) panel.classList.add('translate-x-full');\n\t\t\t\tif (backdrop) backdrop.classList.add('hidden');\n\t\t\t}\n\t\t\tdocument.addEventListener('keydown', function(event) {\n\t\t\t\tif (event.key === 'Escape') closeRefineryDetail();\n\t\t\t});\n\t\t\tdocument.addEventListener('click', function(event) {\n\t\t\t\tvar card = event.target.closest('.refinery-card');\n\t\t\t\tif (!card) return;\n\t\t\t\topenRefineryDetail(card.getAttribute('data-refinery-detail-id'));\n\t\t\t});\n\t\t\t</script></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

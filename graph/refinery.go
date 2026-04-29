@@ -18,6 +18,7 @@ type RefineryItem struct {
 	ProjectedAt     time.Time `json:"projected_at"`
 	LastEventAt     time.Time `json:"last_event_at"`
 	State           string    `json:"state"`
+	RawState        string    `json:"raw_state"`
 	ExecutionStatus string    `json:"execution_status"`
 	Owner           string    `json:"owner"`
 	NextAction      string    `json:"next_action"`
@@ -39,6 +40,7 @@ type RefineryProjection struct {
 	SpaceSlug    string           `json:"space_slug"`
 	ProjectedAt  time.Time        `json:"projected_at"`
 	Counts       map[string]int   `json:"counts"`
+	ExecCounts   map[string]int   `json:"execution_counts"`
 	Columns      []RefineryColumn `json:"columns"`
 }
 
@@ -143,6 +145,7 @@ func buildRefineryProjection(space Space, tasks []Node, projectedAt time.Time) R
 	}
 	index := map[string]int{}
 	counts := map[string]int{}
+	execCounts := map[string]int{}
 	for i := range columns {
 		index[columns[i].State] = i
 		counts[columns[i].State] = 0
@@ -153,6 +156,7 @@ func buildRefineryProjection(space Space, tasks []Node, projectedAt time.Time) R
 		if i, ok := index[state]; ok {
 			columns[i].Items = append(columns[i].Items, item)
 			counts[state]++
+			execCounts[item.ExecutionStatus]++
 		}
 	}
 	return RefineryProjection{
@@ -161,6 +165,7 @@ func buildRefineryProjection(space Space, tasks []Node, projectedAt time.Time) R
 		SpaceSlug:    space.Slug,
 		ProjectedAt:  projectedAt,
 		Counts:       counts,
+		ExecCounts:   execCounts,
 		Columns:      columns,
 	}
 }
@@ -182,7 +187,8 @@ func refineryItem(task Node, projectedAt time.Time) RefineryItem {
 		SourceID:        task.ID,
 		ProjectedAt:     projectedAt,
 		LastEventAt:     task.UpdatedAt,
-		State:           task.State,
+		State:           refineryState(task),
+		RawState:        task.State,
 		ExecutionStatus: refineryExecutionStatus(task),
 		Owner:           owner,
 		NextAction:      refineryNextAction(task),
