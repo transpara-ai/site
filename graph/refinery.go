@@ -2,12 +2,16 @@ package graph
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/transpara-ai/site/profile"
 )
+
+var refineryStateOrder = []string{"inbox", "refining", "review", "ready", "done"}
+var refineryExecutionStatuses = []string{"unassigned", "refining", "reviewing", "assigned", "building", "blocked", "complete"}
 
 type RefineryItem struct {
 	ID              string    `json:"id"`
@@ -35,13 +39,17 @@ type RefineryColumn struct {
 }
 
 type RefineryProjection struct {
-	SourceSystem string           `json:"source_system"`
-	SourceID     string           `json:"source_id"`
-	SpaceSlug    string           `json:"space_slug"`
-	ProjectedAt  time.Time        `json:"projected_at"`
-	Counts       map[string]int   `json:"counts"`
-	ExecCounts   map[string]int   `json:"execution_counts"`
-	Columns      []RefineryColumn `json:"columns"`
+	SourceSystem      string           `json:"source_system"`
+	SourceID          string           `json:"source_id"`
+	SpaceSlug         string           `json:"space_slug"`
+	ProjectedAt       time.Time        `json:"projected_at"`
+	StateOrder        []string         `json:"state_order"`
+	ExecutionStatuses []string         `json:"execution_statuses"`
+	HumanStatus       string           `json:"human_status"`
+	OpenCount         int              `json:"open_count"`
+	Counts            map[string]int   `json:"counts"`
+	ExecCounts        map[string]int   `json:"execution_counts"`
+	Columns           []RefineryColumn `json:"columns"`
 }
 
 func (h *Handlers) handleRefinery(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +75,7 @@ func (h *Handlers) handleRefinery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	projection := buildRefineryProjection(*space, tasks, time.Now().UTC())
-	RefineryView(*space, spaces, projection.Columns, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
+	RefineryView(*space, spaces, projection, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleRefineryProjection(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +158,10 @@ func buildRefineryProjection(space Space, tasks []Node, projectedAt time.Time) R
 		index[columns[i].State] = i
 		counts[columns[i].State] = 0
 	}
+	for _, status := range refineryExecutionStatuses {
+		execCounts[status] = 0
+	}
+	openCount := 0
 	for _, task := range tasks {
 		state := refineryState(task)
 		item := refineryItem(task, projectedAt)
@@ -157,16 +169,23 @@ func buildRefineryProjection(space Space, tasks []Node, projectedAt time.Time) R
 			columns[i].Items = append(columns[i].Items, item)
 			counts[state]++
 			execCounts[item.ExecutionStatus]++
+			if state != "done" {
+				openCount++
+			}
 		}
 	}
 	return RefineryProjection{
-		SourceSystem: "site",
-		SourceID:     space.ID,
-		SpaceSlug:    space.Slug,
-		ProjectedAt:  projectedAt,
-		Counts:       counts,
-		ExecCounts:   execCounts,
-		Columns:      columns,
+		SourceSystem:      "site",
+		SourceID:          space.ID,
+		SpaceSlug:         space.Slug,
+		ProjectedAt:       projectedAt,
+		StateOrder:        append([]string(nil), refineryStateOrder...),
+		ExecutionStatuses: append([]string(nil), refineryExecutionStatuses...),
+		HumanStatus:       refineryHumanStatus(counts, execCounts, openCount),
+		OpenCount:         openCount,
+		Counts:            counts,
+		ExecCounts:        execCounts,
+		Columns:           columns,
 	}
 }
 
@@ -243,9 +262,24 @@ func refineryExecutionStatus(task Node) string {
 		if task.AssigneeID != "" || task.Assignee != "" {
 			return "assigned"
 		}
+		if hasAnyTag(task, "design", "requirement", "refining", "investigating") || strings.Contains(strings.ToLower(task.Title), "design") {
+			return "refining"
+		}
 		return "unassigned"
 	default:
-		return task.State
+		if strings.Contains(strings.ToLower(task.State), "review") {
+			return "reviewing"
+		}
+		if strings.Contains(strings.ToLower(task.State), "done") || strings.Contains(strings.ToLower(task.State), "closed") {
+			return "complete"
+		}
+		if strings.Contains(strings.ToLower(task.State), "investigating") || strings.Contains(strings.ToLower(task.State), "requirement") {
+			return "refining"
+		}
+		if task.State == "" {
+			return "unassigned"
+		}
+		return "unassigned"
 	}
 }
 
@@ -282,4 +316,21 @@ func hasAnyTag(task Node, tags ...string) bool {
 		}
 	}
 	return false
+}
+
+func refineryHumanStatus(counts, execCounts map[string]int, openCount int) string {
+	if openCount == 0 {
+		return "Refinery has no open items. Completed cards are in Done."
+	}
+	return fmt.Sprintf(
+		"Refinery has %d open items: %d inbox, %d refining, %d in review, and %d ready. Execution status: %d building, %d blocked, %d assigned.",
+		openCount,
+		counts["inbox"],
+		counts["refining"],
+		counts["review"],
+		counts["ready"],
+		execCounts["building"],
+		execCounts["blocked"],
+		execCounts["assigned"],
+	)
 }
