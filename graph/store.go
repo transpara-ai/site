@@ -155,6 +155,9 @@ type Node struct {
 	ChildDone    int        `json:"child_done"`
 	BlockerCount int        `json:"blocker_count"`
 	Causes       []string   `json:"causes"`
+	HiveTaskID   string     `json:"hive_task_id,omitempty"`
+	HiveChainRef string     `json:"hive_chain_ref,omitempty"`
+	HiveEventType string    `json:"hive_event_type,omitempty"`
 }
 
 // Op is a recorded grammar operation.
@@ -499,6 +502,10 @@ ALTER TABLE node_members DROP COLUMN IF EXISTS user_name;
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS causes TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS quorum_pct INT NOT NULL DEFAULT 0;
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS voting_body TEXT NOT NULL DEFAULT 'all';
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS hive_task_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS hive_chain_ref TEXT NOT NULL DEFAULT '';
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS hive_event_type TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_nodes_hive_chain_ref ON nodes(hive_chain_ref) WHERE hive_chain_ref != '';
 
 CREATE TABLE IF NOT EXISTS delegations (
     space_id     TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
@@ -1358,6 +1365,28 @@ func (s *Store) UpdateNodeState(ctx context.Context, id, state string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("update state: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// StampNodeHiveMirror records the Hive-side task and chain references for a
+// Site node after Hive mirrors execution progress back to Site.
+func (s *Store) StampNodeHiveMirror(ctx context.Context, nodeID, hiveTaskID, hiveChainRef, hiveEventType string) error {
+	res, err := s.db.ExecContext(ctx,
+		`UPDATE nodes
+		 SET hive_task_id = $1,
+		     hive_chain_ref = $2,
+		     hive_event_type = $3,
+		     updated_at = NOW()
+		 WHERE id = $4`,
+		hiveTaskID, hiveChainRef, hiveEventType, nodeID,
+	)
+	if err != nil {
+		return fmt.Errorf("stamp hive mirror: %w", err)
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
