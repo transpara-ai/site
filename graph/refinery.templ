@@ -41,6 +41,18 @@ templ RefineryView(space Space, spaces []Space, projection RefineryProjection, u
 					<p class="text-xs text-warm-muted mt-2">{ projection.ProjectedAt.Format("2006-01-02 15:04") }</p>
 				</div>
 			</section>
+			<section class="border border-edge bg-surface rounded-lg p-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between flex-none">
+				<div>
+					<p class="text-xs font-medium text-warm">Active work</p>
+					<p class="text-[11px] text-warm-faint mt-1">Filter Ready items by execution status without adding FSM columns.</p>
+				</div>
+				<div class="flex items-center gap-2 flex-wrap" role="group" aria-label="Execution status filters">
+					<button type="button" data-refinery-filter="all" class="refinery-filter px-2.5 py-1.5 rounded-md border border-brand/30 bg-brand/10 text-brand text-xs transition-colors">All</button>
+					<button type="button" data-refinery-filter="building" class="refinery-filter px-2.5 py-1.5 rounded-md border border-edge bg-void/30 text-warm-muted hover:text-brand hover:border-brand/30 text-xs transition-colors">Building ({ fmt.Sprintf("%d", projection.ExecCounts["building"]) })</button>
+					<button type="button" data-refinery-filter="blocked" class="refinery-filter px-2.5 py-1.5 rounded-md border border-edge bg-void/30 text-warm-muted hover:text-brand hover:border-brand/30 text-xs transition-colors">Blocked ({ fmt.Sprintf("%d", projection.ExecCounts["blocked"]) })</button>
+					<button type="button" data-refinery-filter="assigned" class="refinery-filter px-2.5 py-1.5 rounded-md border border-edge bg-void/30 text-warm-muted hover:text-brand hover:border-brand/30 text-xs transition-colors">Assigned ({ fmt.Sprintf("%d", projection.ExecCounts["assigned"]) })</button>
+				</div>
+			</section>
 			<div class="flex gap-3 flex-1 min-h-0 overflow-x-auto overflow-y-hidden pb-3 snap-x snap-mandatory">
 				for _, column := range projection.Columns {
 					<section class="border border-edge bg-surface rounded-lg w-[19rem] md:w-[21rem] flex-none min-h-0 flex flex-col snap-start">
@@ -96,6 +108,7 @@ templ RefineryView(space Space, spaces []Space, projection RefineryProjection, u
 								<button
 									type="button"
 									data-refinery-detail-id={ item.ID }
+									data-refinery-exec-status={ item.ExecutionStatus }
 									class="refinery-card block w-full text-left border border-edge rounded-md bg-void/30 hover:border-brand/30 hover:bg-elevated/50 transition-colors p-3"
 								>
 									<div class="flex items-start justify-between gap-2">
@@ -203,10 +216,33 @@ templ RefineryView(space Space, spaces []Space, projection RefineryProjection, u
 				if (panel) panel.classList.add('translate-x-full');
 				if (backdrop) backdrop.classList.add('hidden');
 			}
+			function setRefineryFilter(status) {
+				var cards = document.querySelectorAll('.refinery-card');
+				var filters = document.querySelectorAll('.refinery-filter');
+				cards.forEach(function(card) {
+					var visible = status === 'all' || card.getAttribute('data-refinery-exec-status') === status;
+					card.classList.toggle('hidden', !visible);
+				});
+				filters.forEach(function(button) {
+					var active = button.getAttribute('data-refinery-filter') === status;
+					button.classList.toggle('border-brand/30', active);
+					button.classList.toggle('bg-brand/10', active);
+					button.classList.toggle('text-brand', active);
+					button.classList.toggle('border-edge', !active);
+					button.classList.toggle('bg-void/30', !active);
+					button.classList.toggle('text-warm-muted', !active);
+				});
+				closeRefineryDetail();
+			}
 			document.addEventListener('keydown', function(event) {
 				if (event.key === 'Escape') closeRefineryDetail();
 			});
 			document.addEventListener('click', function(event) {
+				var filter = event.target.closest('.refinery-filter');
+				if (filter) {
+					setRefineryFilter(filter.getAttribute('data-refinery-filter'));
+					return;
+				}
 				var card = event.target.closest('.refinery-card');
 				if (!card) return;
 				openRefineryDetail(card.getAttribute('data-refinery-detail-id'));

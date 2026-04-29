@@ -44,6 +44,37 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	}
 }
 
+func TestHandleOpsWorkDoesNotLinkLegacyDashboard(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks" {
+			t.Fatalf("path = %q, want /tasks", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"tasks":[]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/work?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/work: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "Legacy dashboard") || strings.Contains(body, `href="`+srv.URL+`/"`) {
+		t.Fatal("GET /ops/work still links to the legacy Work browser dashboard")
+	}
+	if !strings.Contains(body, "Work summary") {
+		t.Fatal("GET /ops/work: body does not contain native Work summary")
+	}
+}
+
 func TestFetchOpsTelemetryIncludesPipelineReport(t *testing.T) {
 	var overviewAuth, reportAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -103,6 +134,41 @@ func TestFetchOpsTelemetryIncludesPipelineReport(t *testing.T) {
 	}
 	if len(got.Pipeline.Phases) != 1 || got.Pipeline.Phases[0].WorkflowStage != "emission" {
 		t.Fatalf("pipeline phases = %#v", got.Pipeline.Phases)
+	}
+}
+
+func TestHandleOpsTelemetryDoesNotLinkLegacyDashboard(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/telemetry/overview":
+			w.Write([]byte(`{"timestamp":"2026-04-29T15:00:00Z","actors":[],"agents":[],"recent_events":[],"phases":[]}`))
+		case "/telemetry/pipeline/report":
+			w.Write([]byte(`{"computed_at":"2026-04-29T15:00:01Z","report":null}`))
+		default:
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/telemetry?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/telemetry: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "Legacy dashboard") || strings.Contains(body, `href="`+srv.URL+`/telemetry/"`) {
+		t.Fatal("GET /ops/telemetry still links to the legacy Work telemetry dashboard")
+	}
+	if !strings.Contains(body, "Telemetry summary") {
+		t.Fatal("GET /ops/telemetry: body does not contain native telemetry summary")
 	}
 }
 

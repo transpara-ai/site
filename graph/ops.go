@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -199,24 +198,20 @@ func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) handleOpsWork(w http.ResponseWriter, r *http.Request) {
-	legacyURL := legacyWorkURL(workUIBaseURL(r), "/")
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Work",
 		Description: "Native Site task summary sourced from the Work API.",
 		Active:      "work",
 		Work:        fetchOpsWork(r),
-		LegacyURL:   legacyURL,
 	})
 }
 
 func (h *Handlers) handleOpsTelemetry(w http.ResponseWriter, r *http.Request) {
-	legacyURL := legacyWorkURL(workUIBaseURL(r), "/telemetry/")
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Telemetry",
 		Description: "Native Site telemetry summary sourced from Work APIs.",
 		Active:      "telemetry",
 		Telemetry:   fetchOpsTelemetry(r),
-		LegacyURL:   legacyURL,
 	})
 }
 
@@ -252,14 +247,13 @@ func (h *Handlers) renderOps(w http.ResponseWriter, r *http.Request, data OpsPag
 }
 
 func opsSurfaces(r *http.Request) []OpsSurface {
-	workBase := workUIBaseURL(r)
 	return []OpsSurface{
 		{
 			ID:          "work",
 			Label:       "Work",
 			Description: "Task queue, assignment, blockers, artifacts, and completion evidence.",
 			Href:        "/ops/work",
-			Target:      legacyWorkURL(workBase, "/"),
+			Target:      "work API /tasks",
 			Owner:       "site shell, work API",
 			Status:      "native summary",
 		},
@@ -268,7 +262,7 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Label:       "Telemetry",
 			Description: "Agent status, phase activity, pipeline report, and event stream health.",
 			Href:        "/ops/telemetry",
-			Target:      legacyWorkURL(workBase, "/telemetry/"),
+			Target:      "work API /telemetry/*",
 			Owner:       "site native UI, work telemetry",
 			Status:      "native summary",
 		},
@@ -614,34 +608,6 @@ func opsAgentStateClass(state string) string {
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
 	}
-}
-
-func workUIBaseURL(r *http.Request) string {
-	if base := strings.TrimSpace(os.Getenv("WORK_UI_BASE_URL")); base != "" {
-		return strings.TrimRight(base, "/")
-	}
-
-	host := r.Host
-	if host == "" {
-		return "http://localhost:8080"
-	}
-
-	name, _, err := net.SplitHostPort(host)
-	if err != nil {
-		name = host
-	}
-	if name == "" {
-		name = "localhost"
-	}
-
-	scheme := "http"
-	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwarded != "" {
-		scheme = strings.Split(forwarded, ",")[0]
-	} else if r.TLS != nil {
-		scheme = "https"
-	}
-
-	return scheme + "://" + name + ":8080"
 }
 
 func legacyWorkURL(base, path string) string {
