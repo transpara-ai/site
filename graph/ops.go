@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,6 +33,7 @@ type OpsPageData struct {
 	EmbedLabel  string
 	Telemetry   *OpsTelemetryData
 	Work        *OpsWorkData
+	Hive        *OpsHiveData
 	LegacyURL   string
 }
 
@@ -95,6 +97,23 @@ type OpsWorkTask struct {
 	Waived        bool   `json:"waived"`
 }
 
+type OpsHiveData struct {
+	GeneratedAt     string
+	Iteration       int
+	Phase           string
+	BuildTitle      string
+	BuildCost       float64
+	TotalOps        int
+	LastActive      string
+	VerifiedBuilds  int
+	TotalCost       float64
+	AverageCost     float64
+	DiagnosticCount int
+	RecentCommits   []RecentCommit
+	RecentEvents    []DiagEntry
+	Error           string
+}
+
 type opsWorkTasksResponse struct {
 	Tasks []OpsWorkTask `json:"tasks"`
 }
@@ -149,10 +168,10 @@ func (h *Handlers) handleOpsTelemetry(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) handleOpsHive(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Hive",
-		Description: "Hive runtime status rendered through the site shell.",
+		Description: "Native Site operator summary for Hive runtime status, diagnostics, and build signal.",
 		Active:      "hive",
-		EmbedURL:    "/hive",
-		EmbedLabel:  "Hive status",
+		Hive:        h.fetchOpsHive(r),
+		LegacyURL:   "/hive",
 	})
 }
 
@@ -187,7 +206,7 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Href:        "/ops/work",
 			Target:      legacyWorkURL(workBase, "/"),
 			Owner:       "site shell, work API",
-			Status:      "legacy UI framed",
+			Status:      "native summary",
 		},
 		{
 			ID:          "telemetry",
@@ -205,7 +224,7 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Href:        "/ops/hive",
 			Target:      "/hive",
 			Owner:       "site shell, hive diagnostics",
-			Status:      "native site page framed",
+			Status:      "native summary",
 		},
 		{
 			ID:          "refinery",
@@ -217,6 +236,86 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native FSM framed",
 		},
 	}
+}
+
+func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
+	ctx := r.Context()
+	data := &OpsHiveData{
+		GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05"),
+	}
+
+	entries, err := h.store.ListHiveDiagnostics(ctx, maxHiveDiagEntries)
+	if err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	if len(entries) == 0 {
+		entries = readDiagnostics(h.loopDir, maxHiveDiagEntries)
+	}
+	data.RecentEvents = entries
+	data.DiagnosticCount = len(entries)
+
+	ls := readLoopState(h.loopDir)
+	data.Iteration = ls.Iteration
+	data.Phase = ls.Phase
+	data.BuildTitle = ls.BuildTitle
+	data.BuildCost = ls.BuildCost
+
+	repoDir := ""
+	if h.loopDir != "" {
+		repoDir = filepath.Dir(h.loopDir)
+	}
+	data.RecentCommits = readRecentCommits(repoDir, 6)
+
+	agentID := h.store.GetHiveAgentID(ctx)
+	if agentID == "" {
+		return data
+	}
+
+	totalOps, lastActive, err := h.store.GetHiveTotals(ctx, agentID)
+	if err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	data.TotalOps = totalOps
+	if !lastActive.IsZero() {
+		data.LastActive = lastActive.Format("2006-01-02 15:04")
+		if data.BuildTitle == "" {
+			data.BuildTitle = "Last active: " + data.LastActive
+		}
+	}
+
+	posts, err := h.store.ListHiveActivity(ctx, agentID, maxHivePosts)
+	if err != nil {
+		data.Error = err.Error()
+		return data
+	}
+	stats := computeHiveStats(posts)
+	data.VerifiedBuilds = stats.Features
+	data.TotalCost = stats.TotalCost
+	data.AverageCost = stats.AvgCost
+
+	if ic := parseIterFromPosts(posts); ic > data.Iteration {
+		data.Iteration = ic
+	}
+	if data.Iteration == 0 {
+		tasks, err := h.store.ListHiveAgentTasks(ctx, agentID, 1000)
+		if err != nil {
+			data.Error = err.Error()
+			return data
+		}
+		doneCount := 0
+		for _, task := range tasks {
+			if task.State == "done" {
+				doneCount++
+			}
+		}
+		data.Iteration = doneCount
+	}
+	if data.TotalOps > 0 && data.Phase == "" {
+		data.Phase = "idle"
+	}
+	return data
 }
 
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
