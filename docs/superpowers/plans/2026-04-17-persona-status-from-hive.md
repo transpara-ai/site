@@ -861,7 +861,7 @@ gh pr create --repo transpara-ai/site --base main --head feat/persona-status-fro
   --body "$(cat <<'EOF'
 ## Summary
 
-Implements Option B from the role/persona decomposition debt doc ([transpara-ai/hive/docs/debt/role-persona-decomposition.md](https://github.com/transpara-ai/hive/blob/main/docs/debt/role-persona-decomposition.md)). Supersedes closed PR #14.
+Implements Option B from the role/persona decomposition debt doc ([transpara-ai/hive/docs/debt/role-persona-decomposition.md](../../../third_party/hive/docs/debt/role-persona-decomposition.md)). Supersedes closed PR #14.
 
 - Adds `third_party/hive` as a git submodule pinned to a specific hive commit.
 - Adds `cmd/gen-persona-status` — reads hive `agents/*.md`, emits `graph/personas/status_gen.go` containing `var HiveStatus = map[string]string{persona: status}`.
