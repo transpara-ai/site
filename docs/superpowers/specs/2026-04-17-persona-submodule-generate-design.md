@@ -3,7 +3,7 @@
 **Date:** 2026-04-17
 **Status:** Approved; implementation plan to follow
 **Supersedes:** [transpara-ai/site#14](https://github.com/transpara-ai/site/pull/14) (`feat/persona-status-sync`)
-**Implements:** the "submodule + `go generate`" stopgap referenced in [hive's debt doc](https://github.com/transpara-ai/hive/blob/main/docs/debt/role-persona-decomposition.md)
+**Implements:** the "submodule + `go generate`" stopgap referenced in [hive's debt doc](../../../third_party/hive/docs/debt/role-persona-decomposition.md)
 
 ## Problem
 
