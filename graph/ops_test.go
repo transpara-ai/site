@@ -9,18 +9,22 @@ import (
 
 func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/tasks" {
-			t.Fatalf("path = %q, want /tasks", r.URL.Path)
-		}
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("Authorization = %q, want Bearer test-key", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"tasks":[
+		switch r.URL.Path {
+		case "/tasks":
+			w.Write([]byte(`{"tasks":[
 			{"id":"task-1","title":"Blocked task","description":"Needs dependency","priority":"high","status":"open","assignee":"","blocked":true,"artifact_count":0,"waived":false,"ready":false,"missing_gates":["definition_of_done"]},
 			{"id":"task-2","title":"Active task","description":"Being built","priority":"medium","status":"in_progress","assignee":"agent-1","blocked":false,"artifact_count":2,"waived":false,"ready":true,"missing_gates":[]},
 			{"id":"task-3","title":"Completed task","description":"Done","priority":"low","status":"completed","assignee":"agent-2","blocked":false,"artifact_count":1,"waived":true,"ready":true,"missing_gates":[]}
 		]}`))
+		case "/phase-gates":
+			w.Write([]byte(`{"gates":[{"id":"gate-1","phase":"design","title":"Design approval","criteria":["brief"],"status":"approved","summary":"accepted","updated_at":"2026-05-01T10:00:00Z"}]}`))
+		default:
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
 	}))
 	defer srv.Close()
 
@@ -45,15 +49,22 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	if len(got.BlockedTasks) != 1 || got.BlockedTasks[0].ID != "task-1" {
 		t.Fatalf("BlockedTasks = %#v, want task-1", got.BlockedTasks)
 	}
+	if len(got.PhaseGates) != 1 || got.PhaseGates[0].Status != "approved" {
+		t.Fatalf("PhaseGates = %#v, want approved gate", got.PhaseGates)
+	}
 }
 
 func TestHandleOpsWorkDoesNotLinkLegacyDashboard(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/tasks" {
-			t.Fatalf("path = %q, want /tasks", r.URL.Path)
-		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"tasks":[]}`))
+		switch r.URL.Path {
+		case "/tasks":
+			w.Write([]byte(`{"tasks":[]}`))
+		case "/phase-gates":
+			w.Write([]byte(`{"gates":[{"id":"gate-1","phase":"validation","title":"Validation gate","status":"pending"}]}`))
+		default:
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
 	}))
 	defer srv.Close()
 	t.Setenv("WORK_API_BASE_URL", srv.URL)
@@ -75,6 +86,9 @@ func TestHandleOpsWorkDoesNotLinkLegacyDashboard(t *testing.T) {
 	}
 	if !strings.Contains(body, "Work summary") {
 		t.Fatal("GET /ops/work: body does not contain native Work summary")
+	}
+	if !strings.Contains(body, "Phase gates") || !strings.Contains(body, "Validation gate") {
+		t.Fatal("GET /ops/work: body does not contain phase gate summary")
 	}
 }
 

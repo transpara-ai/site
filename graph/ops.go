@@ -129,6 +129,7 @@ type OpsWorkData struct {
 	WaivedCount   int
 	RecentTasks   []OpsWorkTask
 	BlockedTasks  []OpsWorkTask
+	PhaseGates    []OpsPhaseGate
 	Error         string
 }
 
@@ -145,6 +146,18 @@ type OpsWorkTask struct {
 	Waived        bool     `json:"waived"`
 	Ready         bool     `json:"ready"`
 	MissingGates  []string `json:"missing_gates"`
+}
+
+type OpsPhaseGate struct {
+	ID         string   `json:"id"`
+	Phase      string   `json:"phase"`
+	Title      string   `json:"title"`
+	Criteria   []string `json:"criteria"`
+	Status     string   `json:"status"`
+	Summary    string   `json:"summary"`
+	Reason     string   `json:"reason"`
+	DeclaredAt string   `json:"declared_at"`
+	UpdatedAt  string   `json:"updated_at"`
 }
 
 type OpsHiveData struct {
@@ -166,6 +179,10 @@ type OpsHiveData struct {
 
 type opsWorkTasksResponse struct {
 	Tasks []OpsWorkTask `json:"tasks"`
+}
+
+type opsPhaseGatesResponse struct {
+	Gates []OpsPhaseGate `json:"gates"`
 }
 
 type opsTelemetryOverview struct {
@@ -516,7 +533,32 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 	}
 	data.RecentTasks = takeWorkTasks(tasks.Tasks, 10)
 	data.BlockedTasks = takeWorkTasks(data.BlockedTasks, 6)
+	data.PhaseGates = fetchOpsPhaseGates(r, workBase)
 	return data
+}
+
+func fetchOpsPhaseGates(r *http.Request, workBase string) []OpsPhaseGate {
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, legacyWorkURL(workBase, "/phase-gates"), nil)
+	if err != nil {
+		return nil
+	}
+	setWorkAuth(req)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil
+	}
+	var gates opsPhaseGatesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&gates); err != nil {
+		return nil
+	}
+	if len(gates.Gates) > 6 {
+		return gates.Gates[:6]
+	}
+	return gates.Gates
 }
 
 func setWorkAuth(req *http.Request) {
@@ -600,6 +642,17 @@ func opsPipelineOutcomeClass(outcome string) string {
 		return "border-sky-400/30 text-sky-300 bg-sky-400/10"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
+	}
+}
+
+func opsPhaseGateStatusClass(status string) string {
+	switch strings.ToLower(status) {
+	case "approved":
+		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
+	case "rejected":
+		return "border-red-400/30 text-red-300 bg-red-400/10"
+	default:
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
 	}
 }
 
