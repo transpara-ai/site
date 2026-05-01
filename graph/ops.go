@@ -122,6 +122,7 @@ type OpsWorkData struct {
 	Active        int
 	Blocked       int
 	Completed     int
+	Ready         int
 	HighPriority  int
 	Unassigned    int
 	EvidenceCount int
@@ -132,16 +133,18 @@ type OpsWorkData struct {
 }
 
 type OpsWorkTask struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Description   string `json:"description"`
-	Priority      string `json:"priority"`
-	Workspace     string `json:"workspace"`
-	Status        string `json:"status"`
-	Assignee      string `json:"assignee"`
-	Blocked       bool   `json:"blocked"`
-	ArtifactCount int    `json:"artifact_count"`
-	Waived        bool   `json:"waived"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Priority      string   `json:"priority"`
+	Workspace     string   `json:"workspace"`
+	Status        string   `json:"status"`
+	Assignee      string   `json:"assignee"`
+	Blocked       bool     `json:"blocked"`
+	ArtifactCount int      `json:"artifact_count"`
+	Waived        bool     `json:"waived"`
+	Ready         bool     `json:"ready"`
+	MissingGates  []string `json:"missing_gates"`
 }
 
 type OpsHiveData struct {
@@ -506,6 +509,9 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 		data.EvidenceCount += task.ArtifactCount
 		if task.Waived {
 			data.WaivedCount++
+		}
+		if task.Ready {
+			data.Ready++
 		}
 	}
 	data.RecentTasks = takeWorkTasks(tasks.Tasks, 10)
