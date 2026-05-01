@@ -348,6 +348,57 @@ func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
 	}
 }
 
+func TestHandleHiveSiteOpsRejectsPrivateSpaceForNonMember(t *testing.T) {
+	_, store, _ := testHandlers(t)
+
+	otherUser := &auth.User{ID: "test-user-2", Name: "Other", Email: "other@test.com", Kind: "human"}
+	otherWrap := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := auth.ContextWithUser(r.Context(), otherUser)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+	h := NewHandlers(store, otherWrap, otherWrap)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	slug := fmt.Sprintf("site-ops-private-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(t.Context(), slug, "Private Site Ops", "", "test-user-1", "project", "private")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
+
+	node, err := store.CreateNode(t.Context(), CreateNodeParams{
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		Title:    "Private kickoff",
+		Body:     "# Secret kickoff",
+		Priority: PriorityHigh,
+		Author:   "Tester",
+		AuthorID: "test-user-1",
+	})
+	if err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+	if _, err := store.RecordOp(t.Context(), space.ID, node.ID, "Tester", "test-user-1", "intend", nil); err != nil {
+		t.Fatalf("record op: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/hive/site-ops?space="+url.QueryEscape(slug), nil)
+	req.Header.Set("Accept", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusNotFound, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), "Secret kickoff") {
+		t.Fatalf("private payload leaked in response: %s", w.Body.String())
+	}
+}
+
 func TestHandlerConversationDetail(t *testing.T) {
 	h, store, _ := testHandlers(t)
 

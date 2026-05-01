@@ -461,6 +461,14 @@ func (h *Handlers) spaceForRead(r *http.Request) (*Space, bool, error) {
 	return nil, false, ErrNotFound
 }
 
+func (h *Handlers) canReadSpace(r *http.Request, space *Space) bool {
+	uid := h.userID(r)
+	if space.OwnerID == uid || space.Visibility == VisibilityPublic {
+		return true
+	}
+	return uid != anonUserID && h.store.IsMember(r.Context(), space.ID, uid)
+}
+
 func isHTMX(r *http.Request) bool {
 	return r.Header.Get("HX-Request") == "true"
 }
@@ -4282,6 +4290,10 @@ func (h *Handlers) handleHiveSiteOps(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Error(w, "get space: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !h.canReadSpace(r, space) {
+		http.Error(w, "space not found", http.StatusNotFound)
 		return
 	}
 
