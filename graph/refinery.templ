@@ -85,15 +85,22 @@ templ RefineryView(space Space, spaces []Space, projection RefineryProjection, u
 										id="refinery-inbox-title"
 										name="title"
 										type="text"
-										placeholder="New intake item"
+										placeholder="Idea or spec title"
 										class="w-full px-2.5 py-2 bg-void border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"
 										required
 									/>
+									<input
+										id="refinery-markdown-file"
+										type="file"
+										accept=".md,.markdown,text/markdown,text/plain"
+										class="block w-full text-[11px] text-warm-faint file:mr-2 file:px-2 file:py-1.5 file:rounded-md file:border-0 file:bg-elevated file:text-warm-muted hover:file:text-brand"
+									/>
 									<textarea
+										id="refinery-markdown-body"
 										name="body"
-										placeholder="Notes"
-										rows="2"
-										class="w-full px-2.5 py-2 bg-void border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-none"
+										placeholder="Paste Markdown idea or spec"
+										rows="8"
+										class="w-full px-2.5 py-2 bg-void border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y font-mono leading-relaxed"
 									></textarea>
 									<div class="flex items-center justify-end gap-2">
 										<button type="button" onclick="document.getElementById('refinery-inbox-form').classList.add('hidden')" class="px-2.5 py-1.5 rounded-md text-xs text-warm-faint hover:text-warm-muted transition-colors">Cancel</button>
@@ -246,6 +253,16 @@ templ RefineryView(space Space, spaces []Space, projection RefineryProjection, u
 				var card = event.target.closest('.refinery-card');
 				if (!card) return;
 				openRefineryDetail(card.getAttribute('data-refinery-detail-id'));
+			});
+			document.addEventListener('change', function(event) {
+				var input = event.target.closest('#refinery-markdown-file');
+				if (!input || !input.files || !input.files[0]) return;
+				var file = input.files[0];
+				var title = document.getElementById('refinery-inbox-title');
+				var body = document.getElementById('refinery-markdown-body');
+				if (title && !title.value.trim()) title.value = file.name.replace(/\.(md|markdown)$/i, '');
+				if (!body) return;
+				file.text().then(function(text) { body.value = text; });
 			});
 			</script>
 		</div>

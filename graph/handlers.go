@@ -342,6 +342,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
 	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
+	mux.Handle("GET /api/hive/site-ops", h.readWrap(h.handleHiveSiteOps))
 
 	// Node children (for HTMX polling).
 	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
@@ -2438,7 +2439,11 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		op, _ := h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "intend", nil)
+		intentPayload, _ := json.Marshal(map[string]string{
+			"body":     intentBody,
+			"priority": node.Priority,
+		})
+		op, _ := h.store.RecordOp(ctx, space.ID, node.ID, actor, actorID, "intend", intentPayload)
 
 		// Notify assignee if task was created with one.
 		if assigneeID != "" && assigneeID != actorID && op != nil {
@@ -4258,6 +4263,97 @@ func (h *Handlers) handleHiveDiagnostic(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "ok"})
+}
+
+// handleHiveSiteOps exposes human-authored site operations for Hive
+// reconciliation. It enriches intend ops with the linked node's Markdown body so
+// Refinery intake can be used as the kickoff input while Hive is already idle.
+func (h *Handlers) handleHiveSiteOps(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	slug := strings.TrimSpace(r.URL.Query().Get("space"))
+	if slug == "" {
+		http.Error(w, "space required", http.StatusBadRequest)
+		return
+	}
+	space, err := h.store.GetSpaceBySlug(ctx, slug)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			http.Error(w, "space not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "get space: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var since *time.Time
+	if raw := strings.TrimSpace(r.URL.Query().Get("since")); raw != "" {
+		t, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			http.Error(w, "invalid since: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		since = &t
+	}
+
+	ops, err := h.store.ListOpsSince(ctx, space.ID, since, 100)
+	if err != nil {
+		http.Error(w, "list ops: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	type siteOp struct {
+		ID        string          `json:"id"`
+		SpaceID   string          `json:"space_id"`
+		NodeID    string          `json:"node_id,omitempty"`
+		NodeTitle string          `json:"node_title,omitempty"`
+		Actor     string          `json:"actor"`
+		ActorID   string          `json:"actor_id"`
+		ActorKind string          `json:"actor_kind"`
+		Op        string          `json:"op"`
+		Payload   json.RawMessage `json:"payload"`
+		CreatedAt time.Time       `json:"created_at"`
+	}
+
+	out := make([]siteOp, 0, len(ops))
+	for _, op := range ops {
+		out = append(out, siteOp{
+			ID:        op.ID,
+			SpaceID:   op.SpaceID,
+			NodeID:    op.NodeID,
+			NodeTitle: op.NodeTitle,
+			Actor:     op.Actor,
+			ActorID:   op.ActorID,
+			ActorKind: op.ActorKind,
+			Op:        op.Op,
+			Payload:   hiveSiteOpPayload(op),
+			CreatedAt: op.CreatedAt,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ops": out})
+}
+
+func hiveSiteOpPayload(op Op) json.RawMessage {
+	var payload map[string]any
+	if len(op.Payload) > 0 && string(op.Payload) != "{}" {
+		_ = json.Unmarshal(op.Payload, &payload)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	if op.Op == "intend" {
+		if _, ok := payload["body"]; !ok && op.NodeBody != "" {
+			payload["body"] = op.NodeBody
+		}
+		if _, ok := payload["priority"]; !ok && op.NodePriority != "" {
+			payload["priority"] = op.NodePriority
+		}
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return data
 }
 
 // handleHiveMirror accepts Hive execution updates for Site-originated tasks.

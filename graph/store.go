@@ -166,6 +166,8 @@ type Op struct {
 	SpaceID   string          `json:"space_id"`
 	NodeID    string          `json:"node_id,omitempty"`
 	NodeTitle string          `json:"node_title,omitempty"` // resolved from nodes table when available
+	NodeBody  string          `json:"node_body,omitempty"`  // resolved from nodes table when available
+	NodePriority string       `json:"node_priority,omitempty"` // resolved from nodes table when available
 	Actor     string          `json:"actor"`
 	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
 	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
@@ -1520,6 +1522,7 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	}
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		        COALESCE(n.body, ''), COALESCE(n.priority, ''),
 		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
 		 FROM ops o
 		 LEFT JOIN users u ON u.id = o.actor_id
@@ -1535,8 +1538,48 @@ func (s *Store) ListOps(ctx context.Context, spaceID string, limit int) ([]Op, e
 	var ops []Op
 	for rows.Next() {
 		var o Op
-		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.NodeBody, &o.NodePriority, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan op: %w", err)
+		}
+		ops = append(ops, o)
+	}
+	return ops, rows.Err()
+}
+
+// ListOpsSince returns operations in ascending order for Hive reconciliation.
+// Node fields are joined so the feed can preserve Markdown task bodies even
+// when the original op payload was minimal.
+func (s *Store) ListOpsSince(ctx context.Context, spaceID string, since *time.Time, limit int) ([]Op, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	where := "WHERE o.space_id = $1"
+	args := []any{spaceID, limit}
+	if since != nil && !since.IsZero() {
+		where += " AND o.created_at > $3"
+		args = []any{spaceID, limit, *since}
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT o.id, o.space_id, COALESCE(o.node_id, ''), COALESCE(n.title, ''),
+		        COALESCE(n.body, ''), COALESCE(n.priority, ''),
+		        o.actor, o.actor_id, COALESCE(u.kind, 'human'), o.op, o.payload, o.created_at
+		 FROM ops o
+		 LEFT JOIN users u ON u.id = o.actor_id
+		 LEFT JOIN nodes n ON n.id = o.node_id
+		 `+where+`
+		 ORDER BY o.created_at ASC LIMIT $2`,
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list ops since: %w", err)
+	}
+	defer rows.Close()
+
+	var ops []Op
+	for rows.Next() {
+		var o Op
+		if err := rows.Scan(&o.ID, &o.SpaceID, &o.NodeID, &o.NodeTitle, &o.NodeBody, &o.NodePriority, &o.Actor, &o.ActorID, &o.ActorKind, &o.Op, &o.Payload, &o.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan op since: %w", err)
 		}
 		ops = append(ops, o)
 	}
