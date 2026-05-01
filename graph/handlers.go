@@ -338,11 +338,11 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Refinery projection (optional auth — public spaces readable by anyone).
 	mux.Handle("GET /api/refinery/{slug}/projection", h.readWrap(h.handleRefineryProjection))
 
-	// Hive diagnostics ingestion (requires auth — used by hive runner).
+	// Hive diagnostics and reconciliation ingestion (requires auth — used by hive runner).
 	mux.Handle("POST /api/hive/diagnostic", h.writeWrap(h.handleHiveDiagnostic))
 	mux.Handle("POST /api/hive/escalation", h.writeWrap(h.handleHiveEscalation))
 	mux.Handle("POST /api/hive/mirror", h.writeWrap(h.handleHiveMirror))
-	mux.Handle("GET /api/hive/site-ops", h.readWrap(h.handleHiveSiteOps))
+	mux.Handle("GET /api/hive/site-ops", h.writeWrap(h.handleHiveSiteOps))
 
 	// Node children (for HTMX polling).
 	mux.Handle("GET /app/{slug}/node/{id}/children", h.readWrap(h.handleNodeChildren))
