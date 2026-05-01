@@ -276,6 +276,78 @@ func TestHandlerOp(t *testing.T) {
 	})
 }
 
+func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
+	h, store, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	slug := fmt.Sprintf("site-ops-%d", time.Now().UnixNano())
+	space, err := store.CreateSpace(t.Context(), slug, "Site Ops", "", "test-user-1", "project", "public")
+	if err != nil {
+		t.Fatalf("create space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(t.Context(), space.ID) })
+
+	markdown := "# Kickoff\n\nBuild the Civilization ingestion bridge."
+	node, err := store.CreateNode(t.Context(), CreateNodeParams{
+		SpaceID:  space.ID,
+		Kind:     KindTask,
+		Title:    "Kickoff idea",
+		Body:     markdown,
+		Priority: PriorityHigh,
+		Author:   "Tester",
+		AuthorID: "test-user-1",
+	})
+	if err != nil {
+		t.Fatalf("create node: %v", err)
+	}
+	if _, err := store.RecordOp(t.Context(), space.ID, node.ID, "Tester", "test-user-1", "intend", nil); err != nil {
+		t.Fatalf("record op: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/hive/site-ops?space="+url.QueryEscape(slug), nil)
+	req.Header.Set("Accept", "application/json")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var result struct {
+		Ops []struct {
+			ID        string          `json:"id"`
+			SpaceID   string          `json:"space_id"`
+			NodeID    string          `json:"node_id"`
+			NodeTitle string          `json:"node_title"`
+			ActorKind string          `json:"actor_kind"`
+			Op        string          `json:"op"`
+			Payload   json.RawMessage `json:"payload"`
+		} `json:"ops"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(result.Ops) != 1 {
+		t.Fatalf("ops = %d, want 1; body: %s", len(result.Ops), w.Body.String())
+	}
+	got := result.Ops[0]
+	if got.SpaceID != space.ID || got.NodeID != node.ID || got.NodeTitle != "Kickoff idea" || got.ActorKind != "human" || got.Op != "intend" {
+		t.Fatalf("op metadata = %#v", got)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal(got.Payload, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload["body"] != markdown {
+		t.Fatalf("payload body = %q, want Markdown body", payload["body"])
+	}
+	if payload["priority"] != PriorityHigh {
+		t.Fatalf("payload priority = %q, want %q", payload["priority"], PriorityHigh)
+	}
+}
+
 func TestHandlerConversationDetail(t *testing.T) {
 	h, store, _ := testHandlers(t)
 
@@ -325,9 +397,9 @@ func TestHandlerConversationDetail(t *testing.T) {
 
 func TestParseMessageSearch(t *testing.T) {
 	tests := []struct {
-		input      string
-		wantBody   string
-		wantFrom   string
+		input    string
+		wantBody string
+		wantFrom string
 	}{
 		{"hello world", "hello world", ""},
 		{"from:alice", "", "alice"},

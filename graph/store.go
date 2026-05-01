@@ -71,8 +71,8 @@ const (
 // Proposal states.
 const (
 	ProposalOpen   = "open"
-	ProposalPassed = "done"    // reuse "done" for passed proposals
-	ProposalFailed = "closed"  // reuse "closed" for failed/rejected
+	ProposalPassed = "done"   // reuse "done" for passed proposals
+	ProposalFailed = "closed" // reuse "closed" for failed/rejected
 )
 
 // Space kinds.
@@ -109,35 +109,35 @@ const (
 
 // Space is a container — project, community, or team.
 type Space struct {
-	ID                 string     `json:"id"`
-	Slug               string     `json:"slug"`
-	Name               string     `json:"name"`
-	Description        string     `json:"description"`
-	OwnerID            string     `json:"owner_id"`
-	Kind               string     `json:"kind"`
-	Visibility         string     `json:"visibility"`
-	ParentID           string     `json:"parent_id,omitempty"`
-	CreatedAt          time.Time  `json:"created_at"`
-	FirstCompletionAt  *time.Time `json:"first_completion_at,omitempty"`
+	ID                string     `json:"id"`
+	Slug              string     `json:"slug"`
+	Name              string     `json:"name"`
+	Description       string     `json:"description"`
+	OwnerID           string     `json:"owner_id"`
+	Kind              string     `json:"kind"`
+	Visibility        string     `json:"visibility"`
+	ParentID          string     `json:"parent_id,omitempty"`
+	CreatedAt         time.Time  `json:"created_at"`
+	FirstCompletionAt *time.Time `json:"first_completion_at,omitempty"`
 }
 
 // Node is a universal content unit — task, post, thread, or comment.
 type Node struct {
-	ID           string     `json:"id"`
-	SpaceID      string     `json:"space_id"`
-	ParentID     string     `json:"parent_id,omitempty"`
-	Kind         string     `json:"kind"`
-	Title        string     `json:"title"`
-	Body         string     `json:"body"`
-	State        string     `json:"state"`
-	Priority     string     `json:"priority"`
-	Assignee     string     `json:"assignee"`
-	AssigneeID   string     `json:"assignee_id"`              // user ID — source of truth for assignment
-	AssigneeKind string     `json:"assignee_kind"`            // "human" or "agent", resolved from users table
-	Author       string     `json:"author"`
-	AuthorID     string     `json:"author_id"`               // user ID — source of truth for identity
-	AuthorKind   string     `json:"author_kind"`              // "human" or "agent"
-	Tags         []string   `json:"tags"`
+	ID            string     `json:"id"`
+	SpaceID       string     `json:"space_id"`
+	ParentID      string     `json:"parent_id,omitempty"`
+	Kind          string     `json:"kind"`
+	Title         string     `json:"title"`
+	Body          string     `json:"body"`
+	State         string     `json:"state"`
+	Priority      string     `json:"priority"`
+	Assignee      string     `json:"assignee"`
+	AssigneeID    string     `json:"assignee_id"`   // user ID — source of truth for assignment
+	AssigneeKind  string     `json:"assignee_kind"` // "human" or "agent", resolved from users table
+	Author        string     `json:"author"`
+	AuthorID      string     `json:"author_id"`   // user ID — source of truth for identity
+	AuthorKind    string     `json:"author_kind"` // "human" or "agent"
+	Tags          []string   `json:"tags"`
 	Pinned        bool       `json:"pinned"`
 	ReplyToID     string     `json:"reply_to_id,omitempty"`     // message this is a reply to
 	ReplyToAuthor string     `json:"reply_to_author,omitempty"` // resolved at query time
@@ -147,39 +147,39 @@ type Node struct {
 	QuoteOfTitle  string     `json:"quote_of_title,omitempty"`  // resolved at query time
 	QuoteOfBody   string     `json:"quote_of_body,omitempty"`   // resolved at query time
 	DueDate       *time.Time `json:"due_date,omitempty"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	Verdict      string     `json:"verdict"`      // "approve", "revise", "reject" — set by review op
-	Rating       int        `json:"rating"`        // 1-5 quality score — set by review op
-	ChildCount   int        `json:"child_count"`
-	ChildDone    int        `json:"child_done"`
-	BlockerCount int        `json:"blocker_count"`
-	Causes       []string   `json:"causes"`
-	HiveTaskID   string     `json:"hive_task_id,omitempty"`
-	HiveChainRef string     `json:"hive_chain_ref,omitempty"`
-	HiveEventType string    `json:"hive_event_type,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	Verdict       string     `json:"verdict"` // "approve", "revise", "reject" — set by review op
+	Rating        int        `json:"rating"`  // 1-5 quality score — set by review op
+	ChildCount    int        `json:"child_count"`
+	ChildDone     int        `json:"child_done"`
+	BlockerCount  int        `json:"blocker_count"`
+	Causes        []string   `json:"causes"`
+	HiveTaskID    string     `json:"hive_task_id,omitempty"`
+	HiveChainRef  string     `json:"hive_chain_ref,omitempty"`
+	HiveEventType string     `json:"hive_event_type,omitempty"`
 }
 
 // Op is a recorded grammar operation.
 type Op struct {
-	ID        string          `json:"id"`
-	SpaceID   string          `json:"space_id"`
-	NodeID    string          `json:"node_id,omitempty"`
-	NodeTitle string          `json:"node_title,omitempty"` // resolved from nodes table when available
-	NodeBody  string          `json:"node_body,omitempty"`  // resolved from nodes table when available
-	NodePriority string       `json:"node_priority,omitempty"` // resolved from nodes table when available
-	Actor     string          `json:"actor"`
-	ActorID   string          `json:"actor_id"`   // user ID — source of truth for identity
-	ActorKind string          `json:"actor_kind"`  // "human" or "agent", resolved from users table
-	Op        string          `json:"op"`
-	Payload   json.RawMessage `json:"payload"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID           string          `json:"id"`
+	SpaceID      string          `json:"space_id"`
+	NodeID       string          `json:"node_id,omitempty"`
+	NodeTitle    string          `json:"node_title,omitempty"`    // resolved from nodes table when available
+	NodeBody     string          `json:"node_body,omitempty"`     // resolved from nodes table when available
+	NodePriority string          `json:"node_priority,omitempty"` // resolved from nodes table when available
+	Actor        string          `json:"actor"`
+	ActorID      string          `json:"actor_id"`   // user ID — source of truth for identity
+	ActorKind    string          `json:"actor_kind"` // "human" or "agent", resolved from users table
+	Op           string          `json:"op"`
+	Payload      json.RawMessage `json:"payload"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 // Reaction is a single emoji reaction on a node.
 type Reaction struct {
-	Emoji string `json:"emoji"`
-	Count int    `json:"count"`
+	Emoji string   `json:"emoji"`
+	Count int      `json:"count"`
 	Users []string `json:"users"` // user IDs who reacted with this emoji
 }
 
@@ -226,8 +226,8 @@ type ListNodesParams struct {
 // ────────────────────────────────────────────────────────────────────
 
 var (
-	ErrNotFound            = errors.New("not found")
-	ErrChildrenIncomplete  = errors.New("cannot complete task: incomplete children")
+	ErrNotFound           = errors.New("not found")
+	ErrChildrenIncomplete = errors.New("cannot complete task: incomplete children")
 )
 
 // ────────────────────────────────────────────────────────────────────
@@ -1618,10 +1618,10 @@ func (s *Store) ListNodeOps(ctx context.Context, nodeID string) ([]Op, error) {
 
 // PlatformStats returns aggregate counts for the platform.
 type PlatformStats struct {
-	Spaces     int
-	Tasks      int
-	Users      int
-	AgentOps   int
+	Spaces   int
+	Tasks    int
+	Users    int
+	AgentOps int
 }
 
 func (s *Store) GetPlatformStats(ctx context.Context) PlatformStats {
@@ -1814,7 +1814,7 @@ func (s *Store) GetUserProfile(ctx context.Context, name string) (*struct {
 // ComputeAndUpdateReputation recomputes a user's reputation score from their op
 // history across all spaces and stores it in users.reputation_score.
 // Formula: completed_tasks×1 + review_approvals×2 + review_revisions×0.5
-//          + endorsements×1.5 - review_rejections×1
+//   - endorsements×1.5 - review_rejections×1
 func (s *Store) ComputeAndUpdateReputation(ctx context.Context, userID string) error {
 	if userID == "" {
 		return nil
@@ -2352,9 +2352,9 @@ func (s *Store) ListPinnedNodes(ctx context.Context, spaceID string) ([]Node, er
 // ChangelogEntry is a completed task with its completion op.
 type ChangelogEntry struct {
 	Node
-	CompletedBy   string    `json:"completed_by"`
-	CompletedByKind string  `json:"completed_by_kind"`
-	CompletedAt   time.Time `json:"completed_at"`
+	CompletedBy     string    `json:"completed_by"`
+	CompletedByKind string    `json:"completed_by_kind"`
+	CompletedAt     time.Time `json:"completed_at"`
 }
 
 // ListChangelog returns recently completed tasks in a space, most recent first.
@@ -2409,10 +2409,10 @@ type ProposalWithVotes struct {
 	Node
 	VotesYes       int    `json:"votes_yes"`
 	VotesNo        int    `json:"votes_no"`
-	QuorumPct      int    `json:"quorum_pct"`       // 0 = no quorum enforcement
-	VotingBody     string `json:"voting_body"`      // "all", "council", "team"
-	EffectiveVotes int    `json:"effective_votes"`  // direct + delegated vote count
-	EligibleCount  int    `json:"eligible_count"`   // eligible voter count for quorum display
+	QuorumPct      int    `json:"quorum_pct"`      // 0 = no quorum enforcement
+	VotingBody     string `json:"voting_body"`     // "all", "council", "team"
+	EffectiveVotes int    `json:"effective_votes"` // direct + delegated vote count
+	EligibleCount  int    `json:"eligible_count"`  // eligible voter count for quorum display
 }
 
 // ListProposals returns proposals in a space with vote counts.
