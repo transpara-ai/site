@@ -177,6 +177,9 @@ func TestRefineryViewRendersExecutionFilters(t *testing.T) {
 		`data-refinery-exec-status="building"`,
 		`data-refinery-exec-status="blocked"`,
 		`data-refinery-exec-status="assigned"`,
+		`id="refinery-markdown-file"`,
+		`id="refinery-markdown-body"`,
+		`Paste Markdown idea or spec`,
 		"Filter Ready items by execution status",
 	} {
 		if !strings.Contains(body, want) {

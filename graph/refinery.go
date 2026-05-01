@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -121,11 +122,12 @@ func (h *Handlers) handleRefineryIntake(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "title required", http.StatusBadRequest)
 		return
 	}
+	body := strings.TrimSpace(r.FormValue("body"))
 	node, err := h.store.CreateNode(r.Context(), CreateNodeParams{
 		SpaceID:    space.ID,
 		Kind:       KindTask,
 		Title:      title,
-		Body:       strings.TrimSpace(r.FormValue("body")),
+		Body:       body,
 		Priority:   PriorityMedium,
 		Author:     h.userName(r),
 		AuthorID:   h.userID(r),
@@ -135,7 +137,11 @@ func (h *Handlers) handleRefineryIntake(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.store.RecordOp(r.Context(), space.ID, node.ID, h.userName(r), h.userID(r), "intend", nil)
+	payload, _ := json.Marshal(map[string]string{
+		"body":     body,
+		"priority": PriorityMedium,
+	})
+	h.store.RecordOp(r.Context(), space.ID, node.ID, h.userName(r), h.userID(r), "intend", payload)
 	p := profile.FromContext(r.Context())
 	if p == nil {
 		p = profile.Default()
