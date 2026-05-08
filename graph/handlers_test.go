@@ -33,6 +33,40 @@ func testHandlers(t *testing.T) (*Handlers, *Store, func(http.HandlerFunc) http.
 	return h, store, wrap
 }
 
+func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
+	requireAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "auth required", http.StatusUnauthorized)
+		})
+	}
+	optionalAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Fatalf("route %s used optional auth wrapper; want required auth", r.URL.Path)
+		})
+	}
+	h := NewHandlers(nil, optionalAuth, requireAuth)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for _, path := range []string{
+		"/ops",
+		"/ops/work",
+		"/ops/telemetry",
+		"/ops/hive",
+		"/ops/refinery",
+		"/api/hive/site-ops?space=hive",
+	} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusUnauthorized, w.Body.String())
+			}
+		})
+	}
+}
+
 func TestHandlerCreateSpace(t *testing.T) {
 	h, store, _ := testHandlers(t)
 

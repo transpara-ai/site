@@ -304,7 +304,9 @@ func main() {
 			log.Fatalf("ping db: %v", err)
 		}
 
-		// Auth middleware: Google OAuth if configured, otherwise anonymous passthrough.
+		// Auth middleware: Google OAuth if configured, otherwise anonymous passthrough
+		// for local development only. Production must fail closed when auth is
+		// not explicitly configured.
 		clientID := os.Getenv("GOOGLE_CLIENT_ID")
 		clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 
@@ -345,6 +347,10 @@ func main() {
 			readWrap = authService.OptionalAuth
 			log.Println("auth enabled (Google OAuth)")
 		} else {
+			if err := validateProductionAuthConfig(os.Getenv); err != nil {
+				log.Fatal(err)
+			}
+
 			// Anonymous mode with Bearer token support.
 			// If a valid Bearer token is present, resolve the real user
 			// (enables hive API key auth without full Google OAuth).
@@ -1009,6 +1015,29 @@ func noCache(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func validateProductionAuthConfig(getenv func(string) string) error {
+	if !isProductionEnvironment(getenv) {
+		return nil
+	}
+	if strings.TrimSpace(getenv("GOOGLE_CLIENT_ID")) != "" &&
+		strings.TrimSpace(getenv("GOOGLE_CLIENT_SECRET")) != "" {
+		return nil
+	}
+	return fmt.Errorf("production auth configuration missing: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
+}
+
+func isProductionEnvironment(getenv func(string) string) bool {
+	for _, key := range []string{"SITE_ENV", "APP_ENV", "GO_ENV", "ENV"} {
+		switch strings.ToLower(strings.TrimSpace(getenv(key))) {
+		case "production", "prod":
+			return true
+		case "development", "dev", "test", "local":
+			return false
+		}
+	}
+	return strings.TrimSpace(getenv("FLY_APP_NAME")) != ""
 }
 
 // ────────────────────────────────────────────────────────────────────

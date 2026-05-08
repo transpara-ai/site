@@ -358,12 +358,12 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /hive/stats", h.handleHiveStats)
 	mux.HandleFunc("GET /hive/status", h.handleHiveStatus)
 
-	// Operator shell — site-owned entry points for legacy and native ops surfaces.
-	mux.Handle("GET /ops", h.readWrap(h.handleOps))
-	mux.Handle("GET /ops/work", h.readWrap(h.handleOpsWork))
-	mux.Handle("GET /ops/telemetry", h.readWrap(h.handleOpsTelemetry))
-	mux.Handle("GET /ops/hive", h.readWrap(h.handleOpsHive))
-	mux.Handle("GET /ops/refinery", h.readWrap(h.handleOpsRefinery))
+	// Operator shell — requires auth. Public Hive status stays under /hive*.
+	mux.Handle("GET /ops", h.writeWrap(h.handleOps))
+	mux.Handle("GET /ops/work", h.writeWrap(h.handleOpsWork))
+	mux.Handle("GET /ops/telemetry", h.writeWrap(h.handleOpsTelemetry))
+	mux.Handle("GET /ops/hive", h.writeWrap(h.handleOpsHive))
+	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
 }
 
 // ────────────────────────────────────────────────────────────────────
