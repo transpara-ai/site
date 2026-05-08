@@ -3612,8 +3612,6 @@ func (s *Store) ListUserConversations(ctx context.Context, userID string, limit 
 		if lastBody.Valid {
 			dc.LastBody = lastBody.String
 		}
-		dc.SpaceSlug = dc.SpaceSlug
-		dc.SpaceName = dc.SpaceName
 		convos = append(convos, dc)
 	}
 	return convos, rows.Err()

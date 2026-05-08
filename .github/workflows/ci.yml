@@ -51,19 +51,10 @@ jobs:
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@v0.3.1001
 
-      - name: Generate persona status
-        run: go generate ./graph/personas/...
-
-      - name: Generate templates
-        run: templ generate
+      - name: Verify
+        run: make verify
+        env:
+          DATABASE_URL: postgres://site:site@localhost:5432/site?sslmode=disable
 
       - name: Check for uncommitted generated file changes
         run: git diff --exit-code -- '*_templ.go' '*_gen.go'
-
-      - name: Build
-        run: go build -o site ./cmd/site/
-
-      - name: Test
-        run: go test -v -count=1 ./...
-        env:
-          DATABASE_URL: postgres://site:site@localhost:5432/site?sslmode=disable

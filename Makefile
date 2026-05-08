@@ -1,13 +1,24 @@
-.PHONY: css generate build run dev deploy
+.PHONY: css generate-personas generate build test vet verify run dev deploy
 
 css:
 	npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/site.css --minify
 
-generate:
+generate-personas:
+	go generate ./graph/personas/...
+
+generate: generate-personas
 	templ generate
 
 build: css generate
 	go build -o site ./cmd/site/
+
+test:
+	go test -count=1 ./...
+
+vet:
+	go vet ./...
+
+verify: build test vet
 
 run: build
 	./site

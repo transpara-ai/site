@@ -8,6 +8,7 @@ Transpara AI site and operator-facing product surface. It presents embedded cont
 - Generate templates: `make generate`
 - Build: `make build`
 - Test: `make test`
+- Vet: `make vet`
 - Verify: `make verify`
 - Dev server: `make dev`
 
