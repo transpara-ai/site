@@ -161,20 +161,97 @@ type OpsPhaseGate struct {
 }
 
 type OpsHiveData struct {
-	GeneratedAt     string
-	Iteration       int
-	Phase           string
-	BuildTitle      string
-	BuildCost       float64
-	TotalOps        int
-	LastActive      string
-	VerifiedBuilds  int
-	TotalCost       float64
-	AverageCost     float64
-	DiagnosticCount int
-	RecentCommits   []RecentCommit
-	RecentEvents    []DiagEntry
-	Error           string
+	GeneratedAt        string
+	Iteration          int
+	Phase              string
+	BuildTitle         string
+	BuildCost          float64
+	TotalOps           int
+	LastActive         string
+	VerifiedBuilds     int
+	TotalCost          float64
+	AverageCost        float64
+	DiagnosticCount    int
+	ProjectionSource   string
+	ProjectionError    string
+	PendingApprovals   []OpsHiveApproval
+	AuthorityDecisions []OpsHiveDecision
+	Lifecycle          []OpsHiveLifecycle
+	KeyAuditTraces     []OpsHiveKeyAuditTrace
+	RecentCommits      []RecentCommit
+	RecentEvents       []DiagEntry
+	Error              string
+}
+
+type OpsHiveProjection struct {
+	GeneratedAt        string                 `json:"generated_at"`
+	Source             string                 `json:"source"`
+	PendingApprovals   []OpsHiveApproval      `json:"pending_approvals"`
+	AuthorityDecisions []OpsHiveDecision      `json:"authority_decisions"`
+	Lifecycle          []OpsHiveLifecycle     `json:"lifecycle"`
+	KeyAuditTraces     []OpsHiveKeyAuditTrace `json:"key_audit_traces"`
+	Errors             []string               `json:"errors"`
+}
+
+type OpsHiveApproval struct {
+	EventID           string `json:"event_id"`
+	RequestID         string `json:"request_id"`
+	RequestingActor   string `json:"requesting_actor"`
+	ActionName        string `json:"action_name"`
+	Target            string `json:"target"`
+	Environment       string `json:"environment"`
+	RequestedOutcome  string `json:"requested_outcome"`
+	Justification     string `json:"justification"`
+	RiskSummary       string `json:"risk_summary"`
+	ProposedOperation string `json:"proposed_operation"`
+	CreatedAt         string `json:"created_at"`
+}
+
+type OpsHiveDecision struct {
+	EventID         string `json:"event_id"`
+	DecisionID      string `json:"decision_id"`
+	RequestID       string `json:"request_id"`
+	ApproverActor   string `json:"approver_actor"`
+	Outcome         string `json:"outcome"`
+	ApprovedAction  string `json:"approved_action"`
+	ApprovedTarget  string `json:"approved_target"`
+	Rationale       string `json:"rationale"`
+	RequestedAction string `json:"requested_action"`
+	RequestedTarget string `json:"requested_target"`
+	CreatedAt       string `json:"created_at"`
+}
+
+type OpsHiveLifecycle struct {
+	ActorID         string `json:"actor_id"`
+	DisplayName     string `json:"display_name"`
+	Role            string `json:"role"`
+	LifecycleStatus string `json:"lifecycle_status"`
+	AuthorityScope  string `json:"authority_scope"`
+	KeyProvenance   string `json:"key_provenance"`
+	Environment     string `json:"environment"`
+	IdentityMode    string `json:"identity_mode"`
+	LastEventType   string `json:"last_event_type"`
+	UpdatedAt       string `json:"updated_at"`
+}
+
+type OpsHiveKeyAuditTrace struct {
+	EventID          string `json:"event_id"`
+	EventType        string `json:"event_type"`
+	ActorID          string `json:"actor_id"`
+	SubjectActorID   string `json:"subject_actor_id"`
+	KeyProvenance    string `json:"key_provenance"`
+	Environment      string `json:"environment"`
+	IdentityMode     string `json:"identity_mode"`
+	PublicKey        string `json:"public_key"`
+	OldPublicKey     string `json:"old_public_key"`
+	NewPublicKey     string `json:"new_public_key"`
+	ExternalKeyRef   string `json:"external_key_ref"`
+	Reason           string `json:"reason"`
+	RecordKind       string `json:"record_kind"`
+	Rationale        string `json:"rationale"`
+	AuthorityRequest string `json:"authority_request"`
+	DecisionEvent    string `json:"decision_event"`
+	CreatedAt        string `json:"created_at"`
 }
 
 type opsWorkTasksResponse struct {
@@ -312,6 +389,7 @@ func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
 	data := &OpsHiveData{
 		GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05"),
 	}
+	applyHiveOperatorProjection(r, data)
 
 	entries, _ := h.store.ListHiveDiagnostics(ctx, maxHiveDiagEntries)
 	if len(entries) == 0 {
@@ -381,6 +459,49 @@ func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
 		data.Phase = "idle"
 	}
 	return data
+}
+
+func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		data.ProjectionError = "Hive operator projection source is not configured."
+		return
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/operator-projection"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return
+	}
+	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		data.ProjectionError = fmt.Sprintf("hive operator projection returned %s", resp.Status)
+		return
+	}
+	var projection OpsHiveProjection
+	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
+		data.ProjectionError = err.Error()
+		return
+	}
+	data.ProjectionSource = projection.Source
+	if projection.GeneratedAt != "" {
+		data.GeneratedAt = formatOpsTime(projection.GeneratedAt)
+	}
+	if len(projection.Errors) > 0 {
+		data.ProjectionError = strings.Join(projection.Errors, "; ")
+	}
+	data.PendingApprovals = projection.PendingApprovals
+	data.AuthorityDecisions = projection.AuthorityDecisions
+	data.Lifecycle = projection.Lifecycle
+	data.KeyAuditTraces = projection.KeyAuditTraces
 }
 
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {

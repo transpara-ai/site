@@ -212,3 +212,109 @@ func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 		t.Fatal("GET /ops/hive: body does not link to the public /hive live-build page")
 	}
 }
+
+func TestFetchOpsHiveOperatorProjection(t *testing.T) {
+	var auth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/operator-projection" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		auth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[{"request_id":"req-1","requesting_actor":"actor-requester","action_name":"agent.retire","target":"actor-target","environment":"production","justification":"completed mandate","created_at":"2026-05-09T11:00:00Z"}],
+			"authority_decisions":[{"decision_id":"decision-1","request_id":"req-2","approver_actor":"actor-approver","outcome":"approved","approved_action":"agent.revoke","approved_target":"actor-revoked","rationale":"valid evidence","created_at":"2026-05-09T10:00:00Z"}],
+			"lifecycle":[{"actor_id":"actor-target","display_name":"builder","role":"builder","lifecycle_status":"retired","authority_scope":"hive:read","key_provenance":"generated","updated_at":"2026-05-09T09:00:00Z"}],
+			"key_audit_traces":[{"event_id":"event-key","event_type":"agent.key.registered","actor_id":"actor-target","key_provenance":"generated","public_key":"abc","created_at":"2026-05-09T08:00:00Z"}]
+		}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "ops-key")
+	h, _, _ := testHandlers(t)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive", nil)
+
+	got := h.fetchOpsHive(req)
+
+	if auth != "Bearer ops-key" {
+		t.Fatalf("Authorization = %q, want Bearer ops-key", auth)
+	}
+	if got.ProjectionError != "" {
+		t.Fatalf("ProjectionError = %q, want empty", got.ProjectionError)
+	}
+	if got.ProjectionSource != "eventgraph" {
+		t.Fatalf("ProjectionSource = %q, want eventgraph", got.ProjectionSource)
+	}
+	if len(got.PendingApprovals) != 1 || got.PendingApprovals[0].ActionName != "agent.retire" {
+		t.Fatalf("PendingApprovals = %#v", got.PendingApprovals)
+	}
+	if len(got.AuthorityDecisions) != 1 || got.AuthorityDecisions[0].Outcome != "approved" {
+		t.Fatalf("AuthorityDecisions = %#v", got.AuthorityDecisions)
+	}
+	if len(got.Lifecycle) != 1 || got.Lifecycle[0].LifecycleStatus != "retired" {
+		t.Fatalf("Lifecycle = %#v", got.Lifecycle)
+	}
+	if len(got.KeyAuditTraces) != 1 || got.KeyAuditTraces[0].EventType != "agent.key.registered" {
+		t.Fatalf("KeyAuditTraces = %#v", got.KeyAuditTraces)
+	}
+}
+
+func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[{"request_id":"req-1","requesting_actor":"actor-requester","action_name":"agent.spawn.persistent","target":"builder","environment":"production","justification":"trial passed","created_at":"2026-05-09T11:00:00Z"}],
+			"authority_decisions":[{"decision_id":"decision-1","request_id":"req-2","approver_actor":"actor-approver","outcome":"denied","approved_action":"agent.revoke","approved_target":"actor-revoked","rationale":"insufficient evidence","created_at":"2026-05-09T10:00:00Z"}],
+			"lifecycle":[{"actor_id":"actor-builder","display_name":"builder","role":"builder","lifecycle_status":"active","authority_scope":"hive:read","key_provenance":"external","updated_at":"2026-05-09T09:00:00Z"}],
+			"key_audit_traces":[{"event_id":"event-key","event_type":"agent.key.registered","actor_id":"actor-builder","key_provenance":"external","public_key":"abc","created_at":"2026-05-09T08:00:00Z"}]
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Authority projection", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "agent.spawn.persistent", "builder"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, `method="post"`) || strings.Contains(body, "<button") {
+		t.Fatal("GET /ops/hive exposes authority mutation controls")
+	}
+}
+
+func TestFetchOpsHiveProjectionFailureIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "no projection", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive", nil)
+
+	got := h.fetchOpsHive(req)
+
+	if got.Error != "" {
+		t.Fatalf("Error = %q, want empty runtime summary error", got.Error)
+	}
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal projection error")
+	}
+}
