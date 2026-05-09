@@ -294,7 +294,9 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
 	}
-	if strings.Contains(body, `method="post"`) || strings.Contains(body, "<button") {
+	if strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/hive"`) ||
+		strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive exposes authority mutation controls")
 	}
 }
