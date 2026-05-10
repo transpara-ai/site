@@ -258,6 +258,7 @@ templ opsHiveSummary(h *OpsHiveData, publicURL string) {
 				@opsMetric("Average", fmt.Sprintf("$%.2f", h.AverageCost), "per verified build")
 				@opsMetric("Last active", opsValueOr(h.LastActive, "none"), "latest recorded operation")
 			</div>
+			@opsHiveAuthorityProjection(h)
 			<div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
 				<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 					<header class="px-4 py-3 border-b border-edge">
@@ -304,6 +305,167 @@ templ opsHiveSummary(h *OpsHiveData, publicURL string) {
 				</section>
 			</div>
 		}
+	</section>
+}
+
+templ opsHiveAuthorityProjection(h *OpsHiveData) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Authority projection</h2>
+			if h.ProjectionSource != "" {
+				<p class="text-xs text-warm-faint mt-1">Source: { h.ProjectionSource }</p>
+			}
+			if h.ProjectionError != "" {
+				<p class="text-xs text-amber-300 mt-2">{ h.ProjectionError }</p>
+			}
+		</header>
+		<div class="grid gap-3 p-4 lg:grid-cols-2">
+			@opsHivePendingApprovals(h.PendingApprovals)
+			@opsHiveAuthorityDecisions(h.AuthorityDecisions)
+			@opsHiveLifecycle(h.Lifecycle)
+			@opsHiveKeyAudit(h.KeyAuditTraces)
+		</div>
+	</section>
+}
+
+templ opsHivePendingApprovals(items []OpsHiveApproval) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+		<header class="px-3 py-2 border-b border-edge">
+			<h3 class="text-sm font-medium text-warm">Pending approvals</h3>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-3 py-5 text-sm text-warm-faint">No pending authority requests.</p>
+			}
+			for _, item := range items {
+				<div class="px-3 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.ActionName, "protected action") }</h4>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.Target, "target unknown") }</p>
+						</div>
+						<span class="text-[10px] px-2 py-1 rounded-full border border-amber-400/30 text-amber-300 bg-amber-400/10 whitespace-nowrap">{ opsValueOr(item.Environment, "env") }</span>
+					</div>
+					if item.Justification != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ item.Justification }</p>
+					}
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Request</dt>
+						<dd class="text-warm-muted truncate">{ item.RequestID }</dd>
+						<dt class="text-warm-faint">Actor</dt>
+						<dd class="text-warm-muted truncate">{ item.RequestingActor }</dd>
+						<dt class="text-warm-faint">At</dt>
+						<dd class="text-warm-muted">{ formatOpsTime(item.CreatedAt) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsHiveAuthorityDecisions(items []OpsHiveDecision) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+		<header class="px-3 py-2 border-b border-edge">
+			<h3 class="text-sm font-medium text-warm">Authority decisions</h3>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-3 py-5 text-sm text-warm-faint">No authority decisions projected.</p>
+			}
+			for _, item := range items {
+				<div class="px-3 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.ApprovedAction, item.RequestedAction) }</h4>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.ApprovedTarget, item.RequestedTarget) }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPhaseGateStatusClass(item.Outcome) }>{ opsValueOr(item.Outcome, "recorded") }</span>
+					</div>
+					if item.Rationale != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ item.Rationale }</p>
+					}
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Request</dt>
+						<dd class="text-warm-muted truncate">{ item.RequestID }</dd>
+						<dt class="text-warm-faint">Approver</dt>
+						<dd class="text-warm-muted truncate">{ item.ApproverActor }</dd>
+						<dt class="text-warm-faint">At</dt>
+						<dd class="text-warm-muted">{ formatOpsTime(item.CreatedAt) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsHiveLifecycle(items []OpsHiveLifecycle) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+		<header class="px-3 py-2 border-b border-edge">
+			<h3 class="text-sm font-medium text-warm">Lifecycle state</h3>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-3 py-5 text-sm text-warm-faint">No lifecycle state projected.</p>
+			}
+			for _, item := range items {
+				<div class="px-3 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.DisplayName, item.ActorID) }</h4>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.Role, item.ActorID) }</p>
+						</div>
+						<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">{ opsValueOr(item.LifecycleStatus, "unknown") }</span>
+					</div>
+					<dl class="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Scope</dt>
+						<dd class="text-warm-muted truncate">{ opsValueOr(item.AuthorityScope, "none") }</dd>
+						<dt class="text-warm-faint">Key</dt>
+						<dd class="text-warm-muted truncate">{ opsValueOr(item.KeyProvenance, "unknown") }</dd>
+						<dt class="text-warm-faint">Updated</dt>
+						<dd class="text-warm-muted">{ formatOpsTime(item.UpdatedAt) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsHiveKeyAudit(items []OpsHiveKeyAuditTrace) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+		<header class="px-3 py-2 border-b border-edge">
+			<h3 class="text-sm font-medium text-warm">Key provenance</h3>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-3 py-5 text-sm text-warm-faint">No key or audit traces projected.</p>
+			}
+			for _, item := range items {
+				<div class="px-3 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.EventType, "audit event") }</h4>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.ActorID, item.SubjectActorID) }</p>
+						</div>
+						if item.KeyProvenance != "" {
+							<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">{ item.KeyProvenance }</span>
+						}
+					</div>
+					if item.Reason != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ item.Reason }</p>
+					} else if item.Rationale != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ item.Rationale }</p>
+					}
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Event</dt>
+						<dd class="text-warm-muted truncate">{ item.EventID }</dd>
+						<dt class="text-warm-faint">Public</dt>
+						<dd class="text-warm-muted truncate">{ opsValueOr(item.PublicKey, item.NewPublicKey) }</dd>
+						<dt class="text-warm-faint">At</dt>
+						<dd class="text-warm-muted">{ formatOpsTime(item.CreatedAt) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
 	</section>
 }
 
