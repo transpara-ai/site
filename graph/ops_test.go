@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
@@ -318,5 +319,30 @@ func TestFetchOpsHiveProjectionFailureIsNonFatal(t *testing.T) {
 	}
 	if got.ProjectionError == "" {
 		t.Fatal("ProjectionError is empty, want nonfatal projection error")
+	}
+}
+
+func TestFetchOpsHiveProjectionTimeoutIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	oldClient := hiveOpsProjectionClient
+	hiveOpsProjectionClient = &http.Client{Timeout: 10 * time.Millisecond}
+	t.Cleanup(func() { hiveOpsProjectionClient = oldClient })
+
+	h, _, _ := testHandlers(t)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive", nil)
+
+	got := h.fetchOpsHive(req)
+
+	if got.Error != "" {
+		t.Fatalf("Error = %q, want empty runtime summary error", got.Error)
+	}
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal timeout error")
 	}
 }

@@ -286,6 +286,8 @@ type opsPipelineReportResponse struct {
 	Detail     string             `json:"detail"`
 }
 
+var hiveOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
+
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Operations",
@@ -476,7 +478,7 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
 		req.Header.Set("Authorization", "Bearer "+key)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := hiveOpsProjectionClient.Do(req)
 	if err != nil {
 		data.ProjectionError = err.Error()
 		return
