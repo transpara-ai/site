@@ -3,7 +3,7 @@ module github.com/transpara-ai/site
 go 1.25.0
 
 require (
-	github.com/a-h/templ v0.3.1001
+	github.com/a-h/templ v0.3.1020
 	github.com/lib/pq v1.12.0
 )
 
