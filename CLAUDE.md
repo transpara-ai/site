@@ -20,12 +20,17 @@ Always run `templ generate` after editing any `.templ` file. The `*_templ.go` fi
 
 ## Environment Variables
 
+> **Migration 2026-05-14:** `CLAUDE_TOKEN` is no longer used. The Mind now reads
+> credentials through the standard `intelligence` package, which inherits whatever
+> auth the configured provider already has (`~/.claude/.credentials.json` for
+> Claude CLI, env-var-backed API keys for HTTP providers).
+
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | HTTP port (default 8080) |
 | `GOOGLE_OAUTH_ID` / `GOOGLE_OAUTH_SECRET` | OAuth2 credentials |
-| `CLAUDE_TOKEN` | Claude API key for Mind agent |
+| `SITE_CATALOG` | Optional path to a YAML model catalog. Defaults to the built-in `eventgraph/go/pkg/modelconfig` catalog. |
 | `HIVE_REPO_PATH` | Path to sibling hive repo (default: `../hive`) |
 
 Use `docker-compose.yml` for local PostgreSQL. The app fails to start if required env vars are missing.
@@ -44,7 +49,7 @@ Use `docker-compose.yml` for local PostgreSQL. The app fails to start if require
 **`graph/`** — The core of the application.
 - `store.go` (~4300 LOC): PostgreSQL-backed store for all graph data (spaces, nodes, ops, users, reactions)
 - `handlers.go` (~4300 LOC): HTTP handlers for all `/api/*` and authenticated page routes
-- `mind.go`: Claude API integration — agents react to operations via `Store.OnOp()` subscriber pattern
+- `mind.go`: Provider-pool integration — agents react to operations via `Store.OnOp()` subscriber pattern. Routes through `modelconfig.ProviderPool` (one provider per persona); defaults to Sonnet via claude-cli.
 - `personas.go`: Loads 30+ agent persona `.md` files (embedded); seeds agents into the DB at startup
 - `views.templ` (~306KB): All graph UI components (task views, conversations, profiles, etc.)
 

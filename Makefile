@@ -29,4 +29,5 @@ dev:
 	go run ./cmd/site/
 
 deploy:
+	go mod vendor
 	fly deploy

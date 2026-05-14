@@ -17,9 +17,11 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/yuin/goldmark"
 
+	"github.com/transpara-ai/eventgraph/go/pkg/modelconfig"
 	"github.com/transpara-ai/site/auth"
 	"github.com/transpara-ai/site/content"
 	"github.com/transpara-ai/site/graph"
+	"github.com/transpara-ai/site/graph/personas"
 	"github.com/transpara-ai/site/profile"
 	"github.com/transpara-ai/site/views"
 )
@@ -392,14 +394,31 @@ func main() {
 			log.Printf("hive webhook enabled: %s", webhookURL)
 		}
 
-		// Wire Mind auto-reply if Claude token is set.
-		if claudeToken := os.Getenv("CLAUDE_CODE_OAUTH_TOKEN"); claudeToken != "" {
-			mind = graph.NewMind(db, graphStore, claudeToken)
-			graphHandlers.SetMind(mind)
-			log.Println("mind enabled (CLAUDE_CODE_OAUTH_TOKEN set)")
+		// Wire Mind auto-reply via the modelconfig.ProviderPool. The pool
+		// pre-warms one provider per persona at startup; runtime auth is
+		// inherited from whatever the configured provider already has
+		// (Claude CLI reads ~/.claude/.credentials.json natively, HTTP
+		// providers read their own env-var API keys).
+		//
+		// Failures here (missing `claude` binary, bad catalog, etc.) leave the
+		// Mind disabled but allow the rest of the site to boot. Mind handlers
+		// detect a nil pool and return a graceful error per request.
+		var pool *modelconfig.ProviderPool
+		resolver, err := buildSiteResolver(os.Getenv("SITE_CATALOG"))
+		if err != nil {
+			log.Printf("site: warning: resolver init failed, Mind disabled: %v", err)
 		} else {
-			log.Println("mind disabled (no CLAUDE_CODE_OAUTH_TOKEN)")
+			pool = modelconfig.NewProviderPool(resolver)
+			personaNames := personas.AllNames()
+			if err := pool.WarmForRoles(personaNames); err != nil {
+				log.Printf("site: warning: pool warm-up failed, Mind disabled: %v", err)
+				pool = nil
+			} else {
+				log.Printf("site: mind initialized — %s", pool.Stats().Summary())
+			}
 		}
+		mind = graph.NewMind(db, graphStore, pool)
+		graphHandlers.SetMind(mind)
 
 		// Home: redirect logged-in users to /app, show landing with live stats for anonymous.
 		mux.Handle("GET /{$}", readWrap(func(w http.ResponseWriter, r *http.Request) {
@@ -1069,4 +1088,15 @@ func makeHandlers(posts []views.Post) (home, blogIndex, blogPost http.HandlerFun
 		http.NotFound(w, r)
 	}
 	return
+}
+
+// buildSiteResolver returns the modelconfig.Resolver used to build the Mind's
+// provider pool. When SITE_CATALOG is unset, the built-in default resolver is
+// used (every persona → Sonnet via claude-cli); otherwise the YAML catalog at
+// catalogPath is loaded.
+func buildSiteResolver(catalogPath string) (*modelconfig.Resolver, error) {
+	if catalogPath == "" {
+		return modelconfig.DefaultResolver(), nil
+	}
+	return modelconfig.ResolverFromCatalogFile(catalogPath)
 }

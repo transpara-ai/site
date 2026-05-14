@@ -1540,8 +1540,8 @@ func TestHandlerQuestionAutoAnswer(t *testing.T) {
 	}
 	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID) })
 
-	mind := NewMind(db, store, "fake-token")
-	mind.callClaudeOverride = func(_ context.Context, _ string, _ []claudeMessage) (string, error) {
+	mind := NewMind(db, store, nil)
+	mind.callProviderOverride = func(_ context.Context, _ string, _ []providerMessage) (string, error) {
 		return "Auto-answer from mind.", nil
 	}
 

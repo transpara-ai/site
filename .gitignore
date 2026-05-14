@@ -5,3 +5,4 @@ static/css/output.css
 static/css/site.css
 /node_modules/
 .env
+/vendor/
