@@ -644,6 +644,7 @@ templ opsEvidenceSummary(e *OpsEvidenceData) {
 			</section>
 		} else {
 			@opsEvidenceIdentity(e)
+			@opsProofOfWorkPacket(e.ProofOfWorkPacket)
 			@opsEvidenceTimeline(e.Timeline)
 			<div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
 				@opsEvidenceGates(e.GateEvidence)
@@ -690,6 +691,100 @@ templ opsEvidenceIdentity(e *OpsEvidenceData) {
 			}
 		</div>
 	</section>
+}
+
+templ opsProofOfWorkPacket(packet *OpsProofOfWorkPacket) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Proof-of-work packet</h2>
+					<p class="text-xs text-warm-faint mt-1">Read-only evidence package; authority and certification records remain external sources of truth.</p>
+				</div>
+				if packet != nil && packet.Status != "" {
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsPipelineOutcomeClass(packet.Status) }>{ packet.Status }</span>
+				}
+			</div>
+		</header>
+		if packet == nil {
+			<p class="px-4 py-6 text-sm text-warm-faint">No proof-of-work packet returned.</p>
+		} else {
+			<div class="p-4 space-y-4">
+				<div class="grid gap-2 md:grid-cols-2 text-xs">
+					<div>
+						<p class="text-warm-faint">Packet</p>
+						<p class="text-warm-muted break-all mt-1">{ opsValueOr(packet.ID, "unknown") }</p>
+					</div>
+					<div>
+						<p class="text-warm-faint">EventGraph refs</p>
+						<p class="text-warm-muted break-all mt-1">{ opsEvidenceJoin(packet.EventGraphRefs) }</p>
+					</div>
+				</div>
+				if packet.Summary != "" {
+					<p class="text-sm text-warm-muted leading-relaxed">{ packet.Summary }</p>
+				}
+				<div class="grid gap-3 lg:grid-cols-2">
+					@opsProofOfWorkSingle("Work item", packet.WorkItem)
+					@opsProofOfWorkSingle("Runtime invocation", packet.RuntimeInvocation)
+					@opsProofOfWorkList("Changed files", packet.ChangedFiles)
+					@opsProofOfWorkList("Tests run", packet.TestsRun)
+					@opsProofOfWorkSingle("CI status", packet.CIStatus)
+					@opsProofOfWorkList("Review feedback", packet.ReviewFeedback)
+					@opsProofOfWorkList("Security scan results", packet.SecurityScanResults)
+					@opsProofOfWorkList("Screenshots and walkthrough artifacts", packet.ScreenshotsWalkthrough)
+					@opsProofOfWorkList("Known failures", packet.KnownFailures)
+					@opsProofOfWorkSingle("Operator decision", packet.OperatorDecision)
+				</div>
+			</div>
+		}
+	</section>
+}
+
+templ opsProofOfWorkSingle(title string, item *OpsProofOfWorkItem) {
+	<div class="border border-edge bg-void/30 rounded-lg p-3">
+		<h3 class="text-xs font-medium text-warm uppercase tracking-widest">{ title }</h3>
+		if item == nil {
+			<p class="text-xs text-warm-faint mt-3">No evidence returned.</p>
+		} else {
+			@opsProofOfWorkItem(item)
+		}
+	</div>
+}
+
+templ opsProofOfWorkList(title string, items []OpsProofOfWorkItem) {
+	<div class="border border-edge bg-void/30 rounded-lg p-3">
+		<h3 class="text-xs font-medium text-warm uppercase tracking-widest">{ title }</h3>
+		if len(items) == 0 {
+			<p class="text-xs text-warm-faint mt-3">No evidence returned.</p>
+		}
+		<div class="divide-y divide-edge">
+			for _, item := range items {
+				<div class="py-3 first:pt-3 last:pb-0">
+					@opsProofOfWorkItem(&item)
+				</div>
+			}
+		</div>
+	</div>
+}
+
+templ opsProofOfWorkItem(item *OpsProofOfWorkItem) {
+	<div class="space-y-2">
+		<div class="flex items-start justify-between gap-3">
+			<div class="min-w-0">
+				<p class="text-sm font-medium text-warm truncate">{ opsValueOr(item.Label, "evidence item") }</p>
+				if item.ArtifactRef != "" {
+					<p class="text-[11px] text-warm-faint mt-1 break-all">{ item.ArtifactRef }</p>
+				}
+			</div>
+			if item.Status != "" {
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(item.Status) }>{ item.Status }</span>
+			}
+		</div>
+		if item.Summary != "" {
+			<p class="text-xs text-warm-muted leading-relaxed">{ item.Summary }</p>
+		}
+		<p class="text-[11px] text-warm-faint break-all">EventGraph refs: { opsEvidenceJoin(item.EventGraphRefs) }</p>
+	</div>
 }
 
 templ opsEvidenceTimeline(items []OpsEvidenceTimelineEvent) {

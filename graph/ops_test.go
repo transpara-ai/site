@@ -395,6 +395,15 @@ func TestFetchOpsEvidenceProjection(t *testing.T) {
 	if len(got.MissingProvenance) != 1 || got.MissingProvenance[0].PathName == "" {
 		t.Fatalf("MissingProvenance = %#v, want one path", got.MissingProvenance)
 	}
+	if got.ProofOfWorkPacket == nil || got.ProofOfWorkPacket.ID != "pow_001" {
+		t.Fatalf("ProofOfWorkPacket = %#v, want pow_001", got.ProofOfWorkPacket)
+	}
+	if got.ProofOfWorkPacket.WorkItem == nil || got.ProofOfWorkPacket.WorkItem.EventGraphRefs[0] != "eg://task/tsk_001" {
+		t.Fatalf("ProofOfWorkPacket.WorkItem = %#v, want task EventGraph ref", got.ProofOfWorkPacket.WorkItem)
+	}
+	if len(got.ProofOfWorkPacket.SecurityScanResults) != 1 || got.ProofOfWorkPacket.SecurityScanResults[0].Status != "pass" {
+		t.Fatalf("ProofOfWorkPacket.SecurityScanResults = %#v, want passing scan", got.ProofOfWorkPacket.SecurityScanResults)
+	}
 }
 
 func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
@@ -425,8 +434,23 @@ func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
 		"Failures and repairs",
 		"Audit evidence",
 		"Missing provenance",
+		"Proof-of-work packet",
+		"Work item",
+		"Runtime invocation",
+		"Changed files",
+		"Tests run",
+		"CI status",
+		"Review feedback",
+		"Security scan results",
+		"Screenshots and walkthrough artifacts",
+		"Known failures",
+		"Operator decision",
 		"fo_001",
+		"pow_001",
 		"unit_tests",
+		"go test -count=1 ./graph",
+		"CodeQL scan",
+		"ops evidence walkthrough",
 		"traceability_gap",
 		"missing RuntimeResult rr_001",
 	} {
@@ -453,6 +477,14 @@ func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
 		`hx-patch="/ops/evidence"`,
 		`hx-delete="/ops/evidence"`,
 		`data-evidence-action`,
+		"Certify release",
+		"Reject release",
+		"Approve authority",
+		"Repair work",
+		"Waive failure",
+		"Retry work",
+		"Unblock work",
+		"Execute work",
 	} {
 		if strings.Contains(evidenceSurface, forbidden) {
 			t.Fatalf("GET /ops/evidence evidence surface contains mutation control marker %q", forbidden)
@@ -479,6 +511,40 @@ func TestHandleOpsEvidenceUnconfiguredRendersEmptyState(t *testing.T) {
 	}
 }
 
+func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(opsEvidenceFixtureWithoutProofOfWorkPacketJSON()))
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Proof-of-work packet", "No proof-of-work packet returned.", "FactoryOrder timeline"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/evidence missing packet body does not contain %q", want)
+		}
+	}
+	evidenceSurface := body[strings.Index(body, "Evidence projection"):]
+	if end := strings.Index(evidenceSurface, "</main>"); end >= 0 {
+		evidenceSurface = evidenceSurface[:end]
+	}
+	if strings.Contains(evidenceSurface, "<form") || strings.Contains(evidenceSurface, "<button") {
+		t.Fatal("GET /ops/evidence missing packet state contains mutation controls")
+	}
+}
+
 func TestFetchOpsEvidenceProjectionFailureIsNonFatal(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no projection", http.StatusServiceUnavailable)
@@ -491,6 +557,25 @@ func TestFetchOpsEvidenceProjectionFailureIsNonFatal(t *testing.T) {
 
 	if got.ProjectionError == "" {
 		t.Fatal("ProjectionError is empty, want nonfatal projection error")
+	}
+}
+
+func TestFetchOpsEvidenceProjectionInvalidProofOfWorkPacketIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"generated_at":"2026-05-14T19:00:00Z","source":"eventgraph-work-projection","proof_of_work_packet":"not an object"}`))
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence", nil)
+	got := fetchOpsEvidence(req)
+
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal proof_of_work_packet decode error")
+	}
+	if got.ProofOfWorkPacket != nil {
+		t.Fatalf("ProofOfWorkPacket = %#v, want nil after type-invalid packet", got.ProofOfWorkPacket)
 	}
 }
 
@@ -546,6 +631,42 @@ func opsEvidenceFixtureJSON() string {
 		"release_evidence":[{"label":"packaged artifact path","status":"complete","artifact_refs":["art_001"],"runtime_refs":["frv_001"],"bom_refs":["bom_001"],"required_path_refs":["path_release_artifact"],"missing_refs":[]}],
 		"failures_repairs":[{"failure_id":"fail_001","failure_class":"traceability_gap","severity":"high","summary":"missing evidence fixture","task_id":"tsk_001","gate_result_id":"gate_fail_001","test_run_id":"tr_001","repair_id":"rep_001","repair_status":"planned","actor_invocation_id":"inv_001"}],
 		"missing_provenance":[{"path_name":"Task -> RuntimeEnvelope -> RuntimeResult","node_ids":["tsk_001"],"edge_ids":[],"missing":["missing RuntimeResult rr_001"],"completed":false}],
+		"proof_of_work_packet":{
+			"id":"pow_001",
+			"status":"complete",
+			"summary":"Read-only Site packet for a bounded D0b evidence view.",
+			"event_graph_refs":["eg://factory_order/fo_001","eg://release_candidate/rc_001"],
+			"work_item":{"label":"D0b Site proof-of-work packet view","status":"done","summary":"Display projected packet evidence without mutation controls.","artifact_ref":"task://tsk_001","event_graph_refs":["eg://task/tsk_001"]},
+			"runtime_invocation":{"label":"local deterministic RuntimeBroker invocation","status":"done","summary":"Bounded worker invocation completed under local policy.","artifact_ref":"runtime://inv_001","event_graph_refs":["eg://actor_invocation/inv_001","eg://runtime_result/rr_001"]},
+			"changed_files":[{"label":"graph/ops.go","status":"changed","summary":"Projection decode structs extended.","artifact_ref":"artifact://codechange_001","event_graph_refs":["eg://code_change/cc_001"]}],
+			"tests_run":[{"label":"go test -count=1 ./graph","status":"pass","summary":"Graph package validation passed.","artifact_ref":"test://tr_001","event_graph_refs":["eg://test_run/tr_001"]}],
+			"ci_status":{"label":"GitHub Build & Test","status":"pass","summary":"Required CI checks passed.","artifact_ref":"ci://run_001","event_graph_refs":["eg://gate_result/gate_001"]},
+			"review_feedback":[{"label":"Claude review","status":"addressed","summary":"No blocking findings remain.","artifact_ref":"review://rev_001","event_graph_refs":["eg://review/rev_001"]}],
+			"security_scan_results":[{"label":"CodeQL scan","status":"pass","summary":"No high or critical findings.","artifact_ref":"security://scan_001","event_graph_refs":["eg://security_scan/sec_001"]}],
+			"screenshots_walkthrough_artifacts":[{"label":"ops evidence walkthrough","status":"recorded","summary":"Operator walkthrough artifact captured.","artifact_ref":"screenshot://pow_001","event_graph_refs":["eg://artifact/shot_001"]}],
+			"known_failures":[{"label":"missing RuntimeResult rr_001","status":"open","summary":"Fixture keeps one known traceability gap visible.","artifact_ref":"failure://fail_001","event_graph_refs":["eg://failure/fail_001"]}],
+			"operator_decision":{"label":"projected operator decision","status":"recorded","summary":"Decision is displayed from projection only.","artifact_ref":"decision://cert_001","event_graph_refs":["eg://certification/cert_001"]}
+		},
 		"errors":[]
 	}`
+}
+
+func opsEvidenceFixtureWithoutProofOfWorkPacketJSON() string {
+	return strings.Replace(opsEvidenceFixtureJSON(), `,
+		"proof_of_work_packet":{
+			"id":"pow_001",
+			"status":"complete",
+			"summary":"Read-only Site packet for a bounded D0b evidence view.",
+			"event_graph_refs":["eg://factory_order/fo_001","eg://release_candidate/rc_001"],
+			"work_item":{"label":"D0b Site proof-of-work packet view","status":"done","summary":"Display projected packet evidence without mutation controls.","artifact_ref":"task://tsk_001","event_graph_refs":["eg://task/tsk_001"]},
+			"runtime_invocation":{"label":"local deterministic RuntimeBroker invocation","status":"done","summary":"Bounded worker invocation completed under local policy.","artifact_ref":"runtime://inv_001","event_graph_refs":["eg://actor_invocation/inv_001","eg://runtime_result/rr_001"]},
+			"changed_files":[{"label":"graph/ops.go","status":"changed","summary":"Projection decode structs extended.","artifact_ref":"artifact://codechange_001","event_graph_refs":["eg://code_change/cc_001"]}],
+			"tests_run":[{"label":"go test -count=1 ./graph","status":"pass","summary":"Graph package validation passed.","artifact_ref":"test://tr_001","event_graph_refs":["eg://test_run/tr_001"]}],
+			"ci_status":{"label":"GitHub Build & Test","status":"pass","summary":"Required CI checks passed.","artifact_ref":"ci://run_001","event_graph_refs":["eg://gate_result/gate_001"]},
+			"review_feedback":[{"label":"Claude review","status":"addressed","summary":"No blocking findings remain.","artifact_ref":"review://rev_001","event_graph_refs":["eg://review/rev_001"]}],
+			"security_scan_results":[{"label":"CodeQL scan","status":"pass","summary":"No high or critical findings.","artifact_ref":"security://scan_001","event_graph_refs":["eg://security_scan/sec_001"]}],
+			"screenshots_walkthrough_artifacts":[{"label":"ops evidence walkthrough","status":"recorded","summary":"Operator walkthrough artifact captured.","artifact_ref":"screenshot://pow_001","event_graph_refs":["eg://artifact/shot_001"]}],
+			"known_failures":[{"label":"missing RuntimeResult rr_001","status":"open","summary":"Fixture keeps one known traceability gap visible.","artifact_ref":"failure://fail_001","event_graph_refs":["eg://failure/fail_001"]}],
+			"operator_decision":{"label":"projected operator decision","status":"recorded","summary":"Decision is displayed from projection only.","artifact_ref":"decision://cert_001","event_graph_refs":["eg://certification/cert_001"]}
+		}`, "", 1)
 }
