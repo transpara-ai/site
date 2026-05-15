@@ -53,6 +53,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/work",
 		"/ops/telemetry",
 		"/ops/hive",
+		"/ops/evidence",
 		"/ops/refinery",
 		"/api/hive/site-ops?space=hive",
 	} {
