@@ -27,7 +27,7 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 						My Work
 					</a>
 				</section>
-				<nav class="grid gap-3 md:grid-cols-4" aria-label="Operator surfaces">
+				<nav class="grid gap-3 md:grid-cols-5" aria-label="Operator surfaces">
 					for _, surface := range data.Surfaces {
 						<a
 							href={ templ.SafeURL(surface.Href) }
@@ -55,6 +55,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					@opsWorkSummary(data.Work)
 				} else if data.Hive != nil {
 					@opsHiveSummary(data.Hive, data.LegacyURL)
+				} else if data.Evidence != nil {
+					@opsEvidenceSummary(data.Evidence)
 				} else if data.EmbedURL != "" {
 					<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 						<div class="px-4 py-3 border-b border-edge flex items-center justify-between gap-3">
@@ -613,6 +615,365 @@ templ opsWorkTaskRow(task OpsWorkTask) {
 	</div>
 }
 
+templ opsEvidenceSummary(e *OpsEvidenceData) {
+	<section class="space-y-4">
+		<div class="border border-edge bg-surface rounded-lg p-4">
+			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Evidence projection</h2>
+					if e.GeneratedAt != "" {
+						<p class="text-xs text-warm-faint mt-1">Projected at { e.GeneratedAt }</p>
+					}
+					if e.Source != "" {
+						<p class="text-xs text-warm-faint mt-1">Source: { e.Source }</p>
+					}
+					if e.ProjectionError != "" {
+						<p class="text-sm text-amber-300 mt-2">{ e.ProjectionError }</p>
+					}
+				</div>
+				<div class="text-xs text-warm-faint md:text-right space-y-1">
+					<p>FactoryOrder: { opsValueOr(e.FactoryOrderID, "none") }</p>
+					<p>ReleaseCandidate: { opsValueOr(e.ReleaseCandidateID, "none") }</p>
+				</div>
+			</div>
+		</div>
+		if e.ProjectionError != "" && e.FactoryOrder == nil && len(e.Timeline) == 0 && len(e.GateEvidence) == 0 && e.AuditReport == nil {
+			<section class="border border-edge bg-surface rounded-lg p-4">
+				<h2 class="text-sm font-medium text-warm">Projection unavailable</h2>
+				<p class="text-sm text-warm-muted mt-2 leading-relaxed">No read-only evidence projection is available for this operator view.</p>
+			</section>
+		} else {
+			@opsEvidenceIdentity(e)
+			@opsProofOfWorkPacket(e.ProofOfWorkPacket)
+			@opsEvidenceTimeline(e.Timeline)
+			<div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
+				@opsEvidenceGates(e.GateEvidence)
+				@opsEvidenceRelease(e)
+			</div>
+			<div class="grid gap-3 lg:grid-cols-[1fr_1fr]">
+				@opsEvidenceFailures(e.FailuresRepairs)
+				@opsEvidenceAudit(e.AuditReport)
+			</div>
+			@opsEvidenceMissing(e.MissingProvenance)
+		}
+	</section>
+}
+
+templ opsEvidenceIdentity(e *OpsEvidenceData) {
+	<section class="grid gap-3 md:grid-cols-2">
+		<div class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-sm font-medium text-warm">FactoryOrder</h2>
+			if e.FactoryOrder == nil {
+				<p class="text-sm text-warm-faint mt-3">No FactoryOrder projection returned.</p>
+			} else {
+				<dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 mt-3 text-xs">
+					<dt class="text-warm-faint">ID</dt><dd class="text-warm-muted break-all">{ e.FactoryOrder.ID }</dd>
+					<dt class="text-warm-faint">Status</dt><dd class="text-warm-muted">{ opsValueOr(e.FactoryOrder.Status, "unknown") }</dd>
+					<dt class="text-warm-faint">Version</dt><dd class="text-warm-muted">{ fmt.Sprintf("%d", e.FactoryOrder.Version) }</dd>
+					<dt class="text-warm-faint">Risk</dt><dd class="text-warm-muted">{ opsValueOr(e.FactoryOrder.RiskClass, "unknown") }</dd>
+					<dt class="text-warm-faint">Policy</dt><dd class="text-warm-muted break-all">{ opsValueOr(e.FactoryOrder.ReleasePolicy, "unknown") }</dd>
+					<dt class="text-warm-faint">Intent</dt><dd class="text-warm-muted break-all">{ opsValueOr(e.FactoryOrder.SourceIntentRef, "none") }</dd>
+				</dl>
+			}
+		</div>
+		<div class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-sm font-medium text-warm">ReleaseCandidate</h2>
+			if e.ReleaseCandidate == nil {
+				<p class="text-sm text-warm-faint mt-3">No ReleaseCandidate projection returned.</p>
+			} else {
+				<dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 mt-3 text-xs">
+					<dt class="text-warm-faint">ID</dt><dd class="text-warm-muted break-all">{ e.ReleaseCandidate.ID }</dd>
+					<dt class="text-warm-faint">Status</dt><dd class="text-warm-muted">{ opsValueOr(e.ReleaseCandidate.Status, "unknown") }</dd>
+					<dt class="text-warm-faint">Factory</dt><dd class="text-warm-muted break-all">{ opsValueOr(e.ReleaseCandidate.FactoryOrderID, "none") }</dd>
+					<dt class="text-warm-faint">Runtime</dt><dd class="text-warm-muted break-all">{ opsValueOr(e.ReleaseCandidate.FactoryRuntimeVersionID, "none") }</dd>
+					<dt class="text-warm-faint">Artifacts</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(e.ReleaseCandidate.ArtifactRefs) }</dd>
+				</dl>
+			}
+		</div>
+	</section>
+}
+
+templ opsProofOfWorkPacket(packet *OpsProofOfWorkPacket) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Proof-of-work packet</h2>
+					<p class="text-xs text-warm-faint mt-1">Read-only evidence package; authority and certification records remain external sources of truth.</p>
+				</div>
+				if packet != nil && packet.Status != "" {
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsPipelineOutcomeClass(packet.Status) }>{ packet.Status }</span>
+				}
+			</div>
+		</header>
+		if packet == nil {
+			<p class="px-4 py-6 text-sm text-warm-faint">No proof-of-work packet returned.</p>
+		} else {
+			<div class="p-4 space-y-4">
+				<div class="grid gap-2 md:grid-cols-2 text-xs">
+					<div>
+						<p class="text-warm-faint">Packet</p>
+						<p class="text-warm-muted break-all mt-1">{ opsValueOr(packet.ID, "unknown") }</p>
+					</div>
+					<div>
+						<p class="text-warm-faint">EventGraph refs</p>
+						<p class="text-warm-muted break-all mt-1">{ opsEvidenceJoin(packet.EventGraphRefs) }</p>
+					</div>
+				</div>
+				if packet.Summary != "" {
+					<p class="text-sm text-warm-muted leading-relaxed">{ packet.Summary }</p>
+				}
+				<div class="grid gap-3 lg:grid-cols-2">
+					@opsProofOfWorkSingle("Work item", packet.WorkItem)
+					@opsProofOfWorkSingle("Runtime invocation", packet.RuntimeInvocation)
+					@opsProofOfWorkList("Changed files", packet.ChangedFiles)
+					@opsProofOfWorkList("Tests run", packet.TestsRun)
+					@opsProofOfWorkSingle("CI status", packet.CIStatus)
+					@opsProofOfWorkList("Review feedback", packet.ReviewFeedback)
+					@opsProofOfWorkList("Security scan results", packet.SecurityScanResults)
+					@opsProofOfWorkList("Screenshots and walkthrough artifacts", packet.ScreenshotsWalkthrough)
+					@opsProofOfWorkList("Known failures", packet.KnownFailures)
+					@opsProofOfWorkSingle("Operator decision", packet.OperatorDecision)
+				</div>
+			</div>
+		}
+	</section>
+}
+
+templ opsProofOfWorkSingle(title string, item *OpsProofOfWorkItem) {
+	<div class="border border-edge bg-void/30 rounded-lg p-3">
+		<h3 class="text-xs font-medium text-warm uppercase tracking-widest">{ title }</h3>
+		if item == nil {
+			<p class="text-xs text-warm-faint mt-3">No evidence returned.</p>
+		} else {
+			@opsProofOfWorkItem(item)
+		}
+	</div>
+}
+
+templ opsProofOfWorkList(title string, items []OpsProofOfWorkItem) {
+	<div class="border border-edge bg-void/30 rounded-lg p-3">
+		<h3 class="text-xs font-medium text-warm uppercase tracking-widest">{ title }</h3>
+		if len(items) == 0 {
+			<p class="text-xs text-warm-faint mt-3">No evidence returned.</p>
+		}
+		<div class="divide-y divide-edge">
+			for _, item := range items {
+				<div class="py-3 first:pt-3 last:pb-0">
+					@opsProofOfWorkItem(&item)
+				</div>
+			}
+		</div>
+	</div>
+}
+
+templ opsProofOfWorkItem(item *OpsProofOfWorkItem) {
+	<div class="space-y-2">
+		<div class="flex items-start justify-between gap-3">
+			<div class="min-w-0">
+				<p class="text-sm font-medium text-warm truncate">{ opsValueOr(item.Label, "evidence item") }</p>
+				if item.ArtifactRef != "" {
+					<p class="text-[11px] text-warm-faint mt-1 break-all">{ item.ArtifactRef }</p>
+				}
+			</div>
+			if item.Status != "" {
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(item.Status) }>{ item.Status }</span>
+			}
+		</div>
+		if item.Summary != "" {
+			<p class="text-xs text-warm-muted leading-relaxed">{ item.Summary }</p>
+		}
+		<p class="text-[11px] text-warm-faint break-all">EventGraph refs: { opsEvidenceJoin(item.EventGraphRefs) }</p>
+	</div>
+}
+
+templ opsEvidenceTimeline(items []OpsEvidenceTimelineEvent) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">FactoryOrder timeline</h2>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-4 py-6 text-sm text-warm-faint">No timeline events returned.</p>
+			}
+			for _, item := range items {
+				<div class="px-4 py-3 flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.Label, item.Kind) }</h3>
+						<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.NodeID, "node unknown") } / { opsValueOr(item.Kind, "event") }</p>
+						if item.Summary != "" {
+							<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ item.Summary }</p>
+						}
+					</div>
+					<div class="shrink-0 text-right">
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(item.Status) }>{ opsValueOr(item.Status, "recorded") }</span>
+						<p class="text-[11px] text-warm-faint mt-2">{ formatOpsTime(item.CreatedAt) }</p>
+					</div>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsEvidenceGates(items []OpsEvidenceGate) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Gate evidence</h2>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-4 py-6 text-sm text-warm-faint">No gate evidence returned.</p>
+			}
+			for _, item := range items {
+				<div class="px-4 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.GateName, "gate") }</h3>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.GateResultID, "gate result unknown") }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPhaseGateStatusClass(item.Status) }>{ opsValueOr(item.Status, "unknown") }</span>
+					</div>
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Evidence</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.EvidenceRefs) }</dd>
+						<dt class="text-warm-faint">Waiver</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.WaiverRef, "none") }</dd>
+						<dt class="text-warm-faint">Missing</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.MissingRefs) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsEvidenceRelease(e *OpsEvidenceData) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Release evidence</h2>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(e.ReleaseEvidence) == 0 && e.Decision == nil {
+				<p class="px-4 py-6 text-sm text-warm-faint">No release evidence returned.</p>
+			}
+			for _, item := range e.ReleaseEvidence {
+				<div class="px-4 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.Label, "release path") }</h3>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(item.Status) }>{ opsValueOr(item.Status, "unknown") }</span>
+					</div>
+					<dl class="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Artifacts</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.ArtifactRefs) }</dd>
+						<dt class="text-warm-faint">Runtime</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.RuntimeRefs) }</dd>
+						<dt class="text-warm-faint">BOM</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.BOMRefs) }</dd>
+						<dt class="text-warm-faint">Paths</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.RequiredPathRefs) }</dd>
+						<dt class="text-warm-faint">Missing</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.MissingRefs) }</dd>
+					</dl>
+				</div>
+			}
+			if e.Decision != nil {
+				<div class="px-4 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(e.Decision.Kind, "decision") }</h3>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(e.Decision.ID, "decision unknown") } / { opsValueOr(e.Decision.ActorID, "actor unknown") }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(e.Decision.Status) }>{ opsValueOr(e.Decision.Status, "recorded") }</span>
+					</div>
+					if e.Decision.Reason != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ e.Decision.Reason }</p>
+					}
+					<p class="text-[11px] text-warm-faint mt-2 break-all">Evidence: { opsEvidenceJoin(e.Decision.EvidenceRefs) }</p>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsEvidenceFailures(items []OpsEvidenceFailureRepair) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Failures and repairs</h2>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-4 py-6 text-sm text-warm-faint">No failures or repairs returned.</p>
+			}
+			for _, item := range items {
+				<div class="px-4 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.FailureClass, "failure") }</h3>
+							<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.FailureID, "failure unknown") }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(item.Severity) }>{ opsValueOr(item.Severity, "unknown") }</span>
+					</div>
+					if item.Summary != "" {
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ item.Summary }</p>
+					}
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Task</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.TaskID, "none") }</dd>
+						<dt class="text-warm-faint">Gate</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.GateResultID, "none") }</dd>
+						<dt class="text-warm-faint">Repair</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.RepairID, "none") } / { opsValueOr(item.RepairStatus, "unknown") }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
+templ opsEvidenceAudit(a *OpsEvidenceAuditReport) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Audit evidence</h2>
+		</header>
+		if a == nil {
+			<p class="px-4 py-6 text-sm text-warm-faint">No audit report returned.</p>
+		} else {
+			<div class="p-4">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(a.ID, "audit report") }</h3>
+						<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(a.TargetType, "target") } / { opsValueOr(a.TargetID, "unknown") }</p>
+					</div>
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPipelineOutcomeClass(a.Status) }>{ opsValueOr(a.Status, "unknown") }</span>
+				</div>
+				<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+					<dt class="text-warm-faint">Score</dt><dd class="text-warm-muted">{ fmt.Sprintf("%.2f", a.TraceScore) }</dd>
+					<dt class="text-warm-faint">Missing</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(a.MissingLinks) }</dd>
+				</dl>
+			</div>
+		}
+	</section>
+}
+
+templ opsEvidenceMissing(items []OpsEvidenceMissingProvenance) {
+	<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+		<header class="px-4 py-3 border-b border-edge">
+			<h2 class="text-sm font-medium text-warm">Missing provenance</h2>
+		</header>
+		<div class="divide-y divide-edge">
+			if len(items) == 0 {
+				<p class="px-4 py-6 text-sm text-warm-faint">No missing provenance returned.</p>
+			}
+			for _, item := range items {
+				<div class="px-4 py-3">
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.PathName, "required path") }</h3>
+						if item.Completed {
+							<span class="text-[10px] px-2 py-1 rounded-full border border-emerald-400/30 text-emerald-300 bg-emerald-400/10 whitespace-nowrap">complete</span>
+						} else {
+							<span class="text-[10px] px-2 py-1 rounded-full border border-amber-400/30 text-amber-300 bg-amber-400/10 whitespace-nowrap">missing</span>
+						}
+					</div>
+					<dl class="grid grid-cols-[5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">Nodes</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.NodeIDs) }</dd>
+						<dt class="text-warm-faint">Edges</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.EdgeIDs) }</dd>
+						<dt class="text-warm-faint">Missing</dt><dd class="text-warm-muted break-all">{ opsEvidenceJoin(item.Missing) }</dd>
+					</dl>
+				</div>
+			}
+		</div>
+	</section>
+}
+
 templ opsMetric(label, value, hint string) {
 	<div class="border border-edge bg-surface rounded-lg p-4">
 		<p class="text-xs text-warm-faint uppercase tracking-widest">{ label }</p>
@@ -626,4 +987,11 @@ func opsValueOr(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func opsEvidenceJoin(values []string) string {
+	if len(values) == 0 {
+		return "none"
+	}
+	return strings.Join(values, ", ")
 }

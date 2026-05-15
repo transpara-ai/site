@@ -34,6 +34,7 @@ type OpsPageData struct {
 	Telemetry   *OpsTelemetryData
 	Work        *OpsWorkData
 	Hive        *OpsHiveData
+	Evidence    *OpsEvidenceData
 	LegacyURL   string
 }
 
@@ -254,6 +255,153 @@ type OpsHiveKeyAuditTrace struct {
 	CreatedAt        string `json:"created_at"`
 }
 
+type OpsEvidenceData struct {
+	GeneratedAt        string
+	Source             string
+	ProjectionURL      string
+	ProjectionError    string
+	FactoryOrderID     string
+	ReleaseCandidateID string
+	FactoryOrder       *OpsEvidenceFactoryOrder
+	ReleaseCandidate   *OpsEvidenceReleaseCandidate
+	Decision           *OpsEvidenceDecision
+	AuditReport        *OpsEvidenceAuditReport
+	Timeline           []OpsEvidenceTimelineEvent
+	GateEvidence       []OpsEvidenceGate
+	ReleaseEvidence    []OpsEvidenceReleaseEvidence
+	FailuresRepairs    []OpsEvidenceFailureRepair
+	MissingProvenance  []OpsEvidenceMissingProvenance
+	ProofOfWorkPacket  *OpsProofOfWorkPacket
+	Errors             []string
+}
+
+type OpsEvidenceProjection struct {
+	GeneratedAt       string                         `json:"generated_at"`
+	Source            string                         `json:"source"`
+	FactoryOrder      *OpsEvidenceFactoryOrder       `json:"factory_order"`
+	ReleaseCandidate  *OpsEvidenceReleaseCandidate   `json:"release_candidate"`
+	Decision          *OpsEvidenceDecision           `json:"decision"`
+	AuditReport       *OpsEvidenceAuditReport        `json:"audit_report"`
+	Timeline          []OpsEvidenceTimelineEvent     `json:"timeline"`
+	GateEvidence      []OpsEvidenceGate              `json:"gate_evidence"`
+	ReleaseEvidence   []OpsEvidenceReleaseEvidence   `json:"release_evidence"`
+	FailuresRepairs   []OpsEvidenceFailureRepair     `json:"failures_repairs"`
+	MissingProvenance []OpsEvidenceMissingProvenance `json:"missing_provenance"`
+	ProofOfWorkPacket *OpsProofOfWorkPacket          `json:"proof_of_work_packet"`
+	Errors            []string                       `json:"errors"`
+}
+
+type OpsEvidenceFactoryOrder struct {
+	ID               string `json:"id"`
+	Version          int    `json:"version"`
+	Status           string `json:"status"`
+	SourceIntentHash string `json:"source_intent_hash"`
+	SourceIntentRef  string `json:"source_intent_ref"`
+	RiskClass        string `json:"risk_class"`
+	ReleasePolicy    string `json:"release_policy"`
+}
+
+type OpsEvidenceReleaseCandidate struct {
+	ID                      string   `json:"id"`
+	Status                  string   `json:"status"`
+	FactoryOrderID          string   `json:"factory_order_id"`
+	FactoryRuntimeVersionID string   `json:"factory_runtime_version_id"`
+	ArtifactRefs            []string `json:"artifact_refs"`
+}
+
+type OpsEvidenceDecision struct {
+	Kind         string   `json:"kind"`
+	ID           string   `json:"id"`
+	ActorID      string   `json:"actor_id"`
+	Reason       string   `json:"reason"`
+	EvidenceRefs []string `json:"evidence_refs"`
+	Status       string   `json:"status"`
+	CreatedAt    string   `json:"created_at"`
+}
+
+type OpsEvidenceAuditReport struct {
+	ID           string   `json:"id"`
+	TargetType   string   `json:"target_type"`
+	TargetID     string   `json:"target_id"`
+	Status       string   `json:"status"`
+	TraceScore   float64  `json:"trace_score"`
+	MissingLinks []string `json:"missing_links"`
+}
+
+type OpsEvidenceTimelineEvent struct {
+	Label     string `json:"label"`
+	Kind      string `json:"kind"`
+	Status    string `json:"status"`
+	NodeID    string `json:"node_id"`
+	CreatedAt string `json:"created_at"`
+	Summary   string `json:"summary"`
+}
+
+type OpsEvidenceGate struct {
+	GateName     string   `json:"gate_name"`
+	Status       string   `json:"status"`
+	GateResultID string   `json:"gate_result_id"`
+	EvidenceRefs []string `json:"evidence_refs"`
+	WaiverRef    string   `json:"waiver_ref"`
+	MissingRefs  []string `json:"missing_refs"`
+}
+
+type OpsEvidenceReleaseEvidence struct {
+	Label            string   `json:"label"`
+	Status           string   `json:"status"`
+	ArtifactRefs     []string `json:"artifact_refs"`
+	RuntimeRefs      []string `json:"runtime_refs"`
+	BOMRefs          []string `json:"bom_refs"`
+	RequiredPathRefs []string `json:"required_path_refs"`
+	MissingRefs      []string `json:"missing_refs"`
+}
+
+type OpsEvidenceFailureRepair struct {
+	FailureID         string `json:"failure_id"`
+	FailureClass      string `json:"failure_class"`
+	Severity          string `json:"severity"`
+	Summary           string `json:"summary"`
+	TaskID            string `json:"task_id"`
+	GateResultID      string `json:"gate_result_id"`
+	TestRunID         string `json:"test_run_id"`
+	RepairID          string `json:"repair_id"`
+	RepairStatus      string `json:"repair_status"`
+	ActorInvocationID string `json:"actor_invocation_id"`
+}
+
+type OpsEvidenceMissingProvenance struct {
+	PathName  string   `json:"path_name"`
+	NodeIDs   []string `json:"node_ids"`
+	EdgeIDs   []string `json:"edge_ids"`
+	Missing   []string `json:"missing"`
+	Completed bool     `json:"completed"`
+}
+
+type OpsProofOfWorkPacket struct {
+	ID                     string               `json:"id"`
+	Status                 string               `json:"status"`
+	Summary                string               `json:"summary"`
+	WorkItem               *OpsProofOfWorkItem  `json:"work_item"`
+	RuntimeInvocation      *OpsProofOfWorkItem  `json:"runtime_invocation"`
+	ChangedFiles           []OpsProofOfWorkItem `json:"changed_files"`
+	TestsRun               []OpsProofOfWorkItem `json:"tests_run"`
+	CIStatus               *OpsProofOfWorkItem  `json:"ci_status"`
+	ReviewFeedback         []OpsProofOfWorkItem `json:"review_feedback"`
+	SecurityScanResults    []OpsProofOfWorkItem `json:"security_scan_results"`
+	ScreenshotsWalkthrough []OpsProofOfWorkItem `json:"screenshots_walkthrough_artifacts"`
+	KnownFailures          []OpsProofOfWorkItem `json:"known_failures"`
+	OperatorDecision       *OpsProofOfWorkItem  `json:"operator_decision"`
+	EventGraphRefs         []string             `json:"event_graph_refs"`
+}
+
+type OpsProofOfWorkItem struct {
+	Label          string   `json:"label"`
+	Status         string   `json:"status"`
+	Summary        string   `json:"summary"`
+	ArtifactRef    string   `json:"artifact_ref"`
+	EventGraphRefs []string `json:"event_graph_refs"`
+}
+
 type opsWorkTasksResponse struct {
 	Tasks []OpsWorkTask `json:"tasks"`
 }
@@ -287,11 +435,12 @@ type opsPipelineReportResponse struct {
 }
 
 var hiveOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
+var evidenceOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Operations",
-		Description: "Site-owned operator shell for work, telemetry, hive status, and refinery review.",
+		Description: "Site-owned operator shell for work, telemetry, hive status, evidence, and refinery review.",
 		Active:      "overview",
 	})
 }
@@ -321,6 +470,15 @@ func (h *Handlers) handleOpsHive(w http.ResponseWriter, r *http.Request) {
 		Active:      "hive",
 		Hive:        h.fetchOpsHive(r),
 		LegacyURL:   "/hive",
+	})
+}
+
+func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Evidence",
+		Description: "Read-only operator projection for FactoryOrder timeline, gate, release, audit, failure, repair, and provenance evidence.",
+		Active:      "evidence",
+		Evidence:    fetchOpsEvidence(r),
 	})
 }
 
@@ -375,6 +533,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native summary",
 		},
 		{
+			ID:          "evidence",
+			Label:       "Evidence",
+			Description: "Read-only FactoryOrder evidence projection: timeline, gates, release, audit, failures, repairs, and provenance gaps.",
+			Href:        "/ops/evidence",
+			Target:      "configured projection URL",
+			Owner:       "site shell, eventgraph/work projection",
+			Status:      "read only",
+		},
+		{
 			ID:          "refinery",
 			Label:       "Refinery",
 			Description: "Intake/design review backed by the simplified FSM projection.",
@@ -384,6 +551,86 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native FSM framed",
 		},
 	}
+}
+
+func fetchOpsEvidence(r *http.Request) *OpsEvidenceData {
+	data := &OpsEvidenceData{
+		GeneratedAt:        time.Now().UTC().Format("2006-01-02 15:04:05"),
+		FactoryOrderID:     strings.TrimSpace(r.URL.Query().Get("factory_order_id")),
+		ReleaseCandidateID: strings.TrimSpace(r.URL.Query().Get("release_candidate_id")),
+	}
+	rawURL := strings.TrimSpace(os.Getenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL"))
+	if rawURL == "" {
+		data.ProjectionError = "Dark Factory evidence projection URL is not configured."
+		return data
+	}
+	endpoint, err := evidenceProjectionURL(rawURL, data.FactoryOrderID, data.ReleaseCandidateID)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return data
+	}
+	data.ProjectionURL = endpoint
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return data
+	}
+	resp, err := evidenceOpsProjectionClient.Do(req)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return data
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		data.ProjectionError = fmt.Sprintf("evidence projection returned %s", resp.Status)
+		return data
+	}
+	var projection OpsEvidenceProjection
+	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
+		data.ProjectionError = err.Error()
+		return data
+	}
+	data.Source = projection.Source
+	if projection.GeneratedAt != "" {
+		data.GeneratedAt = formatOpsTime(projection.GeneratedAt)
+	}
+	data.FactoryOrder = projection.FactoryOrder
+	data.ReleaseCandidate = projection.ReleaseCandidate
+	data.Decision = projection.Decision
+	data.AuditReport = projection.AuditReport
+	data.Timeline = projection.Timeline
+	data.GateEvidence = projection.GateEvidence
+	data.ReleaseEvidence = projection.ReleaseEvidence
+	data.FailuresRepairs = projection.FailuresRepairs
+	data.MissingProvenance = projection.MissingProvenance
+	data.ProofOfWorkPacket = projection.ProofOfWorkPacket
+	data.Errors = projection.Errors
+	if data.FactoryOrderID == "" && data.FactoryOrder != nil {
+		data.FactoryOrderID = data.FactoryOrder.ID
+	}
+	if data.ReleaseCandidateID == "" && data.ReleaseCandidate != nil {
+		data.ReleaseCandidateID = data.ReleaseCandidate.ID
+	}
+	if len(data.Errors) > 0 {
+		data.ProjectionError = strings.Join(data.Errors, "; ")
+	}
+	return data
+}
+
+func evidenceProjectionURL(rawURL, factoryOrderID, releaseCandidateID string) (string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return "", err
+	}
+	q := u.Query()
+	if factoryOrderID != "" {
+		q.Set("factory_order_id", factoryOrderID)
+	}
+	if releaseCandidateID != "" {
+		q.Set("release_candidate_id", releaseCandidateID)
+	}
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
