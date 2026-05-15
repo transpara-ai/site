@@ -31,30 +31,42 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          path: site
+
+      # Checkout sibling repo (go.mod replace directive points to ../eventgraph/go).
+      - uses: actions/checkout@v4
+        with:
+          repository: transpara-ai/eventgraph
+          path: eventgraph
 
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-          cache-dependency-path: go.sum
+          cache-dependency-path: site/go.sum
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: site/package-lock.json
 
       - name: Install npm deps
         run: npm ci
+        working-directory: site
 
       - name: Build CSS
         run: make css
+        working-directory: site
 
       - name: Install templ
         run: go install github.com/a-h/templ/cmd/templ@v0.3.1001
 
       - name: Verify
         run: make verify
+        working-directory: site
         env:
           DATABASE_URL: postgres://site:site@localhost:5432/site?sslmode=disable
 
       - name: Check for uncommitted generated file changes
         run: git diff --exit-code -- '*_templ.go' '*_gen.go'
+        working-directory: site
