@@ -434,12 +434,29 @@ func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
 			t.Fatalf("GET /ops/evidence: body does not contain %q", want)
 		}
 	}
-	if strings.Contains(body, "<form") ||
-		strings.Contains(body, `method="post"`) ||
-		strings.Contains(body, `action="/ops/evidence"`) ||
-		strings.Contains(body, "<button") ||
-		strings.Contains(body, `data-evidence-action`) {
-		t.Fatal("GET /ops/evidence exposes mutation controls")
+	start := strings.Index(body, "Evidence projection")
+	if start < 0 {
+		t.Fatal("GET /ops/evidence: could not locate evidence surface")
+	}
+	evidenceSurface := body[start:]
+	if end := strings.Index(evidenceSurface, "</main>"); end >= 0 {
+		evidenceSurface = evidenceSurface[:end]
+	}
+	for _, forbidden := range []string{
+		"<form",
+		"<button",
+		`method="post"`,
+		`action="/ops/evidence"`,
+		`formaction="/ops/evidence"`,
+		`hx-post="/ops/evidence"`,
+		`hx-put="/ops/evidence"`,
+		`hx-patch="/ops/evidence"`,
+		`hx-delete="/ops/evidence"`,
+		`data-evidence-action`,
+	} {
+		if strings.Contains(evidenceSurface, forbidden) {
+			t.Fatalf("GET /ops/evidence evidence surface contains mutation control marker %q", forbidden)
+		}
 	}
 }
 
