@@ -59,7 +59,7 @@ jobs:
         working-directory: site
 
       - name: Install templ
-        run: go install github.com/a-h/templ/cmd/templ@v0.3.1001
+        run: go install github.com/a-h/templ/cmd/templ@v0.3.1020
 
       - name: Verify
         run: make verify
