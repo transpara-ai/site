@@ -271,6 +271,7 @@ type OpsEvidenceData struct {
 	ReleaseEvidence    []OpsEvidenceReleaseEvidence
 	FailuresRepairs    []OpsEvidenceFailureRepair
 	MissingProvenance  []OpsEvidenceMissingProvenance
+	ProofOfWorkPacket  *OpsProofOfWorkPacket
 	Errors             []string
 }
 
@@ -286,6 +287,7 @@ type OpsEvidenceProjection struct {
 	ReleaseEvidence   []OpsEvidenceReleaseEvidence   `json:"release_evidence"`
 	FailuresRepairs   []OpsEvidenceFailureRepair     `json:"failures_repairs"`
 	MissingProvenance []OpsEvidenceMissingProvenance `json:"missing_provenance"`
+	ProofOfWorkPacket *OpsProofOfWorkPacket          `json:"proof_of_work_packet"`
 	Errors            []string                       `json:"errors"`
 }
 
@@ -373,6 +375,31 @@ type OpsEvidenceMissingProvenance struct {
 	EdgeIDs   []string `json:"edge_ids"`
 	Missing   []string `json:"missing"`
 	Completed bool     `json:"completed"`
+}
+
+type OpsProofOfWorkPacket struct {
+	ID                     string               `json:"id"`
+	Status                 string               `json:"status"`
+	Summary                string               `json:"summary"`
+	WorkItem               *OpsProofOfWorkItem  `json:"work_item"`
+	RuntimeInvocation      *OpsProofOfWorkItem  `json:"runtime_invocation"`
+	ChangedFiles           []OpsProofOfWorkItem `json:"changed_files"`
+	TestsRun               []OpsProofOfWorkItem `json:"tests_run"`
+	CIStatus               *OpsProofOfWorkItem  `json:"ci_status"`
+	ReviewFeedback         []OpsProofOfWorkItem `json:"review_feedback"`
+	SecurityScanResults    []OpsProofOfWorkItem `json:"security_scan_results"`
+	ScreenshotsWalkthrough []OpsProofOfWorkItem `json:"screenshots_walkthrough_artifacts"`
+	KnownFailures          []OpsProofOfWorkItem `json:"known_failures"`
+	OperatorDecision       *OpsProofOfWorkItem  `json:"operator_decision"`
+	EventGraphRefs         []string             `json:"event_graph_refs"`
+}
+
+type OpsProofOfWorkItem struct {
+	Label          string   `json:"label"`
+	Status         string   `json:"status"`
+	Summary        string   `json:"summary"`
+	ArtifactRef    string   `json:"artifact_ref"`
+	EventGraphRefs []string `json:"event_graph_refs"`
 }
 
 type opsWorkTasksResponse struct {
@@ -576,6 +603,7 @@ func fetchOpsEvidence(r *http.Request) *OpsEvidenceData {
 	data.ReleaseEvidence = projection.ReleaseEvidence
 	data.FailuresRepairs = projection.FailuresRepairs
 	data.MissingProvenance = projection.MissingProvenance
+	data.ProofOfWorkPacket = projection.ProofOfWorkPacket
 	data.Errors = projection.Errors
 	if data.FactoryOrderID == "" && data.FactoryOrder != nil {
 		data.FactoryOrderID = data.FactoryOrder.ID
