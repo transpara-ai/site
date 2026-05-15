@@ -26,12 +26,15 @@ RUN go install github.com/a-h/templ/cmd/templ@latest
 
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN go mod download
 
+# Build uses vendored deps (populated by `go mod vendor` on the host before
+# `fly deploy`). The vendor dir is required because go.mod has a `replace`
+# directive pointing at the sibling eventgraph repo, which is outside the
+# Docker build context.
 COPY . .
 COPY --from=css-builder /app/static/css/site.css ./static/css/site.css
 RUN templ generate
-RUN CGO_ENABLED=0 go build -o /site ./cmd/site/
+RUN CGO_ENABLED=0 go build -mod=vendor -o /site ./cmd/site/
 
 # ── Final stage ─────────────────────────────────────────────────────
 FROM alpine:3.21

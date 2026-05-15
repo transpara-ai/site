@@ -10,13 +10,18 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/transpara-ai/eventgraph/go/pkg/decision"
+	"github.com/transpara-ai/eventgraph/go/pkg/event"
+	"github.com/transpara-ai/eventgraph/go/pkg/intelligence"
+	"github.com/transpara-ai/eventgraph/go/pkg/modelconfig"
+	"github.com/transpara-ai/eventgraph/go/pkg/types"
 )
 
 // TestMindFindAgentParticipant verifies the Mind correctly identifies agent participants.
 func TestMindFindAgentParticipant(t *testing.T) {
 	db, store := testDB(t)
 	ctx := context.Background()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	agentName := "MindTestAgent"
 	agentID := "mind-test-agent-id"
@@ -70,7 +75,7 @@ func TestMindFindAgentParticipant(t *testing.T) {
 func TestMindOnMessage(t *testing.T) {
 	db, store := testDB(t)
 	ctx := context.Background()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	agentName := "MindTestAgent2"
 	agentID := "mind-test-agent2-id"
@@ -119,7 +124,7 @@ func TestMindOnMessage(t *testing.T) {
 
 	// OnMessage without Claude token will fail but should not panic.
 	t.Run("human_message_no_claude", func(t *testing.T) {
-		// The Mind has fake-token, so callClaude will fail.
+		// The Mind has fake-token, so callProvider will fail.
 		// OnMessage should log the error but not panic.
 		mind.OnMessage(space.ID, space.Slug, convo, humanID)
 		// Give the goroutine a moment.
@@ -130,11 +135,11 @@ func TestMindOnMessage(t *testing.T) {
 }
 
 // TestMindOnCouncilConvened verifies that OnCouncilConvened calls Claude once per
-// tagged agent ID. Uses callClaudeOverride to count invocations without a real token.
+// tagged agent ID. Uses callProviderOverride to count invocations without a real token.
 func TestMindOnCouncilConvened(t *testing.T) {
 	db, store := testDB(t)
 	ctx := context.Background()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	agentAID := "council-agent-a-id"
 	agentAName := "CouncilAgentA"
@@ -173,10 +178,10 @@ func TestMindOnCouncilConvened(t *testing.T) {
 		t.Fatalf("create council: %v", err)
 	}
 
-	// Count calls per agent via callClaudeOverride.
+	// Count calls per agent via callProviderOverride.
 	var callCount int
 	calledFor := make(map[string]int) // systemPrompt substring → count
-	mind.callClaudeOverride = func(_ context.Context, systemPrompt string, _ []claudeMessage) (string, error) {
+	mind.callProviderOverride = func(_ context.Context, systemPrompt string, _ []providerMessage) (string, error) {
 		callCount++
 		for _, name := range []string{agentAName, agentBName} {
 			if strings.Contains(systemPrompt, name) {
@@ -190,7 +195,7 @@ func TestMindOnCouncilConvened(t *testing.T) {
 	mind.OnCouncilConvened(space.ID, space.Slug, council)
 
 	if callCount != 2 {
-		t.Errorf("callClaude called %d times, want 2 (one per agent)", callCount)
+		t.Errorf("callProvider called %d times, want 2 (one per agent)", callCount)
 	}
 
 	// Verify response nodes were created — one comment per agent.
@@ -235,7 +240,7 @@ func TestMindTaskWork(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	mind := NewMind(db, store, token)
+	mind := NewMind(db, store, modelconfig.NewProviderPool(modelconfig.DefaultResolver()))
 
 	agentName := "TaskTestAgent"
 	agentID := "task-test-agent-id"
@@ -311,7 +316,7 @@ func TestMindSimpleTask(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	mind := NewMind(db, store, token)
+	mind := NewMind(db, store, modelconfig.NewProviderPool(modelconfig.DefaultResolver()))
 
 	agentID := "simple-task-agent-id"
 	db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'simple-task-test'`)
@@ -367,7 +372,7 @@ func min(a, b int) int {
 func TestBuildSystemPromptPersonaRouting(t *testing.T) {
 	db, store := testDB(t)
 	ctx := context.Background()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	const personaSlug = "test-persona-routing"
 	const personaPrompt = "YOU ARE THE TEST PERSONA"
@@ -477,7 +482,7 @@ func TestReplyToInjectsUserMemories(t *testing.T) {
 	mind := &Mind{
 		db:    db,
 		store: store,
-		callClaudeOverride: func(_ context.Context, sys string, _ []claudeMessage) (string, error) {
+		callProviderOverride: func(_ context.Context, sys string, _ []providerMessage) (string, error) {
 			if capturedPrompt == "" {
 				capturedPrompt = sys
 			}
@@ -518,7 +523,7 @@ func TestMindE2E(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	mind := NewMind(db, store, token)
+	mind := NewMind(db, store, modelconfig.NewProviderPool(modelconfig.DefaultResolver()))
 
 	agentName := "E2ETestAgent"
 	agentID := "e2e-test-agent-id"
@@ -598,7 +603,7 @@ func TestMindE2E(t *testing.T) {
 // TestBuildQuestionAnswerPrompt verifies document context is injected into the prompt.
 func TestBuildQuestionAnswerPrompt(t *testing.T) {
 	db, store := testDB(t)
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	question := &Node{
 		Title: "What is the event graph?",
@@ -637,7 +642,7 @@ func TestBuildQuestionAnswerPrompt(t *testing.T) {
 // into the auto-reply system prompt as "## Space Knowledge" context.
 func TestBuildSystemPromptDocumentInjection(t *testing.T) {
 	db, store := testDB(t)
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	convo := &Node{
 		Title: "Test Chat",
@@ -683,7 +688,7 @@ func TestBuildSystemPromptDocumentInjection(t *testing.T) {
 func TestAutoReplyDocumentInjectionPath(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	slug := fmt.Sprintf("auto-reply-doc-inject-test-%d", time.Now().UnixNano())
 	space, err := store.CreateSpace(ctx, slug, "Doc Inject Test", "", "owner", "project", "public")
@@ -785,12 +790,12 @@ func TestListDocumentContextBounded(t *testing.T) {
 // TestReplyToInjectsDocuments verifies that the Chat auto-reply path (replyTo)
 // fetches space documents from the store and injects them into the system prompt.
 // This tests the full wiring: replyTo → ListDocumentContext → buildSystemPrompt.
-// It uses callClaudeOverride to capture the assembled system prompt without a real Claude call.
+// It uses callProviderOverride to capture the assembled system prompt without a real Claude call.
 func TestReplyToInjectsDocuments(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
 
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	nonce := time.Now().UnixNano()
 	agentName := "ReplyDocTestAgent"
@@ -831,7 +836,7 @@ func TestReplyToInjectsDocuments(t *testing.T) {
 	}
 
 	var capturedPrompt string
-	mind.callClaudeOverride = func(_ context.Context, systemPrompt string, _ []claudeMessage) (string, error) {
+	mind.callProviderOverride = func(_ context.Context, systemPrompt string, _ []providerMessage) (string, error) {
 		capturedPrompt = systemPrompt
 		return "ok", nil
 	}
@@ -840,7 +845,7 @@ func TestReplyToInjectsDocuments(t *testing.T) {
 	mind.OnMessage(space.ID, space.Slug, convo, "human-id")
 
 	if capturedPrompt == "" {
-		t.Fatal("callClaude was never called — check agent participant lookup")
+		t.Fatal("callProvider was never called — check agent participant lookup")
 	}
 	if !strings.Contains(capturedPrompt, "## Space Knowledge") {
 		t.Errorf("system prompt missing '## Space Knowledge' section\ngot: %s", capturedPrompt[:min(len(capturedPrompt), 600)])
@@ -859,7 +864,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
 
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	nonce := time.Now().UnixNano()
 	agentName := "ReplyNoDocTestAgent"
@@ -895,7 +900,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 	}
 
 	var capturedPrompt string
-	mind.callClaudeOverride = func(_ context.Context, systemPrompt string, _ []claudeMessage) (string, error) {
+	mind.callProviderOverride = func(_ context.Context, systemPrompt string, _ []providerMessage) (string, error) {
 		capturedPrompt = systemPrompt
 		return "ok", nil
 	}
@@ -903,7 +908,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 	mind.OnMessage(space.ID, space.Slug, convo, "human-id")
 
 	if capturedPrompt == "" {
-		t.Fatal("callClaude was never called — check agent participant lookup")
+		t.Fatal("callProvider was never called — check agent participant lookup")
 	}
 	if strings.Contains(capturedPrompt, "Space Knowledge") {
 		t.Errorf("system prompt should not contain 'Space Knowledge' when space has no docs\ngot: %s", capturedPrompt[:min(len(capturedPrompt), 400)])
@@ -915,7 +920,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 func TestMindOnQuestionAsked_WithAgent(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	agentName := "QATestAgent"
 	agentID := "qa-test-agent-id"
@@ -951,8 +956,8 @@ func TestMindOnQuestionAsked_WithAgent(t *testing.T) {
 		t.Fatalf("create question: %v", err)
 	}
 
-	// Stub callClaude to return a canned answer without a real Claude call.
-	mind.callClaudeOverride = func(_ context.Context, _ string, _ []claudeMessage) (string, error) {
+	// Stub callProvider to return a canned answer without a real Claude call.
+	mind.callProviderOverride = func(_ context.Context, _ string, _ []providerMessage) (string, error) {
 		return "Trust scores range from 0.0 to 1.0 based on endorsements.", nil
 	}
 
@@ -1000,7 +1005,7 @@ func TestMindOnQuestionAsked_WithAgent(t *testing.T) {
 func TestMindOnQuestionAsked_NoAgent(t *testing.T) {
 	db, store := testDB(t)
 	ctx := t.Context()
-	mind := NewMind(db, store, "fake-token")
+	mind := NewMind(db, store, nil)
 
 	if old, _ := store.GetSpaceBySlug(ctx, "question-no-agent-test"); old != nil {
 		store.DeleteSpace(ctx, old.ID)
@@ -1017,11 +1022,58 @@ func TestMindOnQuestionAsked_NoAgent(t *testing.T) {
 		Body:  "Curious about the mechanics.",
 	}
 
-	// Should not panic even with no agents and a fake Claude token.
+	// Should not panic even with no agents and no real provider.
 	mind.OnQuestionAsked(space.ID, space.Slug, question)
 	// No agent → returns early without creating any nodes.
 	answers, _ := store.ListNodes(ctx, ListNodesParams{SpaceID: space.ID, ParentID: question.ID})
 	if len(answers) != 0 {
 		t.Errorf("got %d answers, want 0 (no agent available)", len(answers))
+	}
+}
+
+// localRecordingFakeProvider is site's test fake. Satisfies intelligence.Provider
+// and counts Reason invocations so tests can assert routing went through the pool.
+type localRecordingFakeProvider struct {
+	name, model string
+	incCalls    func()
+}
+
+func (f *localRecordingFakeProvider) Name() string  { return f.name }
+func (f *localRecordingFakeProvider) Model() string { return f.model }
+func (f *localRecordingFakeProvider) Reason(_ context.Context, _ string, _ []event.Event) (decision.Response, error) {
+	f.incCalls()
+	return decision.NewResponse("fake reply", types.MustScore(0.7), decision.TokenUsage{}), nil
+}
+
+// TestMind_CallProvider_RoutesThroughPool proves that callProvider resolves a
+// provider via the configured ProviderPool and invokes Reason on it — i.e. that
+// the refactor away from exec.Command(claude) is wired correctly.
+func TestMind_CallProvider_RoutesThroughPool(t *testing.T) {
+	r := modelconfig.DefaultResolver()
+	called := 0
+	builder := func(cfg intelligence.Config) (intelligence.Provider, error) {
+		return &localRecordingFakeProvider{
+			name:     cfg.Provider,
+			model:    cfg.Model,
+			incCalls: func() { called++ },
+		}, nil
+	}
+	pool := modelconfig.NewProviderPoolWithBuilder(r, builder)
+
+	m := NewMind(nil, nil, pool)
+	out, err := m.callProvider(
+		context.Background(),
+		"planner",
+		"system prompt",
+		[]providerMessage{{Role: "user", Content: "hello"}},
+	)
+	if err != nil {
+		t.Fatalf("callProvider: %v", err)
+	}
+	if out == "" {
+		t.Errorf("empty response")
+	}
+	if called != 1 {
+		t.Errorf("expected 1 provider call; got %d", called)
 	}
 }

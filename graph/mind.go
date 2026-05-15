@@ -6,31 +6,31 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/transpara-ai/eventgraph/go/pkg/modelconfig"
 )
 
-// Mind responds to conversation messages via Claude.
+// Mind responds to conversation messages via the configured provider pool.
 // Event-driven: triggered by handlers when a human messages in an agent conversation.
 type Mind struct {
 	db           *sql.DB
 	store        *Store
-	token        string        // Claude OAuth token
-	replyTimeout time.Duration // timeout for Claude CLI calls
-	// callClaudeOverride is set in tests to stub out the Claude CLI without a real token.
-	// When non-nil, callClaude dispatches here instead of exec-ing the claude binary.
-	callClaudeOverride func(ctx context.Context, systemPrompt string, messages []claudeMessage) (string, error)
+	pool         *modelconfig.ProviderPool
+	replyTimeout time.Duration
+	// callProviderOverride is set in tests to stub out provider calls without a real backend.
+	// When non-nil, callProvider dispatches here instead of routing through the pool.
+	callProviderOverride func(ctx context.Context, systemPrompt string, messages []providerMessage) (string, error)
 }
 
-// NewMind creates a Mind that auto-replies in agent conversations.
-func NewMind(db *sql.DB, store *Store, claudeToken string) *Mind {
+// NewMind creates a Mind that auto-replies in agent conversations using the given provider pool.
+func NewMind(db *sql.DB, store *Store, pool *modelconfig.ProviderPool) *Mind {
 	return &Mind{
 		db:           db,
 		store:        store,
-		token:        claudeToken,
+		pool:         pool,
 		replyTimeout: 5 * time.Minute,
 	}
 }
@@ -100,12 +100,12 @@ func (m *Mind) OnQuestionAsked(spaceID, spaceSlug string, question *Node) {
 	}
 
 	systemPrompt := m.buildQuestionAnswerPrompt(question, docs)
-	messages := []claudeMessage{{
+	messages := []providerMessage{{
 		Role:    "user",
 		Content: fmt.Sprintf("Question: %s\n\nAdditional context: %s\n\nAnswer this question based on the space documents provided, or from your general knowledge if no relevant documents exist. Be concise and helpful.", question.Title, question.Body),
 	}}
 
-	response, err := m.callClaude(ctx, systemPrompt, messages)
+	response, err := m.callProvider(ctx, m.roleForAgent(ctx, agentID, agentName), systemPrompt, messages)
 	if err != nil {
 		log.Printf("mind: answer question %q: %v", question.Title, err)
 		return
@@ -190,12 +190,12 @@ func (m *Mind) OnCouncilConvened(spaceID, spaceSlug string, council *Node) {
 		}
 
 		systemPrompt := m.buildCouncilPrompt(ctx, council, personaName, docs)
-		messages := []claudeMessage{{
+		messages := []providerMessage{{
 			Role:    "user",
 			Content: fmt.Sprintf("Question: %s\n\n%s", council.Title, council.Body),
 		}}
 
-		response, err := m.callClaude(ctx, systemPrompt, messages)
+		response, err := m.callProvider(ctx, personaName, systemPrompt, messages)
 		if err != nil {
 			log.Printf("mind: council %q: %s call failed: %v", council.Title, agentName, err)
 			continue
@@ -261,10 +261,10 @@ func (m *Mind) buildCouncilPrompt(ctx context.Context, council *Node, personaNam
 // creates subtasks, comments with progress, and completes when done.
 func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID string) {
 	// Check if the assignee is an agent.
-	var agentName string
+	var agentName, personaName string
 	err := m.db.QueryRow(
-		`SELECT name FROM users WHERE id = $1 AND kind = 'agent'`, assigneeID,
-	).Scan(&agentName)
+		`SELECT name, COALESCE(persona_name, '') FROM users WHERE id = $1 AND kind = 'agent'`, assigneeID,
+	).Scan(&agentName, &personaName)
 	if err != nil {
 		return // not an agent, or not found
 	}
@@ -276,13 +276,17 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 
 	// Build the work prompt. The Mind outputs a JSON work plan.
 	systemPrompt := m.buildTaskPrompt(task)
-	messages := []claudeMessage{{
+	messages := []providerMessage{{
 		Role: "user",
 		Content: fmt.Sprintf("Task assigned to you:\nTitle: %s\nDescription: %s\nPriority: %s\n\nRespond with a JSON object containing your work plan. Format:\n```json\n{\n  \"comment\": \"Your acknowledgment and approach (markdown)\",\n  \"subtasks\": [\n    {\"title\": \"first thing\"},\n    {\"title\": \"second thing\", \"depends_on\": [0]}\n  ],\n  \"status\": \"active\"\n}\n```\n\nSubtasks can declare dependencies using indices into the array (0-based). If the task is simple enough to complete immediately, set status to \"done\", put your deliverable in the comment, and use an empty subtasks array.",
 			task.Title, task.Body, task.Priority),
 	}}
 
-	response, err := m.callClaude(ctx, systemPrompt, messages)
+	taskRole := personaName
+	if taskRole == "" {
+		taskRole = agentName
+	}
+	response, err := m.callProvider(ctx, taskRole, systemPrompt, messages)
 	if err != nil {
 		log.Printf("mind: task work failed: %v", err)
 		return
@@ -489,11 +493,33 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 		}
 	}
 
-	claudeMessages := m.buildMessages(convo, messages, agentID)
+	providerMessages := m.buildMessages(convo, messages, agentID)
 
-	response, err := m.callClaude(ctx, systemPrompt, claudeMessages)
+	// Resolve the role passed to the provider pool. Prefer (in order):
+	//   1. role:<slug> tag on the conversation
+	//   2. users.persona_name column for the agent
+	//   3. display name (agentName) — only matches a persona slug by accident,
+	//      so the pool will fall back to system defaults.
+	providerRole := agentName
+	for _, tag := range convo.Tags {
+		if strings.HasPrefix(tag, "role:") {
+			providerRole = strings.TrimPrefix(tag, "role:")
+			break
+		}
+	}
+	if providerRole == agentName {
+		var personaName string
+		if err := m.db.QueryRowContext(ctx,
+			`SELECT COALESCE(persona_name, '') FROM users WHERE id = $1 AND kind = 'agent'`,
+			agentID,
+		).Scan(&personaName); err == nil && personaName != "" {
+			providerRole = personaName
+		}
+	}
+
+	response, err := m.callProvider(ctx, providerRole, systemPrompt, providerMessages)
 	if err != nil {
-		return fmt.Errorf("call claude: %w", err)
+		return fmt.Errorf("call provider: %w", err)
 	}
 
 	// Extract and execute any task commands from the response.
@@ -623,7 +649,7 @@ If nothing notable, return an empty array: []`
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	result, err := m.callClaude(ctx, sysPrompt, []claudeMessage{{Role: "user", Content: userMsg}})
+	result, err := m.callProvider(ctx, persona, sysPrompt, []providerMessage{{Role: "user", Content: userMsg}})
 	if err != nil {
 		log.Printf("mind: memory extraction: %v", err)
 		return
@@ -709,7 +735,10 @@ Return [] if nothing notable. Focus on: name, role, stated preferences, goals, o
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	result, err := m.callClaude(ctx, sysPrompt, []claudeMessage{{Role: "user", Content: userMsg}})
+	// "mind" is intentionally not a persona slug — user-level memory extraction
+	// is a generic analytical task. The provider pool falls back to system
+	// defaults (sonnet via claude-cli) when the role has no per-role mapping.
+	result, err := m.callProvider(ctx, "mind", sysPrompt, []providerMessage{{Role: "user", Content: userMsg}})
 	if err != nil {
 		log.Printf("mind: user memory extraction: %v", err)
 		return
@@ -876,20 +905,20 @@ func (m *Mind) buildSystemPrompt(convo *Node, agentID string, docs []Node) strin
 	return sys.String()
 }
 
-type claudeMessage struct {
+type providerMessage struct {
 	Role    string
 	Content string
 }
 
-func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []claudeMessage {
-	var result []claudeMessage
+func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []providerMessage {
+	var result []providerMessage
 
 	for _, msg := range messages {
 		text := fmt.Sprintf("[%s]: %s", msg.Author, msg.Body)
 		if msg.AuthorID == agentID {
-			result = append(result, claudeMessage{Role: "assistant", Content: text})
+			result = append(result, providerMessage{Role: "assistant", Content: text})
 		} else {
-			result = append(result, claudeMessage{Role: "user", Content: text})
+			result = append(result, providerMessage{Role: "user", Content: text})
 		}
 	}
 
@@ -898,14 +927,14 @@ func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []cla
 		if prompt == "" {
 			prompt = convo.Title
 		}
-		result = append(result, claudeMessage{
+		result = append(result, providerMessage{
 			Role:    "user",
 			Content: fmt.Sprintf("[%s]: %s", convo.Author, prompt),
 		})
 	}
 
 	if len(result) > 0 && result[len(result)-1].Role == "assistant" {
-		result = append(result, claudeMessage{
+		result = append(result, providerMessage{
 			Role:    "user",
 			Content: "[system]: Please continue the conversation.",
 		})
@@ -914,9 +943,38 @@ func (m *Mind) buildMessages(convo *Node, messages []Node, agentID string) []cla
 	return result
 }
 
-func (m *Mind) callClaude(ctx context.Context, systemPrompt string, messages []claudeMessage) (string, error) {
-	if m.callClaudeOverride != nil {
-		return m.callClaudeOverride(ctx, systemPrompt, messages)
+// roleForAgent returns the persona slug for the given agent if the users table
+// has one, falling back to the display agentName. Used to route the pool by
+// stable persona key rather than the mutable display name. Returns agentName on
+// any DB error so the caller still makes a provider call (the pool falls back
+// to system defaults for unknown roles).
+func (m *Mind) roleForAgent(ctx context.Context, agentID, agentName string) string {
+	if m.db == nil || agentID == "" {
+		return agentName
+	}
+	var personaName string
+	if err := m.db.QueryRowContext(ctx,
+		`SELECT COALESCE(persona_name, '') FROM users WHERE id = $1 AND kind = 'agent'`,
+		agentID,
+	).Scan(&personaName); err != nil || personaName == "" {
+		return agentName
+	}
+	return personaName
+}
+
+// callProvider routes through the modelconfig.ProviderPool for the given role
+// (typically the persona/agent name). Tests may inject a stub via
+// callProviderOverride to bypass the pool.
+func (m *Mind) callProvider(ctx context.Context, role, systemPrompt string, messages []providerMessage) (string, error) {
+	if m.callProviderOverride != nil {
+		return m.callProviderOverride(ctx, systemPrompt, messages)
+	}
+	if m.pool == nil {
+		return "", fmt.Errorf("mind: no provider pool configured (Mind is disabled)")
+	}
+	provider, err := m.pool.For(role)
+	if err != nil {
+		return "", fmt.Errorf("resolve provider for %s: %w", role, err)
 	}
 	var prompt strings.Builder
 	prompt.WriteString(systemPrompt)
@@ -925,25 +983,13 @@ func (m *Mind) callClaude(ctx context.Context, systemPrompt string, messages []c
 		prompt.WriteString(msg.Content)
 		prompt.WriteString("\n\n")
 	}
-
-	cmd := exec.CommandContext(ctx, "claude",
-		"-p", prompt.String(),
-		"--output-format", "text",
-		"--model", "claude-sonnet-4-6",
-	)
-	cmd.Env = append(cmd.Environ(), "CLAUDE_CODE_OAUTH_TOKEN="+m.token)
-
-	out, err := cmd.Output()
+	resp, err := provider.Reason(ctx, prompt.String(), nil)
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("claude cli: %s (stderr: %s)", err, string(exitErr.Stderr))
-		}
-		return "", fmt.Errorf("claude cli: %w", err)
+		return "", fmt.Errorf("intelligence: %w", err)
 	}
-
-	text := strings.TrimSpace(string(out))
+	text := strings.TrimSpace(resp.Content())
 	if text == "" {
-		return "", fmt.Errorf("empty response from Claude CLI")
+		return "", fmt.Errorf("empty response from %s", role)
 	}
 	return text, nil
 }
