@@ -346,3 +346,189 @@ func TestFetchOpsHiveProjectionTimeoutIsNonFatal(t *testing.T) {
 		t.Fatal("ProjectionError is empty, want nonfatal timeout error")
 	}
 }
+
+func TestFetchOpsEvidenceProjection(t *testing.T) {
+	var gotFactoryOrder, gotReleaseCandidate string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotFactoryOrder = r.URL.Query().Get("factory_order_id")
+		gotReleaseCandidate = r.URL.Query().Get("release_candidate_id")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(opsEvidenceFixtureJSON()))
+	}))
+	defer srv.Close()
+
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL+"/projection?existing=1")
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?factory_order_id=fo_001&release_candidate_id=rc_001", nil)
+
+	got := fetchOpsEvidence(req)
+
+	if got.ProjectionError != "" {
+		t.Fatalf("ProjectionError = %q, want empty", got.ProjectionError)
+	}
+	if gotFactoryOrder != "fo_001" || gotReleaseCandidate != "rc_001" {
+		t.Fatalf("forwarded query = factory_order_id:%q release_candidate_id:%q", gotFactoryOrder, gotReleaseCandidate)
+	}
+	if got.Source != "eventgraph-work-projection" {
+		t.Fatalf("Source = %q, want fixture source", got.Source)
+	}
+	if got.FactoryOrder == nil || got.FactoryOrder.ID != "fo_001" {
+		t.Fatalf("FactoryOrder = %#v, want fo_001", got.FactoryOrder)
+	}
+	if got.ReleaseCandidate == nil || got.ReleaseCandidate.ID != "rc_001" {
+		t.Fatalf("ReleaseCandidate = %#v, want rc_001", got.ReleaseCandidate)
+	}
+	if len(got.Timeline) != 2 || got.Timeline[1].NodeID != "gate_001" {
+		t.Fatalf("Timeline = %#v, want gate_001 event", got.Timeline)
+	}
+	if len(got.GateEvidence) != 1 || got.GateEvidence[0].GateName != "unit_tests" {
+		t.Fatalf("GateEvidence = %#v, want unit_tests", got.GateEvidence)
+	}
+	if len(got.ReleaseEvidence) != 1 || len(got.ReleaseEvidence[0].RuntimeRefs) != 1 {
+		t.Fatalf("ReleaseEvidence = %#v, want runtime refs", got.ReleaseEvidence)
+	}
+	if len(got.FailuresRepairs) != 1 || got.FailuresRepairs[0].RepairID != "rep_001" {
+		t.Fatalf("FailuresRepairs = %#v, want rep_001", got.FailuresRepairs)
+	}
+	if got.AuditReport == nil || got.AuditReport.ID != "aud_001" {
+		t.Fatalf("AuditReport = %#v, want aud_001", got.AuditReport)
+	}
+	if len(got.MissingProvenance) != 1 || got.MissingProvenance[0].PathName == "" {
+		t.Fatalf("MissingProvenance = %#v, want one path", got.MissingProvenance)
+	}
+}
+
+func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(opsEvidenceFixtureJSON()))
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Evidence projection",
+		"FactoryOrder timeline",
+		"Gate evidence",
+		"Release evidence",
+		"Failures and repairs",
+		"Audit evidence",
+		"Missing provenance",
+		"fo_001",
+		"unit_tests",
+		"traceability_gap",
+		"missing RuntimeResult rr_001",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/evidence: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "<form") ||
+		strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/evidence"`) ||
+		strings.Contains(body, "<button") ||
+		strings.Contains(body, `data-evidence-action`) {
+		t.Fatal("GET /ops/evidence exposes mutation controls")
+	}
+}
+
+func TestHandleOpsEvidenceUnconfiguredRendersEmptyState(t *testing.T) {
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Evidence projection") || !strings.Contains(body, "projection URL is not configured") {
+		t.Fatalf("GET /ops/evidence: body does not contain unconfigured empty state; body: %s", body)
+	}
+}
+
+func TestFetchOpsEvidenceProjectionFailureIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "no projection", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence", nil)
+	got := fetchOpsEvidence(req)
+
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal projection error")
+	}
+}
+
+func TestFetchOpsEvidenceProjectionTimeoutIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	oldClient := evidenceOpsProjectionClient
+	evidenceOpsProjectionClient = &http.Client{Timeout: 10 * time.Millisecond}
+	t.Cleanup(func() { evidenceOpsProjectionClient = oldClient })
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence", nil)
+	got := fetchOpsEvidence(req)
+
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal timeout error")
+	}
+}
+
+func TestFetchOpsEvidenceProjectionBadJSONIsNonFatal(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"generated_at":`))
+	}))
+	defer srv.Close()
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", srv.URL)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence", nil)
+	got := fetchOpsEvidence(req)
+
+	if got.ProjectionError == "" {
+		t.Fatal("ProjectionError is empty, want nonfatal JSON error")
+	}
+}
+
+func opsEvidenceFixtureJSON() string {
+	return `{
+		"generated_at":"2026-05-14T19:00:00Z",
+		"source":"eventgraph-work-projection",
+		"factory_order":{"id":"fo_001","version":1,"status":"draft","source_intent_hash":"sha256:intent","source_intent_ref":"issue://55","risk_class":"medium","release_policy":"human_approval_required"},
+		"release_candidate":{"id":"rc_001","status":"certified","factory_order_id":"fo_001","factory_runtime_version_id":"frv_001","artifact_refs":["art_001"]},
+		"decision":{"kind":"certification","id":"cert_001","actor_id":"act_human","reason":"all required evidence present","evidence_refs":["gate_001"],"status":"certified","created_at":"2026-05-14T18:30:00Z"},
+		"audit_report":{"id":"aud_001","target_type":"release_candidate","target_id":"rc_001","status":"incomplete","trace_score":0.75,"missing_links":["missing RuntimeResult rr_001"]},
+		"timeline":[
+			{"label":"FactoryOrder recorded","kind":"FactoryOrder","status":"draft","node_id":"fo_001","created_at":"2026-05-14T18:00:00Z","summary":"operator request accepted"},
+			{"label":"Gate evaluated","kind":"GateResult","status":"pass","node_id":"gate_001","created_at":"2026-05-14T18:10:00Z","summary":"unit tests passed"}
+		],
+		"gate_evidence":[{"gate_name":"unit_tests","status":"pass","gate_result_id":"gate_001","evidence_refs":["tr_001"],"waiver_ref":"","missing_refs":[]}],
+		"release_evidence":[{"label":"packaged artifact path","status":"complete","artifact_refs":["art_001"],"runtime_refs":["frv_001"],"bom_refs":["bom_001"],"required_path_refs":["path_release_artifact"],"missing_refs":[]}],
+		"failures_repairs":[{"failure_id":"fail_001","failure_class":"traceability_gap","severity":"high","summary":"missing evidence fixture","task_id":"tsk_001","gate_result_id":"gate_fail_001","test_run_id":"tr_001","repair_id":"rep_001","repair_status":"planned","actor_invocation_id":"inv_001"}],
+		"missing_provenance":[{"path_name":"Task -> RuntimeEnvelope -> RuntimeResult","node_ids":["tsk_001"],"edge_ids":[],"missing":["missing RuntimeResult rr_001"],"completed":false}],
+		"errors":[]
+	}`
+}
