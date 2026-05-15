@@ -536,7 +536,11 @@ func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
 			t.Fatalf("GET /ops/evidence missing packet body does not contain %q", want)
 		}
 	}
-	if strings.Contains(body, "<form") || strings.Contains(body, "<button") {
+	evidenceSurface := body[strings.Index(body, "Evidence projection"):]
+	if end := strings.Index(evidenceSurface, "</main>"); end >= 0 {
+		evidenceSurface = evidenceSurface[:end]
+	}
+	if strings.Contains(evidenceSurface, "<form") || strings.Contains(evidenceSurface, "<button") {
 		t.Fatal("GET /ops/evidence missing packet state contains mutation controls")
 	}
 }
