@@ -27,7 +27,7 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 						My Work
 					</a>
 				</section>
-				<nav class="grid gap-3 md:grid-cols-5" aria-label="Operator surfaces">
+				<nav class="grid gap-3 md:grid-cols-3 lg:grid-cols-6" aria-label="Operator surfaces">
 					for _, surface := range data.Surfaces {
 						<a
 							href={ templ.SafeURL(surface.Href) }
@@ -57,6 +57,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					@opsHiveSummary(data.Hive, data.LegacyURL)
 				} else if data.Evidence != nil {
 					@opsEvidenceSummary(data.Evidence)
+				} else if data.Decision != nil {
+					@opsDecisionSurface(data.Decision)
 				} else if data.EmbedURL != "" {
 					<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 						<div class="px-4 py-3 border-b border-edge flex items-center justify-between gap-3">
@@ -100,6 +102,149 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 			@simpleFooter(p)
 		</body>
 	</html>
+}
+
+templ opsDecisionSurface(d *OpsDecisionData) {
+	<section class="space-y-4">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Gate E decision surface</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">Site is non-executing. It remains projection and governed decision console only.</p>
+					<p class="text-xs text-warm-faint mt-2">Authorization: { d.AuthorizationSource }</p>
+				</div>
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsDecisionStatusClass(d.Status) }>{ d.Status }</span>
+			</header>
+			<div class="p-4 space-y-3">
+				<p class="text-sm text-warm-muted leading-relaxed">Site does not directly execute work, produce protected side effects, rely on policy-adapter decisions, run runner/worktree protected execution, or grant production autonomy.</p>
+				<p class="text-sm text-warm-muted leading-relaxed">It also does not produce ExecutionReceipt production output or rely on policy-bundle evidence.</p>
+				<div class="grid gap-3 md:grid-cols-3">
+					for _, action := range d.Actions {
+						<a href={ templ.SafeURL(action.Href) } class={ "border rounded-lg p-3 min-h-[8rem] transition-colors flex flex-col",
+							templ.KV("border-brand/40 bg-brand/10", action.WireValue == d.RequestedAction),
+							templ.KV("border-edge bg-void/20 hover:border-brand/30 hover:bg-elevated/50", action.WireValue != d.RequestedAction) }
+						>
+							<div class="flex items-start justify-between gap-3">
+								<h3 class="text-sm font-medium text-warm">{ action.Label }</h3>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">effect none</span>
+							</div>
+							<p class="text-xs text-warm-muted mt-3 leading-relaxed flex-1">{ action.Description }</p>
+							<p class="text-[11px] text-warm-faint mt-3">requested_action: { action.WireValue }</p>
+						</a>
+					}
+				</div>
+			</div>
+		</section>
+		<div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Request envelope</h2>
+					<p class="text-xs text-warm-faint mt-1">Displayed locally by Site; not submitted to an executor.</p>
+				</header>
+				<dl class="grid grid-cols-[8.5rem_1fr] gap-x-3 gap-y-2 p-4 text-xs">
+					<dt class="text-warm-faint">correlation_id</dt><dd class="text-warm-muted break-all">{ d.CorrelationID }</dd>
+					<dt class="text-warm-faint">trace_id</dt><dd class="text-warm-muted break-all">{ d.TraceID }</dd>
+					<dt class="text-warm-faint">requested_action</dt><dd class="text-warm-muted break-all">{ d.RequestedAction }</dd>
+					<dt class="text-warm-faint">decision_reason</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.DecisionReason, "missing") }</dd>
+					<dt class="text-warm-faint">target_type</dt><dd class="text-warm-muted break-all">{ d.TargetType }</dd>
+					<dt class="text-warm-faint">repo</dt><dd class="text-warm-muted break-all">{ d.Repo }</dd>
+					<dt class="text-warm-faint">target_ref</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.TargetRef, "missing") }</dd>
+					<dt class="text-warm-faint">governance_scope</dt><dd class="text-warm-muted break-all">non-executing Site projection; effect = none; excluded scopes visible below</dd>
+				</dl>
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Response and trace</h2>
+					<p class="text-xs text-warm-faint mt-1">Acceptance means review display only, never downstream execution.</p>
+				</header>
+				<dl class="grid grid-cols-[8.5rem_1fr] gap-x-3 gap-y-2 p-4 text-xs">
+					<dt class="text-warm-faint">correlation_id</dt><dd class="text-warm-muted break-all">{ d.CorrelationID }</dd>
+					<dt class="text-warm-faint">trace_id</dt><dd class="text-warm-muted break-all">{ d.TraceID }</dd>
+					<dt class="text-warm-faint">status</dt><dd class="text-warm-muted break-all">{ d.Status }</dd>
+					<dt class="text-warm-faint">effect</dt><dd class="text-warm-muted break-all">effect = { d.Effect }</dd>
+					<dt class="text-warm-faint">summary</dt><dd class="text-warm-muted break-all">{ d.OperatorSummary }</dd>
+					if len(d.BlockedReasons) > 0 {
+						<dt class="text-warm-faint">blocked_reason</dt>
+						<dd class="text-amber-300 break-all">
+							<ul class="space-y-1">
+								for _, reason := range d.BlockedReasons {
+									<li>{ reason }</li>
+								}
+							</ul>
+						</dd>
+					}
+					if len(d.RequiredEvidence) > 0 {
+						<dt class="text-warm-faint">required_evidence</dt>
+						<dd class="text-warm-muted break-all">
+							<ul class="space-y-1">
+								for _, item := range d.RequiredEvidence {
+									<li>{ item }</li>
+								}
+							</ul>
+						</dd>
+					}
+				</dl>
+			</section>
+		</div>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Governance posture</h2>
+				<p class="text-xs text-warm-faint mt-1">Excluded scopes are visible and fail closed before execution.</p>
+			</header>
+			<div class="grid gap-3 p-4 md:grid-cols-2 lg:grid-cols-4">
+				for _, item := range d.GovernancePosture {
+					@opsDecisionPostureCard(item)
+				}
+			</div>
+		</section>
+		<section class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Fail-closed evidence</h2>
+				</header>
+				if len(d.BlockedReasons) == 0 {
+					<p class="px-4 py-6 text-sm text-warm-faint">No blocked reasons for this displayed envelope.</p>
+				} else {
+					<div class="divide-y divide-edge">
+						for _, reason := range d.BlockedReasons {
+							<p class="px-4 py-3 text-sm text-amber-300">{ reason }</p>
+						}
+					</div>
+				}
+				if len(d.RequiredEvidence) > 0 {
+					<div class="border-t border-edge px-4 py-3">
+						<h3 class="text-xs font-medium text-warm uppercase tracking-widest">Required evidence</h3>
+						<ul class="mt-2 space-y-1">
+							for _, item := range d.RequiredEvidence {
+								<li class="text-xs text-warm-muted">{ item }</li>
+							}
+						</ul>
+					</div>
+				}
+			</div>
+			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Residual-risk boundary</h2>
+				</header>
+				<div class="grid gap-3 p-4">
+					for _, item := range d.BoundaryChecks {
+						@opsDecisionPostureCard(item)
+					}
+				</div>
+			</div>
+		</section>
+	</section>
+}
+
+templ opsDecisionPostureCard(item OpsDecisionPosture) {
+	<div class="border border-edge bg-void/20 rounded-lg p-3 min-h-[7rem]">
+		<div class="flex items-start justify-between gap-2">
+			<h3 class="text-sm font-medium text-warm">{ item.Label }</h3>
+			<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsDecisionStatusClass(item.Status) }>{ item.Status }</span>
+		</div>
+		<p class="text-[11px] text-warm-faint mt-2 break-all">{ item.Field }</p>
+		<p class="text-xs text-warm-muted mt-2 break-all">{ item.Value }</p>
+	</div>
 }
 
 templ opsTelemetrySummary(t *OpsTelemetryData) {
