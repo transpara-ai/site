@@ -3,6 +3,7 @@ package graph
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -612,6 +613,163 @@ func TestFetchOpsEvidenceProjectionBadJSONIsNonFatal(t *testing.T) {
 
 	if got.ProjectionError == "" {
 		t.Fatal("ProjectionError is empty, want nonfatal JSON error")
+	}
+}
+
+func TestHandleOpsDecisionRendersNonExecutingBoundary(t *testing.T) {
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?profile=transpara&action=approve&target_type=pull_request&repo=transpara-ai/site&target_ref=pr://transpara-ai/site/75&reason=reviewed+packet+evidence", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/decision: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Gate E decision surface",
+		"Site is non-executing",
+		"Site does not directly execute work, produce protected side effects, rely on policy-adapter decisions, run runner/worktree protected execution, or grant production autonomy.",
+		"transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+		"Approve",
+		"Deny",
+		"Request more evidence",
+		"correlation_id",
+		"trace_id",
+		"requested_action",
+		"decision_reason",
+		"target_ref",
+		"pr://transpara-ai/site/75",
+		"governance_scope",
+		"non-executing Site projection; effect = none",
+		"accepted_for_review",
+		"effect = none",
+		"direct_execution_requested",
+		"protected_side_effect_requested",
+		"policy_adapter_reliance_requested",
+		"runner_worktree_execution_requested",
+		"production_autonomy_requested",
+		"ExecutionReceipt production path",
+		"execution_receipt_requested",
+		"policy-bundle reliance",
+		"policy_bundle_requested",
+		"R-001",
+		"R-002",
+		"R-003",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/decision: body does not contain %q", want)
+		}
+	}
+	assertOpsDecisionNoMutationControls(t, body)
+}
+
+func TestHandleOpsDecisionActionsStayInsideGovernedBoundary(t *testing.T) {
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for _, action := range []string{"approve", "deny", "request-more-evidence", "request_more_evidence"} {
+		t.Run(action, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?action="+url.QueryEscape(action)+"&target_type=issue&repo=transpara-ai/site&target_ref=issue://transpara-ai/site/123&reason=operator+review", nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET /ops/decision: status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			if !strings.Contains(body, "accepted_for_review") || !strings.Contains(body, "effect = none") {
+				t.Fatalf("GET /ops/decision: action %q left governed boundary; body: %s", action, body)
+			}
+			if action == "request_more_evidence" {
+				if !strings.Contains(body, "request-more-evidence") {
+					t.Fatalf("GET /ops/decision: underscore action did not normalize to request-more-evidence; body: %s", body)
+				}
+			} else if !strings.Contains(body, action) {
+				t.Fatalf("GET /ops/decision: body does not contain action %q", action)
+			}
+			assertOpsDecisionNoMutationControls(t, body)
+		})
+	}
+}
+
+func TestHandleOpsDecisionFailsClosedForMissingMalformedAndForbiddenScope(t *testing.T) {
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	cases := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{"missing inputs", "http://site.test/ops/decision", "missing requested_action"},
+		{"invalid action", "http://site.test/ops/decision?action=merge&target_ref=pr://transpara-ai/site/75&reason=operator+review", "requested_action is outside the Gate E decision boundary"},
+		{"direct execution", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&direct_execution=true", "direct execution is forbidden for this Site slice"},
+		{"protected side effect", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&protected_side_effect=true", "protected side effects are forbidden for this Site slice"},
+		{"policy adapter", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&policy_adapter_reliance=true", "policy-adapter reliance is forbidden for this Site slice"},
+		{"runner worktree", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&runner_worktree_execution=true", "runner/worktree protected execution is forbidden for this Site slice"},
+		{"production autonomy", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&production_autonomy=true", "production autonomy is forbidden for this Site slice"},
+		{"execution receipt", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&execution_receipt=true", "ExecutionReceipt production behavior is forbidden for this Site slice"},
+		{"policy bundle", "http://site.test/ops/decision?action=approve&target_ref=pr://transpara-ai/site/75&reason=operator+review&policy_bundle=true", "policy-bundle reliance is forbidden for this Site slice"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.url, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET /ops/decision: status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, want := range []string{"blocked", "effect = none", "blocked_reason", "Request failed closed inside Site. No downstream action was executed.", tc.want} {
+				if !strings.Contains(body, want) {
+					t.Fatalf("GET /ops/decision: body does not contain %q; body: %s", want, body)
+				}
+			}
+			assertOpsDecisionNoMutationControls(t, body)
+		})
+	}
+}
+
+func testOpsDecisionHandlers() *Handlers {
+	return NewHandlers(nil, nil, nil)
+}
+
+func assertOpsDecisionNoMutationControls(t *testing.T, body string) {
+	t.Helper()
+	start := strings.Index(body, "Gate E decision surface")
+	if start < 0 {
+		t.Fatal("GET /ops/decision: could not locate decision surface")
+	}
+	decisionSurface := body[start:]
+	if end := strings.Index(decisionSurface, "</main>"); end >= 0 {
+		decisionSurface = decisionSurface[:end]
+	}
+	for _, forbidden := range []string{
+		"<form",
+		"<button",
+		`method="post"`,
+		`action="/ops/decision"`,
+		`formaction="/ops/decision"`,
+		`hx-post="/ops/decision"`,
+		`hx-put="/ops/decision"`,
+		`hx-patch="/ops/decision"`,
+		`hx-delete="/ops/decision"`,
+		"Merge PR",
+		"Deploy",
+		"Access secret",
+		"Activate capability",
+		"Execute work",
+	} {
+		if strings.Contains(decisionSurface, forbidden) {
+			t.Fatalf("GET /ops/decision surface contains mutation control marker %q", forbidden)
+		}
 	}
 }
 

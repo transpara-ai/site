@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,6 +36,7 @@ type OpsPageData struct {
 	Work        *OpsWorkData
 	Hive        *OpsHiveData
 	Evidence    *OpsEvidenceData
+	Decision    *OpsDecisionData
 	LegacyURL   string
 }
 
@@ -275,6 +277,39 @@ type OpsEvidenceData struct {
 	Errors             []string
 }
 
+type OpsDecisionData struct {
+	AuthorizationSource string
+	CorrelationID       string
+	TraceID             string
+	RequestedAction     string
+	DecisionReason      string
+	TargetType          string
+	Repo                string
+	TargetRef           string
+	Status              string
+	Effect              string
+	OperatorSummary     string
+	BlockedReasons      []string
+	RequiredEvidence    []string
+	Actions             []OpsDecisionAction
+	GovernancePosture   []OpsDecisionPosture
+	BoundaryChecks      []OpsDecisionPosture
+}
+
+type OpsDecisionAction struct {
+	Label       string
+	WireValue   string
+	Href        string
+	Description string
+}
+
+type OpsDecisionPosture struct {
+	Label  string
+	Field  string
+	Value  string
+	Status string
+}
+
 type OpsEvidenceProjection struct {
 	GeneratedAt       string                         `json:"generated_at"`
 	Source            string                         `json:"source"`
@@ -482,6 +517,15 @@ func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) handleOpsDecision(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Decision boundary",
+		Description: "Non-executing Gate E decision surface for bounded approve, deny, and request-more-evidence envelopes.",
+		Active:      "decision",
+		Decision:    buildOpsDecisionData(r),
+	})
+}
+
 func (h *Handlers) handleOpsRefinery(w http.ResponseWriter, r *http.Request) {
 	target := "/app/journey-test/refinery?profile=transpara"
 	if slug := strings.TrimSpace(r.URL.Query().Get("space")); slug != "" {
@@ -542,6 +586,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "read only",
 		},
 		{
+			ID:          "decision",
+			Label:       "Decision",
+			Description: "Gate E governed decision boundary with non-executing approve, deny, and request-more-evidence envelopes.",
+			Href:        "/ops/decision",
+			Target:      "local Site decision surface",
+			Owner:       "site shell only",
+			Status:      "effect none",
+		},
+		{
 			ID:          "refinery",
 			Label:       "Refinery",
 			Description: "Intake/design review backed by the simplified FSM projection.",
@@ -551,6 +604,177 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native FSM framed",
 		},
 	}
+}
+
+func buildOpsDecisionData(r *http.Request) *OpsDecisionData {
+	q := r.URL.Query()
+	actionRaw := strings.TrimSpace(q.Get("action"))
+	action, actionOK := normalizeOpsDecisionAction(actionRaw)
+	reason := strings.TrimSpace(q.Get("reason"))
+	targetType := opsValueOr(strings.TrimSpace(q.Get("target_type")), "pull_request")
+	repo := opsValueOr(strings.TrimSpace(q.Get("repo")), "transpara-ai/site")
+	targetRef := strings.TrimSpace(q.Get("target_ref"))
+
+	blocked := make([]string, 0)
+	required := make([]string, 0)
+	if actionRaw == "" {
+		blocked = append(blocked, "missing requested_action")
+		required = append(required, "requested_action must be approve, deny, or request-more-evidence")
+	} else if !actionOK {
+		blocked = append(blocked, "requested_action is outside the Gate E decision boundary")
+		required = append(required, "requested_action must be approve, deny, or request-more-evidence")
+	}
+	if targetRef == "" {
+		blocked = append(blocked, "missing target reference")
+		required = append(required, "target_ref must point to an existing PR, issue, artifact, FactoryOrder, or release candidate")
+	}
+	if reason == "" {
+		blocked = append(blocked, "missing decision_reason")
+		required = append(required, "decision_reason must explain the operator-visible rationale")
+	}
+	if !opsDecisionTargetTypeAllowed(targetType) {
+		blocked = append(blocked, "target_type is outside the governed decision boundary")
+		required = append(required, "target_type must be pull_request, issue, artifact, factory_order, or release_candidate")
+	}
+	for _, guard := range []struct {
+		keys   []string
+		reason string
+	}{
+		{[]string{"direct_execution", "direct_execution_requested"}, "direct execution is forbidden for this Site slice"},
+		{[]string{"protected_side_effect", "protected_side_effect_requested"}, "protected side effects are forbidden for this Site slice"},
+		{[]string{"policy_adapter_reliance", "policy_adapter_reliance_requested"}, "policy-adapter reliance is forbidden for this Site slice"},
+		{[]string{"runner_worktree_execution", "runner_worktree_execution_requested"}, "runner/worktree protected execution is forbidden for this Site slice"},
+		{[]string{"production_autonomy", "production_autonomy_requested"}, "production autonomy is forbidden for this Site slice"},
+		{[]string{"execution_receipt", "execution_receipt_requested"}, "ExecutionReceipt production behavior is forbidden for this Site slice"},
+		{[]string{"policy_bundle", "policy_bundle_requested"}, "policy-bundle reliance is forbidden for this Site slice"},
+	} {
+		if opsDecisionQueryTrue(q, guard.keys...) {
+			blocked = append(blocked, guard.reason)
+		}
+	}
+
+	if action == "" {
+		action = "none"
+	}
+	status := "accepted_for_review"
+	summary := "Decision request stays inside the governed Gate E boundary. Site displays the envelope and trace only."
+	if len(blocked) > 0 {
+		status = "blocked"
+		summary = "Request failed closed inside Site. No downstream action was executed."
+	}
+
+	seed := strings.Join([]string{action, reason, targetType, repo, targetRef, strings.Join(blocked, "|")}, "|")
+	return &OpsDecisionData{
+		AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+		CorrelationID:       "gate-e-correlation-" + opsDecisionHash(seed),
+		TraceID:             "gate-e-trace-" + opsDecisionHash("trace|"+seed),
+		RequestedAction:     action,
+		DecisionReason:      reason,
+		TargetType:          targetType,
+		Repo:                repo,
+		TargetRef:           targetRef,
+		Status:              status,
+		Effect:              "none",
+		OperatorSummary:     summary,
+		BlockedReasons:      blocked,
+		RequiredEvidence:    required,
+		Actions:             opsDecisionActions(r),
+		GovernancePosture: []OpsDecisionPosture{
+			{Label: "direct execution", Field: "direct_execution_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "direct_execution", "direct_execution_requested")), Status: opsDecisionGuardStatus(q, "direct_execution", "direct_execution_requested")},
+			{Label: "protected side effects", Field: "protected_side_effect_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "protected_side_effect", "protected_side_effect_requested")), Status: opsDecisionGuardStatus(q, "protected_side_effect", "protected_side_effect_requested")},
+			{Label: "policy-adapter reliance", Field: "policy_adapter_reliance_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "policy_adapter_reliance", "policy_adapter_reliance_requested")), Status: opsDecisionGuardStatus(q, "policy_adapter_reliance", "policy_adapter_reliance_requested")},
+			{Label: "runner/worktree protected execution", Field: "runner_worktree_execution_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "runner_worktree_execution", "runner_worktree_execution_requested")), Status: opsDecisionGuardStatus(q, "runner_worktree_execution", "runner_worktree_execution_requested")},
+			{Label: "production autonomy", Field: "production_autonomy_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "production_autonomy", "production_autonomy_requested")), Status: opsDecisionGuardStatus(q, "production_autonomy", "production_autonomy_requested")},
+			{Label: "ExecutionReceipt production path", Field: "execution_receipt_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "execution_receipt", "execution_receipt_requested")), Status: opsDecisionGuardStatus(q, "execution_receipt", "execution_receipt_requested")},
+			{Label: "policy-bundle reliance", Field: "policy_bundle_requested", Value: fmt.Sprintf("%t", opsDecisionQueryTrue(q, "policy_bundle", "policy_bundle_requested")), Status: opsDecisionGuardStatus(q, "policy_bundle", "policy_bundle_requested")},
+		},
+		BoundaryChecks: []OpsDecisionPosture{
+			{Label: "R-001", Field: "runner/worktree evidence gap", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-002", Field: "real protected side effects", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-003", Field: "policy adapter / policy bundle", Value: "unresolved and excluded", Status: "blocked outside scope"},
+		},
+	}
+}
+
+func normalizeOpsDecisionAction(action string) (string, bool) {
+	switch strings.ToLower(strings.TrimSpace(action)) {
+	case "approve":
+		return "approve", true
+	case "deny":
+		return "deny", true
+	case "request-more-evidence", "request_more_evidence":
+		return "request-more-evidence", true
+	default:
+		return "", false
+	}
+}
+
+func opsDecisionTargetTypeAllowed(targetType string) bool {
+	switch strings.ToLower(strings.TrimSpace(targetType)) {
+	case "pull_request", "issue", "artifact", "factory_order", "release_candidate":
+		return true
+	default:
+		return false
+	}
+}
+
+func opsDecisionQueryTrue(q url.Values, keys ...string) bool {
+	for _, key := range keys {
+		switch strings.ToLower(strings.TrimSpace(q.Get(key))) {
+		case "1", "true", "yes", "on", "requested":
+			return true
+		}
+	}
+	return false
+}
+
+func opsDecisionGuardStatus(q url.Values, keys ...string) string {
+	if opsDecisionQueryTrue(q, keys...) {
+		return "blocked"
+	}
+	return "absent"
+}
+
+func opsDecisionActions(r *http.Request) []OpsDecisionAction {
+	return []OpsDecisionAction{
+		{
+			Label:       "Approve",
+			WireValue:   "approve",
+			Href:        opsDecisionActionURL(r, "approve"),
+			Description: "Displays an approval envelope for review with effect = none.",
+		},
+		{
+			Label:       "Deny",
+			WireValue:   "deny",
+			Href:        opsDecisionActionURL(r, "deny"),
+			Description: "Displays a denial envelope for review with effect = none.",
+		},
+		{
+			Label:       "Request more evidence",
+			WireValue:   "request-more-evidence",
+			Href:        opsDecisionActionURL(r, "request-more-evidence"),
+			Description: "Displays an evidence request envelope for review with effect = none.",
+		},
+	}
+}
+
+func opsDecisionActionURL(r *http.Request, action string) string {
+	q := url.Values{}
+	if profile := strings.TrimSpace(r.URL.Query().Get("profile")); profile != "" {
+		q.Set("profile", profile)
+	}
+	q.Set("action", action)
+	q.Set("target_type", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_type")), "pull_request"))
+	q.Set("repo", opsValueOr(strings.TrimSpace(r.URL.Query().Get("repo")), "transpara-ai/site"))
+	q.Set("target_ref", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_ref")), "pr://transpara-ai/site/review-environment"))
+	q.Set("reason", opsValueOr(strings.TrimSpace(r.URL.Query().Get("reason")), "Operator review remains inside the non-executing Gate E boundary."))
+	return "/ops/decision?" + q.Encode()
+}
+
+func opsDecisionHash(seed string) string {
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(seed))
+	return fmt.Sprintf("%012x", h.Sum64())[:12]
 }
 
 func fetchOpsEvidence(r *http.Request) *OpsEvidenceData {
@@ -1023,6 +1247,17 @@ func opsPhaseGateStatusClass(status string) string {
 		return "border-red-400/30 text-red-300 bg-red-400/10"
 	default:
 		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	}
+}
+
+func opsDecisionStatusClass(status string) string {
+	switch strings.ToLower(status) {
+	case "accepted_for_review", "absent":
+		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
+	case "blocked", "blocked outside scope":
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	default:
+		return "border-brand/30 text-brand bg-brand/10"
 	}
 }
 
