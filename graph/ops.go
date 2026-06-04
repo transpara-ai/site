@@ -35,9 +35,77 @@ type OpsPageData struct {
 	Telemetry   *OpsTelemetryData
 	Work        *OpsWorkData
 	Hive        *OpsHiveData
+	HiveShell   *OpsHiveShellData
 	Evidence    *OpsEvidenceData
 	Decision    *OpsDecisionData
 	LegacyURL   string
+}
+
+type OpsHiveShellData struct {
+	Active    string
+	Intake    OpsHiveIntakeView
+	Runs      []OpsHiveRunView
+	Agents    []OpsHiveAgentView
+	Resources []OpsHiveResourceView
+}
+
+type OpsHiveShellCard struct {
+	ID          string
+	Label       string
+	Href        string
+	Description string
+	Status      string
+}
+
+type OpsHiveSourceView struct {
+	Kind   string
+	Title  string
+	Detail string
+	Status string
+}
+
+type OpsHiveMissingFieldView struct {
+	Label  string
+	Detail string
+	Status string
+}
+
+type OpsHiveIntakeView struct {
+	Status          string
+	Confidence      string
+	SuggestedMode   string
+	AuthorityLevel  string
+	EstimatedBudget string
+	Sources         []OpsHiveSourceView
+	MissingFields   []OpsHiveMissingFieldView
+}
+
+type OpsHiveRunView struct {
+	ID        string
+	Title     string
+	Status    string
+	Guardian  string
+	Budget    string
+	Phase     string
+	Approvals int
+	Artifacts int
+	UpdatedAt string
+}
+
+type OpsHiveAgentView struct {
+	Name      string
+	Role      string
+	State     string
+	Budget    string
+	LastEvent string
+}
+
+type OpsHiveResourceView struct {
+	Label  string
+	Used   string
+	Limit  string
+	Status string
+	Detail string
 }
 
 type OpsTelemetryData struct {
@@ -508,6 +576,42 @@ func (h *Handlers) handleOpsHive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive intake",
+		Description: "Static Site-owned intake shell for source capture, interpretation, and launch readiness.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("intake"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveRuns(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive runs",
+		Description: "Static Site-owned run tower with sample pipeline, approval, artifact, and Guardian state.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("runs"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveAgents(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive agents",
+		Description: "Static Site-owned agent topology with sample roles, lifecycle state, and budget posture.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("agents"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveResources(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive resources",
+		Description: "Static Site-owned resource dashboard with sample budget, queue, and capacity signals.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("resources"),
+	})
+}
+
 func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Evidence",
@@ -602,6 +706,86 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Target:      "/app/journey-test/refinery?profile=transpara",
 			Owner:       "site shell, eventgraph/work projection",
 			Status:      "native FSM framed",
+		},
+	}
+}
+
+func opsHiveShellCards() []OpsHiveShellCard {
+	return []OpsHiveShellCard{
+		{
+			ID:          "overview",
+			Label:       "Overview",
+			Href:        "/ops/hive",
+			Description: "Runtime summary and public build link.",
+			Status:      "native summary",
+		},
+		{
+			ID:          "intake",
+			Label:       "Intake",
+			Href:        "/ops/hive/intake",
+			Description: "Source capture, interpretation, and brief readiness.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "runs",
+			Label:       "Runs",
+			Href:        "/ops/hive/runs",
+			Description: "Run tower, pipeline phase, approvals, and artifacts.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "agents",
+			Label:       "Agents",
+			Href:        "/ops/hive/agents",
+			Description: "Agent topology, lifecycle state, and budget posture.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "resources",
+			Label:       "Resources",
+			Href:        "/ops/hive/resources",
+			Description: "Budget, queue, token, and capacity signals.",
+			Status:      "static sample",
+		},
+	}
+}
+
+func buildOpsHiveShellData(active string) *OpsHiveShellData {
+	return &OpsHiveShellData{
+		Active: active,
+		Intake: OpsHiveIntakeView{
+			Status:          "draft ready",
+			Confidence:      "0.91",
+			SuggestedMode:   "full product pipeline",
+			AuthorityLevel:  "human launch required",
+			EstimatedBudget: "$18.00",
+			Sources: []OpsHiveSourceView{
+				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
+				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
+				{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
+			},
+			MissingFields: []OpsHiveMissingFieldView{
+				{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
+				{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+				{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
+			},
+		},
+		Runs: []OpsHiveRunView{
+			{ID: "run_static_001", Title: "Build onboarding control surface", Status: "active", Guardian: "clear", Budget: "18% used", Phase: "Design", Approvals: 2, Artifacts: 7, UpdatedAt: "sample now"},
+			{ID: "run_static_002", Title: "Refine evidence inspection flow", Status: "waiting", Guardian: "watch", Budget: "4% used", Phase: "Research", Approvals: 0, Artifacts: 3, UpdatedAt: "sample 12m ago"},
+			{ID: "run_static_003", Title: "Prepare integration checklist", Status: "paused", Guardian: "blocked", Budget: "31% used", Phase: "Review", Approvals: 1, Artifacts: 11, UpdatedAt: "sample 1h ago"},
+		},
+		Agents: []OpsHiveAgentView{
+			{Name: "guardian", Role: "Risk and authority", State: "watching", Budget: "12%", LastEvent: "approval request classified"},
+			{Name: "architect", Role: "System design", State: "active", Budget: "24%", LastEvent: "brief split into run graph"},
+			{Name: "builder", Role: "Implementation", State: "waiting", Budget: "0%", LastEvent: "blocked until launch approval"},
+			{Name: "tester", Role: "Verification", State: "idle", Budget: "0%", LastEvent: "waiting for artifact stream"},
+		},
+		Resources: []OpsHiveResourceView{
+			{Label: "Run budget", Used: "$3.24", Limit: "$18.00", Status: "clear", Detail: "Human cap visible before launch."},
+			{Label: "Approval queue", Used: "2", Limit: "unresolved", Status: "attention", Detail: "Operator decisions required before protected actions."},
+			{Label: "Token budget", Used: "84k", Limit: "460k", Status: "clear", Detail: "Sample aggregate across active agents."},
+			{Label: "Artifact store", Used: "7", Limit: "collected", Status: "clear", Detail: "Outputs stay inspectable and causally linked."},
 		},
 	}
 }
@@ -1256,6 +1440,21 @@ func opsDecisionStatusClass(status string) string {
 		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
 	case "blocked", "blocked outside scope":
 		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	default:
+		return "border-brand/30 text-brand bg-brand/10"
+	}
+}
+
+func opsHiveShellStatusClass(status string) string {
+	switch strings.ToLower(status) {
+	case "clear", "ready", "draft ready", "active", "watching":
+		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
+	case "attention", "warning", "watch", "waiting":
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	case "blocked", "paused", "missing":
+		return "border-red-400/30 text-red-300 bg-red-400/10"
+	case "idle":
+		return "border-edge text-warm-faint bg-void/30"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
 	}

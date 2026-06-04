@@ -213,6 +213,62 @@ func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 	if !strings.Contains(body, "Public live build") {
 		t.Fatal("GET /ops/hive: body does not link to the public /hive live-build page")
 	}
+	for _, want := range []string{`href="/ops/hive/intake"`, `href="/ops/hive/runs"`, `href="/ops/hive/agents"`, `href="/ops/hive/resources"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain child route link %q", want)
+		}
+	}
+}
+
+func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	tests := []struct {
+		path string
+		want []string
+	}{
+		{
+			path: "/ops/hive/intake?profile=transpara",
+			want: []string{"Hive intake", "Source input", "Live interpretation", "checkout-redesign.md"},
+		},
+		{
+			path: "/ops/hive/runs?profile=transpara",
+			want: []string{"Hive runs", "Run tower", "run_static_001", "Build onboarding control surface"},
+		},
+		{
+			path: "/ops/hive/agents?profile=transpara",
+			want: []string{"Hive agents", "Agent topology", "guardian", "architect"},
+		},
+		{
+			path: "/ops/hive/resources?profile=transpara",
+			want: []string{"Hive resources", "Run budget", "Approval queue", "Read-only mode"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://site.test"+tt.path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s: status = %d, want 200; body: %s", tt.path, w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, want := range tt.want {
+				if !strings.Contains(body, want) {
+					t.Fatalf("GET %s: body does not contain %q", tt.path, want)
+				}
+			}
+			for _, forbidden := range []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"} {
+				if strings.Contains(body, forbidden) {
+					t.Fatalf("GET %s: body contains forbidden %q", tt.path, forbidden)
+				}
+			}
+		})
+	}
 }
 
 func TestFetchOpsHiveOperatorProjection(t *testing.T) {

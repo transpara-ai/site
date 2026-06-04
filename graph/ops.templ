@@ -55,6 +55,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					@opsWorkSummary(data.Work)
 				} else if data.Hive != nil {
 					@opsHiveSummary(data.Hive, data.LegacyURL)
+				} else if data.HiveShell != nil {
+					@opsHiveShell(data.HiveShell)
 				} else if data.Evidence != nil {
 					@opsEvidenceSummary(data.Evidence)
 				} else if data.Decision != nil {
@@ -378,6 +380,7 @@ templ opsPipelineReport(t *OpsTelemetryData) {
 
 templ opsHiveSummary(h *OpsHiveData, publicURL string) {
 	<section class="space-y-4">
+		@opsHiveSubnav("overview")
 		<div class="border border-edge bg-surface rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 			<div>
 				<h2 class="text-base font-medium text-warm">Hive summary</h2>
@@ -453,6 +456,191 @@ templ opsHiveSummary(h *OpsHiveData, publicURL string) {
 			</div>
 		}
 	</section>
+}
+
+templ opsHiveSubnav(active string) {
+	<nav class="grid gap-3 md:grid-cols-5" aria-label="Hive operator views">
+		for _, card := range opsHiveShellCards() {
+			<a
+				href={ templ.SafeURL(card.Href) }
+				class={ "border rounded-lg p-3 min-h-[7.5rem] transition-colors flex flex-col",
+					templ.KV("border-brand/40 bg-brand/10", card.ID == active),
+					templ.KV("border-edge bg-surface hover:border-brand/30 hover:bg-elevated/60", card.ID != active) }
+			>
+				<div class="flex items-start justify-between gap-2">
+					<h2 class="text-sm font-medium text-warm">{ card.Label }</h2>
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(card.Status) }>{ card.Status }</span>
+				</div>
+				<p class="text-xs text-warm-muted leading-relaxed mt-2 flex-1">{ card.Description }</p>
+			</a>
+		}
+	</nav>
+}
+
+templ opsHiveShell(shell *OpsHiveShellData) {
+	<section class="space-y-4">
+		@opsHiveSubnav(shell.Active)
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Static Hive control room</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">Site-owned sample shell for issue #64. It renders the operator cockpit shape without calling Hive or exposing authority mutations.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">no Hive dependency</span>
+			</header>
+			if shell.Active == "intake" {
+				@opsHiveIntakeShell(shell.Intake)
+			} else if shell.Active == "runs" {
+				@opsHiveRunsShell(shell.Runs)
+			} else if shell.Active == "agents" {
+				@opsHiveAgentsShell(shell.Agents)
+			} else if shell.Active == "resources" {
+				@opsHiveResourcesShell(shell.Resources)
+			}
+		</section>
+	</section>
+}
+
+templ opsHiveIntakeShell(intake OpsHiveIntakeView) {
+	<div class="grid gap-4 p-4 lg:grid-cols-[1.05fr_.95fr]">
+		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h3 class="text-sm font-medium text-warm">Source input</h3>
+				<p class="text-xs text-warm-faint mt-1">Static sample wells only; persistence lands in a later issue.</p>
+			</header>
+			<div class="p-4 space-y-3">
+				<div class="border border-dashed border-brand/30 bg-brand/5 rounded-lg p-5 text-center">
+					<p class="text-sm text-warm">Drop spec, PRD, plan, or screenshot here</p>
+					<p class="text-xs text-warm-faint mt-2">Read-only placeholder. No upload or launch action is wired.</p>
+				</div>
+				<div class="grid gap-3">
+					for _, source := range intake.Sources {
+						<div class="border border-edge bg-surface rounded-lg p-3">
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
+									<h4 class="text-sm font-medium text-warm truncate">{ source.Title }</h4>
+									<p class="text-xs text-warm-faint mt-1">{ source.Kind }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(source.Status) }>{ source.Status }</span>
+							</div>
+							<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ source.Detail }</p>
+						</div>
+					}
+				</div>
+			</div>
+		</section>
+		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h3 class="text-sm font-medium text-warm">Live interpretation</h3>
+				<p class="text-xs text-warm-faint mt-1">Sample derived brief readiness for the initial shell.</p>
+			</header>
+			<div class="p-4 space-y-4">
+				<div class="grid gap-3 sm:grid-cols-2">
+					@opsMetric("Status", intake.Status, "launch readiness")
+					@opsMetric("Confidence", intake.Confidence, "classification score")
+					@opsMetric("Mode", intake.SuggestedMode, "suggested pipeline")
+					@opsMetric("Budget", intake.EstimatedBudget, "operator cap")
+				</div>
+				<div>
+					<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Missing info</h4>
+					<div class="mt-3 grid gap-2">
+						for _, field := range intake.MissingFields {
+							<div class="flex items-start justify-between gap-3 border border-edge bg-surface rounded-lg p-3">
+								<div class="min-w-0">
+									<p class="text-sm text-warm">{ field.Label }</p>
+									<p class="text-xs text-warm-muted mt-1 leading-relaxed">{ field.Detail }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(field.Status) }>{ field.Status }</span>
+							</div>
+						}
+					</div>
+				</div>
+				<div class="border border-edge bg-surface rounded-lg p-3">
+					<p class="text-xs text-warm-faint">Authority level</p>
+					<p class="text-sm text-warm mt-1">{ intake.AuthorityLevel }</p>
+					<p class="text-xs text-warm-muted mt-2">Launch controls intentionally remain display-only until Hive supplies the runtime contract.</p>
+				</div>
+			</div>
+		</section>
+	</div>
+}
+
+templ opsHiveRunsShell(runs []OpsHiveRunView) {
+	<div class="p-4 space-y-4">
+		<div class="grid gap-3 md:grid-cols-3">
+			@opsMetric("Runs", fmt.Sprintf("%d", len(runs)), "sample run records")
+			@opsMetric("Pipeline", "Research -> Integrate", "visible stages")
+			@opsMetric("Approvals", "sample queue", "read-only count")
+		</div>
+		<div class="grid gap-3">
+			for _, run := range runs {
+				<article class="border border-edge bg-void/20 rounded-lg p-4">
+					<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+						<div class="min-w-0">
+							<h3 class="text-base font-medium text-warm">{ run.Title }</h3>
+							<p class="text-xs text-warm-faint mt-1 font-mono">{ run.ID } - updated { run.UpdatedAt }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsHiveShellStatusClass(run.Status) }>{ run.Status }</span>
+					</div>
+					<div class="grid gap-3 mt-4 md:grid-cols-5">
+						@opsMetric("Phase", run.Phase, "pipeline")
+						@opsMetric("Guardian", run.Guardian, "risk state")
+						@opsMetric("Budget", run.Budget, "operator cap")
+						@opsMetric("Approvals", fmt.Sprintf("%d", run.Approvals), "pending")
+						@opsMetric("Artifacts", fmt.Sprintf("%d", run.Artifacts), "collected")
+					</div>
+				</article>
+			}
+		</div>
+	</div>
+}
+
+templ opsHiveAgentsShell(agents []OpsHiveAgentView) {
+	<div class="p-4 space-y-4">
+		<div class="border border-edge bg-void/20 rounded-lg p-4">
+			<h3 class="text-sm font-medium text-warm">Agent topology</h3>
+			<p class="text-xs text-warm-muted mt-2">Guardian -> Architect -> Builder -> Tester. Static topology only; live lifecycle events land in later Hive projection work.</p>
+		</div>
+		<div class="grid gap-3 md:grid-cols-2">
+			for _, agent := range agents {
+				<article class="border border-edge bg-void/20 rounded-lg p-4">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<h3 class="text-base font-medium text-warm">{ agent.Name }</h3>
+							<p class="text-xs text-warm-faint mt-1">{ agent.Role }</p>
+						</div>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(agent.State) }>{ agent.State }</span>
+					</div>
+					<dl class="grid grid-cols-[6rem_1fr] gap-x-3 gap-y-2 mt-4 text-xs">
+						<dt class="text-warm-faint">Budget</dt><dd class="text-warm-muted">{ agent.Budget }</dd>
+						<dt class="text-warm-faint">Last event</dt><dd class="text-warm-muted">{ agent.LastEvent }</dd>
+					</dl>
+				</article>
+			}
+		</div>
+	</div>
+}
+
+templ opsHiveResourcesShell(resources []OpsHiveResourceView) {
+	<div class="p-4 space-y-4">
+		<div class="grid gap-3 md:grid-cols-4">
+			for _, resource := range resources {
+				<article class="border border-edge bg-void/20 rounded-lg p-4 min-h-[10rem]">
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="text-sm font-medium text-warm">{ resource.Label }</h3>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(resource.Status) }>{ resource.Status }</span>
+					</div>
+					<p class="text-2xl font-display text-warm mt-4">{ resource.Used }</p>
+					<p class="text-xs text-warm-faint mt-1">limit: { resource.Limit }</p>
+					<p class="text-xs text-warm-muted mt-3 leading-relaxed">{ resource.Detail }</p>
+				</article>
+			}
+		</div>
+		<div class="border border-edge bg-surface rounded-lg p-4">
+			<h3 class="text-sm font-medium text-warm">Read-only mode</h3>
+			<p class="text-sm text-warm-muted mt-2 leading-relaxed">All resource signals are sample projections. The shell does not resize budgets, launch agents, or call Hive.</p>
+		</div>
+	</div>
 }
 
 templ opsHiveAuthorityProjection(h *OpsHiveData) {
