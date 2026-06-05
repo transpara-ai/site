@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -791,6 +792,36 @@ func TestHandleOpsDecisionFailsClosedForMissingMalformedAndForbiddenScope(t *tes
 			assertOpsDecisionNoMutationControls(t, body)
 		})
 	}
+}
+
+func TestOpsDecisionLoadsRealPendingRequest(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"source": "eventgraph",
+			"pending_approvals": []map[string]any{{
+				"event_id": "ev1", "request_id": "req-civic-roles", "requesting_actor": "guardian",
+				"action_name": "pull_request.create", "target": "transpara-ai/docs codex/civic-roles",
+				"justification": "Draft PR for civic-roles.md", "created_at": "2026-06-05T12:00:00Z",
+			}},
+		})
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?request_id=req-civic-roles", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	for _, want := range []string{"pull_request.create", "codex/civic-roles", "Draft PR for civic-roles.md"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("decision page missing %q", want)
+		}
+	}
+	assertOpsDecisionNoMutationControls(t, body)
 }
 
 func testOpsDecisionHandlers() *Handlers {

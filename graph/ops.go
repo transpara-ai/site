@@ -349,6 +349,7 @@ type OpsDecisionData struct {
 	AuthorizationSource string
 	CorrelationID       string
 	TraceID             string
+	RequestID           string
 	RequestedAction     string
 	DecisionReason      string
 	TargetType          string
@@ -790,8 +791,87 @@ func buildOpsHiveShellData(active string) *OpsHiveShellData {
 	}
 }
 
+// buildOpsDecisionDataFromProjection fetches the hive operator projection,
+// finds the matching pending approval by request_id, and returns an
+// OpsDecisionData populated from the real request. Effect stays "none".
+func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsDecisionData {
+	projection, err := fetchHiveOperatorProjection(r)
+	if err != nil {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           requestID,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "Could not fetch hive operator projection: " + err.Error(),
+			BlockedReasons:      []string{"hive projection unavailable: " + err.Error()},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
+	var found *OpsHiveApproval
+	for i := range projection.PendingApprovals {
+		if projection.PendingApprovals[i].RequestID == requestID {
+			found = &projection.PendingApprovals[i]
+			break
+		}
+	}
+	if found == nil {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           requestID,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "No pending approval found for request_id " + requestID,
+			BlockedReasons:      []string{"request_id " + requestID + " not found in pending approvals"},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
+	// Target field encodes "repo ref" (space-separated); split into Repo and TargetRef.
+	repo := ""
+	targetRef := ""
+	if parts := strings.SplitN(found.Target, " ", 2); len(parts) == 2 {
+		repo = parts[0]
+		targetRef = parts[1]
+	} else {
+		targetRef = found.Target
+	}
+
+	seed := strings.Join([]string{found.ActionName, found.Justification, repo, targetRef, requestID}, "|")
+	return &OpsDecisionData{
+		AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+		CorrelationID:       "gate-e-correlation-" + opsDecisionHash(seed),
+		TraceID:             "gate-e-trace-" + opsDecisionHash("trace|"+seed),
+		RequestID:           found.RequestID,
+		RequestedAction:     found.ActionName,
+		TargetType:          "pull_request", // S1: OpsHiveApproval carries no target_type; Slice 1 handles only pull_request.create.
+		Repo:                repo,
+		TargetRef:           targetRef,
+		Status:              "accepted_for_review",
+		Effect:              "none",
+		OperatorSummary:     found.Justification,
+		BlockedReasons:      []string{},
+		RequiredEvidence:    []string{},
+		Actions:             opsDecisionActions(r),
+		GovernancePosture:   []OpsDecisionPosture{},
+		BoundaryChecks: []OpsDecisionPosture{
+			{Label: "R-001", Field: "runner/worktree evidence gap", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-002", Field: "real protected side effects", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-003", Field: "policy adapter / policy bundle", Value: "unresolved and excluded", Status: "blocked outside scope"},
+		},
+	}
+}
+
 func buildOpsDecisionData(r *http.Request) *OpsDecisionData {
 	q := r.URL.Query()
+
+	// When request_id is present, load the real pending approval from the hive
+	// operator projection and populate the decision surface from it.
+	// Site remains a pure display console: effect = none is preserved.
+	if requestID := strings.TrimSpace(q.Get("request_id")); requestID != "" {
+		return buildOpsDecisionDataFromProjection(r, requestID)
+	}
+
 	actionRaw := strings.TrimSpace(q.Get("action"))
 	action, actionOK := normalizeOpsDecisionAction(actionRaw)
 	reason := strings.TrimSpace(q.Get("reason"))
@@ -1159,6 +1239,36 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.AuthorityDecisions = projection.AuthorityDecisions
 	data.Lifecycle = projection.Lifecycle
 	data.KeyAuditTraces = projection.KeyAuditTraces
+}
+
+// fetchHiveOperatorProjection fetches and decodes the hive operator projection.
+// Returns the projection or an error; it does not touch any OpsHiveData.
+func fetchHiveOperatorProjection(r *http.Request) (*OpsHiveProjection, error) {
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		return nil, errors.New("HIVE_OPS_API_BASE_URL is not configured")
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/operator-projection"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("hive operator projection returned %s", resp.Status)
+	}
+	var projection OpsHiveProjection
+	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
+		return nil, err
+	}
+	return &projection, nil
 }
 
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
