@@ -58,7 +58,11 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 				} else if data.HiveShell != nil {
 					@opsHiveShell(data.HiveShell)
 				} else if data.Evidence != nil {
-					@opsEvidenceSummary(data.Evidence)
+					if data.View == "forensic" {
+						@opsEvidenceSummary(data.Evidence)
+					} else {
+						@opsRoleTimeline(data.Evidence)
+					}
 				} else if data.Decision != nil {
 					@opsDecisionSurface(data.Decision)
 				} else if data.EmbedURL != "" {
@@ -948,6 +952,76 @@ templ opsWorkTaskRow(task OpsWorkTask) {
 			}
 		</dl>
 	</div>
+}
+
+// opsRoleTimeline renders the "order built by the society" view — the default
+// evidence panel.  It groups the run by civic role in canonical order:
+//
+//	strategist → planner → implementer → reviewer → guardian → human (Site approval) → draft PR
+//
+// Sourced entirely from the hive operator projection Lifecycle + AuthorityDecisions.
+// Read-only; no mutation controls; EventGraph is truth.
+templ opsRoleTimeline(e *OpsEvidenceData) {
+	<section class="space-y-4">
+		<div class="border border-edge bg-surface rounded-lg p-4">
+			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Society view</h2>
+					<p class="text-xs text-warm-faint mt-1">Order built by the civic roles — read-only projection; EventGraph is truth.</p>
+					if e.GeneratedAt != "" {
+						<p class="text-xs text-warm-faint mt-1">Projected at { e.GeneratedAt }</p>
+					}
+				</div>
+				<div class="flex flex-col items-end gap-2">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">effect = none</span>
+					<a href="/ops/evidence?view=forensic" class="text-[10px] text-warm-faint hover:text-brand transition-colors">Forensic tiers →</a>
+				</div>
+			</div>
+		</div>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Role timeline</h2>
+				<p class="text-xs text-warm-faint mt-1">Canonical civic order. Advisory only — Site cannot certify or execute work.</p>
+			</header>
+			if len(e.RoleTimeline) == 0 {
+				<p class="px-4 py-6 text-sm text-warm-faint">No role timeline data available. Configure HIVE_OPS_API_BASE_URL to source from the hive operator projection.</p>
+			} else {
+				<ol class="divide-y divide-edge">
+					for i, row := range e.RoleTimeline {
+						<li class="flex items-start gap-4 px-4 py-3">
+							<span class="flex-none w-6 h-6 rounded-full border border-edge bg-void/40 text-[10px] text-warm-faint flex items-center justify-center mt-0.5">{ fmt.Sprintf("%d", i+1) }</span>
+							<div class="flex-1 min-w-0">
+								<div class="flex flex-wrap items-center gap-2">
+									<span class="text-sm font-medium text-warm">{ row.Role }</span>
+									if row.Status != "" {
+										<span class={ "text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap",
+											templ.KV("border-green-700/40 text-green-400 bg-green-900/20", row.Status == "active" || row.Status == "approved"),
+											templ.KV("border-amber-700/40 text-amber-400 bg-amber-900/20", row.Status == "retired" || row.Status == "pending"),
+											templ.KV("border-edge text-warm-faint bg-void/30", row.Status != "active" && row.Status != "approved" && row.Status != "retired" && row.Status != "pending") }>{ row.Status }</span>
+									}
+								</div>
+								if row.Actors != "" {
+									<p class="text-xs text-warm-muted mt-1">{ row.Actors }</p>
+								}
+								if row.Notes != "" {
+									<p class="text-[11px] text-warm-faint mt-1 break-all">{ row.Notes }</p>
+								}
+							</div>
+						</li>
+					}
+				</ol>
+			}
+		</section>
+		<section class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-xs font-medium text-warm uppercase tracking-widest">Evidence-surface guardrails</h2>
+			<ul class="mt-3 space-y-1.5 text-xs text-warm-muted leading-relaxed">
+				<li>Read-only projection surface — Site does not write the graph or call GitHub.</li>
+				<li>effect = none — this console has no downstream execution authority.</li>
+				<li>EventGraph is truth — roles and decisions sourced from the hive operator projection only.</li>
+				<li>Bounded scope — advisory display; Site cannot certify, reject, or repair work.</li>
+			</ul>
+		</section>
+	</section>
 }
 
 templ opsEvidenceSummary(e *OpsEvidenceData) {

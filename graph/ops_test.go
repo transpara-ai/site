@@ -477,7 +477,7 @@ func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -557,7 +557,7 @@ func TestHandleOpsEvidenceUnconfiguredRendersEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -582,7 +582,7 @@ func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -1104,6 +1104,92 @@ func opsEvidenceFixtureJSON() string {
 		},
 		"errors":[]
 	}`
+}
+
+func TestOpsRoleTimelineRendersSocietyView(t *testing.T) {
+	// Stand up a fake hive operator projection server returning lifecycle roles
+	// + one approved pull_request.create authority decision.
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-06-05T10:00:00Z",
+			"source":"eventgraph",
+			"lifecycle":[
+				{"actor_id":"act-strategist","display_name":"strategist","role":"strategist","lifecycle_status":"active","updated_at":"2026-06-05T10:00:00Z"},
+				{"actor_id":"act-planner","display_name":"planner","role":"planner","lifecycle_status":"active","updated_at":"2026-06-05T10:01:00Z"},
+				{"actor_id":"act-implementer","display_name":"implementer","role":"implementer","lifecycle_status":"active","updated_at":"2026-06-05T10:02:00Z"},
+				{"actor_id":"act-reviewer","display_name":"reviewer","role":"reviewer","lifecycle_status":"active","updated_at":"2026-06-05T10:03:00Z"},
+				{"actor_id":"act-guardian","display_name":"guardian","role":"guardian","lifecycle_status":"active","updated_at":"2026-06-05T10:04:00Z"}
+			],
+			"authority_decisions":[
+				{"decision_id":"dec-001","request_id":"req-001","approver_actor":"act-human","outcome":"approved","approved_action":"pull_request.create","approved_target":"transpara-ai/docs","rationale":"reviewed","created_at":"2026-06-05T10:05:00Z"}
+			]
+		}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	// Evidence projection not needed for the role timeline; set to empty so it
+	// renders its unconfigured state without blocking the timeline.
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
+
+	// Use NewHandlers(nil,nil,nil) so this test runs without a database.
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+
+	// The seven canonical labels must all appear in the body.
+	labels := []string{"strategist", "planner", "implementer", "reviewer", "guardian", "human (Site approval)", "draft PR"}
+	for _, label := range labels {
+		if !strings.Contains(body, label) {
+			t.Fatalf("role timeline: body does not contain role label %q", label)
+		}
+	}
+
+	// They must appear IN ORDER (each label's index must be strictly increasing).
+	prev := -1
+	for _, label := range labels {
+		idx := strings.Index(body, label)
+		if idx <= prev {
+			t.Fatalf("role timeline: label %q appears at index %d, expected > %d (out of order)", label, idx, prev)
+		}
+		prev = idx
+	}
+
+	// Evidence surface must remain read-only (no mutation controls).
+	evidenceStart := strings.Index(body, "Society view")
+	if evidenceStart < 0 {
+		t.Fatal("role timeline: body does not contain 'Society view' header")
+	}
+	surface := body[evidenceStart:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	for _, forbidden := range []string{"<form", "<button", `method="post"`, `action="/ops/evidence"`, "Certify release", "Execute work"} {
+		if strings.Contains(surface, forbidden) {
+			t.Fatalf("role timeline: evidence surface contains mutation control %q", forbidden)
+		}
+	}
+
+	// The four guardrail strings must appear in the society-view surface.
+	for _, guardrail := range []string{
+		"Site does not write the graph or call GitHub",
+		"effect = none",
+		"EventGraph is truth",
+		"Site cannot certify",
+	} {
+		if !strings.Contains(surface, guardrail) {
+			t.Fatalf("role timeline: society view surface missing guardrail %q", guardrail)
+		}
+	}
 }
 
 func opsEvidenceFixtureWithoutProofOfWorkPacketJSON() string {

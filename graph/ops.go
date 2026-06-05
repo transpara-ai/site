@@ -30,6 +30,7 @@ type OpsPageData struct {
 	Title       string
 	Description string
 	Active      string
+	View        string // optional sub-view selector; "forensic" shows the full evidence tiers
 	Surfaces    []OpsSurface
 	EmbedURL    string
 	EmbedLabel  string
@@ -326,6 +327,17 @@ type OpsHiveKeyAuditTrace struct {
 	CreatedAt        string `json:"created_at"`
 }
 
+// OpsRoleTimelineRow is one row in the society-view role timeline.
+// Roles are displayed in the canonical civic order:
+//
+//	strategist → planner → implementer → reviewer → guardian → human (Site approval) → draft PR
+type OpsRoleTimelineRow struct {
+	Role   string // canonical role label (e.g. "strategist", "human (Site approval)", "draft PR")
+	Actors string // actor display names observed for this role, comma-separated; empty if none seen
+	Status string // lifecycle_status of the actor(s), or derived status for synthetic rows
+	Notes  string // additional context (e.g. approved action for the human row)
+}
+
 type OpsEvidenceData struct {
 	GeneratedAt        string
 	Source             string
@@ -344,6 +356,10 @@ type OpsEvidenceData struct {
 	MissingProvenance  []OpsEvidenceMissingProvenance
 	ProofOfWorkPacket  *OpsProofOfWorkPacket
 	Errors             []string
+	// RoleTimeline is the society view: order built by the civic roles.
+	// Built from the hive operator projection Lifecycle + AuthorityDecisions.
+	// Empty when HIVE_OPS_API_BASE_URL is not configured.
+	RoleTimeline []OpsRoleTimelineRow
 }
 
 type OpsDecisionData struct {
@@ -627,11 +643,24 @@ func (h *Handlers) handleOpsHiveResources(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
+	evidence := fetchOpsEvidence(r)
+	// Build the society-view role timeline from the hive operator projection.
+	// Failure is non-fatal: if the projection is unavailable, RoleTimeline holds
+	// all canonical rows in empty state (no actors/statuses).
+	if proj, err := fetchHiveOperatorProjection(r); err == nil {
+		evidence.RoleTimeline = buildOpsRoleTimeline(proj)
+		if proj.GeneratedAt != "" {
+			evidence.GeneratedAt = formatOpsTime(proj.GeneratedAt)
+		}
+	} else {
+		evidence.RoleTimeline = buildOpsRoleTimeline(nil)
+	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Evidence",
 		Description: "Read-only operator projection for FactoryOrder timeline, gate, release, audit, failure, repair, and provenance evidence.",
 		Active:      "evidence",
-		Evidence:    fetchOpsEvidence(r),
+		View:        strings.ToLower(strings.TrimSpace(r.URL.Query().Get("view"))),
+		Evidence:    evidence,
 	})
 }
 
@@ -1382,6 +1411,118 @@ func fetchHiveOperatorProjection(r *http.Request) (*OpsHiveProjection, error) {
 		return nil, err
 	}
 	return &projection, nil
+}
+
+// opsCanonicalRoles is the fixed civic-role order shown in the society view.
+// The last two rows ("human (Site approval)" and "draft PR") are synthetic: they
+// are not lifecycle actors but represent the Gate E approval and the resulting
+// draft PR action that flows from an approved pull_request.create decision.
+var opsCanonicalRoles = []string{
+	"strategist",
+	"planner",
+	"implementer",
+	"reviewer",
+	"guardian",
+	"human (Site approval)",
+	"draft PR",
+}
+
+// buildOpsRoleTimeline maps the hive operator projection's Lifecycle entries and
+// AuthorityDecisions into a role-grouped timeline in canonical civic order.
+//
+// Sources (read-only, no new external calls):
+//   - projection.Lifecycle — one entry per actor; actor.Role normalised to lower-case.
+//   - projection.AuthorityDecisions — for the "human (Site approval)" and "draft PR" rows.
+//
+// The "human (Site approval)" row is populated when any decision has
+// outcome == "approved" and approved_action == "pull_request.create".
+// The "draft PR" row immediately follows: its status is "pending" unless an
+// approved pull_request.create decision exists, in which case it is "approved".
+func buildOpsRoleTimeline(projection *OpsHiveProjection) []OpsRoleTimelineRow {
+	if projection == nil {
+		// Return all canonical rows in empty state.
+		rows := make([]OpsRoleTimelineRow, len(opsCanonicalRoles))
+		for i, role := range opsCanonicalRoles {
+			rows[i] = OpsRoleTimelineRow{Role: role}
+		}
+		return rows
+	}
+
+	// Index lifecycle entries by normalised role name (lower-case).
+	// Multiple actors can share a role; collect their display names.
+	type actorSummary struct {
+		names    []string
+		statuses []string
+	}
+	byRole := make(map[string]*actorSummary)
+	for _, lc := range projection.Lifecycle {
+		role := strings.ToLower(strings.TrimSpace(lc.Role))
+		if role == "" {
+			continue
+		}
+		if _, ok := byRole[role]; !ok {
+			byRole[role] = &actorSummary{}
+		}
+		name := lc.DisplayName
+		if name == "" {
+			name = lc.ActorID
+		}
+		byRole[role].names = append(byRole[role].names, name)
+		byRole[role].statuses = append(byRole[role].statuses, lc.LifecycleStatus)
+	}
+
+	// Look for an approved pull_request.create decision.
+	var prDecision *OpsHiveDecision
+	for i := range projection.AuthorityDecisions {
+		d := &projection.AuthorityDecisions[i]
+		if strings.ToLower(d.Outcome) == "approved" &&
+			strings.ToLower(d.ApprovedAction) == "pull_request.create" {
+			prDecision = d
+			break
+		}
+	}
+
+	rows := make([]OpsRoleTimelineRow, 0, len(opsCanonicalRoles))
+	for _, canonicalRole := range opsCanonicalRoles {
+		row := OpsRoleTimelineRow{Role: canonicalRole}
+
+		switch canonicalRole {
+		case "human (Site approval)":
+			if prDecision != nil {
+				row.Status = prDecision.Outcome
+				row.Actors = prDecision.ApproverActor
+				row.Notes = "approved_action: " + prDecision.ApprovedAction
+				if prDecision.ApprovedTarget != "" {
+					row.Notes += " → " + prDecision.ApprovedTarget
+				}
+			}
+
+		case "draft PR":
+			if prDecision != nil {
+				row.Status = "approved"
+				row.Notes = "pull_request.create approved — draft PR queued"
+			}
+
+		default:
+			// Match against lifecycle entries using the canonical role label.
+			// The canonical label IS the normalised role key (all lower-case).
+			if summary, ok := byRole[canonicalRole]; ok && len(summary.names) > 0 {
+				row.Actors = strings.Join(summary.names, ", ")
+				// Use the first (or only) lifecycle_status; if multiple,
+				// prefer "active" > anything else.
+				row.Status = summary.statuses[0]
+				for _, s := range summary.statuses {
+					if strings.ToLower(s) == "active" {
+						row.Status = s
+						break
+					}
+				}
+			}
+		}
+
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
