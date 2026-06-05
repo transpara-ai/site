@@ -2,6 +2,7 @@ package graph
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -824,38 +825,247 @@ func TestOpsDecisionLoadsRealPendingRequest(t *testing.T) {
 	assertOpsDecisionNoMutationControls(t, body)
 }
 
+func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
+	// Posts the REAL UI wire value (opsDecisionApprove = "approve") and asserts
+	// that Site normalises it to the hive-canonical past-tense form ("approved")
+	// before forwarding. Also covers the deny subtest.
+	//
+	// The re-render step calls /api/hive/operator-projection (GET); we track the
+	// governance POST separately.
+	newHiveSrv := func(t *testing.T) (srv *httptest.Server, path, auth, body *string) {
+		t.Helper()
+		var p, a, b string
+		path, auth, body = &p, &a, &b
+		srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				*path, *auth = r.URL.Path, r.Header.Get("Authorization")
+				bs, _ := io.ReadAll(r.Body)
+				*body = string(bs)
+			}
+			w.WriteHeader(http.StatusOK)
+			if r.Method == http.MethodGet {
+				_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+			}
+		}))
+		return srv, path, auth, body
+	}
+
+	t.Run("approve wire value normalised to approved", func(t *testing.T) {
+		srv, gotPath, gotAuth, gotBody := newHiveSrv(t)
+		defer srv.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+		t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+		h := testOpsDecisionHandlers()
+		mux := http.NewServeMux()
+		h.Register(mux)
+		// POST the real UI wire value ("approve"), not "approved".
+		form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionApprove + "&reason=reviewed")
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if *gotPath != "/api/hive/operator-decision" {
+			t.Fatalf("forwarded path = %q", *gotPath)
+		}
+		if *gotAuth != "Bearer secret" {
+			t.Fatalf("forwarded auth = %q", *gotAuth)
+		}
+		// Site must normalise "approve" → "approved" in the forwarded body.
+		if !strings.Contains(*gotBody, "req-civic-roles") || !strings.Contains(*gotBody, `"approved"`) {
+			t.Fatalf("forwarded body = %q; want req-civic-roles + \"approved\"", *gotBody)
+		}
+		if w.Code >= 400 {
+			t.Fatalf("site returned %d", w.Code)
+		}
+	})
+
+	t.Run("deny wire value normalised to denied", func(t *testing.T) {
+		srv, gotPath, _, gotBody := newHiveSrv(t)
+		defer srv.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+		t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+		h := testOpsDecisionHandlers()
+		mux := http.NewServeMux()
+		h.Register(mux)
+		// POST the real UI wire value ("deny"), not "denied".
+		form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionDeny + "&reason=insufficient+evidence")
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if *gotPath != "/api/hive/operator-decision" {
+			t.Fatalf("forwarded path = %q", *gotPath)
+		}
+		// Site must normalise "deny" → "denied" in the forwarded body.
+		if !strings.Contains(*gotBody, "req-civic-roles") || !strings.Contains(*gotBody, `"denied"`) {
+			t.Fatalf("forwarded body = %q; want req-civic-roles + \"denied\"", *gotBody)
+		}
+		if w.Code >= 400 {
+			t.Fatalf("site returned %d", w.Code)
+		}
+	})
+}
+
+// TestOpsDecisionButtonConstantsMatchHandler is a round-trip guard: it asserts
+// that opsDecisionActions()[0].WireValue (the approve button's emitted value)
+// equals opsDecisionApprove — the constant the handler switch also uses.
+// Any future vocabulary drift between the template data and the handler is caught here.
+func TestOpsDecisionButtonConstantsMatchHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision", nil)
+	actions := opsDecisionActions(req)
+	if len(actions) < 3 {
+		t.Fatalf("opsDecisionActions returned %d actions, want 3", len(actions))
+	}
+	if actions[0].WireValue != opsDecisionApprove {
+		t.Errorf("approve button WireValue = %q, want opsDecisionApprove = %q", actions[0].WireValue, opsDecisionApprove)
+	}
+	if actions[1].WireValue != opsDecisionDeny {
+		t.Errorf("deny button WireValue = %q, want opsDecisionDeny = %q", actions[1].WireValue, opsDecisionDeny)
+	}
+	if actions[2].WireValue != opsDecisionMoreEvidence {
+		t.Errorf("more-evidence button WireValue = %q, want opsDecisionMoreEvidence = %q", actions[2].WireValue, opsDecisionMoreEvidence)
+	}
+}
+
+func TestOpsDecisionRequestMoreEvidenceIsHandledLocally(t *testing.T) {
+	// Verify that submitting the real wire value (opsDecisionMoreEvidence =
+	// "request-more-evidence") does NOT call hive's /api/hive/operator-decision
+	// endpoint. The fake hive POST handler must not be hit; the page must show
+	// the "no decision recorded / more evidence" note.
+	hivePostHit := false
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			hivePostHit = true
+			w.WriteHeader(http.StatusBadRequest) // hive would 400 this value anyway
+			return
+		}
+		// GET /api/hive/operator-projection → minimal valid JSON for re-render.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	// POST the real UI wire value for more-evidence (not a made-up string).
+	form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionMoreEvidence + "&reason=need+more+evidence")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if hivePostHit {
+		t.Fatal("hive POST /api/hive/operator-decision was called for request-more-evidence — it must not be")
+	}
+	if w.Code >= 400 {
+		t.Fatalf("site returned %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"More evidence requested",
+		"no decision recorded",
+		"effect = none",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("response body does not contain %q; body: %s", want, body)
+		}
+	}
+}
+
 func testOpsDecisionHandlers() *Handlers {
 	return NewHandlers(nil, nil, nil)
 }
 
+// assertOpsDecisionNoMutationControls asserts the decision surface contains no EXECUTOR control
+// and that every HTML form action or formaction in the region targets ONLY /ops/decision.
+//
+// Region extraction: start from <main> (to exclude the <head> meta-description tags that also
+// contain the phrase "Gate E decision surface"), then find the heading text within that region.
+//
+// Denylist (executor/mutation phrases and GitHub API paths):
+//
+//	"Merge PR", "Deploy", "Access secret", "Activate capability", "Execute work",
+//	"api.github.com", "/repos/"
+//
+// Allowlist (every action= / formaction= attribute value in the region):
+//
+//	MUST be exactly "/ops/decision". Any other target — external URL, absolute
+//	http(s)://, or any other path — causes a test failure.
+//
+// External / absolute href and formaction values (http:// or https://) are also forbidden.
 func assertOpsDecisionNoMutationControls(t *testing.T, body string) {
 	t.Helper()
-	start := strings.Index(body, "Gate E decision surface")
-	if start < 0 {
-		t.Fatal("GET /ops/decision: could not locate decision surface")
+	// Narrow to the <main> body first so the <head> meta-description tags
+	// (which also contain "Gate E decision surface") don't pollute the check.
+	mainStart := strings.Index(body, "<main")
+	if mainStart < 0 {
+		mainStart = 0
 	}
-	decisionSurface := body[start:]
+	mainBody := body[mainStart:]
+	start := strings.Index(mainBody, "Gate E decision surface")
+	if start < 0 {
+		t.Fatal("/ops/decision: could not locate decision surface inside <main>")
+	}
+	decisionSurface := mainBody[start:]
 	if end := strings.Index(decisionSurface, "</main>"); end >= 0 {
 		decisionSurface = decisionSurface[:end]
 	}
-	for _, forbidden := range []string{
-		"<form",
-		"<button",
-		`method="post"`,
-		`action="/ops/decision"`,
-		`formaction="/ops/decision"`,
-		`hx-post="/ops/decision"`,
-		`hx-put="/ops/decision"`,
-		`hx-patch="/ops/decision"`,
-		`hx-delete="/ops/decision"`,
+
+	// Denylist: executor control phrases and GitHub API paths.
+	forbidden := []string{
 		"Merge PR",
 		"Deploy",
 		"Access secret",
 		"Activate capability",
 		"Execute work",
-	} {
-		if strings.Contains(decisionSurface, forbidden) {
-			t.Fatalf("GET /ops/decision surface contains mutation control marker %q", forbidden)
+		"api.github.com",
+		"/repos/", // no GitHub mutation target on the console
+	}
+	for _, f := range forbidden {
+		if strings.Contains(decisionSurface, f) {
+			t.Fatalf("decision surface must not contain executor control %q", f)
+		}
+	}
+
+	// Governance posture invariant.
+	if !strings.Contains(decisionSurface, "effect = none") {
+		t.Fatalf("decision surface must still declare effect = none")
+	}
+
+	// Allowlist: every action="..." and formaction="..." must be exactly /ops/decision.
+	// No external URLs, no absolute http(s):// targets, no other paths permitted.
+	for _, attrPrefix := range []string{`action="`, `formaction="`} {
+		search := decisionSurface
+		for {
+			idx := strings.Index(search, attrPrefix)
+			if idx < 0 {
+				break
+			}
+			rest := search[idx+len(attrPrefix):]
+			end := strings.IndexByte(rest, '"')
+			if end < 0 {
+				break
+			}
+			val := rest[:end]
+			if val != "/ops/decision" {
+				t.Fatalf("decision surface contains disallowed %s%s\" (only /ops/decision is permitted)", attrPrefix, val)
+			}
+			search = rest[end+1:]
+		}
+	}
+
+	// No external / absolute href or formaction values (http:// or https://).
+	for _, absPrefix := range []string{`href="http://`, `href="https://`, `formaction="http://`, `formaction="https://`} {
+		if strings.Contains(decisionSurface, absPrefix) {
+			t.Fatalf("decision surface contains absolute/external link or action starting with %q", absPrefix)
 		}
 	}
 }

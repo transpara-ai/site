@@ -120,21 +120,23 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 			<div class="p-4 space-y-3">
 				<p class="text-sm text-warm-muted leading-relaxed">Site does not directly execute work, produce protected side effects, rely on policy-adapter decisions, run runner/worktree protected execution, or grant production autonomy.</p>
 				<p class="text-sm text-warm-muted leading-relaxed">It also does not produce ExecutionReceipt production output or rely on policy-bundle evidence.</p>
-				<div class="grid gap-3 md:grid-cols-3">
+				<form method="post" action="/ops/decision" class="grid gap-3 md:grid-cols-3">
+					<input type="hidden" name="request_id" value={ d.RequestID }/>
 					for _, action := range d.Actions {
-						<a href={ templ.SafeURL(action.Href) } class={ "border rounded-lg p-3 min-h-[8rem] transition-colors flex flex-col",
+						<div class={ "border rounded-lg p-3 min-h-[8rem] flex flex-col",
 							templ.KV("border-brand/40 bg-brand/10", action.WireValue == d.RequestedAction),
-							templ.KV("border-edge bg-void/20 hover:border-brand/30 hover:bg-elevated/50", action.WireValue != d.RequestedAction) }
+							templ.KV("border-edge bg-void/20", action.WireValue != d.RequestedAction) }
 						>
 							<div class="flex items-start justify-between gap-3">
 								<h3 class="text-sm font-medium text-warm">{ action.Label }</h3>
-								<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">effect none</span>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">effect = none</span>
 							</div>
 							<p class="text-xs text-warm-muted mt-3 leading-relaxed flex-1">{ action.Description }</p>
-							<p class="text-[11px] text-warm-faint mt-3">requested_action: { action.WireValue }</p>
-						</a>
+							<p class="text-[11px] text-warm-faint mt-2">requested_action: { action.WireValue }</p>
+							<button name="decision" value={ action.WireValue } class="mt-3 w-full text-xs px-3 py-2 rounded-md border border-brand/40 bg-brand/10 text-brand hover:bg-brand/20 transition-colors">{ action.Label }</button>
+						</div>
 					}
-				</div>
+				</form>
 			</div>
 		</section>
 		<div class="grid gap-4 lg:grid-cols-[1fr_1fr]">

@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -365,10 +366,22 @@ type OpsDecisionData struct {
 	BoundaryChecks      []OpsDecisionPosture
 }
 
+// opsDecisionApprove, opsDecisionDeny, opsDecisionMoreEvidence are the canonical
+// wire values emitted by the decision form buttons and tested by the submit handler.
+// Using shared constants ensures the UI and handler can never drift independently.
+//
+//   - opsDecisionApprove / opsDecisionDeny are forwarded to hive normalised to the
+//     hive-canonical past-tense form ("approved" / "denied").
+//   - opsDecisionMoreEvidence is handled locally; hive is never called.
+const (
+	opsDecisionApprove      = "approve"
+	opsDecisionDeny         = "deny"
+	opsDecisionMoreEvidence = "request-more-evidence"
+)
+
 type OpsDecisionAction struct {
 	Label       string
 	WireValue   string
-	Href        string
 	Description string
 }
 
@@ -628,6 +641,122 @@ func (h *Handlers) handleOpsDecision(w http.ResponseWriter, r *http.Request) {
 		Description: "Non-executing Gate E decision surface for bounded approve, deny, and request-more-evidence envelopes.",
 		Active:      "decision",
 		Decision:    buildOpsDecisionData(r),
+	})
+}
+
+// handleOpsDecisionSubmit forwards the operator's approve/deny to hive and
+// re-renders the decision surface with a confirmation or error.
+// Site emits a GOVERNANCE POST only — it never calls GitHub or writes the graph.
+//
+// Only "approved" and "denied" are forwarded to hive; hive's operator-decision
+// endpoint accepts only those two values and returns 400 on anything else.
+// "request-more-evidence" (and any unrecognised value) is handled LOCALLY:
+// Site re-renders the decision page with a note that no decision was recorded.
+// Requesting more evidence is not a recordable governance decision.
+func (h *Handlers) handleOpsDecisionSubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	requestID := strings.TrimSpace(r.FormValue("request_id"))
+	decision := strings.TrimSpace(r.FormValue("decision"))
+	reason := strings.TrimSpace(r.FormValue("reason"))
+	approver := strings.TrimSpace(r.FormValue("approver"))
+
+	// Normalise the UI wire value to the hive-canonical past-tense form.
+	// opsDecisionApprove ("approve") → hive receives "approved"
+	// opsDecisionDeny ("deny")       → hive receives "denied"
+	// Anything else (including opsDecisionMoreEvidence) is handled locally;
+	// hive only accepts "approved" / "denied" and would 400 on anything else.
+	var hiveDecision string
+	switch decision {
+	case opsDecisionApprove:
+		hiveDecision = "approved"
+	case opsDecisionDeny:
+		hiveDecision = "denied"
+	default:
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, decision, "more-evidence-local")
+		return
+	}
+
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "HIVE_OPS_API_BASE_URL is not configured")
+		return
+	}
+	apiKey := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY"))
+
+	// Build the governance POST body (JSON — matches hive contract).
+	// Use hiveDecision (past-tense canonical) rather than the UI wire value.
+	payload := map[string]string{
+		"request_id": requestID,
+		"decision":   hiveDecision,
+		"approver":   approver,
+		"reason":     reason,
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "internal error marshalling request: "+err.Error())
+		return
+	}
+
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/operator-decision"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "could not build hive request: "+err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "hive unreachable: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", fmt.Sprintf("hive returned %s", resp.Status))
+		return
+	}
+
+	h.renderOpsDecisionWithConfirmation(w, r, requestID, hiveDecision, "")
+}
+
+// renderOpsDecisionWithConfirmation re-renders the decision surface with either
+// a "decision recorded" confirmation, a local evidence-request note, or an error
+// message. effect = none is preserved in all cases.
+//
+// errMsg sentinel values:
+//
+//	""                  → success: governance POST forwarded for approved/denied.
+//	"more-evidence-local" → request-more-evidence handled locally; hive NOT called.
+//	anything else       → governance POST failed; show error.
+func (h *Handlers) renderOpsDecisionWithConfirmation(w http.ResponseWriter, r *http.Request, requestID, decision, errMsg string) {
+	// Rebuild the display data from the real pending request (or fallback).
+	var data *OpsDecisionData
+	if requestID != "" {
+		data = buildOpsDecisionDataFromProjection(r, requestID)
+	} else {
+		data = buildOpsDecisionData(r)
+	}
+	switch errMsg {
+	case "":
+		data.OperatorSummary = "Decision recorded on the graph by hive. Governance POST forwarded: decision=" + decision + ". Site remains display console; effect = none."
+	case "more-evidence-local":
+		// request-more-evidence is not a recordable governance decision; hive was NOT called.
+		data.OperatorSummary = "More evidence requested — no decision recorded. Site handled this locally; hive was not called. effect = none."
+	default:
+		data.OperatorSummary = "Governance POST failed: " + errMsg + " (effect = none; no downstream action taken)"
+		data.BlockedReasons = append(data.BlockedReasons, errMsg)
+	}
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Decision boundary",
+		Description: "Non-executing Gate E decision surface for bounded approve, deny, and request-more-evidence envelopes.",
+		Active:      "decision",
+		Decision:    data,
 	})
 }
 
@@ -1003,36 +1132,20 @@ func opsDecisionActions(r *http.Request) []OpsDecisionAction {
 	return []OpsDecisionAction{
 		{
 			Label:       "Approve",
-			WireValue:   "approve",
-			Href:        opsDecisionActionURL(r, "approve"),
+			WireValue:   opsDecisionApprove,
 			Description: "Displays an approval envelope for review with effect = none.",
 		},
 		{
 			Label:       "Deny",
-			WireValue:   "deny",
-			Href:        opsDecisionActionURL(r, "deny"),
+			WireValue:   opsDecisionDeny,
 			Description: "Displays a denial envelope for review with effect = none.",
 		},
 		{
 			Label:       "Request more evidence",
-			WireValue:   "request-more-evidence",
-			Href:        opsDecisionActionURL(r, "request-more-evidence"),
+			WireValue:   opsDecisionMoreEvidence,
 			Description: "Displays an evidence request envelope for review with effect = none.",
 		},
 	}
-}
-
-func opsDecisionActionURL(r *http.Request, action string) string {
-	q := url.Values{}
-	if profile := strings.TrimSpace(r.URL.Query().Get("profile")); profile != "" {
-		q.Set("profile", profile)
-	}
-	q.Set("action", action)
-	q.Set("target_type", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_type")), "pull_request"))
-	q.Set("repo", opsValueOr(strings.TrimSpace(r.URL.Query().Get("repo")), "transpara-ai/site"))
-	q.Set("target_ref", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_ref")), "pr://transpara-ai/site/review-environment"))
-	q.Set("reason", opsValueOr(strings.TrimSpace(r.URL.Query().Get("reason")), "Operator review remains inside the non-executing Gate E boundary."))
-	return "/ops/decision?" + q.Encode()
 }
 
 func opsDecisionHash(seed string) string {
