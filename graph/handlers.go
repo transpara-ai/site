@@ -363,8 +363,13 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/work", h.writeWrap(h.handleOpsWork))
 	mux.Handle("GET /ops/telemetry", h.writeWrap(h.handleOpsTelemetry))
 	mux.Handle("GET /ops/hive", h.writeWrap(h.handleOpsHive))
+	mux.Handle("GET /ops/hive/intake", h.writeWrap(h.handleOpsHiveIntake))
+	mux.Handle("GET /ops/hive/runs", h.writeWrap(h.handleOpsHiveRuns))
+	mux.Handle("GET /ops/hive/agents", h.writeWrap(h.handleOpsHiveAgents))
+	mux.Handle("GET /ops/hive/resources", h.writeWrap(h.handleOpsHiveResources))
 	mux.Handle("GET /ops/evidence", h.writeWrap(h.handleOpsEvidence))
 	mux.Handle("GET /ops/decision", h.writeWrap(h.handleOpsDecision))
+	mux.Handle("POST /ops/decision", h.writeWrap(h.handleOpsDecisionSubmit))
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
 }
 

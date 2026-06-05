@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -213,6 +215,62 @@ func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 	if !strings.Contains(body, "Public live build") {
 		t.Fatal("GET /ops/hive: body does not link to the public /hive live-build page")
 	}
+	for _, want := range []string{`href="/ops/hive/intake"`, `href="/ops/hive/runs"`, `href="/ops/hive/agents"`, `href="/ops/hive/resources"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain child route link %q", want)
+		}
+	}
+}
+
+func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	tests := []struct {
+		path string
+		want []string
+	}{
+		{
+			path: "/ops/hive/intake?profile=transpara",
+			want: []string{"Hive intake", "Source input", "Live interpretation", "checkout-redesign.md"},
+		},
+		{
+			path: "/ops/hive/runs?profile=transpara",
+			want: []string{"Hive runs", "Run tower", "run_static_001", "Build onboarding control surface"},
+		},
+		{
+			path: "/ops/hive/agents?profile=transpara",
+			want: []string{"Hive agents", "Agent topology", "guardian", "architect"},
+		},
+		{
+			path: "/ops/hive/resources?profile=transpara",
+			want: []string{"Hive resources", "Run budget", "Approval queue", "Read-only mode"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "http://site.test"+tt.path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s: status = %d, want 200; body: %s", tt.path, w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, want := range tt.want {
+				if !strings.Contains(body, want) {
+					t.Fatalf("GET %s: body does not contain %q", tt.path, want)
+				}
+			}
+			for _, forbidden := range []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"} {
+				if strings.Contains(body, forbidden) {
+					t.Fatalf("GET %s: body contains forbidden %q", tt.path, forbidden)
+				}
+			}
+		})
+	}
 }
 
 func TestFetchOpsHiveOperatorProjection(t *testing.T) {
@@ -419,7 +477,7 @@ func TestHandleOpsEvidenceRendersReadOnlyProjection(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -499,7 +557,7 @@ func TestHandleOpsEvidenceUnconfiguredRendersEmptyState(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -524,7 +582,7 @@ func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara&view=forensic", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
@@ -737,38 +795,314 @@ func TestHandleOpsDecisionFailsClosedForMissingMalformedAndForbiddenScope(t *tes
 	}
 }
 
+func TestOpsDecisionLoadsRealPendingRequest(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"source": "eventgraph",
+			"pending_approvals": []map[string]any{{
+				"event_id": "ev1", "request_id": "req-civic-roles", "requesting_actor": "guardian",
+				"action_name": "pull_request.create", "target": "transpara-ai/docs codex/civic-roles",
+				"justification": "Draft PR for civic-roles.md", "created_at": "2026-06-05T12:00:00Z",
+			}},
+		})
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?request_id=req-civic-roles", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	for _, want := range []string{"pull_request.create", "codex/civic-roles", "Draft PR for civic-roles.md"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("decision page missing %q", want)
+		}
+	}
+	assertOpsDecisionNoMutationControls(t, body)
+}
+
+// TestOpsDecisionRejectsNonDraftPRRequest verifies the Gate-E decision surface
+// governs ONLY pull_request.create (Codex P1-a). A pending request for any other
+// protected action must render as blocked (effect none) and must NOT be
+// mislabeled as an approvable pull_request — previously
+// buildOpsDecisionDataFromProjection hardcoded TargetType:"pull_request" for any
+// pending action.
+func TestOpsDecisionRejectsNonDraftPRRequest(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"source": "eventgraph",
+			"pending_approvals": []map[string]any{{
+				"event_id": "ev1", "request_id": "req-spawn", "requesting_actor": "guardian",
+				"action_name": "agent.spawn.persistent", "target": "builder",
+				"justification": "persistent identity trial", "created_at": "2026-06-05T12:00:00Z",
+			}},
+		})
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?request_id=req-spawn", nil)
+	data := buildOpsDecisionDataFromProjection(req, "req-spawn")
+
+	if data.Status != "blocked" {
+		t.Fatalf("Status = %q, want blocked (a non-draft-PR action must not be approvable here)", data.Status)
+	}
+	if data.Effect != "none" {
+		t.Fatalf("Effect = %q, want none", data.Effect)
+	}
+	if data.TargetType == "pull_request" {
+		t.Fatalf("TargetType = %q: a non-pull_request.create action must not be mislabeled as a pull_request", data.TargetType)
+	}
+	if len(data.BlockedReasons) == 0 {
+		t.Fatal("BlockedReasons is empty, want a reason explaining the action is out of scope")
+	}
+}
+
+func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
+	// Posts the REAL UI wire value (opsDecisionApprove = "approve") and asserts
+	// that Site normalises it to the hive-canonical past-tense form ("approved")
+	// before forwarding. Also covers the deny subtest.
+	//
+	// The re-render step calls /api/hive/operator-projection (GET); we track the
+	// governance POST separately.
+	newHiveSrv := func(t *testing.T) (srv *httptest.Server, path, auth, body *string) {
+		t.Helper()
+		var p, a, b string
+		path, auth, body = &p, &a, &b
+		srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				*path, *auth = r.URL.Path, r.Header.Get("Authorization")
+				bs, _ := io.ReadAll(r.Body)
+				*body = string(bs)
+			}
+			w.WriteHeader(http.StatusOK)
+			if r.Method == http.MethodGet {
+				_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+			}
+		}))
+		return srv, path, auth, body
+	}
+
+	t.Run("approve wire value normalised to approved", func(t *testing.T) {
+		srv, gotPath, gotAuth, gotBody := newHiveSrv(t)
+		defer srv.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+		t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+		h := testOpsDecisionHandlers()
+		mux := http.NewServeMux()
+		h.Register(mux)
+		// POST the real UI wire value ("approve"), not "approved".
+		form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionApprove + "&reason=reviewed")
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if *gotPath != "/api/hive/operator-decision" {
+			t.Fatalf("forwarded path = %q", *gotPath)
+		}
+		if *gotAuth != "Bearer secret" {
+			t.Fatalf("forwarded auth = %q", *gotAuth)
+		}
+		// Site must normalise "approve" → "approved" in the forwarded body.
+		if !strings.Contains(*gotBody, "req-civic-roles") || !strings.Contains(*gotBody, `"approved"`) {
+			t.Fatalf("forwarded body = %q; want req-civic-roles + \"approved\"", *gotBody)
+		}
+		if w.Code >= 400 {
+			t.Fatalf("site returned %d", w.Code)
+		}
+	})
+
+	t.Run("deny wire value normalised to denied", func(t *testing.T) {
+		srv, gotPath, _, gotBody := newHiveSrv(t)
+		defer srv.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+		t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+		h := testOpsDecisionHandlers()
+		mux := http.NewServeMux()
+		h.Register(mux)
+		// POST the real UI wire value ("deny"), not "denied".
+		form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionDeny + "&reason=insufficient+evidence")
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if *gotPath != "/api/hive/operator-decision" {
+			t.Fatalf("forwarded path = %q", *gotPath)
+		}
+		// Site must normalise "deny" → "denied" in the forwarded body.
+		if !strings.Contains(*gotBody, "req-civic-roles") || !strings.Contains(*gotBody, `"denied"`) {
+			t.Fatalf("forwarded body = %q; want req-civic-roles + \"denied\"", *gotBody)
+		}
+		if w.Code >= 400 {
+			t.Fatalf("site returned %d", w.Code)
+		}
+	})
+}
+
+// TestOpsDecisionButtonConstantsMatchHandler is a round-trip guard: it asserts
+// that opsDecisionActions()[0].WireValue (the approve button's emitted value)
+// equals opsDecisionApprove — the constant the handler switch also uses.
+// Any future vocabulary drift between the template data and the handler is caught here.
+func TestOpsDecisionButtonConstantsMatchHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision", nil)
+	actions := opsDecisionActions(req)
+	if len(actions) < 3 {
+		t.Fatalf("opsDecisionActions returned %d actions, want 3", len(actions))
+	}
+	if actions[0].WireValue != opsDecisionApprove {
+		t.Errorf("approve button WireValue = %q, want opsDecisionApprove = %q", actions[0].WireValue, opsDecisionApprove)
+	}
+	if actions[1].WireValue != opsDecisionDeny {
+		t.Errorf("deny button WireValue = %q, want opsDecisionDeny = %q", actions[1].WireValue, opsDecisionDeny)
+	}
+	if actions[2].WireValue != opsDecisionMoreEvidence {
+		t.Errorf("more-evidence button WireValue = %q, want opsDecisionMoreEvidence = %q", actions[2].WireValue, opsDecisionMoreEvidence)
+	}
+}
+
+func TestOpsDecisionRequestMoreEvidenceIsHandledLocally(t *testing.T) {
+	// Verify that submitting the real wire value (opsDecisionMoreEvidence =
+	// "request-more-evidence") does NOT call hive's /api/hive/operator-decision
+	// endpoint. The fake hive POST handler must not be hit; the page must show
+	// the "no decision recorded / more evidence" note.
+	hivePostHit := false
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			hivePostHit = true
+			w.WriteHeader(http.StatusBadRequest) // hive would 400 this value anyway
+			return
+		}
+		// GET /api/hive/operator-projection → minimal valid JSON for re-render.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	// POST the real UI wire value for more-evidence (not a made-up string).
+	form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionMoreEvidence + "&reason=need+more+evidence")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if hivePostHit {
+		t.Fatal("hive POST /api/hive/operator-decision was called for request-more-evidence — it must not be")
+	}
+	if w.Code >= 400 {
+		t.Fatalf("site returned %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"More evidence requested",
+		"no decision recorded",
+		"effect = none",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("response body does not contain %q; body: %s", want, body)
+		}
+	}
+}
+
 func testOpsDecisionHandlers() *Handlers {
 	return NewHandlers(nil, nil, nil)
 }
 
+// assertOpsDecisionNoMutationControls asserts the decision surface contains no EXECUTOR control
+// and that every HTML form action or formaction in the region targets ONLY /ops/decision.
+//
+// Region extraction: start from <main> (to exclude the <head> meta-description tags that also
+// contain the phrase "Gate E decision surface"), then find the heading text within that region.
+//
+// Denylist (executor/mutation phrases and GitHub API paths):
+//
+//	"Merge PR", "Deploy", "Access secret", "Activate capability", "Execute work",
+//	"api.github.com", "/repos/"
+//
+// Allowlist (every action= / formaction= attribute value in the region):
+//
+//	MUST be exactly "/ops/decision". Any other target — external URL, absolute
+//	http(s)://, or any other path — causes a test failure.
+//
+// External / absolute href and formaction values (http:// or https://) are also forbidden.
 func assertOpsDecisionNoMutationControls(t *testing.T, body string) {
 	t.Helper()
-	start := strings.Index(body, "Gate E decision surface")
-	if start < 0 {
-		t.Fatal("GET /ops/decision: could not locate decision surface")
+	// Narrow to the <main> body first so the <head> meta-description tags
+	// (which also contain "Gate E decision surface") don't pollute the check.
+	mainStart := strings.Index(body, "<main")
+	if mainStart < 0 {
+		mainStart = 0
 	}
-	decisionSurface := body[start:]
+	mainBody := body[mainStart:]
+	start := strings.Index(mainBody, "Gate E decision surface")
+	if start < 0 {
+		t.Fatal("/ops/decision: could not locate decision surface inside <main>")
+	}
+	decisionSurface := mainBody[start:]
 	if end := strings.Index(decisionSurface, "</main>"); end >= 0 {
 		decisionSurface = decisionSurface[:end]
 	}
-	for _, forbidden := range []string{
-		"<form",
-		"<button",
-		`method="post"`,
-		`action="/ops/decision"`,
-		`formaction="/ops/decision"`,
-		`hx-post="/ops/decision"`,
-		`hx-put="/ops/decision"`,
-		`hx-patch="/ops/decision"`,
-		`hx-delete="/ops/decision"`,
+
+	// Denylist: executor control phrases and GitHub API paths.
+	forbidden := []string{
 		"Merge PR",
 		"Deploy",
 		"Access secret",
 		"Activate capability",
 		"Execute work",
-	} {
-		if strings.Contains(decisionSurface, forbidden) {
-			t.Fatalf("GET /ops/decision surface contains mutation control marker %q", forbidden)
+		"api.github.com",
+		"/repos/", // no GitHub mutation target on the console
+	}
+	for _, f := range forbidden {
+		if strings.Contains(decisionSurface, f) {
+			t.Fatalf("decision surface must not contain executor control %q", f)
+		}
+	}
+
+	// Governance posture invariant.
+	if !strings.Contains(decisionSurface, "effect = none") {
+		t.Fatalf("decision surface must still declare effect = none")
+	}
+
+	// Allowlist: every action="..." and formaction="..." must be exactly /ops/decision.
+	// No external URLs, no absolute http(s):// targets, no other paths permitted.
+	for _, attrPrefix := range []string{`action="`, `formaction="`} {
+		search := decisionSurface
+		for {
+			idx := strings.Index(search, attrPrefix)
+			if idx < 0 {
+				break
+			}
+			rest := search[idx+len(attrPrefix):]
+			end := strings.IndexByte(rest, '"')
+			if end < 0 {
+				break
+			}
+			val := rest[:end]
+			if val != "/ops/decision" {
+				t.Fatalf("decision surface contains disallowed %s%s\" (only /ops/decision is permitted)", attrPrefix, val)
+			}
+			search = rest[end+1:]
+		}
+	}
+
+	// No external / absolute href or formaction values (http:// or https://).
+	for _, absPrefix := range []string{`href="http://`, `href="https://`, `formaction="http://`, `formaction="https://`} {
+		if strings.Contains(decisionSurface, absPrefix) {
+			t.Fatalf("decision surface contains absolute/external link or action starting with %q", absPrefix)
 		}
 	}
 }
@@ -807,6 +1141,92 @@ func opsEvidenceFixtureJSON() string {
 		},
 		"errors":[]
 	}`
+}
+
+func TestOpsRoleTimelineRendersSocietyView(t *testing.T) {
+	// Stand up a fake hive operator projection server returning lifecycle roles
+	// + one approved pull_request.create authority decision.
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-06-05T10:00:00Z",
+			"source":"eventgraph",
+			"lifecycle":[
+				{"actor_id":"act-strategist","display_name":"strategist","role":"strategist","lifecycle_status":"active","updated_at":"2026-06-05T10:00:00Z"},
+				{"actor_id":"act-planner","display_name":"planner","role":"planner","lifecycle_status":"active","updated_at":"2026-06-05T10:01:00Z"},
+				{"actor_id":"act-implementer","display_name":"implementer","role":"implementer","lifecycle_status":"active","updated_at":"2026-06-05T10:02:00Z"},
+				{"actor_id":"act-reviewer","display_name":"reviewer","role":"reviewer","lifecycle_status":"active","updated_at":"2026-06-05T10:03:00Z"},
+				{"actor_id":"act-guardian","display_name":"guardian","role":"guardian","lifecycle_status":"active","updated_at":"2026-06-05T10:04:00Z"}
+			],
+			"authority_decisions":[
+				{"decision_id":"dec-001","request_id":"req-001","approver_actor":"act-human","outcome":"approved","approved_action":"pull_request.create","approved_target":"transpara-ai/docs","rationale":"reviewed","created_at":"2026-06-05T10:05:00Z"}
+			]
+		}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	// Evidence projection not needed for the role timeline; set to empty so it
+	// renders its unconfigured state without blocking the timeline.
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
+
+	// Use NewHandlers(nil,nil,nil) so this test runs without a database.
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+
+	// The seven canonical labels must all appear in the body.
+	labels := []string{"strategist", "planner", "implementer", "reviewer", "guardian", "human (Site approval)", "draft PR"}
+	for _, label := range labels {
+		if !strings.Contains(body, label) {
+			t.Fatalf("role timeline: body does not contain role label %q", label)
+		}
+	}
+
+	// They must appear IN ORDER (each label's index must be strictly increasing).
+	prev := -1
+	for _, label := range labels {
+		idx := strings.Index(body, label)
+		if idx <= prev {
+			t.Fatalf("role timeline: label %q appears at index %d, expected > %d (out of order)", label, idx, prev)
+		}
+		prev = idx
+	}
+
+	// Evidence surface must remain read-only (no mutation controls).
+	evidenceStart := strings.Index(body, "Society view")
+	if evidenceStart < 0 {
+		t.Fatal("role timeline: body does not contain 'Society view' header")
+	}
+	surface := body[evidenceStart:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	for _, forbidden := range []string{"<form", "<button", `method="post"`, `action="/ops/evidence"`, "Certify release", "Execute work"} {
+		if strings.Contains(surface, forbidden) {
+			t.Fatalf("role timeline: evidence surface contains mutation control %q", forbidden)
+		}
+	}
+
+	// The four guardrail strings must appear in the society-view surface.
+	for _, guardrail := range []string{
+		"Site does not write the graph or call GitHub",
+		"effect = none",
+		"EventGraph is truth",
+		"Site cannot certify",
+	} {
+		if !strings.Contains(surface, guardrail) {
+			t.Fatalf("role timeline: society view surface missing guardrail %q", guardrail)
+		}
+	}
 }
 
 func opsEvidenceFixtureWithoutProofOfWorkPacketJSON() string {

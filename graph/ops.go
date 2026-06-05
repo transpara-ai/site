@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,15 +30,84 @@ type OpsPageData struct {
 	Title       string
 	Description string
 	Active      string
+	View        string // optional sub-view selector; "forensic" shows the full evidence tiers
 	Surfaces    []OpsSurface
 	EmbedURL    string
 	EmbedLabel  string
 	Telemetry   *OpsTelemetryData
 	Work        *OpsWorkData
 	Hive        *OpsHiveData
+	HiveShell   *OpsHiveShellData
 	Evidence    *OpsEvidenceData
 	Decision    *OpsDecisionData
 	LegacyURL   string
+}
+
+type OpsHiveShellData struct {
+	Active    string
+	Intake    OpsHiveIntakeView
+	Runs      []OpsHiveRunView
+	Agents    []OpsHiveAgentView
+	Resources []OpsHiveResourceView
+}
+
+type OpsHiveShellCard struct {
+	ID          string
+	Label       string
+	Href        string
+	Description string
+	Status      string
+}
+
+type OpsHiveSourceView struct {
+	Kind   string
+	Title  string
+	Detail string
+	Status string
+}
+
+type OpsHiveMissingFieldView struct {
+	Label  string
+	Detail string
+	Status string
+}
+
+type OpsHiveIntakeView struct {
+	Status          string
+	Confidence      string
+	SuggestedMode   string
+	AuthorityLevel  string
+	EstimatedBudget string
+	Sources         []OpsHiveSourceView
+	MissingFields   []OpsHiveMissingFieldView
+}
+
+type OpsHiveRunView struct {
+	ID        string
+	Title     string
+	Status    string
+	Guardian  string
+	Budget    string
+	Phase     string
+	Approvals int
+	Artifacts int
+	UpdatedAt string
+}
+
+type OpsHiveAgentView struct {
+	Name      string
+	Role      string
+	State     string
+	Budget    string
+	LastEvent string
+}
+
+type OpsHiveResourceView struct {
+	Label  string
+	Used   string
+	Limit  string
+	Status string
+	Detail string
 }
 
 type OpsTelemetryData struct {
@@ -257,6 +327,17 @@ type OpsHiveKeyAuditTrace struct {
 	CreatedAt        string `json:"created_at"`
 }
 
+// OpsRoleTimelineRow is one row in the society-view role timeline.
+// Roles are displayed in the canonical civic order:
+//
+//	strategist → planner → implementer → reviewer → guardian → human (Site approval) → draft PR
+type OpsRoleTimelineRow struct {
+	Role   string // canonical role label (e.g. "strategist", "human (Site approval)", "draft PR")
+	Actors string // actor display names observed for this role, comma-separated; empty if none seen
+	Status string // lifecycle_status of the actor(s), or derived status for synthetic rows
+	Notes  string // additional context (e.g. approved action for the human row)
+}
+
 type OpsEvidenceData struct {
 	GeneratedAt        string
 	Source             string
@@ -275,12 +356,17 @@ type OpsEvidenceData struct {
 	MissingProvenance  []OpsEvidenceMissingProvenance
 	ProofOfWorkPacket  *OpsProofOfWorkPacket
 	Errors             []string
+	// RoleTimeline is the society view: order built by the civic roles.
+	// Built from the hive operator projection Lifecycle + AuthorityDecisions.
+	// Empty when HIVE_OPS_API_BASE_URL is not configured.
+	RoleTimeline []OpsRoleTimelineRow
 }
 
 type OpsDecisionData struct {
 	AuthorizationSource string
 	CorrelationID       string
 	TraceID             string
+	RequestID           string
 	RequestedAction     string
 	DecisionReason      string
 	TargetType          string
@@ -296,10 +382,22 @@ type OpsDecisionData struct {
 	BoundaryChecks      []OpsDecisionPosture
 }
 
+// opsDecisionApprove, opsDecisionDeny, opsDecisionMoreEvidence are the canonical
+// wire values emitted by the decision form buttons and tested by the submit handler.
+// Using shared constants ensures the UI and handler can never drift independently.
+//
+//   - opsDecisionApprove / opsDecisionDeny are forwarded to hive normalised to the
+//     hive-canonical past-tense form ("approved" / "denied").
+//   - opsDecisionMoreEvidence is handled locally; hive is never called.
+const (
+	opsDecisionApprove      = "approve"
+	opsDecisionDeny         = "deny"
+	opsDecisionMoreEvidence = "request-more-evidence"
+)
+
 type OpsDecisionAction struct {
 	Label       string
 	WireValue   string
-	Href        string
 	Description string
 }
 
@@ -508,12 +606,61 @@ func (h *Handlers) handleOpsHive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive intake",
+		Description: "Static Site-owned intake shell for source capture, interpretation, and launch readiness.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("intake"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveRuns(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive runs",
+		Description: "Static Site-owned run tower with sample pipeline, approval, artifact, and Guardian state.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("runs"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveAgents(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive agents",
+		Description: "Static Site-owned agent topology with sample roles, lifecycle state, and budget posture.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("agents"),
+	})
+}
+
+func (h *Handlers) handleOpsHiveResources(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive resources",
+		Description: "Static Site-owned resource dashboard with sample budget, queue, and capacity signals.",
+		Active:      "hive",
+		HiveShell:   buildOpsHiveShellData("resources"),
+	})
+}
+
 func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
+	evidence := fetchOpsEvidence(r)
+	// Build the society-view role timeline from the hive operator projection.
+	// Failure is non-fatal: if the projection is unavailable, RoleTimeline holds
+	// all canonical rows in empty state (no actors/statuses).
+	if proj, err := fetchHiveOperatorProjection(r); err == nil {
+		evidence.RoleTimeline = buildOpsRoleTimeline(proj)
+		if proj.GeneratedAt != "" {
+			evidence.GeneratedAt = formatOpsTime(proj.GeneratedAt)
+		}
+	} else {
+		evidence.RoleTimeline = buildOpsRoleTimeline(nil)
+	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Evidence",
 		Description: "Read-only operator projection for FactoryOrder timeline, gate, release, audit, failure, repair, and provenance evidence.",
 		Active:      "evidence",
-		Evidence:    fetchOpsEvidence(r),
+		View:        strings.ToLower(strings.TrimSpace(r.URL.Query().Get("view"))),
+		Evidence:    evidence,
 	})
 }
 
@@ -523,6 +670,122 @@ func (h *Handlers) handleOpsDecision(w http.ResponseWriter, r *http.Request) {
 		Description: "Non-executing Gate E decision surface for bounded approve, deny, and request-more-evidence envelopes.",
 		Active:      "decision",
 		Decision:    buildOpsDecisionData(r),
+	})
+}
+
+// handleOpsDecisionSubmit forwards the operator's approve/deny to hive and
+// re-renders the decision surface with a confirmation or error.
+// Site emits a GOVERNANCE POST only — it never calls GitHub or writes the graph.
+//
+// Only "approved" and "denied" are forwarded to hive; hive's operator-decision
+// endpoint accepts only those two values and returns 400 on anything else.
+// "request-more-evidence" (and any unrecognised value) is handled LOCALLY:
+// Site re-renders the decision page with a note that no decision was recorded.
+// Requesting more evidence is not a recordable governance decision.
+func (h *Handlers) handleOpsDecisionSubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	requestID := strings.TrimSpace(r.FormValue("request_id"))
+	decision := strings.TrimSpace(r.FormValue("decision"))
+	reason := strings.TrimSpace(r.FormValue("reason"))
+	approver := strings.TrimSpace(r.FormValue("approver"))
+
+	// Normalise the UI wire value to the hive-canonical past-tense form.
+	// opsDecisionApprove ("approve") → hive receives "approved"
+	// opsDecisionDeny ("deny")       → hive receives "denied"
+	// Anything else (including opsDecisionMoreEvidence) is handled locally;
+	// hive only accepts "approved" / "denied" and would 400 on anything else.
+	var hiveDecision string
+	switch decision {
+	case opsDecisionApprove:
+		hiveDecision = "approved"
+	case opsDecisionDeny:
+		hiveDecision = "denied"
+	default:
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, decision, "more-evidence-local")
+		return
+	}
+
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "HIVE_OPS_API_BASE_URL is not configured")
+		return
+	}
+	apiKey := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY"))
+
+	// Build the governance POST body (JSON — matches hive contract).
+	// Use hiveDecision (past-tense canonical) rather than the UI wire value.
+	payload := map[string]string{
+		"request_id": requestID,
+		"decision":   hiveDecision,
+		"approver":   approver,
+		"reason":     reason,
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "internal error marshalling request: "+err.Error())
+		return
+	}
+
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/operator-decision"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "could not build hive request: "+err.Error())
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "hive unreachable: "+err.Error())
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", fmt.Sprintf("hive returned %s", resp.Status))
+		return
+	}
+
+	h.renderOpsDecisionWithConfirmation(w, r, requestID, hiveDecision, "")
+}
+
+// renderOpsDecisionWithConfirmation re-renders the decision surface with either
+// a "decision recorded" confirmation, a local evidence-request note, or an error
+// message. effect = none is preserved in all cases.
+//
+// errMsg sentinel values:
+//
+//	""                  → success: governance POST forwarded for approved/denied.
+//	"more-evidence-local" → request-more-evidence handled locally; hive NOT called.
+//	anything else       → governance POST failed; show error.
+func (h *Handlers) renderOpsDecisionWithConfirmation(w http.ResponseWriter, r *http.Request, requestID, decision, errMsg string) {
+	// Rebuild the display data from the real pending request (or fallback).
+	var data *OpsDecisionData
+	if requestID != "" {
+		data = buildOpsDecisionDataFromProjection(r, requestID)
+	} else {
+		data = buildOpsDecisionData(r)
+	}
+	switch errMsg {
+	case "":
+		data.OperatorSummary = "Decision recorded on the graph by hive. Governance POST forwarded: decision=" + decision + ". Site remains display console; effect = none."
+	case "more-evidence-local":
+		// request-more-evidence is not a recordable governance decision; hive was NOT called.
+		data.OperatorSummary = "More evidence requested — no decision recorded. Site handled this locally; hive was not called. effect = none."
+	default:
+		data.OperatorSummary = "Governance POST failed: " + errMsg + " (effect = none; no downstream action taken)"
+		data.BlockedReasons = append(data.BlockedReasons, errMsg)
+	}
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Decision boundary",
+		Description: "Non-executing Gate E decision surface for bounded approve, deny, and request-more-evidence envelopes.",
+		Active:      "decision",
+		Decision:    data,
 	})
 }
 
@@ -606,8 +869,185 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 	}
 }
 
+func opsHiveShellCards() []OpsHiveShellCard {
+	return []OpsHiveShellCard{
+		{
+			ID:          "overview",
+			Label:       "Overview",
+			Href:        "/ops/hive",
+			Description: "Runtime summary and public build link.",
+			Status:      "native summary",
+		},
+		{
+			ID:          "intake",
+			Label:       "Intake",
+			Href:        "/ops/hive/intake",
+			Description: "Source capture, interpretation, and brief readiness.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "runs",
+			Label:       "Runs",
+			Href:        "/ops/hive/runs",
+			Description: "Run tower, pipeline phase, approvals, and artifacts.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "agents",
+			Label:       "Agents",
+			Href:        "/ops/hive/agents",
+			Description: "Agent topology, lifecycle state, and budget posture.",
+			Status:      "static sample",
+		},
+		{
+			ID:          "resources",
+			Label:       "Resources",
+			Href:        "/ops/hive/resources",
+			Description: "Budget, queue, token, and capacity signals.",
+			Status:      "static sample",
+		},
+	}
+}
+
+func buildOpsHiveShellData(active string) *OpsHiveShellData {
+	return &OpsHiveShellData{
+		Active: active,
+		Intake: OpsHiveIntakeView{
+			Status:          "draft ready",
+			Confidence:      "0.91",
+			SuggestedMode:   "full product pipeline",
+			AuthorityLevel:  "human launch required",
+			EstimatedBudget: "$18.00",
+			Sources: []OpsHiveSourceView{
+				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
+				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
+				{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
+			},
+			MissingFields: []OpsHiveMissingFieldView{
+				{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
+				{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+				{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
+			},
+		},
+		Runs: []OpsHiveRunView{
+			{ID: "run_static_001", Title: "Build onboarding control surface", Status: "active", Guardian: "clear", Budget: "18% used", Phase: "Design", Approvals: 2, Artifacts: 7, UpdatedAt: "sample now"},
+			{ID: "run_static_002", Title: "Refine evidence inspection flow", Status: "waiting", Guardian: "watch", Budget: "4% used", Phase: "Research", Approvals: 0, Artifacts: 3, UpdatedAt: "sample 12m ago"},
+			{ID: "run_static_003", Title: "Prepare integration checklist", Status: "paused", Guardian: "blocked", Budget: "31% used", Phase: "Review", Approvals: 1, Artifacts: 11, UpdatedAt: "sample 1h ago"},
+		},
+		Agents: []OpsHiveAgentView{
+			{Name: "guardian", Role: "Risk and authority", State: "watching", Budget: "12%", LastEvent: "approval request classified"},
+			{Name: "architect", Role: "System design", State: "active", Budget: "24%", LastEvent: "brief split into run graph"},
+			{Name: "builder", Role: "Implementation", State: "waiting", Budget: "0%", LastEvent: "blocked until launch approval"},
+			{Name: "tester", Role: "Verification", State: "idle", Budget: "0%", LastEvent: "waiting for artifact stream"},
+		},
+		Resources: []OpsHiveResourceView{
+			{Label: "Run budget", Used: "$3.24", Limit: "$18.00", Status: "clear", Detail: "Human cap visible before launch."},
+			{Label: "Approval queue", Used: "2", Limit: "unresolved", Status: "attention", Detail: "Operator decisions required before protected actions."},
+			{Label: "Token budget", Used: "84k", Limit: "460k", Status: "clear", Detail: "Sample aggregate across active agents."},
+			{Label: "Artifact store", Used: "7", Limit: "collected", Status: "clear", Detail: "Outputs stay inspectable and causally linked."},
+		},
+	}
+}
+
+// buildOpsDecisionDataFromProjection fetches the hive operator projection,
+// finds the matching pending approval by request_id, and returns an
+// OpsDecisionData populated from the real request. Effect stays "none".
+func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsDecisionData {
+	projection, err := fetchHiveOperatorProjection(r)
+	if err != nil {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           requestID,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "Could not fetch hive operator projection: " + err.Error(),
+			BlockedReasons:      []string{"hive projection unavailable: " + err.Error()},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
+	var found *OpsHiveApproval
+	for i := range projection.PendingApprovals {
+		if projection.PendingApprovals[i].RequestID == requestID {
+			found = &projection.PendingApprovals[i]
+			break
+		}
+	}
+	if found == nil {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           requestID,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "No pending approval found for request_id " + requestID,
+			BlockedReasons:      []string{"request_id " + requestID + " not found in pending approvals"},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
+	// Slice 1's decision surface governs ONLY the draft-PR create action. A
+	// pending request for any other protected action must NOT render as an
+	// approvable pull_request — refuse it (blocked, effect none) rather than
+	// mislabel its target_type as pull_request. Mirrors the hive decision
+	// endpoint's draft-PR-only gate (hive#129 P1-a).
+	if found.ActionName != "pull_request.create" {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           found.RequestID,
+			RequestedAction:     found.ActionName,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "Request " + requestID + " is not a draft-PR creation; this decision surface only governs pull_request.create.",
+			BlockedReasons:      []string{"action " + found.ActionName + " is not pull_request.create: out of scope for the Gate-E draft-PR decision surface"},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
+	// Target field encodes "repo ref" (space-separated); split into Repo and TargetRef.
+	repo := ""
+	targetRef := ""
+	if parts := strings.SplitN(found.Target, " ", 2); len(parts) == 2 {
+		repo = parts[0]
+		targetRef = parts[1]
+	} else {
+		targetRef = found.Target
+	}
+
+	seed := strings.Join([]string{found.ActionName, found.Justification, repo, targetRef, requestID}, "|")
+	return &OpsDecisionData{
+		AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+		CorrelationID:       "gate-e-correlation-" + opsDecisionHash(seed),
+		TraceID:             "gate-e-trace-" + opsDecisionHash("trace|"+seed),
+		RequestID:           found.RequestID,
+		RequestedAction:     found.ActionName,
+		TargetType:          "pull_request", // guaranteed: this path runs only for pull_request.create (gated above); OpsHiveApproval carries no target_type.
+		Repo:                repo,
+		TargetRef:           targetRef,
+		Status:              "accepted_for_review",
+		Effect:              "none",
+		OperatorSummary:     found.Justification,
+		BlockedReasons:      []string{},
+		RequiredEvidence:    []string{},
+		Actions:             opsDecisionActions(r),
+		GovernancePosture:   []OpsDecisionPosture{},
+		BoundaryChecks: []OpsDecisionPosture{
+			{Label: "R-001", Field: "runner/worktree evidence gap", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-002", Field: "real protected side effects", Value: "unresolved and excluded", Status: "blocked outside scope"},
+			{Label: "R-003", Field: "policy adapter / policy bundle", Value: "unresolved and excluded", Status: "blocked outside scope"},
+		},
+	}
+}
+
 func buildOpsDecisionData(r *http.Request) *OpsDecisionData {
 	q := r.URL.Query()
+
+	// When request_id is present, load the real pending approval from the hive
+	// operator projection and populate the decision surface from it.
+	// Site remains a pure display console: effect = none is preserved.
+	if requestID := strings.TrimSpace(q.Get("request_id")); requestID != "" {
+		return buildOpsDecisionDataFromProjection(r, requestID)
+	}
+
 	actionRaw := strings.TrimSpace(q.Get("action"))
 	action, actionOK := normalizeOpsDecisionAction(actionRaw)
 	reason := strings.TrimSpace(q.Get("reason"))
@@ -739,36 +1179,20 @@ func opsDecisionActions(r *http.Request) []OpsDecisionAction {
 	return []OpsDecisionAction{
 		{
 			Label:       "Approve",
-			WireValue:   "approve",
-			Href:        opsDecisionActionURL(r, "approve"),
+			WireValue:   opsDecisionApprove,
 			Description: "Displays an approval envelope for review with effect = none.",
 		},
 		{
 			Label:       "Deny",
-			WireValue:   "deny",
-			Href:        opsDecisionActionURL(r, "deny"),
+			WireValue:   opsDecisionDeny,
 			Description: "Displays a denial envelope for review with effect = none.",
 		},
 		{
 			Label:       "Request more evidence",
-			WireValue:   "request-more-evidence",
-			Href:        opsDecisionActionURL(r, "request-more-evidence"),
+			WireValue:   opsDecisionMoreEvidence,
 			Description: "Displays an evidence request envelope for review with effect = none.",
 		},
 	}
-}
-
-func opsDecisionActionURL(r *http.Request, action string) string {
-	q := url.Values{}
-	if profile := strings.TrimSpace(r.URL.Query().Get("profile")); profile != "" {
-		q.Set("profile", profile)
-	}
-	q.Set("action", action)
-	q.Set("target_type", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_type")), "pull_request"))
-	q.Set("repo", opsValueOr(strings.TrimSpace(r.URL.Query().Get("repo")), "transpara-ai/site"))
-	q.Set("target_ref", opsValueOr(strings.TrimSpace(r.URL.Query().Get("target_ref")), "pr://transpara-ai/site/review-environment"))
-	q.Set("reason", opsValueOr(strings.TrimSpace(r.URL.Query().Get("reason")), "Operator review remains inside the non-executing Gate E boundary."))
-	return "/ops/decision?" + q.Encode()
 }
 
 func opsDecisionHash(seed string) string {
@@ -975,6 +1399,148 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.AuthorityDecisions = projection.AuthorityDecisions
 	data.Lifecycle = projection.Lifecycle
 	data.KeyAuditTraces = projection.KeyAuditTraces
+}
+
+// fetchHiveOperatorProjection fetches and decodes the hive operator projection.
+// Returns the projection or an error; it does not touch any OpsHiveData.
+func fetchHiveOperatorProjection(r *http.Request) (*OpsHiveProjection, error) {
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		return nil, errors.New("HIVE_OPS_API_BASE_URL is not configured")
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/operator-projection"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("hive operator projection returned %s", resp.Status)
+	}
+	var projection OpsHiveProjection
+	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
+		return nil, err
+	}
+	return &projection, nil
+}
+
+// opsCanonicalRoles is the fixed civic-role order shown in the society view.
+// The last two rows ("human (Site approval)" and "draft PR") are synthetic: they
+// are not lifecycle actors but represent the Gate E approval and the resulting
+// draft PR action that flows from an approved pull_request.create decision.
+var opsCanonicalRoles = []string{
+	"strategist",
+	"planner",
+	"implementer",
+	"reviewer",
+	"guardian",
+	"human (Site approval)",
+	"draft PR",
+}
+
+// buildOpsRoleTimeline maps the hive operator projection's Lifecycle entries and
+// AuthorityDecisions into a role-grouped timeline in canonical civic order.
+//
+// Sources (read-only, no new external calls):
+//   - projection.Lifecycle — one entry per actor; actor.Role normalised to lower-case.
+//   - projection.AuthorityDecisions — for the "human (Site approval)" and "draft PR" rows.
+//
+// The "human (Site approval)" row is populated when any decision has
+// outcome == "approved" and approved_action == "pull_request.create".
+// The "draft PR" row immediately follows: its status is "pending" unless an
+// approved pull_request.create decision exists, in which case it is "approved".
+func buildOpsRoleTimeline(projection *OpsHiveProjection) []OpsRoleTimelineRow {
+	if projection == nil {
+		// Return all canonical rows in empty state.
+		rows := make([]OpsRoleTimelineRow, len(opsCanonicalRoles))
+		for i, role := range opsCanonicalRoles {
+			rows[i] = OpsRoleTimelineRow{Role: role}
+		}
+		return rows
+	}
+
+	// Index lifecycle entries by normalised role name (lower-case).
+	// Multiple actors can share a role; collect their display names.
+	type actorSummary struct {
+		names    []string
+		statuses []string
+	}
+	byRole := make(map[string]*actorSummary)
+	for _, lc := range projection.Lifecycle {
+		role := strings.ToLower(strings.TrimSpace(lc.Role))
+		if role == "" {
+			continue
+		}
+		if _, ok := byRole[role]; !ok {
+			byRole[role] = &actorSummary{}
+		}
+		name := lc.DisplayName
+		if name == "" {
+			name = lc.ActorID
+		}
+		byRole[role].names = append(byRole[role].names, name)
+		byRole[role].statuses = append(byRole[role].statuses, lc.LifecycleStatus)
+	}
+
+	// Look for an approved pull_request.create decision.
+	var prDecision *OpsHiveDecision
+	for i := range projection.AuthorityDecisions {
+		d := &projection.AuthorityDecisions[i]
+		if strings.ToLower(d.Outcome) == "approved" &&
+			strings.ToLower(d.ApprovedAction) == "pull_request.create" {
+			prDecision = d
+			break
+		}
+	}
+
+	rows := make([]OpsRoleTimelineRow, 0, len(opsCanonicalRoles))
+	for _, canonicalRole := range opsCanonicalRoles {
+		row := OpsRoleTimelineRow{Role: canonicalRole}
+
+		switch canonicalRole {
+		case "human (Site approval)":
+			if prDecision != nil {
+				row.Status = prDecision.Outcome
+				row.Actors = prDecision.ApproverActor
+				row.Notes = "approved_action: " + prDecision.ApprovedAction
+				if prDecision.ApprovedTarget != "" {
+					row.Notes += " → " + prDecision.ApprovedTarget
+				}
+			}
+
+		case "draft PR":
+			if prDecision != nil {
+				row.Status = "approved"
+				row.Notes = "pull_request.create approved — draft PR queued"
+			}
+
+		default:
+			// Match against lifecycle entries using the canonical role label.
+			// The canonical label IS the normalised role key (all lower-case).
+			if summary, ok := byRole[canonicalRole]; ok && len(summary.names) > 0 {
+				row.Actors = strings.Join(summary.names, ", ")
+				// Use the first (or only) lifecycle_status; if multiple,
+				// prefer "active" > anything else.
+				row.Status = summary.statuses[0]
+				for _, s := range summary.statuses {
+					if strings.ToLower(s) == "active" {
+						row.Status = s
+						break
+					}
+				}
+			}
+		}
+
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
@@ -1256,6 +1822,21 @@ func opsDecisionStatusClass(status string) string {
 		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
 	case "blocked", "blocked outside scope":
 		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	default:
+		return "border-brand/30 text-brand bg-brand/10"
+	}
+}
+
+func opsHiveShellStatusClass(status string) string {
+	switch strings.ToLower(status) {
+	case "clear", "ready", "draft ready", "active", "watching":
+		return "border-emerald-400/30 text-emerald-300 bg-emerald-400/10"
+	case "attention", "warning", "watch", "waiting":
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	case "blocked", "paused", "missing":
+		return "border-red-400/30 text-red-300 bg-red-400/10"
+	case "idle":
+		return "border-edge text-warm-faint bg-void/30"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
 	}
