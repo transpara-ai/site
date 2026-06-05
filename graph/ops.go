@@ -985,6 +985,24 @@ func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsD
 		}
 	}
 
+	// Slice 1's decision surface governs ONLY the draft-PR create action. A
+	// pending request for any other protected action must NOT render as an
+	// approvable pull_request — refuse it (blocked, effect none) rather than
+	// mislabel its target_type as pull_request. Mirrors the hive decision
+	// endpoint's draft-PR-only gate (hive#129 P1-a).
+	if found.ActionName != "pull_request.create" {
+		return &OpsDecisionData{
+			AuthorizationSource: "transpara-ai/docs#75 / a50190ce470e8686a561e0e0b6e62ef0c5f5bb13",
+			RequestID:           found.RequestID,
+			RequestedAction:     found.ActionName,
+			Status:              "blocked",
+			Effect:              "none",
+			OperatorSummary:     "Request " + requestID + " is not a draft-PR creation; this decision surface only governs pull_request.create.",
+			BlockedReasons:      []string{"action " + found.ActionName + " is not pull_request.create: out of scope for the Gate-E draft-PR decision surface"},
+			Actions:             opsDecisionActions(r),
+		}
+	}
+
 	// Target field encodes "repo ref" (space-separated); split into Repo and TargetRef.
 	repo := ""
 	targetRef := ""
@@ -1002,7 +1020,7 @@ func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsD
 		TraceID:             "gate-e-trace-" + opsDecisionHash("trace|"+seed),
 		RequestID:           found.RequestID,
 		RequestedAction:     found.ActionName,
-		TargetType:          "pull_request", // S1: OpsHiveApproval carries no target_type; Slice 1 handles only pull_request.create.
+		TargetType:          "pull_request", // guaranteed: this path runs only for pull_request.create (gated above); OpsHiveApproval carries no target_type.
 		Repo:                repo,
 		TargetRef:           targetRef,
 		Status:              "accepted_for_review",

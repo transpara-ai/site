@@ -825,6 +825,43 @@ func TestOpsDecisionLoadsRealPendingRequest(t *testing.T) {
 	assertOpsDecisionNoMutationControls(t, body)
 }
 
+// TestOpsDecisionRejectsNonDraftPRRequest verifies the Gate-E decision surface
+// governs ONLY pull_request.create (Codex P1-a). A pending request for any other
+// protected action must render as blocked (effect none) and must NOT be
+// mislabeled as an approvable pull_request — previously
+// buildOpsDecisionDataFromProjection hardcoded TargetType:"pull_request" for any
+// pending action.
+func TestOpsDecisionRejectsNonDraftPRRequest(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"source": "eventgraph",
+			"pending_approvals": []map[string]any{{
+				"event_id": "ev1", "request_id": "req-spawn", "requesting_actor": "guardian",
+				"action_name": "agent.spawn.persistent", "target": "builder",
+				"justification": "persistent identity trial", "created_at": "2026-06-05T12:00:00Z",
+			}},
+		})
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?request_id=req-spawn", nil)
+	data := buildOpsDecisionDataFromProjection(req, "req-spawn")
+
+	if data.Status != "blocked" {
+		t.Fatalf("Status = %q, want blocked (a non-draft-PR action must not be approvable here)", data.Status)
+	}
+	if data.Effect != "none" {
+		t.Fatalf("Effect = %q, want none", data.Effect)
+	}
+	if data.TargetType == "pull_request" {
+		t.Fatalf("TargetType = %q: a non-pull_request.create action must not be mislabeled as a pull_request", data.TargetType)
+	}
+	if len(data.BlockedReasons) == 0 {
+		t.Fatal("BlockedReasons is empty, want a reason explaining the action is out of scope")
+	}
+}
+
 func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
 	// Posts the REAL UI wire value (opsDecisionApprove = "approve") and asserts
 	// that Site normalises it to the hive-canonical past-tense form ("approved")
