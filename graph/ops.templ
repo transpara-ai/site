@@ -665,6 +665,7 @@ templ opsHiveAuthorityProjection(h *OpsHiveData) {
 			@opsHiveAuthorityDecisions(h.AuthorityDecisions)
 			@opsHiveLifecycle(h.Lifecycle)
 			@opsHiveKeyAudit(h.KeyAuditTraces)
+			@opsHiveModelSelection(h.ModelSelection)
 		</div>
 	</section>
 }
@@ -807,6 +808,78 @@ templ opsHiveKeyAudit(items []OpsHiveKeyAuditTrace) {
 				</div>
 			}
 		</div>
+	</section>
+}
+
+templ opsHiveModelSelection(selection OpsHiveModelSelection) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden lg:col-span-2">
+		<header class="px-3 py-2 border-b border-edge">
+			<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h3 class="text-sm font-medium text-warm">Model selection</h3>
+					if selection.CatalogSource != "" {
+						<p class="text-xs text-warm-faint mt-1 break-all">Catalog: { selection.CatalogSource }</p>
+					}
+				</div>
+				if selection.ReloadMode != "" {
+					<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">{ selection.ReloadMode }</span>
+				}
+			</div>
+		</header>
+		if selection.Source == "" && len(selection.Assignments) == 0 && len(selection.Models) == 0 {
+			<p class="px-3 py-5 text-sm text-warm-faint">No model-selection projection returned.</p>
+		} else {
+			<div class="p-3 space-y-3">
+				<div class="grid gap-2 md:grid-cols-4">
+					@opsMetric("Models", fmt.Sprintf("%d", len(selection.Models)), "catalog")
+					@opsMetric("Roles", fmt.Sprintf("%d", len(selection.Assignments)), "assignments")
+					@opsMetric("Hot reload", fmt.Sprintf("%t", selection.HotReload), "Hive-owned")
+					@opsMetric("Loaded", formatOpsTime(selection.LoadedAt), "catalog")
+				</div>
+				if selection.LastReloadAt != "" {
+					<p class="text-[11px] text-warm-faint">Last reload: { formatOpsTime(selection.LastReloadAt) }</p>
+				}
+				if len(selection.Errors) > 0 {
+					<div class="border border-amber-400/30 bg-amber-400/10 rounded-lg p-3">
+						<p class="text-xs font-medium text-amber-300">Projection errors</p>
+						<ul class="mt-2 space-y-1 text-xs text-amber-100/80">
+							for _, err := range selection.Errors {
+								<li>{ err }</li>
+							}
+						</ul>
+					</div>
+				}
+				<div class="grid gap-2 md:grid-cols-2">
+					for _, item := range selection.Assignments {
+						<div class="border border-edge bg-surface rounded-lg p-3">
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
+									<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(item.Role, "role") }</h4>
+									<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(item.Model, item.PolicyModel) }</p>
+								</div>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ opsValueOr(item.AuthMode, "auth") }</span>
+							</div>
+							<dl class="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+								<dt class="text-warm-faint">Provider</dt>
+								<dd class="text-warm-muted truncate">{ opsValueOr(item.Provider, item.PolicyProvider) }</dd>
+								<dt class="text-warm-faint">Tier</dt>
+								<dd class="text-warm-muted truncate">{ opsValueOr(item.PreferredTier, item.Tier) }</dd>
+								<dt class="text-warm-faint">Operate</dt>
+								<dd class="text-warm-muted">{ fmt.Sprintf("%t", item.CanOperate) }</dd>
+								if len(item.RequiredCapabilities) > 0 {
+									<dt class="text-warm-faint">Caps</dt>
+									<dd class="text-warm-muted truncate">{ strings.Join(item.RequiredCapabilities, ", ") }</dd>
+								}
+							</dl>
+							if item.Error != "" {
+								<p class="text-xs text-amber-300 mt-2 leading-relaxed">{ item.Error }</p>
+							}
+						</div>
+					}
+				</div>
+				<p class="text-[11px] text-warm-faint leading-relaxed">Read-only Hive projection. Site renders model state but does not select, persist, or mutate model policy.</p>
+			</div>
+		}
 	</section>
 }
 
