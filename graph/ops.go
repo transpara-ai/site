@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -304,8 +306,10 @@ type OpsHiveModelRoleAssignment struct {
 	PolicyProvider       string   `json:"policy_provider"`
 	PreferredTier        string   `json:"preferred_tier"`
 	RequiredCapabilities []string `json:"required_capabilities"`
+	MaxCostPerCallUSD    *float64 `json:"max_cost_per_call_usd"`
 	SelectionStrategy    string   `json:"selection_strategy"`
 	Source               string   `json:"source"`
+	PolicyEventID        string   `json:"policy_event_id"`
 	Error                string   `json:"error"`
 }
 
@@ -647,6 +651,113 @@ func (h *Handlers) handleOpsHive(w http.ResponseWriter, r *http.Request) {
 		Hive:        h.fetchOpsHive(r),
 		LegacyURL:   "/hive",
 	})
+}
+
+func (h *Handlers) handleOpsHiveModelPolicySubmit(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	payload, err := opsHiveModelPolicyPayloadFromForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		http.Error(w, "HIVE_OPS_API_BASE_URL is not configured", http.StatusBadRequest)
+		return
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "internal error marshalling request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/model-selection/role-policy"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		http.Error(w, "could not build hive request: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		http.Error(w, "hive unreachable: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		http.Error(w, "hive model policy rejected: "+opsHiveResponseError(resp), http.StatusBadGateway)
+		return
+	}
+	target := "/ops/hive"
+	if profile := strings.TrimSpace(r.FormValue("profile")); profile != "" {
+		target += "?profile=" + url.QueryEscape(profile)
+	}
+	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+func opsHiveModelPolicyPayloadFromForm(r *http.Request) (map[string]any, error) {
+	role := strings.TrimSpace(r.FormValue("role"))
+	if role == "" {
+		return nil, errors.New("role is required")
+	}
+	payload := map[string]any{
+		"role": role,
+	}
+	for key, value := range map[string]string{
+		"operator_id":    strings.TrimSpace(r.FormValue("operator_id")),
+		"reason":         strings.TrimSpace(r.FormValue("reason")),
+		"model":          strings.TrimSpace(r.FormValue("model")),
+		"profile":        strings.TrimSpace(r.FormValue("profile")),
+		"auth_mode":      strings.TrimSpace(r.FormValue("auth_mode")),
+		"preferred_tier": strings.TrimSpace(r.FormValue("preferred_tier")),
+	} {
+		if value != "" {
+			payload[key] = value
+		}
+	}
+	capabilities := trimOpsHiveFormValues(r.Form["required_capability"])
+	if len(capabilities) > 0 {
+		payload["required_capabilities"] = capabilities
+	}
+	if rawCost := strings.TrimSpace(r.FormValue("max_cost_per_call_usd")); rawCost != "" {
+		maxCost, err := strconv.ParseFloat(rawCost, 64)
+		if err != nil {
+			return nil, fmt.Errorf("max_cost_per_call_usd must be a number: %w", err)
+		}
+		payload["max_cost_per_call_usd"] = maxCost
+	}
+	return payload, nil
+}
+
+func trimOpsHiveFormValues(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+func opsHiveMaxCostValue(value *float64) string {
+	if value == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*value, 'f', -1, 64)
+}
+
+func opsHiveResponseError(resp *http.Response) string {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+	if msg := strings.TrimSpace(string(body)); msg != "" {
+		return resp.Status + ": " + msg
+	}
+	return resp.Status
 }
 
 func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {

@@ -874,10 +874,47 @@ templ opsHiveModelSelection(selection OpsHiveModelSelection) {
 							if item.Error != "" {
 								<p class="text-xs text-amber-300 mt-2 leading-relaxed">{ item.Error }</p>
 							}
+							if len(selection.Models) > 0 {
+								<form method="post" action="/ops/hive/model-policy" class="mt-3 pt-3 border-t border-edge space-y-2">
+									<input type="hidden" name="role" value={ item.Role }/>
+									<input type="hidden" name="operator_id" value="site-ops"/>
+									<input type="hidden" name="preferred_tier" value={ item.PreferredTier }/>
+									if opsHiveMaxCostValue(item.MaxCostPerCallUSD) != "" {
+										<input type="hidden" name="max_cost_per_call_usd" value={ opsHiveMaxCostValue(item.MaxCostPerCallUSD) }/>
+									}
+									for _, cap := range item.RequiredCapabilities {
+										<input type="hidden" name="required_capability" value={ cap }/>
+									}
+									<label class="block text-[11px] text-warm-faint">
+										Model
+										<select name="model" class="mt-1 w-full px-2 py-1.5 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand">
+											for _, model := range selection.Models {
+												<option value={ model.ID } selected?={ model.ID == item.Model || model.ID == item.PolicyModel }>{ model.ID } - { model.Provider }/{ model.AuthMode }</option>
+											}
+										</select>
+									</label>
+									<div class="grid grid-cols-2 gap-2">
+										<label class="block text-[11px] text-warm-faint">
+											Auth
+											<select name="auth_mode" class="mt-1 w-full px-2 py-1.5 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand">
+												<option value="subscription" selected?={ item.AuthMode == "subscription" }>subscription</option>
+												<option value="api-key" selected?={ item.AuthMode == "api-key" }>api-key</option>
+												<option value="local" selected?={ item.AuthMode == "local" }>local</option>
+											</select>
+										</label>
+										<label class="block text-[11px] text-warm-faint">
+											Profile
+											<input name="profile" value={ item.Profile } class="mt-1 w-full px-2 py-1.5 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+										</label>
+									</div>
+									<input name="reason" value="Site /ops/hive model policy update" class="w-full px-2 py-1.5 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+									<button type="submit" class="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Apply</button>
+								</form>
+							}
 						</div>
 					}
 				</div>
-				<p class="text-[11px] text-warm-faint leading-relaxed">Read-only Hive projection. Site renders model state but does not select, persist, or mutate model policy.</p>
+				<p class="text-[11px] text-warm-faint leading-relaxed">Hive-owned policy. Site forwards changes to Hive and does not persist selections.</p>
 			</div>
 		}
 	</section>
