@@ -337,6 +337,34 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 	}
 }
 
+func TestFetchOpsHiveOperatorProjectionToleratesMissingModelSelection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[]
+		}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+	h, _, _ := testHandlers(t)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive", nil)
+
+	got := h.fetchOpsHive(req)
+
+	if got.ProjectionError != "" {
+		t.Fatalf("ProjectionError = %q, want empty", got.ProjectionError)
+	}
+	if got.ModelSelection.Source != "" || len(got.ModelSelection.Assignments) != 0 || len(got.ModelSelection.Models) != 0 {
+		t.Fatalf("ModelSelection = %#v, want zero value for older Hive projection", got.ModelSelection)
+	}
+}
+
 func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -382,6 +410,43 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		strings.Contains(body, `action="/ops/hive"`) ||
 		strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive exposes authority mutation controls")
+	}
+}
+
+func TestHandleOpsHiveRendersModelSelectionEmptyStateForOlderProjection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[]
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "No model-selection projection returned.") {
+		t.Fatalf("GET /ops/hive: body does not contain model-selection empty state")
+	}
+	if strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/hive"`) ||
+		strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive older projection exposes mutation controls")
 	}
 }
 
