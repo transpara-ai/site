@@ -251,6 +251,7 @@ type OpsHiveData struct {
 	AuthorityDecisions []OpsHiveDecision
 	Lifecycle          []OpsHiveLifecycle
 	KeyAuditTraces     []OpsHiveKeyAuditTrace
+	ModelSelection     OpsHiveModelSelection
 	RecentCommits      []RecentCommit
 	RecentEvents       []DiagEntry
 	Error              string
@@ -263,7 +264,49 @@ type OpsHiveProjection struct {
 	AuthorityDecisions []OpsHiveDecision      `json:"authority_decisions"`
 	Lifecycle          []OpsHiveLifecycle     `json:"lifecycle"`
 	KeyAuditTraces     []OpsHiveKeyAuditTrace `json:"key_audit_traces"`
+	ModelSelection     OpsHiveModelSelection  `json:"model_selection"`
 	Errors             []string               `json:"errors"`
+}
+
+type OpsHiveModelSelection struct {
+	Source        string                       `json:"source"`
+	CatalogSource string                       `json:"catalog_source"`
+	LoadedAt      string                       `json:"loaded_at"`
+	ReloadMode    string                       `json:"reload_mode"`
+	HotReload     bool                         `json:"hot_reload"`
+	LastReloadAt  string                       `json:"last_reload_at"`
+	Models        []OpsHiveModelCatalogEntry   `json:"models"`
+	Assignments   []OpsHiveModelRoleAssignment `json:"assignments"`
+	Errors        []string                     `json:"errors"`
+}
+
+type OpsHiveModelCatalogEntry struct {
+	ID              string   `json:"id"`
+	Aliases         []string `json:"aliases"`
+	Provider        string   `json:"provider"`
+	AuthMode        string   `json:"auth_mode"`
+	Tier            string   `json:"tier"`
+	Capabilities    []string `json:"capabilities"`
+	ContextWindow   int      `json:"context_window"`
+	MaxOutputTokens int      `json:"max_output_tokens"`
+	Deprecated      bool     `json:"deprecated"`
+}
+
+type OpsHiveModelRoleAssignment struct {
+	Role                 string   `json:"role"`
+	Tier                 string   `json:"tier"`
+	CanOperate           bool     `json:"can_operate"`
+	Model                string   `json:"model"`
+	Provider             string   `json:"provider"`
+	AuthMode             string   `json:"auth_mode"`
+	Profile              string   `json:"profile"`
+	PolicyModel          string   `json:"policy_model"`
+	PolicyProvider       string   `json:"policy_provider"`
+	PreferredTier        string   `json:"preferred_tier"`
+	RequiredCapabilities []string `json:"required_capabilities"`
+	SelectionStrategy    string   `json:"selection_strategy"`
+	Source               string   `json:"source"`
+	Error                string   `json:"error"`
 }
 
 type OpsHiveApproval struct {
@@ -1399,6 +1442,7 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.AuthorityDecisions = projection.AuthorityDecisions
 	data.Lifecycle = projection.Lifecycle
 	data.KeyAuditTraces = projection.KeyAuditTraces
+	data.ModelSelection = projection.ModelSelection
 }
 
 // fetchHiveOperatorProjection fetches and decodes the hive operator projection.
