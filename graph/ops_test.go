@@ -401,15 +401,81 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder"} {
+	for _, want := range []string{"Authority projection", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
 	}
-	if strings.Contains(body, `method="post"`) ||
-		strings.Contains(body, `action="/ops/hive"`) ||
-		strings.Contains(body, `data-authority-action`) {
+	if strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive exposes authority mutation controls")
+	}
+}
+
+func TestOpsHiveModelPolicySubmitForwardsToHive(t *testing.T) {
+	var gotPath, gotAuth string
+	var gotPayload map[string]any
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
+			t.Fatalf("decode forwarded payload: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"recorded"}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+	form := url.Values{}
+	form.Set("role", "guardian")
+	form.Set("model", "api-sonnet")
+	form.Set("auth_mode", "api-key")
+	form.Set("profile", "judgment")
+	form.Set("preferred_tier", "execution")
+	form.Add("required_capability", "reasoning")
+	form.Set("max_cost_per_call_usd", "2.75")
+	form.Set("operator_id", "site-ops")
+	form.Set("reason", "operator selected metered guardian")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/model-policy", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d body=%s", w.Code, http.StatusSeeOther, w.Body.String())
+	}
+	if gotPath != "/api/hive/model-selection/role-policy" {
+		t.Fatalf("forwarded path = %q", gotPath)
+	}
+	if gotAuth != "Bearer secret" {
+		t.Fatalf("forwarded auth = %q", gotAuth)
+	}
+	for key, want := range map[string]string{
+		"role":           "guardian",
+		"model":          "api-sonnet",
+		"auth_mode":      "api-key",
+		"profile":        "judgment",
+		"preferred_tier": "execution",
+		"operator_id":    "site-ops",
+		"reason":         "operator selected metered guardian",
+	} {
+		if gotPayload[key] != want {
+			t.Fatalf("payload[%s] = %#v, want %q (payload=%#v)", key, gotPayload[key], want, gotPayload)
+		}
+	}
+	caps, ok := gotPayload["required_capabilities"].([]any)
+	if !ok || len(caps) != 1 || caps[0] != "reasoning" {
+		t.Fatalf("required_capabilities = %#v, want [reasoning]", gotPayload["required_capabilities"])
+	}
+	if gotPayload["max_cost_per_call_usd"] != 2.75 {
+		t.Fatalf("max_cost_per_call_usd = %#v, want 2.75", gotPayload["max_cost_per_call_usd"])
 	}
 }
 
