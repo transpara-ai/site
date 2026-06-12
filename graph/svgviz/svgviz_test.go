@@ -24,6 +24,9 @@ func TestGaugeFailsClosedOnUndrawableInput(t *testing.T) {
 		{"nan cap", 10, nan(), 200, 24},
 		{"zero width", 10, 25, 0, 24},
 		{"zero height", 10, 25, 200, 0},
+		{"height eats padding exactly", 10, 25, 200, 8},
+		{"height below padding", 10, 25, 200, 6},
+		{"width below padding", 10, 25, 7, 24},
 	}
 	for _, c := range cases {
 		if got := Gauge(c.value, c.cap, c.w, c.h); got != "" {
@@ -125,6 +128,12 @@ func TestSpanStripWidthsAndUnknownKind(t *testing.T) {
 	}
 	if SpanStrip([]Span{{Label: "x", Seconds: 0, Kind: "idle"}}, 200, 12) != "" {
 		t.Error("zero-duration total must render nothing")
+	}
+	if SpanStrip([]Span{{Label: "x", Seconds: 5, Kind: "idle"}}, 200, 8) != "" {
+		t.Error("height that leaves no inner track must render nothing")
+	}
+	if SpanStrip([]Span{{Label: "x", Seconds: 5, Kind: "idle"}}, 200, 6) != "" {
+		t.Error("height below padding must render nothing")
 	}
 }
 

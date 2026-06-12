@@ -68,7 +68,8 @@ func Gauge(value, cap float64, w, h int) string {
 		return ""
 	}
 	track := float64(w) - 2*pad
-	if track <= 0 {
+	innerH := float64(h) - 2*pad
+	if track <= 0 || innerH <= 0 {
 		return ""
 	}
 	ratio := value / cap
@@ -154,7 +155,8 @@ func SpanStrip(spans []Span, w, h int) string {
 		return ""
 	}
 	track := float64(w) - 2*pad
-	if track <= 0 {
+	innerH := float64(h) - 2*pad
+	if track <= 0 || innerH <= 0 {
 		return ""
 	}
 	var b strings.Builder

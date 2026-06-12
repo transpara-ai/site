@@ -1720,7 +1720,7 @@ func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
 		return data
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
 		return data
@@ -1776,7 +1776,7 @@ func fetchOpsPipelineReport(r *http.Request, reportURL string) (*OpsPipelineRepo
 		return nil, err
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1812,7 +1812,7 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 		return data
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
 		return data
@@ -1868,7 +1868,7 @@ func fetchOpsPhaseGates(r *http.Request, workBase string) []OpsPhaseGate {
 		return nil
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		return nil
 	}
