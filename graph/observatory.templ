@@ -1,0 +1,357 @@
+package graph
+
+import "fmt"
+
+// Observatory: read-only civilization transparency surface (transparency
+// contract T1–T7). Raw SVG injection below is safe by construction: svgviz
+// generates the markup server-side and HTML-escapes every feeder-supplied
+// label before it reaches the string.
+
+templ opsObservatorySummary(data *OpsObservatoryData) {
+	<div class="space-y-6">
+		@obsVitalsPanel(data)
+		@obsSpendPanel(data)
+		@obsAgentsPanel(data)
+		@obsPhaseCostPanel(data)
+		@obsAuthorityPanel(data)
+		@obsTracePanel(data)
+		@obsPosturePanel()
+		<p class="text-[11px] text-warm-faint">
+			Generated { data.GeneratedAt } · read-only projection · EventGraph remains truth · decisions happen on governed surfaces only
+		</p>
+	</div>
+}
+
+templ obsProvenance(label string, url string) {
+	<p class="text-[11px] text-warm-faint mt-3 truncate">source: { label } · { url }</p>
+}
+
+templ obsUnavailable(what string, reason string, url string) {
+	<div class="border border-edge bg-void/30 rounded-md px-3 py-2">
+		<p class="text-xs text-warm-muted">{ what } unavailable — { reason }</p>
+		<p class="text-[11px] text-warm-faint truncate">attempted: { url }</p>
+	</div>
+}
+
+templ obsVitalsPanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-3">Civilization vitals</h2>
+		if data.VitalsError != "" {
+			@obsUnavailable("Vitals", data.VitalsError, data.StatusURL)
+		} else if data.Vitals == nil {
+			@obsUnavailable("Vitals", "no hive snapshot recorded yet (telemetry writer has not run)", data.StatusURL)
+		} else {
+			<dl class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+				<div>
+					<dt class="text-[11px] text-warm-faint uppercase tracking-widest">Active agents</dt>
+					<dd class="text-warm text-lg">{ fmt.Sprint(data.Vitals.ActiveAgents) } of { fmt.Sprint(data.Vitals.TotalActors) }</dd>
+				</div>
+				<div>
+					<dt class="text-[11px] text-warm-faint uppercase tracking-widest">Chain length</dt>
+					<dd class="text-warm text-lg">{ fmt.Sprint(data.Vitals.ChainLength) }</dd>
+				</div>
+				<div>
+					<dt class="text-[11px] text-warm-faint uppercase tracking-widest">Chain integrity</dt>
+					if data.Vitals.ChainOK {
+						<dd class="text-warm text-lg">verified ✓</dd>
+					} else {
+						<dd class="text-warm text-lg font-medium">FAILED ✗ — investigate before trusting any panel below</dd>
+					}
+				</div>
+				<div>
+					<dt class="text-[11px] text-warm-faint uppercase tracking-widest">Event rate</dt>
+					if data.Vitals.EventRate != nil {
+						<dd class="text-warm text-lg">{ fmt.Sprintf("%.2f/min", *data.Vitals.EventRate) }</dd>
+					} else {
+						<dd class="text-warm-muted text-lg">unknown</dd>
+					}
+				</div>
+				<div>
+					<dt class="text-[11px] text-warm-faint uppercase tracking-widest">Severity</dt>
+					<dd class="text-warm text-lg">{ data.Vitals.Severity }</dd>
+				</div>
+			</dl>
+		}
+		@obsProvenance("work telemetry status", data.StatusURL)
+	</section>
+}
+
+templ obsSpendPanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-3">Spend vs cap (today)</h2>
+		if data.VitalsError != "" {
+			@obsUnavailable("Spend", data.VitalsError, data.StatusURL)
+		} else if data.Vitals == nil {
+			@obsUnavailable("Spend", "no hive snapshot recorded yet", data.StatusURL)
+		} else if data.SpendGaugeSVG != "" && data.Vitals.DailyCost != nil && data.Vitals.DailyCap != nil {
+			<div class="flex items-center gap-4">
+				<div class="text-brand w-80">
+					@templ.Raw(data.SpendGaugeSVG)
+				</div>
+				<p class="text-sm text-warm">
+					{ fmt.Sprintf("$%.2f spent of $%.2f daily cap", *data.Vitals.DailyCost, *data.Vitals.DailyCap) }
+				</p>
+			</div>
+		} else {
+			<div class="border border-edge bg-void/30 rounded-md px-3 py-2 space-y-1">
+				if data.Vitals.DailyCost != nil {
+					<p class="text-xs text-warm-muted">{ fmt.Sprintf("Recorded spend today: $%.2f", *data.Vitals.DailyCost) }</p>
+				} else {
+					<p class="text-xs text-warm-muted">Recorded spend today: unknown</p>
+				}
+				<p class="text-xs text-warm-muted">Daily cap unknown — gauge withheld rather than drawn against a guessed cap (transparency contract T3: spend is only legible against its cap).</p>
+			</div>
+		}
+		@obsProvenance("work telemetry status", data.StatusURL)
+	</section>
+}
+
+templ obsAgentsPanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-1">Agents — latest snapshot + 24h state timeline</h2>
+		<p class="text-[11px] text-warm-faint mb-3">Trial and persistent lifecycle status per DF-SOP-0002 is shown in the Authority panel below; this roster is runtime state.</p>
+		if data.VitalsError != "" {
+			@obsUnavailable("Agent roster", data.VitalsError, data.StatusURL)
+		} else if len(data.Agents) == 0 {
+			@obsUnavailable("Agent roster", "no agent snapshots recorded", data.StatusURL)
+		} else {
+			<div class="overflow-x-auto">
+				<table class="w-full text-xs">
+					<thead>
+						<tr class="text-left text-warm-faint border-b border-edge">
+							<th class="py-2 pr-3 font-medium">Role</th>
+							<th class="py-2 pr-3 font-medium">State</th>
+							<th class="py-2 pr-3 font-medium">Model</th>
+							<th class="py-2 pr-3 font-medium">Iter</th>
+							<th class="py-2 pr-3 font-medium">Tokens</th>
+							<th class="py-2 pr-3 font-medium">Cost $</th>
+							<th class="py-2 pr-3 font-medium">Trust</th>
+							<th class="py-2 pr-3 font-medium">Errors</th>
+							<th class="py-2 pr-3 font-medium">24h timeline</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, a := range data.Agents {
+							<tr class="border-b border-edge/50">
+								<td class="py-2 pr-3 text-warm">{ a.Role }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ a.State }</td>
+								<td class="py-2 pr-3 text-warm-faint">{ a.Model }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ fmt.Sprint(a.Iteration) }/{ fmt.Sprint(a.MaxIter) }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ fmt.Sprint(a.TokensUsed) }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ a.CostUSD }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ a.Trust }</td>
+								<td class="py-2 pr-3 text-warm-muted">{ fmt.Sprint(a.Errors) }</td>
+								<td class="py-2 pr-3">
+									if a.TimelineSVG != "" {
+										<div class="text-brand w-80">
+											@templ.Raw(a.TimelineSVG)
+										</div>
+									} else if data.HistoryError != "" {
+										<span class="text-warm-faint">history unavailable: { data.HistoryError }</span>
+									} else {
+										<span class="text-warm-faint">no history in window</span>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		@obsProvenance("work telemetry agents + history (24h window)", data.HistoryURL)
+	</section>
+}
+
+templ obsPhaseCostPanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-3">Pipeline phase costs (current cycle)</h2>
+		if data.Telemetry == nil || (data.Telemetry.Pipeline == nil && data.Telemetry.PipelineError == "") {
+			@obsUnavailable("Pipeline report", "no pipeline report available", "work telemetry pipeline report")
+		} else if data.Telemetry.PipelineError != "" {
+			@obsUnavailable("Pipeline report", data.Telemetry.PipelineError, data.Telemetry.PipelineURL)
+		} else if data.PhaseCostBarsSVG != "" {
+			<div class="text-brand">
+				@templ.Raw(data.PhaseCostBarsSVG)
+			</div>
+			<p class="text-xs text-warm-muted mt-2">Total recorded phase cost: ${ data.PhaseCostTotal }</p>
+			<ul class="mt-2 space-y-1">
+				for _, label := range data.PhaseCostLabels {
+					<li class="text-[11px] text-warm-faint">{ label }</li>
+				}
+			</ul>
+		} else {
+			<p class="text-xs text-warm-muted">Phases recorded, but no phase carries cost yet — chart withheld (an all-zero chart would imply measurement where none exists).</p>
+			<ul class="mt-2 space-y-1">
+				for _, label := range data.PhaseCostLabels {
+					<li class="text-[11px] text-warm-faint">{ label }</li>
+				}
+			</ul>
+		}
+		if data.Telemetry != nil {
+			@obsProvenance("work telemetry pipeline report", data.Telemetry.PipelineURL)
+		}
+	</section>
+}
+
+templ obsAuthorityPanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-1">Authority — requests, decisions, lifecycle</h2>
+		<p class="text-[11px] text-warm-faint mb-3">
+			Proposal-only default: agents and workers may prepare proposals; they must not execute protected actions without explicit authority approval. This panel has effect = none — decisions are made on the governed
+			<a href="/ops/decision" class="text-brand hover:underline">decision surface</a>.
+		</p>
+		if data.Hive == nil {
+			@obsUnavailable("Authority projection", "hive projection not fetched", "hive operator projection")
+		} else if data.Hive.ProjectionError != "" {
+			@obsUnavailable("Authority projection", data.Hive.ProjectionError, data.Hive.ProjectionSource)
+		} else {
+			<div class="grid gap-4 lg:grid-cols-2">
+				<div>
+					<h3 class="text-xs font-medium text-warm mb-2">Pending ApprovalRequired ({ fmt.Sprint(len(data.Hive.PendingApprovals)) })</h3>
+					if len(data.Hive.PendingApprovals) == 0 {
+						<p class="text-xs text-warm-faint">none pending</p>
+					} else {
+						<ul class="space-y-2">
+							for _, a := range data.Hive.PendingApprovals {
+								<li class="border border-edge bg-void/30 rounded-md px-3 py-2">
+									<p class="text-xs text-warm">{ a.ActionName } → { a.Target }</p>
+									<p class="text-[11px] text-warm-muted">requested by { a.RequestingActor } · risk: { a.RiskSummary } · { a.CreatedAt }</p>
+									<p class="text-[11px] text-warm-faint">{ a.Justification }</p>
+								</li>
+							}
+						</ul>
+					}
+				</div>
+				<div>
+					<h3 class="text-xs font-medium text-warm mb-2">Recent decisions ({ fmt.Sprint(len(data.Hive.AuthorityDecisions)) })</h3>
+					if len(data.Hive.AuthorityDecisions) == 0 {
+						<p class="text-xs text-warm-faint">no decisions recorded</p>
+					} else {
+						<ul class="space-y-2">
+							for _, d := range data.Hive.AuthorityDecisions {
+								<li class="border border-edge bg-void/30 rounded-md px-3 py-2">
+									<p class="text-xs text-warm">
+										<span class="px-2 py-0.5 rounded-full border border-edge text-[10px]">{ d.Outcome }</span>
+										{ d.ApprovedAction } → { d.ApprovedTarget }
+									</p>
+									<p class="text-[11px] text-warm-muted">decided by { d.ApproverActor } · request { d.RequestID } · { d.CreatedAt }</p>
+									<p class="text-[11px] text-warm-faint">{ d.Rationale }</p>
+								</li>
+							}
+						</ul>
+					}
+				</div>
+			</div>
+			<h3 class="text-xs font-medium text-warm mt-4 mb-2">Actor lifecycle (DF-SOP-0002)</h3>
+			if len(data.Hive.Lifecycle) == 0 {
+				<p class="text-xs text-warm-faint">no lifecycle records in projection</p>
+			} else {
+				<div class="overflow-x-auto">
+					<table class="w-full text-xs">
+						<thead>
+							<tr class="text-left text-warm-faint border-b border-edge">
+								<th class="py-2 pr-3 font-medium">Actor</th>
+								<th class="py-2 pr-3 font-medium">Role</th>
+								<th class="py-2 pr-3 font-medium">Lifecycle status</th>
+								<th class="py-2 pr-3 font-medium">Authority scope</th>
+								<th class="py-2 pr-3 font-medium">Identity mode</th>
+								<th class="py-2 pr-3 font-medium">Environment</th>
+								<th class="py-2 pr-3 font-medium">Updated</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, l := range data.Hive.Lifecycle {
+								<tr class="border-b border-edge/50">
+									<td class="py-2 pr-3 text-warm">{ l.DisplayName }</td>
+									<td class="py-2 pr-3 text-warm-muted">{ l.Role }</td>
+									<td class="py-2 pr-3 text-warm-muted">{ l.LifecycleStatus }</td>
+									<td class="py-2 pr-3 text-warm-muted">{ l.AuthorityScope }</td>
+									<td class="py-2 pr-3 text-warm-faint">{ l.IdentityMode }</td>
+									<td class="py-2 pr-3 text-warm-faint">{ l.Environment }</td>
+									<td class="py-2 pr-3 text-warm-faint">{ l.UpdatedAt }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+			@obsProvenance("hive operator projection", data.Hive.ProjectionSource)
+		}
+	</section>
+}
+
+templ obsTracePanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-1">Causal trace explorer</h2>
+		<p class="text-[11px] text-warm-faint mb-3">Renders the ordered work.task.* audit trail for one task — the causal chain of a unit of work (transparency contract T4). Lookup is a read.</p>
+		<form method="get" action="/ops/observatory" class="flex items-center gap-2 mb-3">
+			<input
+				type="text"
+				name="task"
+				value={ data.TraceTaskID }
+				placeholder="task event ID"
+				class="border border-edge bg-void/30 rounded-md px-3 py-1.5 text-xs text-warm w-96"
+			/>
+			<button type="submit" class="text-xs px-3 py-1.5 rounded-md bg-elevated text-warm-muted hover:text-brand transition-colors">Trace</button>
+		</form>
+		if data.TraceTaskID == "" {
+			<p class="text-xs text-warm-faint">Enter a task ID to render its audit trail.</p>
+		} else if data.TraceError != "" {
+			@obsUnavailable("Trace", data.TraceError, data.TraceURL)
+		} else if len(data.TraceSteps) == 0 {
+			@obsUnavailable("Trace", "no events found for this task ID", data.TraceURL)
+		} else {
+			if data.TraceSVG != "" {
+				<div class="text-brand overflow-x-auto">
+					@templ.Raw(data.TraceSVG)
+				</div>
+			}
+			<ol class="mt-3 space-y-1">
+				for i, s := range data.TraceSteps {
+					<li class="text-[11px] text-warm-muted">{ fmt.Sprint(i + 1) }. { s.Label } — { s.Sub } at { s.At }</li>
+				}
+			</ol>
+			@obsProvenance("work task audit trail", data.TraceURL)
+		}
+	</section>
+}
+
+templ obsPostureChip(label string, scope string) {
+	<div class="border border-edge bg-void/30 rounded-md px-3 py-2 min-w-[10rem]">
+		<p class="text-xs text-warm">{ label }</p>
+		<p class="text-[11px] text-warm-faint">{ scope }</p>
+	</div>
+}
+
+templ obsPosturePanel() {
+	<section class="border border-edge bg-surface rounded-lg p-4">
+		<h2 class="text-sm font-medium text-warm mb-1">Program posture (static, from the v3.9.20 state proof)</h2>
+		<p class="text-[11px] text-warm-faint mb-3">A satisfied chip without its bounded scope is invalid — every caption below is the scope. v4.0 is candidate; Gates K and L are defined, NOT satisfied.</p>
+		<div class="flex flex-wrap gap-2">
+			@obsPostureChip("Gate A — review package accepted", "bounded")
+			@obsPostureChip("Gate B — foundation residuals closed/carried", "bounded")
+			@obsPostureChip("Gate C — thin slice", "bounded fixture")
+			@obsPostureChip("Gate D — Hive gov", "R-001/2/3 carried")
+			@obsPostureChip("Gate E — Site surface", "bounded: site#62")
+			@obsPostureChip("Gate F — Work LLM proposal", "bounded: work#38")
+			@obsPostureChip("Gate G — scanner", "bounded: work#39")
+			@obsPostureChip("Gate H — issue→PR", "bounded: work#40")
+			@obsPostureChip("Gate I — cap monitoring", "bounded: work#41")
+			@obsPostureChip("Gate J — golden PRD", "bounded: work#42")
+			@obsPostureChip("Residual Closure", "Hive seam only: hive#126 (side-effect-free)")
+			@obsPostureChip("Epic 11", "selected for authorization review only — NOT implemented")
+		</div>
+		<div class="mt-3 border-t border-edge pt-3 flex flex-wrap gap-2 items-center">
+			<span class="text-[11px] text-warm-faint">━ doctrine boundary — v4.0 is candidate, not accepted ━</span>
+			<div class="border border-dashed border-edge rounded-md px-3 py-2 min-w-[10rem]">
+				<p class="text-xs text-warm-muted">Gate K — interim loop hardened</p>
+				<p class="text-[11px] text-warm-faint">DEFINED · NOT satisfied · candidate</p>
+			</div>
+			<div class="border border-dashed border-edge rounded-md px-3 py-2 min-w-[10rem]">
+				<p class="text-xs text-warm-muted">Gate L — v4.0 reconciliation certified</p>
+				<p class="text-[11px] text-warm-faint">DEFINED · NOT satisfied · candidate</p>
+			</div>
+		</div>
+		<p class="text-[11px] text-warm-faint mt-3">source: dark-factory v3.9.20 state proof + as-built tracker (docs repo) · static labels, not live gate evaluation</p>
+	</section>
+}

@@ -42,6 +42,7 @@ type OpsPageData struct {
 	HiveShell   *OpsHiveShellData
 	Evidence    *OpsEvidenceData
 	Decision    *OpsDecisionData
+	Observatory *OpsObservatoryData
 	LegacyURL   string
 }
 
@@ -983,6 +984,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Target:      "work API /telemetry/*",
 			Owner:       "site native UI, work telemetry",
 			Status:      "native summary",
+		},
+		{
+			ID:          "observatory",
+			Label:       "Observatory",
+			Description: "Civilization transparency: vitals, spend vs cap, agent lifecycle timelines, authority decisions, and causal traces.",
+			Href:        "/ops/observatory",
+			Target:      "work /telemetry/* + hive operator projection",
+			Owner:       "site read-only projection",
+			Status:      "read-only",
 		},
 		{
 			ID:          "hive",
