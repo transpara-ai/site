@@ -105,6 +105,21 @@ func TestPhaseCostBarsStatesReasons(t *testing.T) {
 	if svg == "" || len(labels) != 2 || total != "2.00" || reason != "" {
 		t.Errorf("valid costs must chart: svg=%d labels=%d total=%q reason=%q", len(svg), len(labels), total, reason)
 	}
+
+	// Renderer refusal on a NON-ZERO series must state a reason, never fall
+	// through to the all-zero story (round-2 finding): 400 phases cannot fit
+	// 720px, so Bars fails closed while sum > 0.
+	many := &OpsPipelineReport{Phases: make([]OpsPipelinePhase, 400)}
+	for i := range many.Phases {
+		many.Phases[i] = OpsPipelinePhase{Phase: "p", CostUSD: 0.01}
+	}
+	svg, labels, _, reason = phaseCostBars(many)
+	if svg != "" {
+		t.Fatal("expected renderer refusal for 400 phases at 720px")
+	}
+	if !strings.Contains(reason, "renderer declined") || len(labels) != 400 {
+		t.Errorf("non-zero renderer refusal must carry an explicit reason and keep labels, got reason=%q labels=%d", reason, len(labels))
+	}
 }
 
 func TestFetchObservatoryStatusPresenceAwareDecode(t *testing.T) {
@@ -202,6 +217,18 @@ func TestFetchObservatoryTraceEscapesPathAndVerifiesTask(t *testing.T) {
 	if _, _, err := fetchObservatoryTrace(r, "t-OTHER"); err == nil {
 		t.Error("task_id mismatch must surface as an error")
 	}
+
+	// A feeder that omits the task_id echo is unverifiable — withheld.
+	srvNoEcho := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"events":[{"id":"e1","type":"work.task.created","source":"a","timestamp":"2026-06-13T00:00:01Z"}]}`))
+	}))
+	defer srvNoEcho.Close()
+	t.Setenv("WORK_API_BASE_URL", srvNoEcho.URL)
+	if _, _, err := fetchObservatoryTrace(r, "t-1"); err == nil || !strings.Contains(err.Error(), "did not echo") {
+		t.Errorf("missing task_id echo must fail closed, got err=%v", err)
+	}
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
 
 	// Oversized IDs are rejected before any request.
 	if _, _, err := fetchObservatoryTrace(r, strings.Repeat("x", 200)); err == nil {

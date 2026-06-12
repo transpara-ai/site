@@ -282,7 +282,12 @@ func fetchObservatoryTrace(r *http.Request, taskID string) ([]ObsTraceStep, stri
 	if err := obsGetJSON(r, traceURL, payload); err != nil {
 		return nil, traceURL, err
 	}
-	if payload.TaskID != "" && payload.TaskID != taskID {
+	// Fail closed: the feeder must echo exactly the requested task id. An
+	// empty echo is unverifiable, not acceptable (round-2 review finding).
+	if payload.TaskID != taskID {
+		if payload.TaskID == "" {
+			return nil, traceURL, fmt.Errorf("feeder response did not echo a task id — trail unverifiable, withheld")
+		}
 		return nil, traceURL, fmt.Errorf("feeder returned trail for task %q, not the requested %q", payload.TaskID, taskID)
 	}
 	steps := make([]ObsTraceStep, 0, len(payload.Events))
@@ -443,5 +448,11 @@ func phaseCostBars(report *OpsPipelineReport) (svg string, labels []string, tota
 	if sum > 0 {
 		total = fmt.Sprintf("%.2f", sum)
 	}
-	return svgviz.Bars(values, labels, 720, 80), labels, total, ""
+	svg = svgviz.Bars(values, labels, 720, 80)
+	// Fail closed: a renderer refusal on a non-zero series must never fall
+	// through to the all-zero wording (round-2 review finding).
+	if svg == "" && sum > 0 {
+		return "", labels, total, fmt.Sprintf("chart renderer declined %d phases at this size — chart withheld; recorded costs listed below", len(values))
+	}
+	return svg, labels, total, ""
 }

@@ -173,6 +173,13 @@ templ obsPhaseCostPanel(data *OpsObservatoryData) {
 			@obsUnavailable("Pipeline report", data.Telemetry.PipelineError, data.Telemetry.PipelineURL)
 		} else if data.PhaseCostReason != "" {
 			@obsUnavailable("Phase cost chart", data.PhaseCostReason, data.Telemetry.PipelineURL)
+			if len(data.PhaseCostLabels) > 0 {
+				<ul class="mt-2 space-y-1">
+					for _, label := range data.PhaseCostLabels {
+						<li class="text-[11px] text-warm-faint">{ label }</li>
+					}
+				</ul>
+			}
 		} else if data.PhaseCostBarsSVG != "" {
 			<div class="text-brand">
 				@templ.Raw(data.PhaseCostBarsSVG)
