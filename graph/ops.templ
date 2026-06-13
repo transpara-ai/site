@@ -828,6 +828,16 @@ templ opsHiveModelSelection(selection OpsHiveModelSelection) {
 				}
 			</div>
 		</header>
+		<div class="px-3 py-3 border-b border-edge">
+			<div class="border border-edge bg-surface rounded-lg p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<p class="text-xs font-medium text-warm">Global Model Selection Mode</p>
+					<p class="text-[11px] text-warm-faint mt-1">Projected by Hive when present; inferred as Auto for selector-backed projections.</p>
+					<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { obsHiveProjectionModelModeProvenance(selection) }</p>
+				</div>
+				@obsModelModeToggle(obsHiveProjectionModelMode(selection))
+			</div>
+		</div>
 		if selection.Source == "" && len(selection.Assignments) == 0 && len(selection.Models) == 0 {
 			<p class="px-3 py-5 text-sm text-warm-faint">No model-selection projection returned.</p>
 		} else {
@@ -868,6 +878,11 @@ templ opsHiveModelSelection(selection OpsHiveModelSelection) {
 								<dd class="text-warm-muted truncate">{ opsValueOr(item.PreferredTier, item.Tier) }</dd>
 								<dt class="text-warm-faint">Operate</dt>
 								<dd class="text-warm-muted">{ fmt.Sprintf("%t", item.CanOperate) }</dd>
+								<dt class="text-warm-faint">Mode</dt>
+								<dd class="text-warm-muted">
+									@obsModelModeToggle(obsAssignmentModelMode(selection, item))
+									<p class="text-[10px] text-warm-faint mt-1">{ obsAssignmentModelModeProvenance(selection, item) }</p>
+								</dd>
 								if len(item.RequiredCapabilities) > 0 {
 									<dt class="text-warm-faint">Caps</dt>
 									<dd class="text-warm-muted truncate">{ strings.Join(item.RequiredCapabilities, ", ") }</dd>

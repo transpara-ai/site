@@ -50,6 +50,91 @@ func TestBuildObsAgentsJoinsHistoryAndSorts(t *testing.T) {
 	}
 }
 
+func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testing.T) {
+	hive := &OpsHiveData{
+		Lifecycle: []OpsHiveLifecycle{
+			{ActorID: "act-guardian", DisplayName: "guardian", Role: "guardian", LifecycleStatus: "active"},
+			{ActorID: "act-cartographer", DisplayName: "cartographer", Role: "cartographer", LifecycleStatus: "active"},
+		},
+		PendingApprovals: []OpsHiveApproval{{
+			RequestID:     "req-spawn-cartographer",
+			ActionName:    "agent.spawn.persistent",
+			Target:        "cartographer",
+			Justification: "map system topology",
+		}},
+		ModelSelection: OpsHiveModelSelection{
+			Source: "hive",
+			Assignments: []OpsHiveModelRoleAssignment{
+				{Role: "guardian", Model: "claude-sonnet", SelectionStrategy: "balanced", Source: "starter-role-definition"},
+				{Role: "implementer", Model: "claude-opus", Source: "hive-model-policy-event", PolicyEventID: "ev-model"},
+			},
+		},
+	}
+	civ := buildObsCivilization([]ObsAgentView{{Role: "guardian", ActorID: "run-guardian", State: "processing", Model: "claude-sonnet"}}, hive)
+	if len(civ.Roster) < len(obsStarterRoles)+1 {
+		t.Fatalf("roster missing roles: got %d", len(civ.Roster))
+	}
+	byRole := map[string]ObsCivilizationRole{}
+	for _, row := range civ.Roster {
+		byRole[row.Role] = row
+	}
+	guardian := byRole["guardian"]
+	if guardian.Status != "processing" || guardian.Agent == "not runtime-projected" {
+		t.Fatalf("guardian should reflect runtime projection, got %+v", guardian)
+	}
+	if guardian.ModelMode != "Auto" {
+		t.Fatalf("guardian mode = %q, want Auto", guardian.ModelMode)
+	}
+	if guardian.ModelModeProvenance != "inferred" {
+		t.Fatalf("guardian mode provenance = %q, want inferred", guardian.ModelModeProvenance)
+	}
+	if !strings.Contains(civ.GlobalModeReason, "inferred") {
+		t.Fatalf("global mode reason must disclose inferred mode, got %q", civ.GlobalModeReason)
+	}
+	if civ.GlobalModeProvenance != "inferred" {
+		t.Fatalf("global mode provenance = %q, want inferred", civ.GlobalModeProvenance)
+	}
+	implementer := byRole["implementer"]
+	if implementer.ModelMode != "Manual" {
+		t.Fatalf("implementer mode = %q, want Manual for policy-event override", implementer.ModelMode)
+	}
+	if implementer.ModelModeProvenance != "override" {
+		t.Fatalf("implementer mode provenance = %q, want override", implementer.ModelModeProvenance)
+	}
+	planner := byRole["planner"]
+	if planner.ModelMode != "Auto" || planner.ModelModeProvenance != "default" {
+		t.Fatalf("unassigned bootstrap role should inherit global mode default, got mode=%q provenance=%q", planner.ModelMode, planner.ModelModeProvenance)
+	}
+	emergent := byRole["cartographer"]
+	if emergent.Origin != "runtime-projected" || emergent.Category != "emergent/runtime" {
+		t.Fatalf("non-bootstrap lifecycle role must be marked emergent/runtime-projected, got %+v", emergent)
+	}
+	if emergent.CanOperate != "not projected" {
+		t.Fatalf("emergent CanOperate = %q, want not projected", emergent.CanOperate)
+	}
+	if len(civ.Emergence) == 0 {
+		t.Fatal("spawn approval should appear in emergence queue")
+	}
+}
+
+func TestBuildObsCivilizationLabelsExplicitGlobalModelMode(t *testing.T) {
+	civ := buildObsCivilization(nil, &OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{
+			GlobalMode: "manual",
+			Source:     "hive",
+		},
+	})
+	if civ.GlobalModelMode != "Manual" {
+		t.Fatalf("global mode = %q, want Manual", civ.GlobalModelMode)
+	}
+	if civ.GlobalModeProvenance != "explicit" {
+		t.Fatalf("global mode provenance = %q, want explicit", civ.GlobalModeProvenance)
+	}
+	if !strings.Contains(civ.GlobalModeReason, "explicitly projected") {
+		t.Fatalf("global mode reason must disclose explicit projection, got %q", civ.GlobalModeReason)
+	}
+}
+
 func TestBuildObsSpendStatesTrueReasons(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -237,6 +322,137 @@ func TestFetchObservatoryTraceEscapesPathAndVerifiesTask(t *testing.T) {
 	// UUID-shaped IDs (the real case) pass the allowlist.
 	if !obsTaskIDPattern.MatchString("0197524e-9b7c-7cc3-b8c3-1a2b3c4d5e6f") {
 		t.Error("UUID task IDs must pass the allowlist")
+	}
+}
+
+func TestHandleOpsObservatoryEventsProxiesWorkSSEWithServerSideAuth(t *testing.T) {
+	var gotPath, gotQuery, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(": keepalive\n\n"))
+		w.Write([]byte("event: site-error\n"))
+		w.Write([]byte(`data: {"type":"agent.state.changed","source":"sysmon","summary":"state changed","recorded_at":"2026-06-13T01:00:00Z"}` + "\n\n"))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "test-key")
+
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	h.handleOpsObservatoryEvents(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if gotPath != "/telemetry/sse" {
+		t.Fatalf("upstream path = %q, want /telemetry/sse", gotPath)
+	}
+	if gotQuery != "" {
+		t.Fatalf("upstream query = %q, want empty query so API keys never enter URLs", gotQuery)
+	}
+	if gotAuth != "Bearer test-key" {
+		t.Fatalf("Authorization = %q, want bearer key sent server-side", gotAuth)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	body := w.Body.String()
+	for _, want := range []string{": keepalive", `"type":"agent.state.changed"`, `"source":"sysmon"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("stream body missing %q: %s", want, body)
+		}
+	}
+	if strings.Contains(body, "event: site-error") {
+		t.Fatalf("upstream event names must not be forwarded into the proxy-owned site-error channel: %s", body)
+	}
+}
+
+func TestOpsObservatoryEventsRouteThroughWriteWrapStreams(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`data: {"type":"mock","source":"wrapper-test"}` + "\n\n"))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "")
+
+	var wrapped bool
+	h := NewHandlers(nil, nil, func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			wrapped = true
+			next.ServeHTTP(w, r)
+		})
+	})
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	mux.ServeHTTP(w, req)
+
+	if !wrapped {
+		t.Fatal("observatory events route must be registered through writeWrap")
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	if body := w.Body.String(); !strings.Contains(body, `"source":"wrapper-test"`) {
+		t.Fatalf("stream body missing forwarded data frame: %s", body)
+	}
+}
+
+func TestObsForwardableSSELineDropsUpstreamEventNames(t *testing.T) {
+	cases := []struct {
+		line string
+		want bool
+	}{
+		{"", true},
+		{": keepalive", true},
+		{`data: {"type":"agent.state.changed"}`, true},
+		{"id: 123", true},
+		{"retry: 3000", true},
+		{"event: site-error", false},
+		{"event: message", false},
+		{"junk: nope", false},
+	}
+	for _, c := range cases {
+		if got := obsForwardableSSELine(c.line); got != c.want {
+			t.Errorf("obsForwardableSSELine(%q) = %v, want %v", c.line, got, c.want)
+		}
+	}
+}
+
+func TestHandleOpsObservatoryEventsRejectsNonSSEUpstream(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"events":[]}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	h.handleOpsObservatoryEvents(w, req)
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusBadGateway, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "did not return text/event-stream") {
+		t.Fatalf("error body should name the fail-closed reason, got: %s", w.Body.String())
 	}
 }
 

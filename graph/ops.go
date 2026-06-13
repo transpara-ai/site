@@ -274,6 +274,8 @@ type OpsHiveProjection struct {
 type OpsHiveModelSelection struct {
 	Source        string                       `json:"source"`
 	CatalogSource string                       `json:"catalog_source"`
+	GlobalMode    string                       `json:"global_mode"`
+	SelectionMode string                       `json:"selection_mode"`
 	LoadedAt      string                       `json:"loaded_at"`
 	ReloadMode    string                       `json:"reload_mode"`
 	HotReload     bool                         `json:"hot_reload"`
@@ -309,6 +311,9 @@ type OpsHiveModelRoleAssignment struct {
 	RequiredCapabilities []string `json:"required_capabilities"`
 	MaxCostPerCallUSD    *float64 `json:"max_cost_per_call_usd"`
 	SelectionStrategy    string   `json:"selection_strategy"`
+	SelectionMode        string   `json:"selection_mode"`
+	OverrideMode         string   `json:"override_mode"`
+	EffectiveMode        string   `json:"effective_mode"`
 	Source               string   `json:"source"`
 	PolicyEventID        string   `json:"policy_event_id"`
 	Error                string   `json:"error"`
