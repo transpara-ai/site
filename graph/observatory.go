@@ -17,7 +17,8 @@ import (
 // The observatory is the read-only civilization transparency surface
 // (dark-factory transparency contract T1–T7, observatory phase-3 plan).
 // It consumes egress APIs only — work /telemetry/status, /telemetry/agents/history,
-// /tasks/{id}/events and the hive operator projection — and performs no writes.
+// /telemetry/sse, /tasks/{id}/events and the hive operator projection — and
+// performs no writes.
 //
 // Fail-open is the enemy here: an omitted JSON field must never render as a
 // fact (0, false, "no cost"). Feeder scalars decode as pointers; nil renders
@@ -560,9 +561,9 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 	if hive.ModelSelection.Source == "" && len(hive.ModelSelection.Assignments) == 0 {
 		civ.GlobalModelMode = "unknown"
 		civ.GlobalModeReason = "Hive did not return model-selection projection metadata"
-	} else if mode := obsHiveProjectionModelMode(hive.ModelSelection); mode != "" {
+	} else if mode, reason := obsHiveProjectionModelModeReason(hive.ModelSelection); mode != "" {
 		civ.GlobalModelMode = mode
-		civ.GlobalModeReason = "projected by Hive model-selection metadata"
+		civ.GlobalModeReason = reason
 	}
 
 	lifecycleByRole := obsLifecycleByRole(hive.Lifecycle)
@@ -820,13 +821,18 @@ func obsAssignmentModelMode(selection OpsHiveModelSelection, item OpsHiveModelRo
 }
 
 func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
+	mode, _ := obsHiveProjectionModelModeReason(selection)
+	return mode
+}
+
+func obsHiveProjectionModelModeReason(selection OpsHiveModelSelection) (string, string) {
 	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
-		return mode
+		return mode, "explicitly projected by Hive model-selection metadata"
 	}
 	if selection.Source != "" || len(selection.Assignments) > 0 {
-		return "Auto"
+		return "Auto", "inferred from presence of model-selection metadata; no explicit global mode projected"
 	}
-	return "unknown"
+	return "unknown", "Hive did not return model-selection projection metadata"
 }
 
 func obsCanonicalModelMode(raw string) string {

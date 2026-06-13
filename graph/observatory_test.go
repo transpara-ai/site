@@ -85,6 +85,9 @@ func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testin
 	if guardian.ModelMode != "Auto" {
 		t.Fatalf("guardian mode = %q, want Auto", guardian.ModelMode)
 	}
+	if !strings.Contains(civ.GlobalModeReason, "inferred") {
+		t.Fatalf("global mode reason must disclose inferred mode, got %q", civ.GlobalModeReason)
+	}
 	implementer := byRole["implementer"]
 	if implementer.ModelMode != "Manual" {
 		t.Fatalf("implementer mode = %q, want Manual for policy-event override", implementer.ModelMode)
@@ -95,6 +98,21 @@ func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testin
 	}
 	if len(civ.Emergence) == 0 {
 		t.Fatal("spawn approval should appear in emergence queue")
+	}
+}
+
+func TestBuildObsCivilizationLabelsExplicitGlobalModelMode(t *testing.T) {
+	civ := buildObsCivilization(nil, &OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{
+			GlobalMode: "manual",
+			Source:     "hive",
+		},
+	})
+	if civ.GlobalModelMode != "Manual" {
+		t.Fatalf("global mode = %q, want Manual", civ.GlobalModelMode)
+	}
+	if !strings.Contains(civ.GlobalModeReason, "explicitly projected") {
+		t.Fatalf("global mode reason must disclose explicit projection, got %q", civ.GlobalModeReason)
 	}
 }
 
