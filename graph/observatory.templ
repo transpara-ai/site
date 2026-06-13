@@ -14,6 +14,7 @@ templ opsObservatorySummary(data *OpsObservatoryData) {
 		@obsSpendPanel(data)
 		@obsAgentsPanel(data)
 		@obsPhaseCostPanel(data)
+		@obsEventPulsePanel(data)
 		@obsAuthorityPanel(data)
 		@obsTracePanel(data)
 		@obsPosturePanel()
@@ -201,6 +202,89 @@ templ obsPhaseCostPanel(data *OpsObservatoryData) {
 		if data.Telemetry != nil {
 			@obsProvenance("work telemetry pipeline report", data.Telemetry.PipelineURL)
 		}
+	</section>
+}
+
+templ obsEventPulsePanel(data *OpsObservatoryData) {
+	<section class="border border-edge bg-surface rounded-lg p-4" data-observatory-events={ data.EventPulseURL }>
+		<div class="flex items-start justify-between gap-3 mb-3">
+			<div>
+				<h2 class="text-sm font-medium text-warm">Live event pulse</h2>
+				<p class="text-[11px] text-warm-faint mt-1">Site-authenticated SSE proxy for work telemetry deltas. No Work API key is exposed to the browser.</p>
+			</div>
+			<span id="observatory-event-status" class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">connecting</span>
+		</div>
+		<ol id="observatory-event-list" class="space-y-2 min-h-[5rem]">
+			<li data-empty="true" class="border border-dashed border-edge rounded-md px-3 py-2 text-xs text-warm-faint">waiting for live events</li>
+		</ol>
+		@obsProvenance("site SSE proxy -> work telemetry/sse", data.EventPulseSource)
+		<script>
+			(function () {
+				var root = document.currentScript && document.currentScript.closest("[data-observatory-events]");
+				if (!root) return;
+				var url = root.getAttribute("data-observatory-events");
+				var list = root.querySelector("#observatory-event-list");
+				var status = root.querySelector("#observatory-event-status");
+				if (!url || !list || !status) return;
+				function setStatus(text, cls) {
+					status.textContent = text;
+					status.className = "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap " + cls;
+				}
+				function value(v) {
+					if (v === null || v === undefined || v === "") return "unknown";
+					return String(v);
+				}
+				function render(frame) {
+					var empty = list.querySelector("[data-empty]");
+					if (empty) empty.remove();
+					var li = document.createElement("li");
+					li.className = "border border-edge bg-void/30 rounded-md px-3 py-2";
+					var title = document.createElement("p");
+					title.className = "text-xs text-warm";
+					title.textContent = value(frame.type) + " · " + value(frame.source);
+					var meta = document.createElement("p");
+					meta.className = "text-[11px] text-warm-faint mt-1";
+					meta.textContent = value(frame.recorded_at);
+					var summary = document.createElement("p");
+					summary.className = "text-[11px] text-warm-muted mt-1";
+					summary.textContent = value(frame.summary);
+					li.appendChild(title);
+					li.appendChild(meta);
+					li.appendChild(summary);
+					list.prepend(li);
+					while (list.children.length > 8) {
+						list.removeChild(list.lastElementChild);
+					}
+				}
+				if (!("EventSource" in window)) {
+					setStatus("unsupported", "border-amber-400/30 text-amber-300 bg-amber-400/10");
+					list.innerHTML = "";
+					var li = document.createElement("li");
+					li.setAttribute("data-empty", "true");
+					li.className = "border border-dashed border-edge rounded-md px-3 py-2 text-xs text-warm-faint";
+					li.textContent = "browser EventSource unavailable";
+					list.appendChild(li);
+					return;
+				}
+				var es = new EventSource(url);
+				es.onopen = function () {
+					setStatus("live", "border-emerald-400/30 text-emerald-300 bg-emerald-400/10");
+				};
+				es.onmessage = function (ev) {
+					try {
+						render(JSON.parse(ev.data));
+					} catch (e) {
+						setStatus("bad frame", "border-amber-400/30 text-amber-300 bg-amber-400/10");
+					}
+				};
+				es.addEventListener("site-error", function () {
+					setStatus("feeder error", "border-red-400/30 text-red-300 bg-red-400/10");
+				});
+				es.onerror = function () {
+					setStatus("unavailable", "border-red-400/30 text-red-300 bg-red-400/10");
+				};
+			})();
+		</script>
 	</section>
 }
 

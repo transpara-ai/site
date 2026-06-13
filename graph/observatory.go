@@ -1,8 +1,10 @@
 package graph
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"regexp"
 	"sort"
@@ -24,6 +26,19 @@ import (
 // obsWorkClient bounds every observatory fetch to the Work API so a hung
 // feeder renders an unavailable panel instead of hanging the page.
 var obsWorkClient = &http.Client{Timeout: 5 * time.Second}
+
+// obsSSEClient bounds the upstream SSE handshake but leaves the body stream
+// open for the browser's EventSource. A normal http.Client Timeout would cut
+// off healthy long-lived streams.
+var obsSSEClient = &http.Client{
+	Transport: &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		DialContext:           (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+		TLSHandshakeTimeout:   5 * time.Second,
+		ResponseHeaderTimeout: 5 * time.Second,
+		IdleConnTimeout:       30 * time.Second,
+	},
+}
 
 type OpsObservatoryData struct {
 	GeneratedAt string
@@ -57,6 +72,10 @@ type OpsObservatoryData struct {
 	TraceSteps  []ObsTraceStep
 	TraceSVG    string
 	TraceError  string
+
+	// Live pulse (Site proxy -> work /telemetry/sse)
+	EventPulseURL    string
+	EventPulseSource string
 }
 
 // ObsSpend carries either a drawable spend-vs-cap state or the explicit
@@ -166,7 +185,11 @@ var authorityOutcomes = map[string]bool{
 func obsCanonicalOutcome(s string) bool { return authorityOutcomes[strings.TrimSpace(s)] }
 
 func (h *Handlers) handleOpsObservatory(w http.ResponseWriter, r *http.Request) {
-	data := &OpsObservatoryData{GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05 UTC")}
+	data := &OpsObservatoryData{
+		GeneratedAt:      time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+		EventPulseURL:    "/ops/observatory/events",
+		EventPulseSource: legacyWorkURL(serverWorkAPIBaseURL(), "/telemetry/sse"),
+	}
 
 	status, statusURL, err := fetchObservatoryStatus(r)
 	data.StatusURL = statusURL
@@ -212,6 +235,85 @@ func (h *Handlers) handleOpsObservatory(w http.ResponseWriter, r *http.Request) 
 		Active:      "observatory",
 		Observatory: data,
 	})
+}
+
+func (h *Handlers) handleOpsObservatoryEvents(w http.ResponseWriter, r *http.Request) {
+	streamObservatoryEvents(w, r)
+}
+
+func streamObservatoryEvents(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "event pulse streaming is not supported by this response writer", http.StatusInternalServerError)
+		return
+	}
+
+	upstreamURL := legacyWorkURL(serverWorkAPIBaseURL(), "/telemetry/sse")
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, upstreamURL, nil)
+	if err != nil {
+		http.Error(w, "event pulse request could not be built: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	setWorkAuth(req)
+
+	resp, err := obsSSEClient.Do(req)
+	if err != nil {
+		http.Error(w, "event pulse feeder unavailable: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		http.Error(w, "event pulse feeder returned "+resp.Status, http.StatusBadGateway)
+		return
+	}
+	if ct := strings.ToLower(resp.Header.Get("Content-Type")); !strings.HasPrefix(ct, "text/event-stream") {
+		http.Error(w, "event pulse feeder did not return text/event-stream", http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+	fmt.Fprint(w, ": site observatory event proxy connected\n\n")
+	flusher.Flush()
+
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !obsForwardableSSELine(line) {
+			continue
+		}
+		fmt.Fprint(w, line+"\n")
+		if line == "" {
+			flusher.Flush()
+		}
+	}
+	if err := scanner.Err(); err != nil && r.Context().Err() == nil {
+		obsWriteSSEError(w, flusher, "event pulse upstream read failed")
+	}
+}
+
+func obsForwardableSSELine(line string) bool {
+	if line == "" {
+		return true
+	}
+	for _, prefix := range []string{"data:", "id:", "retry:", ":"} {
+		if strings.HasPrefix(line, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func obsWriteSSEError(w http.ResponseWriter, flusher http.Flusher, message string) {
+	payload, err := json.Marshal(map[string]string{"error": message})
+	if err != nil {
+		payload = []byte(`{"error":"event pulse failed"}`)
+	}
+	fmt.Fprintf(w, "event: site-error\ndata: %s\n\n", payload)
+	flusher.Flush()
 }
 
 // buildObsSpend validates spend inputs and states the true reason whenever

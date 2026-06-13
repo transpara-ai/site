@@ -240,6 +240,98 @@ func TestFetchObservatoryTraceEscapesPathAndVerifiesTask(t *testing.T) {
 	}
 }
 
+func TestHandleOpsObservatoryEventsProxiesWorkSSEWithServerSideAuth(t *testing.T) {
+	var gotPath, gotQuery, gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(": keepalive\n\n"))
+		w.Write([]byte("event: site-error\n"))
+		w.Write([]byte(`data: {"type":"agent.state.changed","source":"sysmon","summary":"state changed","recorded_at":"2026-06-13T01:00:00Z"}` + "\n\n"))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "test-key")
+
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	h.handleOpsObservatoryEvents(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if gotPath != "/telemetry/sse" {
+		t.Fatalf("upstream path = %q, want /telemetry/sse", gotPath)
+	}
+	if gotQuery != "" {
+		t.Fatalf("upstream query = %q, want empty query so API keys never enter URLs", gotQuery)
+	}
+	if gotAuth != "Bearer test-key" {
+		t.Fatalf("Authorization = %q, want bearer key sent server-side", gotAuth)
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	body := w.Body.String()
+	for _, want := range []string{": keepalive", `"type":"agent.state.changed"`, `"source":"sysmon"`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("stream body missing %q: %s", want, body)
+		}
+	}
+	if strings.Contains(body, "event: site-error") {
+		t.Fatalf("upstream event names must not be forwarded into the proxy-owned site-error channel: %s", body)
+	}
+}
+
+func TestObsForwardableSSELineDropsUpstreamEventNames(t *testing.T) {
+	cases := []struct {
+		line string
+		want bool
+	}{
+		{"", true},
+		{": keepalive", true},
+		{`data: {"type":"agent.state.changed"}`, true},
+		{"id: 123", true},
+		{"retry: 3000", true},
+		{"event: site-error", false},
+		{"event: message", false},
+		{"junk: nope", false},
+	}
+	for _, c := range cases {
+		if got := obsForwardableSSELine(c.line); got != c.want {
+			t.Errorf("obsForwardableSSELine(%q) = %v, want %v", c.line, got, c.want)
+		}
+	}
+}
+
+func TestHandleOpsObservatoryEventsRejectsNonSSEUpstream(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"events":[]}`))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := &Handlers{}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	h.handleOpsObservatoryEvents(w, req)
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusBadGateway, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "did not return text/event-stream") {
+		t.Fatalf("error body should name the fail-closed reason, got: %s", w.Body.String())
+	}
+}
+
 func TestObsCanonicalOutcomeAllowlist(t *testing.T) {
 	for _, ok := range []string{"Autonomous", "Notify", "ApprovalRequired", "Forbidden", " ApprovalRequired "} {
 		if !obsCanonicalOutcome(ok) {
