@@ -42,6 +42,7 @@ type OpsPageData struct {
 	HiveShell   *OpsHiveShellData
 	Evidence    *OpsEvidenceData
 	Decision    *OpsDecisionData
+	Observatory *OpsObservatoryData
 	LegacyURL   string
 }
 
@@ -985,6 +986,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native summary",
 		},
 		{
+			ID:          "observatory",
+			Label:       "Observatory",
+			Description: "Civilization transparency: vitals, spend vs cap, agent lifecycle timelines, authority decisions, and causal traces.",
+			Href:        "/ops/observatory",
+			Target:      "work /telemetry/* + hive operator projection",
+			Owner:       "site read-only projection",
+			Status:      "read-only",
+		},
+		{
 			ID:          "hive",
 			Label:       "Hive",
 			Description: "Runtime iteration, phase timeline, diagnostics, and recent build signal.",
@@ -1710,7 +1720,7 @@ func fetchOpsTelemetry(r *http.Request) *OpsTelemetryData {
 		return data
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
 		return data
@@ -1766,7 +1776,7 @@ func fetchOpsPipelineReport(r *http.Request, reportURL string) (*OpsPipelineRepo
 		return nil, err
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -1802,7 +1812,7 @@ func fetchOpsWork(r *http.Request) *OpsWorkData {
 		return data
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		data.Error = err.Error()
 		return data
@@ -1858,7 +1868,7 @@ func fetchOpsPhaseGates(r *http.Request, workBase string) []OpsPhaseGate {
 		return nil
 	}
 	setWorkAuth(req)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := obsWorkClient.Do(req)
 	if err != nil {
 		return nil
 	}
