@@ -101,6 +101,10 @@ func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testin
 	if implementer.ModelModeProvenance != "override" {
 		t.Fatalf("implementer mode provenance = %q, want override", implementer.ModelModeProvenance)
 	}
+	planner := byRole["planner"]
+	if planner.ModelMode != "Auto" || planner.ModelModeProvenance != "default" {
+		t.Fatalf("unassigned bootstrap role should inherit global mode default, got mode=%q provenance=%q", planner.ModelMode, planner.ModelModeProvenance)
+	}
 	emergent := byRole["cartographer"]
 	if emergent.Origin != "runtime-projected" || emergent.Category != "emergent/runtime" {
 		t.Fatalf("non-bootstrap lifecycle role must be marked emergent/runtime-projected, got %+v", emergent)

@@ -585,7 +585,7 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 		if civ.Roster[i].Model == "" {
 			civ.Roster[i].Model = "not projected"
 		}
-		if civ.Roster[i].ModelMode == "" {
+		if civ.Roster[i].ModelMode == "" || (civ.Roster[i].ModelMode == "unknown" && civ.GlobalModeProvenance != "not projected") {
 			civ.Roster[i].ModelMode = civ.GlobalModelMode
 			civ.Roster[i].ModelModeProvenance = obsInheritedModelModeProvenance(civ.GlobalModeProvenance)
 		}
@@ -850,11 +850,6 @@ func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
 func obsHiveProjectionModelModeProvenance(selection OpsHiveModelSelection) string {
 	_, provenance, _ := obsHiveProjectionModelModeState(selection)
 	return provenance
-}
-
-func obsHiveProjectionModelModeReason(selection OpsHiveModelSelection) (string, string) {
-	mode, _, reason := obsHiveProjectionModelModeState(selection)
-	return mode, reason
 }
 
 func obsHiveProjectionModelModeState(selection OpsHiveModelSelection) (string, string, string) {
