@@ -833,6 +833,7 @@ templ opsHiveModelSelection(selection OpsHiveModelSelection) {
 				<div>
 					<p class="text-xs font-medium text-warm">Global Model Selection Mode</p>
 					<p class="text-[11px] text-warm-faint mt-1">Projected by Hive when present; inferred as Auto for selector-backed projections.</p>
+					<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { obsHiveProjectionModelModeProvenance(selection) }</p>
 				</div>
 				@obsModelModeToggle(obsHiveProjectionModelMode(selection))
 			</div>
@@ -880,6 +881,7 @@ templ opsHiveModelSelection(selection OpsHiveModelSelection) {
 								<dt class="text-warm-faint">Mode</dt>
 								<dd class="text-warm-muted">
 									@obsModelModeToggle(obsAssignmentModelMode(selection, item))
+									<p class="text-[10px] text-warm-faint mt-1">{ obsAssignmentModelModeProvenance(selection, item) }</p>
 								</dd>
 								if len(item.RequiredCapabilities) > 0 {
 									<dt class="text-warm-faint">Caps</dt>

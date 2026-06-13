@@ -178,13 +178,14 @@ type ObsTraceStep struct {
 }
 
 type ObsCivilization struct {
-	OrgLevels        []ObsOrgLevel
-	Roster           []ObsCivilizationRole
-	Emergence        []ObsEmergenceStep
-	Findings         []string
-	GlobalModelMode  string
-	GlobalModeReason string
-	ModelSource      string
+	OrgLevels            []ObsOrgLevel
+	Roster               []ObsCivilizationRole
+	Emergence            []ObsEmergenceStep
+	Findings             []string
+	GlobalModelMode      string
+	GlobalModeProvenance string
+	GlobalModeReason     string
+	ModelSource          string
 }
 
 type ObsOrgLevel struct {
@@ -195,19 +196,20 @@ type ObsOrgLevel struct {
 }
 
 type ObsCivilizationRole struct {
-	Role           string
-	Agent          string
-	Tier           string
-	Category       string
-	Origin         string
-	Status         string
-	CanOperate     bool
-	Model          string
-	ModelMode      string
-	ReportsTo      string
-	EscalationPath string
-	Why            string
-	Evidence       string
+	Role                string
+	Agent               string
+	Tier                string
+	Category            string
+	Origin              string
+	Status              string
+	CanOperate          string
+	Model               string
+	ModelMode           string
+	ModelModeProvenance string
+	ReportsTo           string
+	EscalationPath      string
+	Why                 string
+	Evidence            string
 }
 
 type ObsEmergenceStep struct {
@@ -537,12 +539,14 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 			{Tier: "C", Label: "Business operations", Used: "not projected", Detail: "taxonomy level exists; no current projection evidence in this Site slice"},
 			{Tier: "D", Label: "Self-governance", Used: "not projected", Detail: "taxonomy level exists; no current projection evidence in this Site slice"},
 		},
-		GlobalModelMode:  "Auto",
-		GlobalModeReason: "inferred from Hive selector policy metadata until Hive projects an explicit global Model Selection Mode",
-		ModelSource:      "Hive operator projection",
+		GlobalModelMode:      "Auto",
+		GlobalModeProvenance: "inferred",
+		GlobalModeReason:     "inferred from Hive selector policy metadata until Hive projects an explicit global Model Selection Mode",
+		ModelSource:          "Hive operator projection",
 	}
 	if hive == nil {
 		civ.GlobalModelMode = "unknown"
+		civ.GlobalModeProvenance = "not projected"
 		civ.GlobalModeReason = "Hive projection not fetched"
 		civ.ModelSource = "hive operator projection unavailable"
 		civ.Roster = obsBootstrapRoster(nil, nil)
@@ -560,9 +564,11 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 	}
 	if hive.ModelSelection.Source == "" && len(hive.ModelSelection.Assignments) == 0 {
 		civ.GlobalModelMode = "unknown"
+		civ.GlobalModeProvenance = "not projected"
 		civ.GlobalModeReason = "Hive did not return model-selection projection metadata"
-	} else if mode, reason := obsHiveProjectionModelModeReason(hive.ModelSelection); mode != "" {
+	} else if mode, provenance, reason := obsHiveProjectionModelModeState(hive.ModelSelection); mode != "" {
 		civ.GlobalModelMode = mode
+		civ.GlobalModeProvenance = provenance
 		civ.GlobalModeReason = reason
 	}
 
@@ -574,13 +580,14 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 		role := strings.ToLower(civ.Roster[i].Role)
 		if assignment, ok := assignmentsByRole[role]; ok {
 			civ.Roster[i].Model = obsFirstNonEmpty(assignment.Model, assignment.PolicyModel, civ.Roster[i].Model)
-			civ.Roster[i].ModelMode = obsAssignmentModelMode(hive.ModelSelection, assignment)
+			civ.Roster[i].ModelMode, civ.Roster[i].ModelModeProvenance = obsAssignmentModelModeState(hive.ModelSelection, assignment)
 		}
 		if civ.Roster[i].Model == "" {
 			civ.Roster[i].Model = "not projected"
 		}
 		if civ.Roster[i].ModelMode == "" {
 			civ.Roster[i].ModelMode = civ.GlobalModelMode
+			civ.Roster[i].ModelModeProvenance = obsInheritedModelModeProvenance(civ.GlobalModeProvenance)
 		}
 	}
 
@@ -594,19 +601,20 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 			continue
 		}
 		civ.Roster = append(civ.Roster, ObsCivilizationRole{
-			Role:           role,
-			Agent:          obsFirstNonEmpty(l.DisplayName, l.ActorID, "projected actor"),
-			Tier:           "B?",
-			Category:       "emergent/runtime",
-			Origin:         "runtime-projected",
-			Status:         obsFirstNonEmpty(l.LifecycleStatus, "projected"),
-			CanOperate:     false,
-			Model:          "not projected",
-			ModelMode:      civ.GlobalModelMode,
-			ReportsTo:      "not projected",
-			EscalationPath: "not projected",
-			Why:            "role is not in the bootstrap registry and appears through Hive lifecycle projection",
-			Evidence:       "Hive lifecycle projection",
+			Role:                role,
+			Agent:               obsFirstNonEmpty(l.DisplayName, l.ActorID, "projected actor"),
+			Tier:                "B?",
+			Category:            "emergent/runtime",
+			Origin:              "runtime-projected",
+			Status:              obsFirstNonEmpty(l.LifecycleStatus, "projected"),
+			CanOperate:          "not projected",
+			Model:               "not projected",
+			ModelMode:           civ.GlobalModelMode,
+			ModelModeProvenance: obsInheritedModelModeProvenance(civ.GlobalModeProvenance),
+			ReportsTo:           "not projected",
+			EscalationPath:      "not projected",
+			Why:                 "role is not in the bootstrap registry and appears through Hive lifecycle projection",
+			Evidence:            "Hive lifecycle projection",
 		})
 	}
 	sort.Slice(civ.Roster, func(i, j int) bool {
@@ -627,19 +635,20 @@ func obsBootstrapRoster(lifecycleByRole map[string][]OpsHiveLifecycle, agentsByR
 	for _, role := range obsStarterRoles {
 		key := strings.ToLower(role.Role)
 		row := ObsCivilizationRole{
-			Role:           role.Role,
-			Agent:          "not runtime-projected",
-			Tier:           role.Tier,
-			Category:       role.Category,
-			Origin:         "bootstrap registry",
-			Status:         "defined, not runtime-projected",
-			CanOperate:     role.CanOperate,
-			Model:          "not projected",
-			ModelMode:      "unknown",
-			ReportsTo:      role.ReportsTo,
-			EscalationPath: role.EscalationPath,
-			Why:            role.Why,
-			Evidence:       "Hive StarterAgents / StarterRoleDefinitions",
+			Role:                role.Role,
+			Agent:               "not runtime-projected",
+			Tier:                role.Tier,
+			Category:            role.Category,
+			Origin:              "bootstrap registry",
+			Status:              "defined, not runtime-projected",
+			CanOperate:          obsOperateState(role.CanOperate),
+			Model:               "not projected",
+			ModelMode:           "unknown",
+			ModelModeProvenance: "not projected",
+			ReportsTo:           role.ReportsTo,
+			EscalationPath:      role.EscalationPath,
+			Why:                 role.Why,
+			Evidence:            "Hive StarterAgents / StarterRoleDefinitions",
 		}
 		if lifecycleByRole != nil {
 			if lifecycle := lifecycleByRole[key]; len(lifecycle) > 0 {
@@ -754,7 +763,7 @@ func obsOrgLevels(roster []ObsCivilizationRole) []ObsOrgLevel {
 func obsCivilizationFindings(civ ObsCivilization, hive *OpsHiveData) []string {
 	findings := []string{
 		"Starter role rows use a Site fallback snapshot of Hive bootstrap definitions; runtime status, model policy, and emergence evidence require live Hive/Work projection.",
-		"CanOperate is rendered as a capability flag only; it is not bootstrap membership or authority.",
+		"CanOperate is rendered as a tri-state capability flag only; it is not bootstrap membership or authority.",
 		"Auto model-selection mode expands routing flexibility only; it does not expand agent authority.",
 	}
 	if hive == nil || hive.ModelSelection.Source == "" {
@@ -802,37 +811,74 @@ func obsModelAssignmentsByRole(items []OpsHiveModelRoleAssignment) map[string]Op
 }
 
 func obsAssignmentModelMode(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) string {
-	if mode := obsCanonicalModelMode(obsFirstNonEmpty(item.EffectiveMode, item.OverrideMode, item.SelectionMode)); mode != "" {
-		return mode
-	}
-	if item.PolicyEventID != "" || item.Source == "hive-model-policy-event" {
-		return "Manual"
-	}
-	if item.SelectionStrategy != "" || item.PreferredTier != "" || len(item.RequiredCapabilities) > 0 {
-		return "Auto"
-	}
-	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
-		return mode
-	}
-	if item.Model != "" || item.PolicyModel != "" {
-		return "Manual"
-	}
-	return "unknown"
-}
-
-func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
-	mode, _ := obsHiveProjectionModelModeReason(selection)
+	mode, _ := obsAssignmentModelModeState(selection, item)
 	return mode
 }
 
-func obsHiveProjectionModelModeReason(selection OpsHiveModelSelection) (string, string) {
+func obsAssignmentModelModeProvenance(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) string {
+	_, provenance := obsAssignmentModelModeState(selection, item)
+	return provenance
+}
+
+func obsAssignmentModelModeState(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) (string, string) {
+	if mode := obsCanonicalModelMode(item.OverrideMode); mode != "" {
+		return mode, "override"
+	}
+	if mode := obsCanonicalModelMode(obsFirstNonEmpty(item.EffectiveMode, item.SelectionMode)); mode != "" {
+		return mode, "explicit"
+	}
+	if item.PolicyEventID != "" || item.Source == "hive-model-policy-event" {
+		return "Manual", "override"
+	}
+	if item.SelectionStrategy != "" || item.PreferredTier != "" || len(item.RequiredCapabilities) > 0 {
+		return "Auto", "inferred"
+	}
 	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
-		return mode, "explicitly projected by Hive model-selection metadata"
+		return mode, "default"
+	}
+	if item.Model != "" || item.PolicyModel != "" {
+		return "Manual", "inferred"
+	}
+	return "unknown", "not projected"
+}
+
+func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
+	mode, _, _ := obsHiveProjectionModelModeState(selection)
+	return mode
+}
+
+func obsHiveProjectionModelModeProvenance(selection OpsHiveModelSelection) string {
+	_, provenance, _ := obsHiveProjectionModelModeState(selection)
+	return provenance
+}
+
+func obsHiveProjectionModelModeReason(selection OpsHiveModelSelection) (string, string) {
+	mode, _, reason := obsHiveProjectionModelModeState(selection)
+	return mode, reason
+}
+
+func obsHiveProjectionModelModeState(selection OpsHiveModelSelection) (string, string, string) {
+	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
+		return mode, "explicit", "explicitly projected by Hive model-selection metadata"
 	}
 	if selection.Source != "" || len(selection.Assignments) > 0 {
-		return "Auto", "inferred from presence of model-selection metadata; no explicit global mode projected"
+		return "Auto", "inferred", "inferred from presence of model-selection metadata; no explicit global mode projected"
 	}
-	return "unknown", "Hive did not return model-selection projection metadata"
+	return "unknown", "not projected", "Hive did not return model-selection projection metadata"
+}
+
+func obsInheritedModelModeProvenance(globalProvenance string) string {
+	if globalProvenance == "not projected" || globalProvenance == "" {
+		return "not projected"
+	}
+	return "default"
+}
+
+func obsOperateState(canOperate bool) string {
+	if canOperate {
+		return "true"
+	}
+	return "false"
 }
 
 func obsCanonicalModelMode(raw string) string {

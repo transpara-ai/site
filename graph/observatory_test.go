@@ -85,16 +85,28 @@ func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testin
 	if guardian.ModelMode != "Auto" {
 		t.Fatalf("guardian mode = %q, want Auto", guardian.ModelMode)
 	}
+	if guardian.ModelModeProvenance != "inferred" {
+		t.Fatalf("guardian mode provenance = %q, want inferred", guardian.ModelModeProvenance)
+	}
 	if !strings.Contains(civ.GlobalModeReason, "inferred") {
 		t.Fatalf("global mode reason must disclose inferred mode, got %q", civ.GlobalModeReason)
+	}
+	if civ.GlobalModeProvenance != "inferred" {
+		t.Fatalf("global mode provenance = %q, want inferred", civ.GlobalModeProvenance)
 	}
 	implementer := byRole["implementer"]
 	if implementer.ModelMode != "Manual" {
 		t.Fatalf("implementer mode = %q, want Manual for policy-event override", implementer.ModelMode)
 	}
+	if implementer.ModelModeProvenance != "override" {
+		t.Fatalf("implementer mode provenance = %q, want override", implementer.ModelModeProvenance)
+	}
 	emergent := byRole["cartographer"]
 	if emergent.Origin != "runtime-projected" || emergent.Category != "emergent/runtime" {
 		t.Fatalf("non-bootstrap lifecycle role must be marked emergent/runtime-projected, got %+v", emergent)
+	}
+	if emergent.CanOperate != "not projected" {
+		t.Fatalf("emergent CanOperate = %q, want not projected", emergent.CanOperate)
 	}
 	if len(civ.Emergence) == 0 {
 		t.Fatal("spawn approval should appear in emergence queue")
@@ -110,6 +122,9 @@ func TestBuildObsCivilizationLabelsExplicitGlobalModelMode(t *testing.T) {
 	})
 	if civ.GlobalModelMode != "Manual" {
 		t.Fatalf("global mode = %q, want Manual", civ.GlobalModelMode)
+	}
+	if civ.GlobalModeProvenance != "explicit" {
+		t.Fatalf("global mode provenance = %q, want explicit", civ.GlobalModeProvenance)
 	}
 	if !strings.Contains(civ.GlobalModeReason, "explicitly projected") {
 		t.Fatalf("global mode reason must disclose explicit projection, got %q", civ.GlobalModeReason)
@@ -351,6 +366,45 @@ func TestHandleOpsObservatoryEventsProxiesWorkSSEWithServerSideAuth(t *testing.T
 	}
 	if strings.Contains(body, "event: site-error") {
 		t.Fatalf("upstream event names must not be forwarded into the proxy-owned site-error channel: %s", body)
+	}
+}
+
+func TestOpsObservatoryEventsRouteThroughWriteWrapStreams(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`data: {"type":"mock","source":"wrapper-test"}` + "\n\n"))
+	}))
+	defer srv.Close()
+
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "")
+
+	var wrapped bool
+	h := NewHandlers(nil, nil, func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			wrapped = true
+			next.ServeHTTP(w, r)
+		})
+	})
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site/ops/observatory/events", nil)
+	mux.ServeHTTP(w, req)
+
+	if !wrapped {
+		t.Fatal("observatory events route must be registered through writeWrap")
+	}
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	if body := w.Body.String(); !strings.Contains(body, `"source":"wrapper-test"`) {
+		t.Fatalf("stream body missing forwarded data frame: %s", body)
 	}
 }
 

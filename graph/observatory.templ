@@ -312,6 +312,7 @@ templ obsCivilizationPanel(data *OpsObservatoryData) {
 			<div class="shrink-0 text-right">
 				<p class="text-[10px] text-warm-faint uppercase tracking-widest mb-1">Global Model Selection Mode</p>
 				@obsModelModeToggle(data.Civilization.GlobalModelMode)
+				<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { data.Civilization.GlobalModeProvenance }</p>
 				<p class="text-[11px] text-warm-faint mt-1 max-w-xs">{ data.Civilization.GlobalModeReason }</p>
 			</div>
 		</div>
@@ -354,10 +355,11 @@ templ obsCivilizationPanel(data *OpsObservatoryData) {
 							<td class="py-2 px-3 text-warm-muted">Tier { row.Tier }</td>
 							<td class="py-2 px-3 text-warm-muted">{ row.Category }</td>
 							<td class="py-2 px-3 text-warm-muted">{ row.Status }</td>
-							<td class="py-2 px-3 text-warm-muted">{ fmt.Sprintf("%t", row.CanOperate) }</td>
+							<td class="py-2 px-3 text-warm-muted">{ row.CanOperate }</td>
 							<td class="py-2 px-3 text-warm-muted">{ row.Model }</td>
 							<td class="py-2 px-3">
 								@obsModelModeToggle(row.ModelMode)
+								<p class="text-[10px] text-warm-faint mt-1">{ row.ModelModeProvenance }</p>
 							</td>
 							<td class="py-2 px-3 text-warm-faint">
 								<p>reports: { row.ReportsTo }</p>
