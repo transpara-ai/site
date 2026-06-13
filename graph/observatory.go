@@ -66,6 +66,11 @@ type OpsObservatoryData struct {
 	// Authority, lifecycle, audit traces (hive operator projection via fetchOpsHive)
 	Hive *OpsHiveData
 
+	// Civilization assembly: role/agent topology derived from Work runtime
+	// status, Hive lifecycle/model projection, and a fallback snapshot of the
+	// Hive bootstrap role registry shape. It is display-only, never authority.
+	Civilization ObsCivilization
+
 	// Causal trace explorer (work /tasks/{id}/events, on demand via ?task=)
 	TraceTaskID string
 	TraceURL    string
@@ -171,6 +176,71 @@ type ObsTraceStep struct {
 	At    string
 }
 
+type ObsCivilization struct {
+	OrgLevels        []ObsOrgLevel
+	Roster           []ObsCivilizationRole
+	Emergence        []ObsEmergenceStep
+	Findings         []string
+	GlobalModelMode  string
+	GlobalModeReason string
+	ModelSource      string
+}
+
+type ObsOrgLevel struct {
+	Tier   string
+	Label  string
+	Used   string
+	Detail string
+}
+
+type ObsCivilizationRole struct {
+	Role           string
+	Agent          string
+	Tier           string
+	Category       string
+	Origin         string
+	Status         string
+	CanOperate     bool
+	Model          string
+	ModelMode      string
+	ReportsTo      string
+	EscalationPath string
+	Why            string
+	Evidence       string
+}
+
+type ObsEmergenceStep struct {
+	Subject  string
+	State    string
+	Why      string
+	Evidence string
+}
+
+type obsStarterRole struct {
+	Role           string
+	Tier           string
+	Category       string
+	CanOperate     bool
+	ReportsTo      string
+	EscalationPath string
+	Why            string
+}
+
+// obsStarterRoles is a Site fallback snapshot of Hive's StarterAgents /
+// StarterRoleDefinitions bootstrap shape. Live runtime status, model policy,
+// and emergence evidence must still come from Hive/Work projections.
+var obsStarterRoles = []obsStarterRole{
+	{Role: "guardian", Tier: "A", Category: "process", CanOperate: false, ReportsTo: "human", EscalationPath: "human", Why: "integrity monitor for soul violations, authority overreach, and policy breaches"},
+	{Role: "sysmon", Tier: "A", Category: "process", CanOperate: false, ReportsTo: "guardian", EscalationPath: "guardian", Why: "operational health monitor"},
+	{Role: "allocator", Tier: "A", Category: "process", CanOperate: false, ReportsTo: "guardian", EscalationPath: "guardian", Why: "resource and token-budget manager"},
+	{Role: "cto", Tier: "A", Category: "leadership", CanOperate: false, ReportsTo: "human", EscalationPath: "human", Why: "architecture leader and structural-gap detector"},
+	{Role: "spawner", Tier: "A", Category: "staffing", CanOperate: false, ReportsTo: "cto", EscalationPath: "guardian", Why: "growth engine that proposes new roles when gaps are detected"},
+	{Role: "reviewer", Tier: "A", Category: "technical", CanOperate: false, ReportsTo: "cto", EscalationPath: "cto", Why: "quality gate for implementer output"},
+	{Role: "strategist", Tier: "A", Category: "leadership", CanOperate: false, ReportsTo: "cto", EscalationPath: "human", Why: "decomposes seed ideas into high-level tasks"},
+	{Role: "planner", Tier: "A", Category: "technical", CanOperate: false, ReportsTo: "strategist", EscalationPath: "cto", Why: "turns high-level tasks into implementable subtasks"},
+	{Role: "implementer", Tier: "A", Category: "technical", CanOperate: true, ReportsTo: "strategist", EscalationPath: "cto", Why: "writes code, runs tests, and completes filesystem-backed work"},
+}
+
 // authorityOutcomes is the canonical DF-SPEC-0004 vocabulary, allowlisted.
 // Anything else renders as an explicit non-canonical value (T1/T6).
 var authorityOutcomes = map[string]bool{
@@ -216,6 +286,7 @@ func (h *Handlers) handleOpsObservatory(w http.ResponseWriter, r *http.Request) 
 	}
 
 	data.Hive = h.fetchOpsHive(r)
+	data.Civilization = buildObsCivilization(data.Agents, data.Hive)
 
 	if taskID := strings.TrimSpace(r.URL.Query().Get("task")); taskID != "" {
 		data.TraceTaskID = taskID
@@ -455,6 +526,390 @@ func buildObsAgents(agents []obsStatusAgent, histories map[string]obsAgentHistor
 		return views[i].ActorID < views[j].ActorID
 	})
 	return views
+}
+
+func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilization {
+	civ := ObsCivilization{
+		OrgLevels: []ObsOrgLevel{
+			{Tier: "A", Label: "Bootstrap / foundation", Used: "defined", Detail: "StarterAgents registry; runtime activity requires Work/Hive projection evidence"},
+			{Tier: "B", Label: "Organic emergence", Used: "not projected", Detail: "used when approved dynamic roles appear as spawned lifecycle records"},
+			{Tier: "C", Label: "Business operations", Used: "not projected", Detail: "taxonomy level exists; no current projection evidence in this Site slice"},
+			{Tier: "D", Label: "Self-governance", Used: "not projected", Detail: "taxonomy level exists; no current projection evidence in this Site slice"},
+		},
+		GlobalModelMode:  "Auto",
+		GlobalModeReason: "inferred from Hive selector policy metadata until Hive projects an explicit global Model Selection Mode",
+		ModelSource:      "Hive operator projection",
+	}
+	if hive == nil {
+		civ.GlobalModelMode = "unknown"
+		civ.GlobalModeReason = "Hive projection not fetched"
+		civ.ModelSource = "hive operator projection unavailable"
+		civ.Roster = obsBootstrapRoster(nil, nil)
+		civ.Emergence = append(civ.Emergence, ObsEmergenceStep{
+			Subject:  "role emergence",
+			State:    "not projected",
+			Why:      "Hive lifecycle and authority projection were not available to Site",
+			Evidence: "HIVE_OPS_API_BASE_URL / operator projection",
+		})
+		civ.Findings = append(civ.Findings, "Only bootstrap definitions are visible. Runtime activity is withheld until Hive/Work projections are available.")
+		return civ
+	}
+	if hive.ProjectionError != "" {
+		civ.Findings = append(civ.Findings, "Hive projection reported an error: "+hive.ProjectionError)
+	}
+	if hive.ModelSelection.Source == "" && len(hive.ModelSelection.Assignments) == 0 {
+		civ.GlobalModelMode = "unknown"
+		civ.GlobalModeReason = "Hive did not return model-selection projection metadata"
+	} else if mode := obsHiveProjectionModelMode(hive.ModelSelection); mode != "" {
+		civ.GlobalModelMode = mode
+		civ.GlobalModeReason = "projected by Hive model-selection metadata"
+	}
+
+	lifecycleByRole := obsLifecycleByRole(hive.Lifecycle)
+	agentsByRole := obsAgentsByRole(agents)
+	assignmentsByRole := obsModelAssignmentsByRole(hive.ModelSelection.Assignments)
+	civ.Roster = obsBootstrapRoster(lifecycleByRole, agentsByRole)
+	for i := range civ.Roster {
+		role := strings.ToLower(civ.Roster[i].Role)
+		if assignment, ok := assignmentsByRole[role]; ok {
+			civ.Roster[i].Model = obsFirstNonEmpty(assignment.Model, assignment.PolicyModel, civ.Roster[i].Model)
+			civ.Roster[i].ModelMode = obsAssignmentModelMode(hive.ModelSelection, assignment)
+		}
+		if civ.Roster[i].Model == "" {
+			civ.Roster[i].Model = "not projected"
+		}
+		if civ.Roster[i].ModelMode == "" {
+			civ.Roster[i].ModelMode = civ.GlobalModelMode
+		}
+	}
+
+	bootstrap := map[string]bool{}
+	for _, role := range obsStarterRoles {
+		bootstrap[role.Role] = true
+	}
+	for _, l := range hive.Lifecycle {
+		role := strings.ToLower(strings.TrimSpace(l.Role))
+		if role == "" || bootstrap[role] {
+			continue
+		}
+		civ.Roster = append(civ.Roster, ObsCivilizationRole{
+			Role:           role,
+			Agent:          obsFirstNonEmpty(l.DisplayName, l.ActorID, "projected actor"),
+			Tier:           "B?",
+			Category:       "emergent/runtime",
+			Origin:         "runtime-projected",
+			Status:         obsFirstNonEmpty(l.LifecycleStatus, "projected"),
+			CanOperate:     false,
+			Model:          "not projected",
+			ModelMode:      civ.GlobalModelMode,
+			ReportsTo:      "not projected",
+			EscalationPath: "not projected",
+			Why:            "role is not in the bootstrap registry and appears through Hive lifecycle projection",
+			Evidence:       "Hive lifecycle projection",
+		})
+	}
+	sort.Slice(civ.Roster, func(i, j int) bool {
+		if civ.Roster[i].Tier != civ.Roster[j].Tier {
+			return civ.Roster[i].Tier < civ.Roster[j].Tier
+		}
+		return civ.Roster[i].Role < civ.Roster[j].Role
+	})
+
+	civ.Emergence = buildObsEmergence(hive)
+	civ.OrgLevels = obsOrgLevels(civ.Roster)
+	civ.Findings = append(civ.Findings, obsCivilizationFindings(civ, hive)...)
+	return civ
+}
+
+func obsBootstrapRoster(lifecycleByRole map[string][]OpsHiveLifecycle, agentsByRole map[string][]ObsAgentView) []ObsCivilizationRole {
+	rows := make([]ObsCivilizationRole, 0, len(obsStarterRoles))
+	for _, role := range obsStarterRoles {
+		key := strings.ToLower(role.Role)
+		row := ObsCivilizationRole{
+			Role:           role.Role,
+			Agent:          "not runtime-projected",
+			Tier:           role.Tier,
+			Category:       role.Category,
+			Origin:         "bootstrap registry",
+			Status:         "defined, not runtime-projected",
+			CanOperate:     role.CanOperate,
+			Model:          "not projected",
+			ModelMode:      "unknown",
+			ReportsTo:      role.ReportsTo,
+			EscalationPath: role.EscalationPath,
+			Why:            role.Why,
+			Evidence:       "Hive StarterAgents / StarterRoleDefinitions",
+		}
+		if lifecycleByRole != nil {
+			if lifecycle := lifecycleByRole[key]; len(lifecycle) > 0 {
+				row.Agent = obsLifecycleActors(lifecycle)
+				row.Status = obsLifecycleStatuses(lifecycle)
+				row.Evidence = "Hive lifecycle projection + bootstrap registry"
+			}
+		}
+		if agentsByRole != nil {
+			if runtimeAgents := agentsByRole[key]; len(runtimeAgents) > 0 {
+				row.Agent = obsRuntimeActors(runtimeAgents, row.Agent)
+				row.Status = obsRuntimeStatuses(runtimeAgents, row.Status)
+				if model := obsRuntimeModel(runtimeAgents); model != "" {
+					row.Model = model
+				}
+				row.Evidence = "Work runtime telemetry + " + row.Evidence
+			}
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func buildObsEmergence(hive *OpsHiveData) []ObsEmergenceStep {
+	if hive == nil {
+		return nil
+	}
+	steps := make([]ObsEmergenceStep, 0)
+	for _, a := range hive.PendingApprovals {
+		if strings.Contains(strings.ToLower(a.ActionName), "agent.spawn") || strings.Contains(strings.ToLower(a.ActionName), "role") {
+			steps = append(steps, ObsEmergenceStep{
+				Subject:  obsFirstNonEmpty(a.Target, a.ActionName),
+				State:    "awaiting approval",
+				Why:      obsFirstNonEmpty(a.Justification, a.RiskSummary, "pending protected action"),
+				Evidence: "authority request " + a.RequestID,
+			})
+		}
+	}
+	for _, d := range hive.AuthorityDecisions {
+		action := strings.ToLower(obsFirstNonEmpty(d.ApprovedAction, d.RequestedAction))
+		if strings.Contains(action, "agent.spawn") || strings.Contains(action, "role") {
+			steps = append(steps, ObsEmergenceStep{
+				Subject:  obsFirstNonEmpty(d.ApprovedTarget, d.RequestedTarget, d.RequestID),
+				State:    obsFirstNonEmpty(d.Outcome, "recorded"),
+				Why:      obsFirstNonEmpty(d.Rationale, "authority decision recorded"),
+				Evidence: "authority decision " + obsFirstNonEmpty(d.DecisionID, d.EventID),
+			})
+		}
+	}
+	bootstrap := map[string]bool{}
+	for _, role := range obsStarterRoles {
+		bootstrap[role.Role] = true
+	}
+	for _, l := range hive.Lifecycle {
+		role := strings.ToLower(strings.TrimSpace(l.Role))
+		if role == "" || bootstrap[role] {
+			continue
+		}
+		steps = append(steps, ObsEmergenceStep{
+			Subject:  obsFirstNonEmpty(l.DisplayName, role),
+			State:    obsFirstNonEmpty(l.LifecycleStatus, "projected"),
+			Why:      "non-bootstrap role visible in lifecycle projection",
+			Evidence: "lifecycle actor " + obsFirstNonEmpty(l.ActorID, role),
+		})
+	}
+	sort.Slice(steps, func(i, j int) bool {
+		if steps[i].State != steps[j].State {
+			return steps[i].State < steps[j].State
+		}
+		return steps[i].Subject < steps[j].Subject
+	})
+	return steps
+}
+
+func obsOrgLevels(roster []ObsCivilizationRole) []ObsOrgLevel {
+	levels := []ObsOrgLevel{
+		{Tier: "A", Label: "Bootstrap / foundation"},
+		{Tier: "B", Label: "Organic emergence"},
+		{Tier: "C", Label: "Business operations"},
+		{Tier: "D", Label: "Self-governance"},
+	}
+	counts := map[string]int{}
+	projected := map[string]int{}
+	for _, row := range roster {
+		tier := strings.TrimSuffix(row.Tier, "?")
+		if tier == "" {
+			tier = "unknown"
+		}
+		counts[tier]++
+		if row.Status != "defined, not runtime-projected" {
+			projected[tier]++
+		}
+	}
+	for i := range levels {
+		n := counts[levels[i].Tier]
+		p := projected[levels[i].Tier]
+		switch {
+		case n == 0:
+			levels[i].Used = "not projected"
+			levels[i].Detail = "no roles visible at this level in the current projection"
+		case p == 0:
+			levels[i].Used = "defined"
+			levels[i].Detail = fmt.Sprintf("%d role(s) defined; none runtime-projected", n)
+		default:
+			levels[i].Used = "projected"
+			levels[i].Detail = fmt.Sprintf("%d role(s) visible; %d runtime/lifecycle-projected", n, p)
+		}
+	}
+	return levels
+}
+
+func obsCivilizationFindings(civ ObsCivilization, hive *OpsHiveData) []string {
+	findings := []string{
+		"Starter role rows use a Site fallback snapshot of Hive bootstrap definitions; runtime status, model policy, and emergence evidence require live Hive/Work projection.",
+		"CanOperate is rendered as a capability flag only; it is not bootstrap membership or authority.",
+		"Auto model-selection mode expands routing flexibility only; it does not expand agent authority.",
+	}
+	if hive == nil || hive.ModelSelection.Source == "" {
+		findings = append(findings, "Model Selection Mode is not yet first-class in Hive projection; Site shows the intended control plane without persisting it.")
+	}
+	if len(civ.Emergence) == 0 {
+		findings = append(findings, "No emergent role queue is visible in the current Hive projection.")
+	}
+	return findings
+}
+
+func obsLifecycleByRole(items []OpsHiveLifecycle) map[string][]OpsHiveLifecycle {
+	out := make(map[string][]OpsHiveLifecycle)
+	for _, item := range items {
+		role := strings.ToLower(strings.TrimSpace(item.Role))
+		if role == "" {
+			continue
+		}
+		out[role] = append(out[role], item)
+	}
+	return out
+}
+
+func obsAgentsByRole(items []ObsAgentView) map[string][]ObsAgentView {
+	out := make(map[string][]ObsAgentView)
+	for _, item := range items {
+		role := strings.ToLower(strings.TrimSpace(item.Role))
+		if role == "" || role == "unknown" {
+			continue
+		}
+		out[role] = append(out[role], item)
+	}
+	return out
+}
+
+func obsModelAssignmentsByRole(items []OpsHiveModelRoleAssignment) map[string]OpsHiveModelRoleAssignment {
+	out := make(map[string]OpsHiveModelRoleAssignment)
+	for _, item := range items {
+		role := strings.ToLower(strings.TrimSpace(item.Role))
+		if role != "" {
+			out[role] = item
+		}
+	}
+	return out
+}
+
+func obsAssignmentModelMode(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) string {
+	if mode := obsCanonicalModelMode(obsFirstNonEmpty(item.EffectiveMode, item.OverrideMode, item.SelectionMode)); mode != "" {
+		return mode
+	}
+	if item.PolicyEventID != "" || item.Source == "hive-model-policy-event" {
+		return "Manual"
+	}
+	if item.SelectionStrategy != "" || item.PreferredTier != "" || len(item.RequiredCapabilities) > 0 {
+		return "Auto"
+	}
+	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
+		return mode
+	}
+	if item.Model != "" || item.PolicyModel != "" {
+		return "Manual"
+	}
+	return "unknown"
+}
+
+func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
+	if mode := obsCanonicalModelMode(obsFirstNonEmpty(selection.GlobalMode, selection.SelectionMode)); mode != "" {
+		return mode
+	}
+	if selection.Source != "" || len(selection.Assignments) > 0 {
+		return "Auto"
+	}
+	return "unknown"
+}
+
+func obsCanonicalModelMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "auto", "automatic":
+		return "Auto"
+	case "manual", "pinned":
+		return "Manual"
+	default:
+		return ""
+	}
+}
+
+func obsFirstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func obsLifecycleActors(items []OpsHiveLifecycle) string {
+	values := make([]string, 0, len(items))
+	for _, item := range items {
+		values = append(values, obsFirstNonEmpty(item.DisplayName, item.ActorID))
+	}
+	return strings.Join(obsUniqueNonEmpty(values), ", ")
+}
+
+func obsLifecycleStatuses(items []OpsHiveLifecycle) string {
+	values := make([]string, 0, len(items))
+	for _, item := range items {
+		values = append(values, obsFirstNonEmpty(item.LifecycleStatus, "projected"))
+	}
+	return strings.Join(obsUniqueNonEmpty(values), ", ")
+}
+
+func obsRuntimeActors(items []ObsAgentView, fallback string) string {
+	values := make([]string, 0, len(items))
+	for _, item := range items {
+		values = append(values, obsFirstNonEmpty(item.ActorID, item.Role))
+	}
+	if out := strings.Join(obsUniqueNonEmpty(values), ", "); out != "" {
+		return out
+	}
+	return fallback
+}
+
+func obsRuntimeStatuses(items []ObsAgentView, fallback string) string {
+	values := make([]string, 0, len(items))
+	for _, item := range items {
+		values = append(values, obsFirstNonEmpty(item.State, "projected"))
+	}
+	if out := strings.Join(obsUniqueNonEmpty(values), ", "); out != "" {
+		return out
+	}
+	return fallback
+}
+
+func obsRuntimeModel(items []ObsAgentView) string {
+	values := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.Model != "unknown" {
+			values = append(values, item.Model)
+		}
+	}
+	return strings.Join(obsUniqueNonEmpty(values), ", ")
+}
+
+func obsUniqueNonEmpty(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
 }
 
 func orUnknown(s string) string {

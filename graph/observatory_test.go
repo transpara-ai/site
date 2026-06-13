@@ -50,6 +50,54 @@ func TestBuildObsAgentsJoinsHistoryAndSorts(t *testing.T) {
 	}
 }
 
+func TestBuildObsCivilizationSeparatesBootstrapRuntimeAndEmergentRoles(t *testing.T) {
+	hive := &OpsHiveData{
+		Lifecycle: []OpsHiveLifecycle{
+			{ActorID: "act-guardian", DisplayName: "guardian", Role: "guardian", LifecycleStatus: "active"},
+			{ActorID: "act-cartographer", DisplayName: "cartographer", Role: "cartographer", LifecycleStatus: "active"},
+		},
+		PendingApprovals: []OpsHiveApproval{{
+			RequestID:     "req-spawn-cartographer",
+			ActionName:    "agent.spawn.persistent",
+			Target:        "cartographer",
+			Justification: "map system topology",
+		}},
+		ModelSelection: OpsHiveModelSelection{
+			Source: "hive",
+			Assignments: []OpsHiveModelRoleAssignment{
+				{Role: "guardian", Model: "claude-sonnet", SelectionStrategy: "balanced", Source: "starter-role-definition"},
+				{Role: "implementer", Model: "claude-opus", Source: "hive-model-policy-event", PolicyEventID: "ev-model"},
+			},
+		},
+	}
+	civ := buildObsCivilization([]ObsAgentView{{Role: "guardian", ActorID: "run-guardian", State: "processing", Model: "claude-sonnet"}}, hive)
+	if len(civ.Roster) < len(obsStarterRoles)+1 {
+		t.Fatalf("roster missing roles: got %d", len(civ.Roster))
+	}
+	byRole := map[string]ObsCivilizationRole{}
+	for _, row := range civ.Roster {
+		byRole[row.Role] = row
+	}
+	guardian := byRole["guardian"]
+	if guardian.Status != "processing" || guardian.Agent == "not runtime-projected" {
+		t.Fatalf("guardian should reflect runtime projection, got %+v", guardian)
+	}
+	if guardian.ModelMode != "Auto" {
+		t.Fatalf("guardian mode = %q, want Auto", guardian.ModelMode)
+	}
+	implementer := byRole["implementer"]
+	if implementer.ModelMode != "Manual" {
+		t.Fatalf("implementer mode = %q, want Manual for policy-event override", implementer.ModelMode)
+	}
+	emergent := byRole["cartographer"]
+	if emergent.Origin != "runtime-projected" || emergent.Category != "emergent/runtime" {
+		t.Fatalf("non-bootstrap lifecycle role must be marked emergent/runtime-projected, got %+v", emergent)
+	}
+	if len(civ.Emergence) == 0 {
+		t.Fatal("spawn approval should appear in emergence queue")
+	}
+}
+
 func TestBuildObsSpendStatesTrueReasons(t *testing.T) {
 	cases := []struct {
 		name       string
