@@ -1048,6 +1048,7 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 					"created_at":"2026-05-09T05:59:00Z",
 					"causes":["event-source"],
 					"inspector_kind":"curated_eventgraph_event",
+					"content":{"secret":"should-not-render"},
 					"content_error":"content omitted: factory.run.requested is not in the runtime inspector allowlist"
 				}],
 				"causal_graph":{
@@ -1580,6 +1581,9 @@ func TestHandleOpsHiveRendersArtifactsGraphAndEventInspector(t *testing.T) {
 		strings.Contains(body, `action="/ops/hive"`) ||
 		strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive artifact graph view exposes mutation controls")
+	}
+	if strings.Contains(body, "should-not-render") {
+		t.Fatal("GET /ops/hive rendered event content despite content_error")
 	}
 }
 
