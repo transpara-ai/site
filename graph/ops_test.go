@@ -667,6 +667,35 @@ func TestHandleOpsApprovalsRendersPartialProjectionWarningWithQueue(t *testing.T
 	}
 }
 
+func TestHandleOpsApprovalsProjectionErrorRendersWithoutQueue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "projection unavailable", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/approvals", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/approvals: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "hive operator projection returned 503 Service Unavailable") {
+		t.Fatalf("GET /ops/approvals: body does not contain projection error; body: %s", body)
+	}
+	for _, forbidden := range []string{"Pending approvals", "Review decision", "No pending authority requests projected"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops/approvals: body contains queue content %q despite fatal projection error; body: %s", forbidden, body)
+		}
+	}
+}
+
 func TestOpsHiveModelPolicySubmitForwardsToHive(t *testing.T) {
 	var gotPath, gotAuth string
 	var gotPayload map[string]any
@@ -1270,6 +1299,9 @@ func TestOpsDecisionRejectsNonDraftPRRequest(t *testing.T) {
 	}
 	if len(data.BlockedReasons) == 0 {
 		t.Fatal("BlockedReasons is empty, want a reason explaining the action is out of scope")
+	}
+	if len(data.Actions) != 0 {
+		t.Fatalf("Actions = %d, want 0 for blocked non-draft-PR request", len(data.Actions))
 	}
 }
 
