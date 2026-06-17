@@ -1230,38 +1230,28 @@ func opsHiveShellCards() []OpsHiveShellCard {
 }
 
 func buildOpsHiveShellData(active string) *OpsHiveShellData {
+	intake := OpsHiveIntakeView{
+		Status:          "draft ready",
+		Confidence:      "0.91",
+		SuggestedMode:   "full product pipeline",
+		AuthorityLevel:  "human launch required",
+		EstimatedBudget: "$18.00",
+		StorageStatus:   "sample only",
+		Sources: []OpsHiveSourceView{
+			{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
+			{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
+			{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
+		},
+		MissingFields: []OpsHiveMissingFieldView{
+			{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
+			{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+			{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
+		},
+	}
+	intake.Brief = opsHiveBriefPreview(intake.Sources, intake.MissingFields, intake.Status, intake.SuggestedMode)
 	return &OpsHiveShellData{
 		Active: active,
-		Intake: OpsHiveIntakeView{
-			Status:          "draft ready",
-			Confidence:      "0.91",
-			SuggestedMode:   "full product pipeline",
-			AuthorityLevel:  "human launch required",
-			EstimatedBudget: "$18.00",
-			StorageStatus:   "sample only",
-			Sources: []OpsHiveSourceView{
-				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
-				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
-				{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
-			},
-			MissingFields: []OpsHiveMissingFieldView{
-				{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
-				{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
-				{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
-			},
-			Brief: OpsHiveBriefPreviewView{
-				Title:      "checkout-redesign.md",
-				Objective:  "Product intent and acceptance criteria captured from sample sources.",
-				Scope:      "PRD: checkout-redesign.md\nURL: customer-notes\nRepo: transpara-ai/site",
-				Acceptance: "Resolve budget cap before launch planning.",
-				Risks:      "Launch controls remain unavailable until governed launch integration is reviewed.",
-				Readiness:  "draft ready / full product pipeline",
-				Missing: []OpsHiveMissingFieldView{
-					{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
-					{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
-				},
-			},
-		},
+		Intake: intake,
 		Runs: []OpsHiveRunView{
 			{ID: "run_static_001", Title: "Build onboarding control surface", Status: "active", Guardian: "clear", Budget: "18% used", Phase: "Design", Approvals: 2, Artifacts: 7, UpdatedAt: "sample now"},
 			{ID: "run_static_002", Title: "Refine evidence inspection flow", Status: "waiting", Guardian: "watch", Budget: "4% used", Phase: "Research", Approvals: 0, Artifacts: 3, UpdatedAt: "sample 12m ago"},
