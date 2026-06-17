@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
@@ -408,6 +409,27 @@ func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
 	}
 	if len(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
 		t.Fatalf("Title = %q, want 72-char truncated title with ellipsis", params.Title)
+	}
+}
+
+func TestOpsHiveIntakeSourceParamsTruncatesMultibyteTitleOnRuneBoundary(t *testing.T) {
+	values := url.Values{
+		"source_kind": {"text"},
+		"title":       {strings.Repeat("界", 80)},
+		"content":     {"requirements for the intake card"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsHiveIntakeSourceParamsFromForm(req)
+	if err != nil {
+		t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+	}
+	if !utf8.ValidString(params.Title) {
+		t.Fatalf("Title is invalid UTF-8: %q", params.Title)
+	}
+	if utf8.RuneCountInString(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
+		t.Fatalf("Title = %q, want 72-rune truncated title with ellipsis", params.Title)
 	}
 }
 

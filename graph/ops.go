@@ -1353,10 +1353,11 @@ func truncateOpsHiveIntakeTitle(value string) string {
 	if value == "" {
 		return "Untitled source"
 	}
-	if len(value) <= 72 {
+	runes := []rune(value)
+	if len(runes) <= 72 {
 		return value
 	}
-	return strings.TrimSpace(value[:69]) + "..."
+	return strings.TrimSpace(string(runes[:69])) + "..."
 }
 
 func opsHiveIntakeSourceDetail(kind, content string) string {
@@ -1372,7 +1373,7 @@ func opsHiveIntakeSourceDetail(kind, content string) string {
 	case "Plan":
 		return "Implementation plan source captured"
 	default:
-		return fmt.Sprintf("Text source captured (%d chars)", len(content))
+		return fmt.Sprintf("Text source captured (%d bytes)", len(content))
 	}
 }
 
