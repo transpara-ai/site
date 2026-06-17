@@ -1543,6 +1543,7 @@ func TestHandleOpsHiveRendersArtifactsGraphAndEventInspector(t *testing.T) {
 					"created_at":"2026-05-09T05:59:00Z",
 					"causes":["event-source"],
 					"inspector_kind":"curated_eventgraph_event",
+					"content":{"secret":"should-not-render"},
 					"content_error":"content omitted: factory.run.requested is not in the runtime inspector allowlist"
 				}],
 				"causal_graph":{
