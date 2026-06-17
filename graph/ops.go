@@ -18,6 +18,8 @@ import (
 	"github.com/transpara-ai/site/profile"
 )
 
+const opsHiveIntakeMaxContentBytes = 20000
+
 type OpsSurface struct {
 	ID          string
 	Label       string
@@ -774,7 +776,7 @@ func opsHiveResponseError(resp *http.Response) string {
 
 func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {
 	shell := buildOpsHiveShellData("intake")
-	shell.Profile = profile.FromContext(r.Context()).GetSlug()
+	shell.Profile = opsHiveProfileSlugFromRequest(r)
 	if h.store != nil {
 		shell.Intake = h.buildOpsHiveIntakeView(r)
 	}
@@ -801,12 +803,12 @@ func (h *Handlers) handleOpsHiveIntakeSourceCreate(w http.ResponseWriter, r *htt
 		return
 	}
 	if _, err := h.store.CreateOpsHiveIntakeSource(r.Context(), params); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "could not save intake source", http.StatusInternalServerError)
 		return
 	}
 	target := "/ops/hive/intake"
 	if profile := strings.TrimSpace(r.FormValue("profile")); profile != "" {
-		target += "?profile=" + url.QueryEscape(profile)
+		target += "?profile=" + url.QueryEscape(params.ProfileSlug)
 	}
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
@@ -1156,6 +1158,7 @@ func buildOpsHiveShellData(active string) *OpsHiveShellData {
 }
 
 func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
+	profileSlug := opsHiveProfileSlugFromRequest(r)
 	view := OpsHiveIntakeView{
 		Status:          "collecting sources",
 		Confidence:      "0.00",
@@ -1164,9 +1167,9 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		EstimatedBudget: "not estimated",
 		StorageStatus:   "persisted",
 	}
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), 25)
+	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
 	if err != nil {
-		view.Error = err.Error()
+		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
 		return view
 	}
@@ -1195,6 +1198,18 @@ func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView
 		})
 	}
 	return out
+}
+
+func opsHiveProfileSlugFromRequest(r *http.Request) string {
+	if slug := strings.TrimSpace(r.FormValue("profile")); slug != "" {
+		if p := profile.Lookup(slug); p != nil {
+			return p.GetSlug()
+		}
+	}
+	if p := profile.FromContext(r.Context()); p != nil {
+		return p.GetSlug()
+	}
+	return opsHiveIntakeDefaultProfileSlug
 }
 
 func opsHiveIntakeMissingFields(sources []OpsHiveSourceView) []OpsHiveMissingFieldView {
@@ -1276,16 +1291,20 @@ func opsHiveIntakeSourceParamsFromForm(r *http.Request) (CreateOpsHiveIntakeSour
 	if content == "" {
 		return CreateOpsHiveIntakeSourceParams{}, errors.New("source content is required")
 	}
+	if len(content) > opsHiveIntakeMaxContentBytes {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("source content must be %d bytes or less", opsHiveIntakeMaxContentBytes)
+	}
 	kind, status := opsHiveClassifyIntakeSource(rawKind, title, content)
 	if title == "" {
 		title = opsHiveIntakeSourceTitle(kind, content)
 	}
 	return CreateOpsHiveIntakeSourceParams{
-		Kind:    kind,
-		Title:   title,
-		Detail:  opsHiveIntakeSourceDetail(kind, content),
-		Content: content,
-		Status:  status,
+		ProfileSlug: opsHiveProfileSlugFromRequest(r),
+		Kind:        kind,
+		Title:       title,
+		Detail:      opsHiveIntakeSourceDetail(kind, content),
+		Content:     content,
+		Status:      status,
 	}, nil
 }
 

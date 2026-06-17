@@ -540,7 +540,7 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 					</div>
 					<label class="block text-[11px] text-warm-faint">
 						Source
-						<textarea name="content" required rows="4" placeholder="Paste PRD/spec/plan text, a URL, or owner/repo context" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y"></textarea>
+						<textarea name="content" required maxlength="20000" rows="4" placeholder="Paste PRD/spec/plan text, a URL, or owner/repo context" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y"></textarea>
 					</label>
 					<button type="submit" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Add source</button>
 				</form>

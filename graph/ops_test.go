@@ -295,8 +295,9 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	postSource := func(values url.Values) {
+	postSource := func(profileSlug string, values url.Values) {
 		t.Helper()
+		values.Set("profile", profileSlug)
 		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
@@ -304,20 +305,28 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 		if w.Code != http.StatusSeeOther {
 			t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 303; body: %s", w.Code, w.Body.String())
 		}
+		if got, want := w.Header().Get("Location"), "/ops/hive/intake?profile="+profileSlug; got != want {
+			t.Fatalf("POST /ops/hive/intake/sources: Location = %q, want %q", got, want)
+		}
 	}
 
-	postSource(url.Values{
+	postSource("transpara", url.Values{
 		"source_kind": {"text"},
 		"title":       {"Checkout PRD"},
 		"content":     {"PRD\nAcceptance criteria: operator can review intake sources before launch."},
 	})
-	postSource(url.Values{
+	postSource("transpara", url.Values{
 		"source_kind": {"url"},
 		"content":     {"https://example.com/customer-notes"},
 	})
-	postSource(url.Values{
+	postSource("transpara", url.Values{
 		"source_kind": {"repo"},
 		"content":     {"transpara-ai/site"},
+	})
+	postSource("transpara-ai", url.Values{
+		"source_kind": {"text"},
+		"title":       {"Default profile only"},
+		"content":     {"Default-profile material should not appear in the Transpara intake."},
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara", nil)
@@ -335,6 +344,9 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	if strings.Contains(body, "checkout-redesign.md") || strings.Contains(body, "No intake sources saved yet") {
 		t.Fatal("GET /ops/hive/intake rendered static or empty-state sources after persisted sources")
 	}
+	if strings.Contains(body, "Default profile only") {
+		t.Fatal("GET /ops/hive/intake rendered source from another profile")
+	}
 }
 
 func TestHandleOpsHiveIntakeRejectsMissingSourceContent(t *testing.T) {
@@ -350,6 +362,27 @@ func TestHandleOpsHiveIntakeRejectsMissingSourceContent(t *testing.T) {
 		t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 400", w.Code)
 	}
 	if !strings.Contains(w.Body.String(), "source content is required") {
+		t.Fatalf("POST /ops/hive/intake/sources: body = %q", w.Body.String())
+	}
+}
+
+func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	values := url.Values{
+		"source_kind": {"text"},
+		"content":     {strings.Repeat("x", opsHiveIntakeMaxContentBytes+1)},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "source content must be 20000 bytes or less") {
 		t.Fatalf("POST /ops/hive/intake/sources: body = %q", w.Body.String())
 	}
 }
