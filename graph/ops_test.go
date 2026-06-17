@@ -575,8 +575,8 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 			"key_audit_traces":[{"event_id":"event-key","event_type":"agent.key.registered","actor_id":"actor-builder","key_provenance":"external","public_key":"abc","created_at":"2026-05-09T08:00:00Z"}],
 			"runtime_evidence":{
 				"source":"eventgraph",
-				"status":"running",
-				"last_run":{"started_event_id":"event-run-start","conversation_id":"conv_runtime","started_at":"2026-05-09T06:00:00Z","seed_idea":"render runtime evidence","repo_path":"/repos/hive"},
+				"status":"completed",
+				"last_run":{"started_event_id":"event-run-start","completed_event_id":"event-run-complete","conversation_id":"conv_runtime","started_at":"2026-05-09T06:00:00Z","completed_at":"2026-05-09T06:03:00Z","seed_idea":"render runtime evidence","repo_path":"/repos/hive","agent_count":1,"duration_ms":120000,"total_cost":0},
 				"agent_events":{
 					"scope":"events_since_latest_hive.run.started",
 					"spawned":2,
@@ -613,7 +613,7 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
+	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
