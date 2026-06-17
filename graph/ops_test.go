@@ -761,6 +761,11 @@ func TestHandleOpsApprovalsRendersProjectedQueue(t *testing.T) {
 	if got := strings.Count(body, "Review decision"); got != 1 {
 		t.Fatalf("GET /ops/approvals: Review decision link count = %d, want 1", got)
 	}
+	for _, forbidden := range []string{"<form", "<button", `name="decision"`, `method="post"`, `action="/ops/approvals"`, `data-authority-action`} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops/approvals rendered mutation control %q", forbidden)
+		}
+	}
 }
 
 func TestHandleOpsApprovalsRendersPartialProjectionWarningWithQueue(t *testing.T) {
