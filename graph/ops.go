@@ -1196,10 +1196,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
-<<<<<<< HEAD
 		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
-=======
->>>>>>> origin/main
 		return view
 	}
 	view.Sources = opsHiveIntakeSourceViews(sources)
@@ -1210,10 +1207,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		view.EstimatedBudget = "cap pending"
 		view.Status = "draft ready"
 	}
-<<<<<<< HEAD
 	view.Brief = opsHiveBriefPreview(view.Sources, view.MissingFields, view.Status, view.SuggestedMode)
-=======
->>>>>>> origin/main
 	return view
 }
 
@@ -1233,7 +1227,6 @@ func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView
 	return out
 }
 
-<<<<<<< HEAD
 func opsHiveBriefPreview(sources []OpsHiveSourceView, missing []OpsHiveMissingFieldView, status, mode string) OpsHiveBriefPreviewView {
 	primary := opsHivePrimaryBriefSource(sources)
 	title := "Factory brief draft"
@@ -1328,8 +1321,6 @@ func opsHiveBriefExcerpt(value string, limit int) string {
 	return strings.TrimSpace(string(runes[:limit-3])) + "..."
 }
 
-=======
->>>>>>> origin/main
 func opsHiveProfileSlugFromRequest(r *http.Request) string {
 	if slug := strings.TrimSpace(r.FormValue("profile")); slug != "" {
 		if p := profile.Lookup(slug); p != nil {

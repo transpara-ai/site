@@ -241,11 +241,7 @@ func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
 	}{
 		{
 			path:      "/ops/hive/intake?profile=transpara",
-<<<<<<< HEAD
 			want:      []string{"Hive intake", "Source input", "Live interpretation", "Factory brief", `name="brief_title"`, "No scoped sources yet.", "No intake sources saved yet"},
-=======
-			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "No intake sources saved yet"},
->>>>>>> origin/main
 			forbidden: []string{"<iframe", "Hive operator projection source is not configured", "checkout-redesign.md"},
 		},
 		{
@@ -341,11 +337,7 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-<<<<<<< HEAD
 	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted", "Factory brief", `name="brief_objective"`, "Acceptance criteria: operator can review intake sources before launch.", "URL reference: ready", "Repo context: ready", "Budget cap: warning", "Readiness: draft ready / full product pipeline"} {
-=======
-	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted"} {
->>>>>>> origin/main
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
 		}
@@ -362,7 +354,6 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	if strings.Contains(body, "Default profile only") {
 		t.Fatal("GET /ops/hive/intake rendered source from another profile")
 	}
-<<<<<<< HEAD
 	formStart := strings.Index(body, `action="/ops/hive/intake/sources"`)
 	if formStart < 0 {
 		t.Fatal("GET /ops/hive/intake did not render the source form")
@@ -375,8 +366,6 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	if strings.Contains(sourceForm, `name="brief_`) {
 		t.Fatal("GET /ops/hive/intake nested brief preview controls inside the source POST form")
 	}
-=======
->>>>>>> origin/main
 }
 
 func TestHandleOpsHiveIntakeRejectsMissingSourceContent(t *testing.T) {
@@ -417,7 +406,6 @@ func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestHandleOpsHiveIntakeRendersBriefDefaultsOnSourceLoadError(t *testing.T) {
 	h, store, _ := testHandlers(t)
 	if err := store.db.Close(); err != nil {
@@ -440,8 +428,6 @@ func TestHandleOpsHiveIntakeRendersBriefDefaultsOnSourceLoadError(t *testing.T) 
 	}
 }
 
-=======
->>>>>>> origin/main
 func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
 	values := url.Values{
 		"source_kind": {"text"},
@@ -481,7 +467,6 @@ func TestOpsHiveIntakeSourceParamsTruncatesMultibyteTitleOnRuneBoundary(t *testi
 	}
 }
 
-<<<<<<< HEAD
 func TestOpsHiveBriefPreviewDerivesSourcePriorityAndOverflow(t *testing.T) {
 	sources := []OpsHiveSourceView{
 		{Kind: "URL", Title: "reference", Content: "https://example.com/reference"},
@@ -525,8 +510,6 @@ func TestOpsHiveBriefExcerptHandlesSmallLimit(t *testing.T) {
 	}
 }
 
-=======
->>>>>>> origin/main
 func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 	var auth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
