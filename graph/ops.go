@@ -81,6 +81,18 @@ type OpsHiveMissingFieldView struct {
 	Status string
 }
 
+// OpsHiveBriefPreviewView is render-only. Operators can edit the fields locally
+// while assembling a draft; persistence and launch remain separate governed work.
+type OpsHiveBriefPreviewView struct {
+	Title      string
+	Objective  string
+	Scope      string
+	Acceptance string
+	Risks      string
+	Readiness  string
+	Missing    []OpsHiveMissingFieldView
+}
+
 type OpsHiveIntakeView struct {
 	Status          string
 	Confidence      string
@@ -91,6 +103,7 @@ type OpsHiveIntakeView struct {
 	Error           string
 	Sources         []OpsHiveSourceView
 	MissingFields   []OpsHiveMissingFieldView
+	Brief           OpsHiveBriefPreviewView
 }
 
 type OpsHiveRunView struct {
@@ -1217,26 +1230,28 @@ func opsHiveShellCards() []OpsHiveShellCard {
 }
 
 func buildOpsHiveShellData(active string) *OpsHiveShellData {
+	intake := OpsHiveIntakeView{
+		Status:          "draft ready",
+		Confidence:      "0.91",
+		SuggestedMode:   "full product pipeline",
+		AuthorityLevel:  "human launch required",
+		EstimatedBudget: "$18.00",
+		StorageStatus:   "sample only",
+		Sources: []OpsHiveSourceView{
+			{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
+			{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
+			{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
+		},
+		MissingFields: []OpsHiveMissingFieldView{
+			{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
+			{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+			{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
+		},
+	}
+	intake.Brief = opsHiveBriefPreview(intake.Sources, intake.MissingFields, intake.Status, intake.SuggestedMode)
 	return &OpsHiveShellData{
 		Active: active,
-		Intake: OpsHiveIntakeView{
-			Status:          "draft ready",
-			Confidence:      "0.91",
-			SuggestedMode:   "full product pipeline",
-			AuthorityLevel:  "human launch required",
-			EstimatedBudget: "$18.00",
-			StorageStatus:   "sample only",
-			Sources: []OpsHiveSourceView{
-				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
-				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
-				{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
-			},
-			MissingFields: []OpsHiveMissingFieldView{
-				{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
-				{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
-				{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
-			},
-		},
+		Intake: intake,
 		Runs: []OpsHiveRunView{
 			{ID: "run_static_001", Title: "Build onboarding control surface", Status: "active", Guardian: "clear", Budget: "18% used", Phase: "Design", Approvals: 2, Artifacts: 7, UpdatedAt: "sample now"},
 			{ID: "run_static_002", Title: "Refine evidence inspection flow", Status: "waiting", Guardian: "watch", Budget: "4% used", Phase: "Research", Approvals: 0, Artifacts: 3, UpdatedAt: "sample 12m ago"},
@@ -1271,6 +1286,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
+		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
 		return view
 	}
 	view.Sources = opsHiveIntakeSourceViews(sources)
@@ -1281,6 +1297,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		view.EstimatedBudget = "cap pending"
 		view.Status = "draft ready"
 	}
+	view.Brief = opsHiveBriefPreview(view.Sources, view.MissingFields, view.Status, view.SuggestedMode)
 	return view
 }
 
@@ -1298,6 +1315,100 @@ func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView
 		})
 	}
 	return out
+}
+
+func opsHiveBriefPreview(sources []OpsHiveSourceView, missing []OpsHiveMissingFieldView, status, mode string) OpsHiveBriefPreviewView {
+	primary := opsHivePrimaryBriefSource(sources)
+	title := "Factory brief draft"
+	objective := "Awaiting source material."
+	if primary.Title != "" {
+		title = primary.Title
+	}
+	if primary.Content != "" {
+		objective = opsHiveBriefExcerpt(primary.Content, 260)
+	}
+	return OpsHiveBriefPreviewView{
+		Title:      title,
+		Objective:  objective,
+		Scope:      opsHiveBriefScope(sources),
+		Acceptance: opsHiveBriefAcceptance(missing),
+		Risks:      opsHiveBriefRisks(missing),
+		Readiness:  opsHiveBriefReadiness(sources, status, mode),
+		Missing:    missing,
+	}
+}
+
+func opsHivePrimaryBriefSource(sources []OpsHiveSourceView) OpsHiveSourceView {
+	for _, source := range sources {
+		switch strings.ToLower(source.Kind) {
+		case "prd", "spec", "plan", "text":
+			return source
+		}
+	}
+	if len(sources) > 0 {
+		return sources[0]
+	}
+	return OpsHiveSourceView{}
+}
+
+func opsHiveBriefScope(sources []OpsHiveSourceView) string {
+	if len(sources) == 0 {
+		return "No scoped sources yet."
+	}
+	var b strings.Builder
+	for i, source := range sources {
+		if i >= 5 {
+			fmt.Fprintf(&b, "Additional sources: %d\n", len(sources)-i)
+			break
+		}
+		fmt.Fprintf(&b, "%s: %s\n", source.Kind, source.Title)
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func opsHiveBriefAcceptance(missing []OpsHiveMissingFieldView) string {
+	lines := []string{}
+	for _, field := range missing {
+		if field.Status != "ready" {
+			lines = append(lines, "Resolve "+field.Label+": "+field.Detail)
+		}
+	}
+	if len(lines) == 0 {
+		return "Current source prerequisites are present."
+	}
+	return strings.Join(lines, "\n")
+}
+
+func opsHiveBriefRisks(missing []OpsHiveMissingFieldView) string {
+	lines := []string{"Launch controls remain unavailable until governed launch integration is reviewed."}
+	for _, field := range missing {
+		if field.Status != "ready" {
+			lines = append(lines, field.Label+": "+field.Detail)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func opsHiveBriefReadiness(sources []OpsHiveSourceView, status, mode string) string {
+	if len(sources) == 0 {
+		return "intake pending"
+	}
+	return status + " / " + mode
+}
+
+func opsHiveBriefExcerpt(value string, limit int) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if value == "" {
+		return "Awaiting source material."
+	}
+	if limit < 4 {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return strings.TrimSpace(string(runes[:limit-3])) + "..."
 }
 
 func opsHiveProfileSlugFromRequest(r *http.Request) string {

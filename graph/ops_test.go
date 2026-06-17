@@ -241,7 +241,7 @@ func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
 	}{
 		{
 			path:      "/ops/hive/intake?profile=transpara",
-			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "No intake sources saved yet"},
+			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "Factory brief", "No scoped sources yet.", "No intake sources saved yet"},
 			forbidden: []string{"<iframe", "Hive operator projection source is not configured", "checkout-redesign.md"},
 		},
 		{
@@ -337,9 +337,14 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted"} {
+	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted", "Factory brief", "Acceptance criteria: operator can review intake sources before launch.", "URL reference: ready", "Repo context: ready", "Budget cap: warning", "Readiness: draft ready / full product pipeline"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
+		}
+	}
+	for _, forbidden := range []string{`name="brief_title"`, `name="brief_objective"`, `name="brief_scope"`, `name="brief_acceptance"`, `name="brief_risks"`} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops/hive/intake rendered submittable brief preview control %q", forbidden)
 		}
 	}
 	if !strings.Contains(body, "cap pending") {
@@ -353,6 +358,18 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	}
 	if strings.Contains(body, "Default profile only") {
 		t.Fatal("GET /ops/hive/intake rendered source from another profile")
+	}
+	formStart := strings.Index(body, `action="/ops/hive/intake/sources"`)
+	if formStart < 0 {
+		t.Fatal("GET /ops/hive/intake did not render the source form")
+	}
+	formEnd := strings.Index(body[formStart:], "</form>")
+	if formEnd < 0 {
+		t.Fatal("GET /ops/hive/intake source form is not closed")
+	}
+	sourceForm := body[formStart : formStart+formEnd]
+	if strings.Contains(sourceForm, `name="brief_`) {
+		t.Fatal("GET /ops/hive/intake nested brief preview controls inside the source POST form")
 	}
 }
 
@@ -394,6 +411,28 @@ func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
 	}
 }
 
+func TestHandleOpsHiveIntakeRendersBriefDefaultsOnSourceLoadError(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	if err := store.db.Close(); err != nil {
+		t.Fatalf("close db: %v", err)
+	}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Could not load persisted intake sources.", "Factory brief draft", "Awaiting source material.", "No scoped sources yet.", "Readiness: intake pending"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
+		}
+	}
+}
+
 func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
 	values := url.Values{
 		"source_kind": {"text"},
@@ -430,6 +469,49 @@ func TestOpsHiveIntakeSourceParamsTruncatesMultibyteTitleOnRuneBoundary(t *testi
 	}
 	if utf8.RuneCountInString(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
 		t.Fatalf("Title = %q, want 72-rune truncated title with ellipsis", params.Title)
+	}
+}
+
+func TestOpsHiveBriefPreviewDerivesSourcePriorityAndOverflow(t *testing.T) {
+	sources := []OpsHiveSourceView{
+		{Kind: "URL", Title: "reference", Content: "https://example.com/reference"},
+		{Kind: "Repo", Title: "transpara-ai/site", Content: "transpara-ai/site"},
+		{Kind: "Spec", Title: "API contract", Content: strings.Repeat("contract ", 60)},
+		{Kind: "Plan", Title: "milestone plan", Content: "launch plan"},
+		{Kind: "Text", Title: "operator notes", Content: "operator notes"},
+		{Kind: "Repo", Title: "transpara-ai/hive", Content: "transpara-ai/hive"},
+	}
+	missing := []OpsHiveMissingFieldView{
+		{Label: "Source material", Detail: "captured", Status: "ready"},
+		{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+	}
+
+	brief := opsHiveBriefPreview(sources, missing, "draft ready", "full product pipeline")
+
+	if brief.Title != "API contract" {
+		t.Fatalf("Title = %q, want primary text-like source title", brief.Title)
+	}
+	if !strings.HasSuffix(brief.Objective, "...") || utf8.RuneCountInString(brief.Objective) > 260 {
+		t.Fatalf("Objective = %q, want excerpt no longer than 260 runes with ellipsis", brief.Objective)
+	}
+	if !strings.Contains(brief.Scope, "Additional sources: 1") {
+		t.Fatalf("Scope = %q, want additional-source count", brief.Scope)
+	}
+	if !strings.Contains(brief.Acceptance, "Resolve Budget cap") {
+		t.Fatalf("Acceptance = %q, want unresolved missing field", brief.Acceptance)
+	}
+	if !strings.Contains(brief.Risks, "Launch controls remain unavailable") {
+		t.Fatalf("Risks = %q, want launch boundary", brief.Risks)
+	}
+	if brief.Readiness != "draft ready / full product pipeline" {
+		t.Fatalf("Readiness = %q, want status and mode", brief.Readiness)
+	}
+}
+
+func TestOpsHiveBriefExcerptHandlesSmallLimit(t *testing.T) {
+	got := opsHiveBriefExcerpt("brief content", 3)
+	if got != "brief content" {
+		t.Fatalf("opsHiveBriefExcerpt = %q, want unmodified content for small limit", got)
 	}
 }
 

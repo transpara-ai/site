@@ -583,6 +583,40 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 					@opsMetric("Mode", intake.SuggestedMode, "suggested pipeline")
 					@opsMetric("Budget", intake.EstimatedBudget, "operator cap")
 				</div>
+				<div class="border border-edge bg-surface rounded-lg p-3 space-y-3">
+					<div class="flex items-start justify-between gap-3">
+						<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Factory brief</h4>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(intake.Status) }>{ intake.Status }</span>
+					</div>
+					<label class="block text-[11px] text-warm-faint">
+						Title
+						<input maxlength="72" value={ intake.Brief.Title } class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+					</label>
+					<label class="block text-[11px] text-warm-faint">
+						Objective
+						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Objective }</textarea>
+					</label>
+					<div class="grid gap-3 md:grid-cols-2">
+						<label class="block text-[11px] text-warm-faint">
+							Scope
+							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Scope }</textarea>
+						</label>
+						<label class="block text-[11px] text-warm-faint">
+							Acceptance
+							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Acceptance }</textarea>
+						</label>
+					</div>
+					<label class="block text-[11px] text-warm-faint">
+						Risks
+						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Risks }</textarea>
+					</label>
+					<div class="flex flex-wrap gap-2">
+						for _, field := range intake.Brief.Missing {
+							<span class={ "text-[10px] px-2 py-1 rounded-full border", opsHiveShellStatusClass(field.Status) }>{ field.Label }: { field.Status }</span>
+						}
+					</div>
+					<p class="text-xs text-warm-muted">Readiness: { intake.Brief.Readiness }</p>
+				</div>
 				<div>
 					<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Missing info</h4>
 					<div class="mt-3 grid gap-2">
