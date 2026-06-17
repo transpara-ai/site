@@ -176,6 +176,24 @@ type Op struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
+type OpsHiveIntakeSource struct {
+	ID        string
+	Kind      string
+	Title     string
+	Detail    string
+	Content   string
+	Status    string
+	CreatedAt time.Time
+}
+
+type CreateOpsHiveIntakeSourceParams struct {
+	Kind    string
+	Title   string
+	Detail  string
+	Content string
+	Status  string
+}
+
 // Reaction is a single emoji reaction on a node.
 type Reaction struct {
 	Emoji string   `json:"emoji"`
@@ -529,8 +547,70 @@ CREATE TABLE IF NOT EXISTS hive_diagnostics (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_hive_diagnostics_created ON hive_diagnostics(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ops_hive_intake_sources (
+    id         TEXT PRIMARY KEY,
+    kind       TEXT NOT NULL DEFAULT 'Text',
+    title      TEXT NOT NULL DEFAULT '',
+    detail     TEXT NOT NULL DEFAULT '',
+    content    TEXT NOT NULL DEFAULT '',
+    status     TEXT NOT NULL DEFAULT 'parsed',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_created ON ops_hive_intake_sources(created_at DESC);
 `)
 	return err
+}
+
+func (s *Store) CreateOpsHiveIntakeSource(ctx context.Context, p CreateOpsHiveIntakeSourceParams) (*OpsHiveIntakeSource, error) {
+	source := &OpsHiveIntakeSource{
+		ID:      newID(),
+		Kind:    p.Kind,
+		Title:   p.Title,
+		Detail:  p.Detail,
+		Content: p.Content,
+		Status:  p.Status,
+	}
+	if source.Kind == "" {
+		source.Kind = "Text"
+	}
+	if source.Status == "" {
+		source.Status = "parsed"
+	}
+	err := s.db.QueryRowContext(ctx,
+		`INSERT INTO ops_hive_intake_sources (id, kind, title, detail, content, status)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 RETURNING created_at`,
+		source.ID, source.Kind, source.Title, source.Detail, source.Content, source.Status,
+	).Scan(&source.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ops hive intake source: %w", err)
+	}
+	return source, nil
+}
+
+func (s *Store) ListOpsHiveIntakeSources(ctx context.Context, limit int) ([]OpsHiveIntakeSource, error) {
+	if limit <= 0 {
+		limit = 25
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, kind, title, detail, content, status, created_at
+		 FROM ops_hive_intake_sources
+		 ORDER BY created_at DESC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list ops hive intake sources: %w", err)
+	}
+	defer rows.Close()
+	sources := []OpsHiveIntakeSource{}
+	for rows.Next() {
+		var source OpsHiveIntakeSource
+		if err := rows.Scan(&source.ID, &source.Kind, &source.Title, &source.Detail, &source.Content, &source.Status, &source.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan ops hive intake source: %w", err)
+		}
+		sources = append(sources, source)
+	}
+	return sources, rows.Err()
 }
 
 // ────────────────────────────────────────────────────────────────────
