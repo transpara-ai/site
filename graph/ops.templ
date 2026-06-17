@@ -1032,6 +1032,9 @@ templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
 						}
 					</div>
 				}
+				@opsHiveRuntimeArtifacts(e.Artifacts)
+				@opsHiveRuntimeCausalGraph(e.CausalGraph)
+				@opsHiveRuntimeEventInspector(e.RunEvents)
 				if len(e.Limitations) > 0 {
 					<div class="border border-amber-400/30 bg-amber-400/10 rounded-lg p-3">
 						<p class="text-xs font-medium text-amber-300">Evidence boundaries</p>
@@ -1041,6 +1044,162 @@ templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
 							}
 						</ul>
 					</div>
+				}
+			</div>
+		}
+	</section>
+}
+
+templ opsHiveRuntimeArtifacts(items []OpsHiveRuntimeArtifact) {
+	<section class="border border-edge bg-surface rounded-lg p-3">
+		<div class="flex items-start justify-between gap-3">
+			<div>
+				<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Artifacts</h4>
+				<p class="text-[11px] text-warm-faint mt-1">Read-only factory.artifact.created projection.</p>
+			</div>
+			<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted bg-void/30 whitespace-nowrap">{ fmt.Sprintf("%d", len(items)) }</span>
+		</div>
+		if len(items) == 0 {
+			<p class="text-sm text-warm-faint mt-3">No factory artifacts projected.</p>
+		} else {
+			<div class="grid gap-2 mt-3 md:grid-cols-2">
+				for _, artifact := range items {
+					<article class="border border-edge bg-void/20 rounded-lg p-3 min-w-0">
+						<div class="flex items-start justify-between gap-3">
+							<div class="min-w-0">
+								<h5 class="text-sm font-medium text-warm truncate">{ opsHiveArtifactLabel(artifact) }</h5>
+								<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(artifact.MediaType, "media type unknown") }</p>
+							</div>
+							<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(artifact.CauseStatus) }>{ opsValueOr(artifact.CauseStatus, "cause") }</span>
+						</div>
+						if artifact.Summary != "" {
+							<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-2">{ artifact.Summary }</p>
+						}
+						<dl class="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+							<dt class="text-warm-faint">Artifact</dt>
+							<dd class="text-warm-muted truncate">{ artifact.ArtifactID }</dd>
+							<dt class="text-warm-faint">Event</dt>
+							<dd class="text-warm-muted truncate">{ artifact.EventID }</dd>
+							<dt class="text-warm-faint">Run</dt>
+							<dd class="text-warm-muted truncate">{ artifact.RunID }</dd>
+							<dt class="text-warm-faint">Created</dt>
+							<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(artifact.CreatedAt), "not observed") }</dd>
+							<dt class="text-warm-faint">URI</dt>
+							<dd class="text-warm-muted truncate">{ opsValueOr(artifact.URI, "not projected") }</dd>
+						</dl>
+						<div class="mt-3 border-t border-edge pt-2">
+							<p class="text-[11px] font-medium text-warm-muted">Causes</p>
+							if len(artifact.Causes) == 0 {
+								<p class="text-[11px] text-warm-faint mt-1">No causes projected.</p>
+							}
+							for _, cause := range artifact.Causes {
+								<p class="text-[11px] text-warm-muted mt-1 truncate">{ cause.EventID } <span class="text-warm-faint">({ opsValueOr(cause.Scope, "scope unknown") })</span></p>
+							}
+						</div>
+					</article>
+				}
+			</div>
+		}
+	</section>
+}
+
+templ opsHiveRuntimeCausalGraph(graph OpsHiveCausalGraph) {
+	<section class="border border-edge bg-surface rounded-lg p-3">
+		<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+			<div>
+				<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Run-local causal graph</h4>
+				<p class="text-[11px] text-warm-faint mt-1">EventGraph causes in the latest run conversation.</p>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted bg-void/30">nodes { fmt.Sprintf("%d", len(graph.Nodes)) }</span>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted bg-void/30">edges { fmt.Sprintf("%d", len(graph.Edges)) }</span>
+				if graph.Truncated {
+					<span class="text-[10px] px-2 py-1 rounded-full border border-amber-400/30 text-amber-300 bg-amber-400/10">truncated</span>
+				}
+			</div>
+		</div>
+		if graph.Scope != "" || graph.ConversationID != "" {
+			<dl class="grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+				<dt class="text-warm-faint">Scope</dt>
+				<dd class="text-warm-muted truncate">{ opsValueOr(graph.Scope, "unknown") }</dd>
+				<dt class="text-warm-faint">Conversation</dt>
+				<dd class="text-warm-muted truncate">{ opsValueOr(graph.ConversationID, "not projected") }</dd>
+				<dt class="text-warm-faint">Limit</dt>
+				<dd class="text-warm-muted">{ fmt.Sprintf("%d", graph.Limit) }</dd>
+			</dl>
+		}
+		if len(graph.Nodes) == 0 && len(graph.Edges) == 0 {
+			<p class="text-sm text-warm-faint mt-3">No run-local graph nodes projected.</p>
+		} else {
+			<div class="grid gap-3 mt-3 lg:grid-cols-2">
+				<div class="border border-edge bg-void/20 rounded-lg p-3 min-w-0">
+					<p class="text-[11px] font-medium text-warm-muted uppercase tracking-widest">Nodes</p>
+					<div class="mt-2 space-y-2">
+						for _, node := range graph.Nodes {
+							<div class="border-l-2 border-brand/40 pl-2 min-w-0">
+								<p class="text-xs text-warm truncate">{ opsValueOr(node.Label, node.EventType) }</p>
+								<p class="text-[11px] text-warm-faint truncate">{ node.EventID }</p>
+								<p class="text-[10px] text-warm-faint truncate">{ opsValueOr(node.Scope, "scope unknown") }</p>
+							</div>
+						}
+					</div>
+				</div>
+				<div class="border border-edge bg-void/20 rounded-lg p-3 min-w-0">
+					<p class="text-[11px] font-medium text-warm-muted uppercase tracking-widest">Edges</p>
+					if len(graph.Edges) == 0 {
+						<p class="text-xs text-warm-faint mt-2">No causal edges projected.</p>
+					}
+					<div class="mt-2 space-y-2">
+						for _, edge := range graph.Edges {
+							<div class="text-[11px] text-warm-muted min-w-0">
+								<p class="truncate">{ edge.FromEventID }</p>
+								<p class="text-warm-faint">-&gt; <span class="text-warm-muted">{ edge.ToEventID }</span></p>
+								<p class="text-[10px] text-warm-faint truncate">{ opsValueOr(edge.Scope, "scope unknown") }</p>
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		}
+	</section>
+}
+
+templ opsHiveRuntimeEventInspector(items []OpsHiveRuntimeEvent) {
+	<section class="border border-edge bg-surface rounded-lg p-3">
+		<div class="flex items-start justify-between gap-3">
+			<div>
+				<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Event inspector</h4>
+				<p class="text-[11px] text-warm-faint mt-1">Curated payloads only; non-allowlisted event content remains omitted.</p>
+			</div>
+			<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-muted bg-void/30 whitespace-nowrap">{ fmt.Sprintf("%d", len(items)) }</span>
+		</div>
+		if len(items) == 0 {
+			<p class="text-sm text-warm-faint mt-3">No run events projected.</p>
+		} else {
+			<div class="mt-3 divide-y divide-edge border border-edge rounded-lg overflow-hidden">
+				for _, event := range items {
+					<details class="bg-void/20 open:bg-void/30">
+						<summary class="cursor-pointer px-3 py-2">
+							<span class="text-xs font-medium text-warm">{ opsValueOr(event.EventType, "event") }</span>
+							<span class="block text-[11px] text-warm-faint truncate mt-1">{ event.EventID }</span>
+						</summary>
+						<div class="px-3 pb-3 space-y-2">
+							<dl class="grid grid-cols-[6rem_1fr] gap-x-2 gap-y-1 text-[11px]">
+								<dt class="text-warm-faint">Kind</dt>
+								<dd class="text-warm-muted truncate">{ opsValueOr(event.InspectorKind, "eventgraph_event") }</dd>
+								<dt class="text-warm-faint">At</dt>
+								<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(event.CreatedAt), "not observed") }</dd>
+								<dt class="text-warm-faint">Causes</dt>
+								<dd class="text-warm-muted truncate">{ opsEvidenceJoin(event.Causes) }</dd>
+							</dl>
+							if event.ContentError != "" {
+								<p class="text-xs text-amber-200 bg-amber-400/10 border border-amber-400/30 rounded-md p-2">{ event.ContentError }</p>
+							}
+							if opsHiveEventContentText(event.Content) != "" {
+								<pre class="max-h-48 overflow-auto text-[11px] text-warm-muted bg-void border border-edge rounded-md p-2 whitespace-pre-wrap">{ opsHiveEventContentText(event.Content) }</pre>
+							}
+						</div>
+					</details>
 				}
 			</div>
 		}

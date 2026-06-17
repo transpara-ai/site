@@ -361,6 +361,9 @@ type OpsHiveRuntimeEvidence struct {
 	LastRun              *OpsHiveRuntimeRun        `json:"last_run"`
 	AgentEvents          OpsHiveRuntimeAgentEvents `json:"agent_events"`
 	LastQueuedRunRequest *OpsHiveQueuedRunRequest  `json:"last_queued_run_request"`
+	Artifacts            []OpsHiveRuntimeArtifact  `json:"artifacts"`
+	RunEvents            []OpsHiveRuntimeEvent     `json:"run_events"`
+	CausalGraph          OpsHiveCausalGraph        `json:"causal_graph"`
 	Limitations          []string                  `json:"limitations"`
 }
 
@@ -412,6 +415,62 @@ type OpsHiveQueuedRunRequest struct {
 	BriefEventID          string   `json:"brief_event_id"`
 	EvidenceKind          string   `json:"evidence_kind"`
 	CreatedAt             string   `json:"created_at"`
+}
+
+type OpsHiveRuntimeArtifact struct {
+	EventID         string                `json:"event_id"`
+	RunID           string                `json:"run_id"`
+	ArtifactID      string                `json:"artifact_id"`
+	Label           string                `json:"label"`
+	Title           string                `json:"title"`
+	MediaType       string                `json:"media_type"`
+	URI             string                `json:"uri"`
+	Summary         string                `json:"summary"`
+	ProducerActorID string                `json:"producer_actor_id"`
+	Causes          []OpsHiveRuntimeCause `json:"causes"`
+	CauseStatus     string                `json:"cause_status"`
+	CreatedAt       string                `json:"created_at"`
+}
+
+type OpsHiveRuntimeCause struct {
+	EventID   string `json:"event_id"`
+	EventType string `json:"event_type"`
+	Scope     string `json:"scope"`
+}
+
+type OpsHiveRuntimeEvent struct {
+	EventID        string          `json:"event_id"`
+	EventType      string          `json:"event_type"`
+	ConversationID string          `json:"conversation_id"`
+	CreatedAt      string          `json:"created_at"`
+	Causes         []string        `json:"causes"`
+	InspectorKind  string          `json:"inspector_kind"`
+	Content        json.RawMessage `json:"content"`
+	ContentError   string          `json:"content_error"`
+}
+
+type OpsHiveCausalGraph struct {
+	Scope          string              `json:"scope"`
+	ConversationID string              `json:"conversation_id"`
+	Limit          int                 `json:"limit"`
+	Truncated      bool                `json:"truncated"`
+	Nodes          []OpsHiveCausalNode `json:"nodes"`
+	Edges          []OpsHiveCausalEdge `json:"edges"`
+}
+
+type OpsHiveCausalNode struct {
+	EventID    string `json:"event_id"`
+	EventType  string `json:"event_type"`
+	Label      string `json:"label"`
+	ArtifactID string `json:"artifact_id"`
+	Scope      string `json:"scope"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type OpsHiveCausalEdge struct {
+	FromEventID string `json:"from_event_id"`
+	ToEventID   string `json:"to_event_id"`
+	Scope       string `json:"scope"`
 }
 
 type OpsHiveModelSelection struct {
@@ -954,7 +1013,39 @@ func opsHiveRuntimeEvidenceEmpty(e OpsHiveRuntimeEvidence) bool {
 		e.AgentEvents.LastAgentEventID == "" &&
 		e.AgentEvents.LastAgentEventAt == "" &&
 		len(e.AgentEvents.ActiveAgents) == 0 &&
+		len(e.Artifacts) == 0 &&
+		len(e.RunEvents) == 0 &&
+		e.CausalGraph.Scope == "" &&
+		e.CausalGraph.ConversationID == "" &&
+		e.CausalGraph.Limit == 0 &&
+		!e.CausalGraph.Truncated &&
+		len(e.CausalGraph.Nodes) == 0 &&
+		len(e.CausalGraph.Edges) == 0 &&
 		len(e.Limitations) == 0
+}
+
+func opsHiveArtifactLabel(a OpsHiveRuntimeArtifact) string {
+	if strings.TrimSpace(a.Title) != "" {
+		return a.Title
+	}
+	if strings.TrimSpace(a.Label) != "" {
+		return a.Label
+	}
+	if strings.TrimSpace(a.ArtifactID) != "" {
+		return a.ArtifactID
+	}
+	return "artifact"
+}
+
+func opsHiveEventContentText(content json.RawMessage) string {
+	if len(content) == 0 {
+		return ""
+	}
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, content, "", "  "); err == nil {
+		return buf.String()
+	}
+	return string(content)
 }
 
 func opsHiveResponseError(resp *http.Response) string {
