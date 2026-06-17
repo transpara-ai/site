@@ -44,6 +44,7 @@ type OpsPageData struct {
 	HiveShell   *OpsHiveShellData
 	Evidence    *OpsEvidenceData
 	Decision    *OpsDecisionData
+	Approvals   *OpsApprovalsData
 	Observatory *OpsObservatoryData
 	LegacyURL   string
 }
@@ -339,6 +340,22 @@ type OpsHiveApproval struct {
 	RiskSummary       string `json:"risk_summary"`
 	ProposedOperation string `json:"proposed_operation"`
 	CreatedAt         string `json:"created_at"`
+}
+
+type OpsApprovalsData struct {
+	GeneratedAt        string
+	ProjectionSource   string
+	ProjectionError    string
+	PendingApprovals   []OpsApprovalQueueItem
+	AuthorityDecisions []OpsHiveDecision
+	KeyAuditTraces     []OpsHiveKeyAuditTrace
+}
+
+type OpsApprovalQueueItem struct {
+	OpsHiveApproval
+	DecisionHref   string
+	ResolveStatus  string
+	ResolveEnabled bool
 }
 
 type OpsHiveDecision struct {
@@ -862,6 +879,15 @@ func (h *Handlers) handleOpsEvidence(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handlers) handleOpsApprovals(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Approval queue",
+		Description: "Site-owned authority queue sourced from Hive's operator projection. Site forwards supported decisions to Hive and does not mutate EventGraph directly.",
+		Active:      "approvals",
+		Approvals:   fetchOpsApprovals(r),
+	})
+}
+
 func (h *Handlers) handleOpsDecision(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Decision boundary",
@@ -903,6 +929,10 @@ func (h *Handlers) handleOpsDecisionSubmit(w http.ResponseWriter, r *http.Reques
 		hiveDecision = "denied"
 	default:
 		h.renderOpsDecisionWithConfirmation(w, r, requestID, decision, "more-evidence-local")
+		return
+	}
+	if reason == "" {
+		h.renderOpsDecisionWithConfirmation(w, r, requestID, "", "decision_reason is required for approve/deny")
 		return
 	}
 
@@ -1063,6 +1093,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Target:      "local Site decision surface",
 			Owner:       "site shell only",
 			Status:      "effect none",
+		},
+		{
+			ID:          "approvals",
+			Label:       "Approvals",
+			Description: "Pending authority requests, recent decisions, and causal audit refs from Hive.",
+			Href:        "/ops/approvals",
+			Target:      "hive operator projection + governed decision POST",
+			Owner:       "site forwarding UI, hive records decisions",
+			Status:      "governed POST",
 		},
 		{
 			ID:          "refinery",
@@ -1390,7 +1429,6 @@ func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsD
 			Effect:              "none",
 			OperatorSummary:     "Could not fetch hive operator projection: " + err.Error(),
 			BlockedReasons:      []string{"hive projection unavailable: " + err.Error()},
-			Actions:             opsDecisionActions(r),
 		}
 	}
 
@@ -1409,7 +1447,6 @@ func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsD
 			Effect:              "none",
 			OperatorSummary:     "No pending approval found for request_id " + requestID,
 			BlockedReasons:      []string{"request_id " + requestID + " not found in pending approvals"},
-			Actions:             opsDecisionActions(r),
 		}
 	}
 
@@ -1427,7 +1464,6 @@ func buildOpsDecisionDataFromProjection(r *http.Request, requestID string) *OpsD
 			Effect:              "none",
 			OperatorSummary:     "Request " + requestID + " is not a draft-PR creation; this decision surface only governs pull_request.create.",
 			BlockedReasons:      []string{"action " + found.ActionName + " is not pull_request.create: out of scope for the Gate-E draft-PR decision surface"},
-			Actions:             opsDecisionActions(r),
 		}
 	}
 
@@ -1562,6 +1598,46 @@ func buildOpsDecisionData(r *http.Request) *OpsDecisionData {
 			{Label: "R-003", Field: "policy adapter / policy bundle", Value: "unresolved and excluded", Status: "blocked outside scope"},
 		},
 	}
+}
+
+func fetchOpsApprovals(r *http.Request) *OpsApprovalsData {
+	data := &OpsApprovalsData{}
+	projection, err := fetchHiveOperatorProjection(r)
+	if err != nil {
+		data.ProjectionError = err.Error()
+		return data
+	}
+	data.ProjectionSource = projection.Source
+	if projection.GeneratedAt != "" {
+		data.GeneratedAt = formatOpsTime(projection.GeneratedAt)
+	}
+	if len(projection.Errors) > 0 {
+		data.ProjectionError = strings.Join(projection.Errors, "; ")
+	}
+	data.PendingApprovals = make([]OpsApprovalQueueItem, 0, len(projection.PendingApprovals))
+	for _, approval := range projection.PendingApprovals {
+		item := OpsApprovalQueueItem{OpsHiveApproval: approval}
+		if approval.ActionName == "pull_request.create" {
+			item.ResolveEnabled = true
+			item.ResolveStatus = "resolve"
+			item.DecisionHref = opsApprovalDecisionHref(r, approval.RequestID)
+		} else {
+			item.ResolveStatus = "projected only"
+		}
+		data.PendingApprovals = append(data.PendingApprovals, item)
+	}
+	data.AuthorityDecisions = projection.AuthorityDecisions
+	data.KeyAuditTraces = projection.KeyAuditTraces
+	return data
+}
+
+func opsApprovalDecisionHref(r *http.Request, requestID string) string {
+	q := url.Values{}
+	q.Set("request_id", requestID)
+	if profile := strings.TrimSpace(r.URL.Query().Get("profile")); profile != "" {
+		q.Set("profile", profile)
+	}
+	return "/ops/decision?" + q.Encode()
 }
 
 func normalizeOpsDecisionAction(action string) (string, bool) {
