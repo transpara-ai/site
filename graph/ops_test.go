@@ -241,7 +241,7 @@ func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
 	}{
 		{
 			path:      "/ops/hive/intake?profile=transpara",
-			want:      []string{"Hive intake", "Source input", "Live interpretation", "Factory brief", "No scoped sources yet.", "No intake sources saved yet"},
+			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "Factory brief", "No scoped sources yet.", "No intake sources saved yet"},
 			forbidden: []string{"<iframe", "Hive operator projection source is not configured", "checkout-redesign.md"},
 		},
 		{
