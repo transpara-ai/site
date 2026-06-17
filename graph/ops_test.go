@@ -354,6 +354,18 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 	if strings.Contains(body, "Default profile only") {
 		t.Fatal("GET /ops/hive/intake rendered source from another profile")
 	}
+	formStart := strings.Index(body, `action="/ops/hive/intake/sources"`)
+	if formStart < 0 {
+		t.Fatal("GET /ops/hive/intake did not render the source form")
+	}
+	formEnd := strings.Index(body[formStart:], "</form>")
+	if formEnd < 0 {
+		t.Fatal("GET /ops/hive/intake source form is not closed")
+	}
+	sourceForm := body[formStart : formStart+formEnd]
+	if strings.Contains(sourceForm, `name="brief_`) {
+		t.Fatal("GET /ops/hive/intake nested brief preview controls inside the source POST form")
+	}
 }
 
 func TestHandleOpsHiveIntakeRejectsMissingSourceContent(t *testing.T) {
@@ -430,6 +442,49 @@ func TestOpsHiveIntakeSourceParamsTruncatesMultibyteTitleOnRuneBoundary(t *testi
 	}
 	if utf8.RuneCountInString(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
 		t.Fatalf("Title = %q, want 72-rune truncated title with ellipsis", params.Title)
+	}
+}
+
+func TestOpsHiveBriefPreviewDerivesSourcePriorityAndOverflow(t *testing.T) {
+	sources := []OpsHiveSourceView{
+		{Kind: "URL", Title: "reference", Content: "https://example.com/reference"},
+		{Kind: "Repo", Title: "transpara-ai/site", Content: "transpara-ai/site"},
+		{Kind: "Spec", Title: "API contract", Content: strings.Repeat("contract ", 60)},
+		{Kind: "Plan", Title: "milestone plan", Content: "launch plan"},
+		{Kind: "Text", Title: "operator notes", Content: "operator notes"},
+		{Kind: "Repo", Title: "transpara-ai/hive", Content: "transpara-ai/hive"},
+	}
+	missing := []OpsHiveMissingFieldView{
+		{Label: "Source material", Detail: "captured", Status: "ready"},
+		{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+	}
+
+	brief := opsHiveBriefPreview(sources, missing, "draft ready", "full product pipeline")
+
+	if brief.Title != "API contract" {
+		t.Fatalf("Title = %q, want primary text-like source title", brief.Title)
+	}
+	if !strings.HasSuffix(brief.Objective, "...") || utf8.RuneCountInString(brief.Objective) != 260 {
+		t.Fatalf("Objective = %q, want 260-rune excerpt with ellipsis", brief.Objective)
+	}
+	if !strings.Contains(brief.Scope, "Additional sources: 1") {
+		t.Fatalf("Scope = %q, want additional-source count", brief.Scope)
+	}
+	if !strings.Contains(brief.Acceptance, "Resolve Budget cap") {
+		t.Fatalf("Acceptance = %q, want unresolved missing field", brief.Acceptance)
+	}
+	if !strings.Contains(brief.Risks, "Launch controls remain unavailable") {
+		t.Fatalf("Risks = %q, want launch boundary", brief.Risks)
+	}
+	if brief.Readiness != "draft ready / full product pipeline" {
+		t.Fatalf("Readiness = %q, want status and mode", brief.Readiness)
+	}
+}
+
+func TestOpsHiveBriefExcerptHandlesSmallLimit(t *testing.T) {
+	got := opsHiveBriefExcerpt("brief content", 3)
+	if got != "brief content" {
+		t.Fatalf("opsHiveBriefExcerpt = %q, want unmodified content for small limit", got)
 	}
 }
 

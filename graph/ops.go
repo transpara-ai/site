@@ -1308,6 +1308,9 @@ func opsHiveBriefExcerpt(value string, limit int) string {
 	if value == "" {
 		return "Awaiting source material."
 	}
+	if limit < 4 {
+		return value
+	}
 	runes := []rune(value)
 	if len(runes) <= limit {
 		return value
