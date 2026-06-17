@@ -635,7 +635,7 @@ templ opsHiveShell(shell *OpsHiveShellData) {
 			if shell.Active == "intake" {
 				@opsHiveIntakeShell(shell.Intake, shell.Profile)
 			} else if shell.Active == "runs" {
-				@opsHiveRunsShell(shell.Runs)
+				@opsHiveRunsShell(shell.Runs, shell.Launches)
 			} else if shell.Active == "agents" {
 				@opsHiveAgentsShell(shell.Agents)
 			} else if shell.Active == "resources" {
@@ -650,7 +650,7 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge">
 				<h3 class="text-sm font-medium text-warm">Source input</h3>
-				<p class="text-xs text-warm-faint mt-1">Persisted source cards for draft brief assembly. Launch remains unavailable.</p>
+				<p class="text-xs text-warm-faint mt-1">Persisted source cards for draft brief assembly and governed queued launch requests.</p>
 				if intake.StorageStatus != "" {
 					<p class="text-[11px] text-warm-faint mt-1">Storage: { intake.StorageStatus }</p>
 				}
@@ -770,20 +770,74 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 				<div class="border border-edge bg-surface rounded-lg p-3">
 					<p class="text-xs text-warm-faint">Authority level</p>
 					<p class="text-sm text-warm mt-1">{ intake.AuthorityLevel }</p>
-					<p class="text-xs text-warm-muted mt-2">Launch controls intentionally remain unavailable until a separate governed launch integration is reviewed.</p>
+					<p class="text-xs text-warm-muted mt-2">Queueing records launch intent in Hive. Runtime start remains separate evidence.</p>
+					if intake.LaunchError != "" {
+						<p class="text-xs text-red-300 mt-2">{ intake.LaunchError }</p>
+					}
+					if len(intake.Sources) == 0 {
+						<p class="text-xs text-warm-faint mt-3">Add at least one source before queueing a Hive run request.</p>
+					} else {
+						<form method="post" action="/ops/hive/intake/launch" class="mt-3 grid gap-3">
+							if profileSlug != "" {
+								<input type="hidden" name="profile" value={ profileSlug }/>
+							}
+							<label class="block text-[11px] text-warm-faint">
+								Target repos
+								<input name="target_repos" required value="transpara-ai/hive" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+							</label>
+							<div class="grid gap-3 md:grid-cols-2">
+								<label class="block text-[11px] text-warm-faint">
+									Max iterations
+									<input name="max_iterations" required type="number" min="1" value="4" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+								</label>
+								<label class="block text-[11px] text-warm-faint">
+									Max cost USD
+									<input name="max_cost_usd" required type="number" min="0" step="0.01" value="12.50" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+								</label>
+							</div>
+							<button type="submit" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Queue Hive run request</button>
+						</form>
+					}
 				</div>
 			</div>
 		</section>
 	</div>
 }
 
-templ opsHiveRunsShell(runs []OpsHiveRunView) {
+templ opsHiveRunsShell(runs []OpsHiveRunView, launches []OpsHiveRunLaunchView) {
 	<div class="p-4 space-y-4">
 		<div class="grid gap-3 md:grid-cols-3">
 			@opsMetric("Runs", fmt.Sprintf("%d", len(runs)), "sample run records")
 			@opsMetric("Pipeline", "Research -> Integrate", "visible stages")
 			@opsMetric("Approvals", "sample queue", "read-only count")
 		</div>
+		if len(launches) > 0 {
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h3 class="text-sm font-medium text-warm">Queued Hive run requests</h3>
+					<p class="text-xs text-warm-faint mt-1">Stored Site proof of Hive-accepted queued launch intent. This is not runtime-start evidence.</p>
+				</header>
+				<div class="grid gap-3 p-4">
+					for _, launch := range launches {
+						<article class={ templ.KV("border border-brand/40 bg-brand/10 rounded-lg p-3", launch.Selected), templ.KV("border border-edge bg-void/20 rounded-lg p-3", !launch.Selected) }>
+							<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+								<div class="min-w-0">
+									<h4 class="text-sm font-medium text-warm">{ launch.Title }</h4>
+									<p class="text-[11px] text-warm-faint mt-1 font-mono break-all">{ launch.RunID }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsHiveShellStatusClass(launch.Status) }>{ launch.Status }</span>
+							</div>
+							<div class="grid gap-3 mt-3 md:grid-cols-4">
+								@opsMetric("Targets", launch.TargetRepos, "declared repos")
+								@opsMetric("Budget", launch.Budget, "operator cap")
+								@opsMetric("First event", launch.FirstEventID, "Hive source event")
+								@opsMetric("Queued", launch.CreatedAt, "Site stored")
+							</div>
+						</article>
+					}
+				</div>
+			</section>
+		}
 		<div class="grid gap-3">
 			for _, run := range runs {
 				<article class="border border-edge bg-void/20 rounded-lg p-4">

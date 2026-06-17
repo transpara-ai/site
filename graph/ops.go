@@ -54,6 +54,7 @@ type OpsHiveShellData struct {
 	Profile   string
 	Intake    OpsHiveIntakeView
 	Runs      []OpsHiveRunView
+	Launches  []OpsHiveRunLaunchView
 	Agents    []OpsHiveAgentView
 	Resources []OpsHiveResourceView
 }
@@ -102,6 +103,7 @@ type OpsHiveIntakeView struct {
 	EstimatedBudget string
 	StorageStatus   string
 	Error           string
+	LaunchError     string
 	Sources         []OpsHiveSourceView
 	MissingFields   []OpsHiveMissingFieldView
 	Brief           OpsHiveBriefPreviewView
@@ -117,6 +119,63 @@ type OpsHiveRunView struct {
 	Approvals int
 	Artifacts int
 	UpdatedAt string
+}
+
+type OpsHiveRunLaunchView struct {
+	RunID        string
+	Status       string
+	FirstEventID string
+	Title        string
+	TargetRepos  string
+	Budget       string
+	CreatedAt    string
+	Selected     bool
+}
+
+type opsHiveRunLaunchPayload struct {
+	OperatorID  string                    `json:"operator_id"`
+	IntakeID    string                    `json:"intake_id"`
+	Title       string                    `json:"title"`
+	Brief       opsHiveRunLaunchBrief     `json:"brief"`
+	Sources     []opsHiveRunLaunchSource  `json:"sources"`
+	Authority   opsHiveRunLaunchAuthority `json:"authority"`
+	Budget      opsHiveRunLaunchBudget    `json:"budget"`
+	TargetRepos []string                  `json:"target_repos"`
+}
+
+type opsHiveRunLaunchBrief struct {
+	Title      string   `json:"title"`
+	Objective  string   `json:"objective"`
+	Scope      string   `json:"scope"`
+	Acceptance string   `json:"acceptance"`
+	Risks      string   `json:"risks"`
+	Readiness  string   `json:"readiness"`
+	Missing    []string `json:"missing"`
+}
+
+type opsHiveRunLaunchSource struct {
+	ID    string `json:"id,omitempty"`
+	Type  string `json:"type"`
+	Ref   string `json:"ref"`
+	Title string `json:"title,omitempty"`
+}
+
+type opsHiveRunLaunchAuthority struct {
+	InitialLevel string `json:"initial_level"`
+	Scope        string `json:"scope"`
+	PolicyRef    string `json:"policy_ref"`
+	Rationale    string `json:"rationale"`
+}
+
+type opsHiveRunLaunchBudget struct {
+	MaxIterations int     `json:"max_iterations"`
+	MaxCostUSD    float64 `json:"max_cost_usd"`
+}
+
+type opsHiveRunLaunchResponse struct {
+	RunID        string `json:"run_id"`
+	Status       string `json:"status"`
+	FirstEventID string `json:"first_event_id"`
 }
 
 type OpsHiveAgentView struct {
@@ -944,12 +1003,66 @@ func (h *Handlers) handleOpsHiveIntakeSourceCreate(w http.ResponseWriter, r *htt
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
+func (h *Handlers) handleOpsHiveIntakeLaunch(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	profileSlug := opsHiveProfileSlugFromRequest(r)
+	if h.store == nil {
+		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, "graph store is not configured")
+		return
+	}
+	payload, storeParams, err := h.buildOpsHiveRunLaunchPayload(r, profileSlug)
+	if err != nil {
+		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, err.Error())
+		return
+	}
+	response, err := postOpsHiveRunLaunch(r, payload)
+	if err != nil {
+		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, err.Error())
+		return
+	}
+	storeParams.RunID = response.RunID
+	storeParams.Status = response.Status
+	storeParams.FirstEventID = response.FirstEventID
+	if _, err := h.store.CreateOpsHiveRunLaunch(r.Context(), storeParams); err != nil {
+		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, "could not store queued run id: "+err.Error())
+		return
+	}
+	target := "/ops/hive/runs?profile=" + url.QueryEscape(profileSlug) + "&run_id=" + url.QueryEscape(response.RunID)
+	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+func (h *Handlers) renderOpsHiveIntakeLaunchError(w http.ResponseWriter, r *http.Request, profileSlug, msg string) {
+	shell := buildOpsHiveShellData("intake")
+	shell.Profile = profileSlug
+	if h.store != nil {
+		shell.Intake = h.buildOpsHiveIntakeView(r)
+	}
+	shell.Intake.LaunchError = msg
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Hive intake",
+		Description: "Site-owned intake shell for persisted source capture, interpretation, and launch readiness.",
+		Active:      "hive",
+		HiveShell:   shell,
+	})
+}
+
 func (h *Handlers) handleOpsHiveRuns(w http.ResponseWriter, r *http.Request) {
+	shell := buildOpsHiveShellData("runs")
+	shell.Profile = opsHiveProfileSlugFromRequest(r)
+	if h.store != nil {
+		launches, err := h.store.ListOpsHiveRunLaunches(r.Context(), shell.Profile, 10)
+		if err == nil {
+			shell.Launches = opsHiveRunLaunchViews(launches, strings.TrimSpace(r.URL.Query().Get("run_id")))
+		}
+	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Hive runs",
 		Description: "Static Site-owned run tower with sample pipeline, approval, artifact, and Guardian state.",
 		Active:      "hive",
-		HiveShell:   buildOpsHiveShellData("runs"),
+		HiveShell:   shell,
 	})
 }
 
@@ -1339,6 +1452,68 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	return view
 }
 
+func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug string) (opsHiveRunLaunchPayload, CreateOpsHiveRunLaunchParams, error) {
+	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	if err != nil {
+		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, fmt.Errorf("could not load persisted intake sources: %w", err)
+	}
+	sourceViews := opsHiveIntakeSourceViews(sources)
+	if len(sourceViews) == 0 {
+		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, errors.New("add at least one intake source before queueing a Hive run")
+	}
+	missing := opsHiveIntakeMissingFields(sourceViews)
+	brief := opsHiveBriefPreview(sourceViews, missing, "draft ready", opsHiveIntakeSuggestedMode(sourceViews))
+	targetRepos := opsHiveLaunchTargetRepos(r.FormValue("target_repos"))
+	if len(targetRepos) == 0 {
+		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, errors.New("target_repos is required")
+	}
+	maxIterations, err := opsHiveLaunchPositiveInt(r.FormValue("max_iterations"), "budget.max_iterations")
+	if err != nil {
+		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, err
+	}
+	maxCost, err := opsHiveLaunchNonNegativeFloat(r.FormValue("max_cost_usd"), "budget.max_cost_usd")
+	if err != nil {
+		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, err
+	}
+	intakeID := "site_" + opsHiveSafeLaunchID(profileSlug)
+	title := brief.Title
+	payload := opsHiveRunLaunchPayload{
+		OperatorID: "site_operator_" + opsHiveSafeLaunchID(profileSlug),
+		IntakeID:   intakeID,
+		Title:      title,
+		Brief: opsHiveRunLaunchBrief{
+			Title:      brief.Title,
+			Objective:  brief.Objective,
+			Scope:      brief.Scope,
+			Acceptance: brief.Acceptance,
+			Risks:      brief.Risks,
+			Readiness:  brief.Readiness,
+			Missing:    opsHiveLaunchMissingLabels(brief.Missing),
+		},
+		Sources: opsHiveLaunchSources(sourceViews),
+		Authority: opsHiveRunLaunchAuthority{
+			InitialLevel: "Required",
+			Scope:        "operator-launch",
+			PolicyRef:    "dark-factory/operator-ui-contract-v0.1.2",
+			Rationale:    "operator queued launch from Site-derived Factory Brief; Hive records queued intent before any runtime start",
+		},
+		Budget: opsHiveRunLaunchBudget{
+			MaxIterations: maxIterations,
+			MaxCostUSD:    maxCost,
+		},
+		TargetRepos: targetRepos,
+	}
+	storeParams := CreateOpsHiveRunLaunchParams{
+		ProfileSlug:         profileSlug,
+		IntakeID:            intakeID,
+		Title:               title,
+		TargetRepos:         targetRepos,
+		BudgetMaxIterations: maxIterations,
+		BudgetMaxCostUSD:    maxCost,
+	}
+	return payload, storeParams, nil
+}
+
 func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView {
 	out := make([]OpsHiveSourceView, 0, len(sources))
 	for _, source := range sources {
@@ -1350,6 +1525,23 @@ func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView
 			Content:   source.Content,
 			Status:    source.Status,
 			CreatedAt: source.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+	return out
+}
+
+func opsHiveRunLaunchViews(launches []OpsHiveRunLaunch, selectedRunID string) []OpsHiveRunLaunchView {
+	out := make([]OpsHiveRunLaunchView, 0, len(launches))
+	for _, launch := range launches {
+		out = append(out, OpsHiveRunLaunchView{
+			RunID:        launch.RunID,
+			Status:       launch.Status,
+			FirstEventID: launch.FirstEventID,
+			Title:        launch.Title,
+			TargetRepos:  strings.Join(launch.TargetRepos, ", "),
+			Budget:       fmt.Sprintf("%d iter / $%.2f", launch.BudgetMaxIterations, launch.BudgetMaxCostUSD),
+			CreatedAt:    launch.CreatedAt.Format("2006-01-02 15:04"),
+			Selected:     launch.RunID == selectedRunID,
 		})
 	}
 	return out
@@ -1418,7 +1610,7 @@ func opsHiveBriefAcceptance(missing []OpsHiveMissingFieldView) string {
 }
 
 func opsHiveBriefRisks(missing []OpsHiveMissingFieldView) string {
-	lines := []string{"Launch controls remain unavailable until governed launch integration is reviewed."}
+	lines := []string{"Queued launch requests are not runtime-start evidence."}
 	for _, field := range missing {
 		if field.Status != "ready" {
 			lines = append(lines, field.Label+": "+field.Detail)
@@ -1557,6 +1749,132 @@ func opsHiveIntakeSourceParamsFromForm(r *http.Request) (CreateOpsHiveIntakeSour
 		Content:     content,
 		Status:      status,
 	}, nil
+}
+
+func postOpsHiveRunLaunch(r *http.Request, payload opsHiveRunLaunchPayload) (opsHiveRunLaunchResponse, error) {
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		return opsHiveRunLaunchResponse{}, errors.New("HIVE_OPS_API_BASE_URL is not configured")
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return opsHiveRunLaunchResponse{}, fmt.Errorf("internal error marshalling run launch: %w", err)
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/runs"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return opsHiveRunLaunchResponse{}, fmt.Errorf("could not build hive run request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if apiKey := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); apiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		return opsHiveRunLaunchResponse{}, fmt.Errorf("hive unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return opsHiveRunLaunchResponse{}, fmt.Errorf("hive returned %s", opsHiveResponseError(resp))
+	}
+	var out opsHiveRunLaunchResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return opsHiveRunLaunchResponse{}, fmt.Errorf("decode hive run response: %w", err)
+	}
+	if out.RunID == "" {
+		return opsHiveRunLaunchResponse{}, errors.New("hive response did not include run_id")
+	}
+	if out.Status == "" {
+		out.Status = "queued"
+	}
+	return out, nil
+}
+
+func opsHiveLaunchTargetRepos(value string) []string {
+	parts := strings.FieldsFunc(value, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\t' || r == ' '
+	})
+	out := []string{}
+	seen := map[string]struct{}{}
+	for _, part := range parts {
+		repo := strings.TrimSpace(part)
+		if repo == "" {
+			continue
+		}
+		if _, exists := seen[repo]; exists {
+			continue
+		}
+		seen[repo] = struct{}{}
+		out = append(out, repo)
+	}
+	return out
+}
+
+func opsHiveLaunchPositiveInt(value, label string) (int, error) {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", label)
+	}
+	return parsed, nil
+}
+
+func opsHiveLaunchNonNegativeFloat(value, label string) (float64, error) {
+	parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil || parsed < 0 {
+		return 0, fmt.Errorf("%s must be zero or greater", label)
+	}
+	return parsed, nil
+}
+
+func opsHiveSafeLaunchID(value string) string {
+	value = strings.TrimSpace(value)
+	var b strings.Builder
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+		case r == '-' || r == '_':
+			b.WriteRune(r)
+		default:
+			b.WriteByte('_')
+		}
+	}
+	if b.Len() == 0 {
+		return "transpara"
+	}
+	return b.String()
+}
+
+func opsHiveLaunchMissingLabels(fields []OpsHiveMissingFieldView) []string {
+	out := make([]string, 0, len(fields))
+	for _, field := range fields {
+		if field.Status == "ready" {
+			continue
+		}
+		out = append(out, field.Label+": "+field.Detail)
+	}
+	return out
+}
+
+func opsHiveLaunchSources(sources []OpsHiveSourceView) []opsHiveRunLaunchSource {
+	out := make([]opsHiveRunLaunchSource, 0, len(sources))
+	for _, source := range sources {
+		ref := source.Content
+		switch strings.ToLower(source.Kind) {
+		case "text", "prd", "spec", "plan":
+			ref = "site-intake-source:" + source.ID
+		}
+		if strings.TrimSpace(ref) == "" {
+			ref = "site-intake-source:" + source.ID
+		}
+		out = append(out, opsHiveRunLaunchSource{
+			ID:    source.ID,
+			Type:  strings.ToLower(source.Kind),
+			Ref:   ref,
+			Title: source.Title,
+		})
+	}
+	return out
 }
 
 func opsHiveClassifyIntakeSource(rawKind, title, content string) (string, string) {

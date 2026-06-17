@@ -196,6 +196,32 @@ type CreateOpsHiveIntakeSourceParams struct {
 	Status      string
 }
 
+type OpsHiveRunLaunch struct {
+	ID                  string
+	ProfileSlug         string
+	IntakeID            string
+	RunID               string
+	Status              string
+	FirstEventID        string
+	Title               string
+	TargetRepos         []string
+	BudgetMaxIterations int
+	BudgetMaxCostUSD    float64
+	CreatedAt           time.Time
+}
+
+type CreateOpsHiveRunLaunchParams struct {
+	ProfileSlug         string
+	IntakeID            string
+	RunID               string
+	Status              string
+	FirstEventID        string
+	Title               string
+	TargetRepos         []string
+	BudgetMaxIterations int
+	BudgetMaxCostUSD    float64
+}
+
 const opsHiveIntakeDefaultProfileSlug = "transpara-ai"
 
 // Reaction is a single emoji reaction on a node.
@@ -567,6 +593,22 @@ ALTER TABLE ops_hive_intake_sources ALTER COLUMN profile_slug SET DEFAULT 'trans
 UPDATE ops_hive_intake_sources SET profile_slug = 'transpara-ai' WHERE profile_slug = '' OR profile_slug = 'default';
 CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_created ON ops_hive_intake_sources(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_profile_created ON ops_hive_intake_sources(profile_slug, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ops_hive_run_launches (
+    id                    TEXT PRIMARY KEY,
+    profile_slug          TEXT NOT NULL DEFAULT 'transpara-ai',
+    intake_id             TEXT NOT NULL DEFAULT '',
+    run_id                TEXT NOT NULL,
+    status                TEXT NOT NULL DEFAULT 'queued',
+    first_event_id        TEXT NOT NULL DEFAULT '',
+    title                 TEXT NOT NULL DEFAULT '',
+    target_repos          JSONB NOT NULL DEFAULT '[]',
+    budget_max_iterations INTEGER NOT NULL DEFAULT 0,
+    budget_max_cost_usd   FLOAT8 NOT NULL DEFAULT 0,
+    created_at            TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_hive_run_launches_run_id ON ops_hive_run_launches(run_id);
+CREATE INDEX IF NOT EXISTS idx_ops_hive_run_launches_profile_created ON ops_hive_run_launches(profile_slug, created_at DESC);
 `)
 	return err
 }
@@ -628,6 +670,105 @@ func (s *Store) ListOpsHiveIntakeSources(ctx context.Context, profileSlug string
 		sources = append(sources, source)
 	}
 	return sources, rows.Err()
+}
+
+func (s *Store) CreateOpsHiveRunLaunch(ctx context.Context, p CreateOpsHiveRunLaunchParams) (*OpsHiveRunLaunch, error) {
+	launch := &OpsHiveRunLaunch{
+		ID:                  newID(),
+		ProfileSlug:         p.ProfileSlug,
+		IntakeID:            p.IntakeID,
+		RunID:               p.RunID,
+		Status:              p.Status,
+		FirstEventID:        p.FirstEventID,
+		Title:               p.Title,
+		TargetRepos:         append([]string(nil), p.TargetRepos...),
+		BudgetMaxIterations: p.BudgetMaxIterations,
+		BudgetMaxCostUSD:    p.BudgetMaxCostUSD,
+	}
+	if launch.ProfileSlug == "" {
+		launch.ProfileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	if launch.Status == "" {
+		launch.Status = "queued"
+	}
+	targetRepos, err := json.Marshal(launch.TargetRepos)
+	if err != nil {
+		return nil, fmt.Errorf("marshal target repos: %w", err)
+	}
+	err = s.db.QueryRowContext(ctx,
+		`INSERT INTO ops_hive_run_launches (id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		 RETURNING created_at`,
+		launch.ID, launch.ProfileSlug, launch.IntakeID, launch.RunID, launch.Status, launch.FirstEventID, launch.Title, targetRepos, launch.BudgetMaxIterations, launch.BudgetMaxCostUSD,
+	).Scan(&launch.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ops hive run launch: %w", err)
+	}
+	return launch, nil
+}
+
+func (s *Store) ListOpsHiveRunLaunches(ctx context.Context, profileSlug string, limit int) ([]OpsHiveRunLaunch, error) {
+	if profileSlug == "" {
+		profileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
+		 FROM ops_hive_run_launches
+		 WHERE profile_slug = $1
+		 ORDER BY created_at DESC
+		 LIMIT $2`, profileSlug, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list ops hive run launches: %w", err)
+	}
+	defer rows.Close()
+	launches := []OpsHiveRunLaunch{}
+	for rows.Next() {
+		launch, err := scanOpsHiveRunLaunch(rows)
+		if err != nil {
+			return nil, err
+		}
+		launches = append(launches, launch)
+	}
+	return launches, rows.Err()
+}
+
+func (s *Store) GetOpsHiveRunLaunch(ctx context.Context, profileSlug, runID string) (*OpsHiveRunLaunch, error) {
+	if profileSlug == "" {
+		profileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	row := s.db.QueryRowContext(ctx,
+		`SELECT id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
+		 FROM ops_hive_run_launches
+		 WHERE profile_slug = $1 AND run_id = $2`, profileSlug, runID)
+	launch, err := scanOpsHiveRunLaunch(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &launch, nil
+}
+
+type opsHiveRunLaunchScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanOpsHiveRunLaunch(row opsHiveRunLaunchScanner) (OpsHiveRunLaunch, error) {
+	var launch OpsHiveRunLaunch
+	var targetRepos []byte
+	if err := row.Scan(&launch.ID, &launch.ProfileSlug, &launch.IntakeID, &launch.RunID, &launch.Status, &launch.FirstEventID, &launch.Title, &targetRepos, &launch.BudgetMaxIterations, &launch.BudgetMaxCostUSD, &launch.CreatedAt); err != nil {
+		return OpsHiveRunLaunch{}, fmt.Errorf("scan ops hive run launch: %w", err)
+	}
+	if len(targetRepos) > 0 {
+		if err := json.Unmarshal(targetRepos, &launch.TargetRepos); err != nil {
+			return OpsHiveRunLaunch{}, fmt.Errorf("decode ops hive run launch target repos: %w", err)
+		}
+	}
+	return launch, nil
 }
 
 // ────────────────────────────────────────────────────────────────────
