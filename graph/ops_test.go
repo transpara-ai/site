@@ -676,6 +676,60 @@ func TestHandleOpsHiveIntakeLaunchRequiresSource(t *testing.T) {
 	}
 }
 
+func TestHandleOpsHiveIntakeLaunchRejectsInvalidFormValuesBeforeHivePost(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	clearOpsHiveLaunchTables(t, store)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: "transpara",
+		Kind:        "Text",
+		Title:       "Operator notes",
+		Content:     "Queue launch only when budget and target fields are valid.",
+		Status:      "parsed",
+	}); err != nil {
+		t.Fatalf("create intake source: %v", err)
+	}
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("Hive must not be called when launch form validation fails")
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	tests := []struct {
+		name          string
+		targetRepos   string
+		maxIterations string
+		maxCostUSD    string
+		want          string
+	}{
+		{name: "empty targets", targetRepos: " \t ", maxIterations: "4", maxCostUSD: "12.50", want: "target_repos is required"},
+		{name: "zero iterations", targetRepos: "transpara-ai/hive", maxIterations: "0", maxCostUSD: "12.50", want: "budget.max_iterations must be greater than zero"},
+		{name: "negative cost", targetRepos: "transpara-ai/hive", maxIterations: "4", maxCostUSD: "-0.01", want: "budget.max_cost_usd must be zero or greater"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			form := url.Values{
+				"profile":        {"transpara"},
+				"target_repos":   {tt.targetRepos},
+				"max_iterations": {tt.maxIterations},
+				"max_cost_usd":   {tt.maxCostUSD},
+			}
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/launch", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("POST /ops/hive/intake/launch: status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), tt.want) {
+				t.Fatalf("POST /ops/hive/intake/launch: body does not contain %q: %s", tt.want, w.Body.String())
+			}
+		})
+	}
+}
+
 func TestHandleOpsHiveIntakeLaunchRejectsCrossOriginPost(t *testing.T) {
 	h, store, _ := testHandlers(t)
 	clearOpsHiveLaunchTables(t, store)
@@ -696,6 +750,69 @@ func TestHandleOpsHiveIntakeLaunchRejectsCrossOriginPost(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("POST /ops/hive/intake/launch: status = %d, want 403; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestOpsHiveRunLaunchStoreEnforcesGlobalRunIDAndProfileScope(t *testing.T) {
+	_, store, _ := testHandlers(t)
+	clearOpsHiveLaunchTables(t, store)
+
+	if _, err := store.CreateOpsHiveRunLaunch(t.Context(), CreateOpsHiveRunLaunchParams{
+		ProfileSlug:         "transpara",
+		OperatorID:          "site_operator_a",
+		IntakeID:            "site_transpara_a",
+		RunID:               "run_global",
+		Status:              "queued",
+		FirstEventID:        "event_a",
+		Title:               "Profile A launch",
+		TargetRepos:         []string{"transpara-ai/hive"},
+		BudgetMaxIterations: 4,
+		BudgetMaxCostUSD:    12.50,
+	}); err != nil {
+		t.Fatalf("create profile A launch: %v", err)
+	}
+	if _, err := store.CreateOpsHiveRunLaunch(t.Context(), CreateOpsHiveRunLaunchParams{
+		ProfileSlug:         "transpara-other",
+		OperatorID:          "site_operator_b",
+		IntakeID:            "site_transpara_b",
+		RunID:               "run_global",
+		Status:              "queued",
+		FirstEventID:        "event_b",
+		Title:               "Profile B duplicate launch",
+		TargetRepos:         []string{"transpara-ai/hive"},
+		BudgetMaxIterations: 4,
+		BudgetMaxCostUSD:    12.50,
+	}); err == nil {
+		t.Fatal("CreateOpsHiveRunLaunch accepted duplicate Hive run_id across profiles")
+	}
+	if _, err := store.CreateOpsHiveRunLaunch(t.Context(), CreateOpsHiveRunLaunchParams{
+		ProfileSlug:         "transpara-other",
+		OperatorID:          "site_operator_b",
+		IntakeID:            "site_transpara_b",
+		RunID:               "run_other",
+		Status:              "queued",
+		FirstEventID:        "event_b",
+		Title:               "Profile B launch",
+		TargetRepos:         []string{"transpara-ai/hive"},
+		BudgetMaxIterations: 2,
+		BudgetMaxCostUSD:    3.50,
+	}); err != nil {
+		t.Fatalf("create profile B launch: %v", err)
+	}
+
+	launches, err := store.ListOpsHiveRunLaunches(t.Context(), "transpara", 10)
+	if err != nil {
+		t.Fatalf("list profile A launches: %v", err)
+	}
+	if len(launches) != 1 || launches[0].RunID != "run_global" {
+		t.Fatalf("profile A launches = %#v, want only run_global", launches)
+	}
+	otherLaunches, err := store.ListOpsHiveRunLaunches(t.Context(), "transpara-other", 10)
+	if err != nil {
+		t.Fatalf("list profile B launches: %v", err)
+	}
+	if len(otherLaunches) != 1 || otherLaunches[0].RunID != "run_other" {
+		t.Fatalf("profile B launches = %#v, want only run_other", otherLaunches)
 	}
 }
 
