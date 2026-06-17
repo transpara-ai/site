@@ -744,7 +744,7 @@ templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
 									<dt class="text-warm-faint">Targets</dt>
 									<dd class="text-warm-muted truncate">{ opsEvidenceJoin(e.LastQueuedRunRequest.TargetRepos) }</dd>
 									<dt class="text-warm-faint">Created</dt>
-									<dd class="text-warm-muted">{ formatOpsTime(e.LastQueuedRunRequest.CreatedAt) }</dd>
+									<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(e.LastQueuedRunRequest.CreatedAt), "not observed") }</dd>
 								</dl>
 							</div>
 						}
@@ -767,7 +767,7 @@ templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
 									<dt class="text-warm-faint">Model</dt>
 									<dd class="text-warm-muted truncate">{ agent.Model }</dd>
 									<dt class="text-warm-faint">Spawned</dt>
-									<dd class="text-warm-muted">{ formatOpsTime(agent.SpawnedAt) }</dd>
+									<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(agent.SpawnedAt), "not observed") }</dd>
 								</dl>
 							</div>
 						}

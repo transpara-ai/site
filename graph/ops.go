@@ -851,6 +851,9 @@ func opsHiveRuntimeEvidenceEmpty(e OpsHiveRuntimeEvidence) bool {
 		e.AgentEvents.Spawned == 0 &&
 		e.AgentEvents.Stopped == 0 &&
 		e.AgentEvents.ObservedActive == 0 &&
+		e.AgentEvents.Scope == "" &&
+		e.AgentEvents.LastAgentEventID == "" &&
+		e.AgentEvents.LastAgentEventAt == "" &&
 		len(e.AgentEvents.ActiveAgents) == 0 &&
 		len(e.Limitations) == 0
 }

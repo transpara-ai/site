@@ -619,6 +619,24 @@ func TestHandleOpsHiveRendersRuntimeEvidenceBoundariesWithoutRun(t *testing.T) {
 	}
 }
 
+func TestOpsHiveRuntimeEvidenceEmptyPreservesAgentMetadata(t *testing.T) {
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{Scope: "events_since_latest_hive.run.started"},
+	}) {
+		t.Fatal("runtime evidence with agent-event scope was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{LastAgentEventID: "event-agent"},
+	}) {
+		t.Fatal("runtime evidence with last agent event id was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{LastAgentEventAt: "2026-05-09T06:01:00Z"},
+	}) {
+		t.Fatal("runtime evidence with last agent event time was classified as empty")
+	}
+}
+
 func TestFetchOpsHiveProjectionFailureIsNonFatal(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no projection", http.StatusServiceUnavailable)
