@@ -1573,7 +1573,7 @@ func TestHandleOpsHiveRendersArtifactsGraphAndEventInspector(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Artifacts", "Factory brief", "Run-local causal graph", "Event inspector", "factory.artifact.created", "content omitted: factory.run.requested", "event-spawn", "event-artifact", "truncated"} {
+	for _, want := range []string{"Artifacts", "Factory brief", "Run-local causal graph", "Event inspector", "factory.artifact.created", "media_type", "content omitted: factory.run.requested", "event-spawn", "event-artifact", "truncated"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
