@@ -176,6 +176,28 @@ type Op struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
+type OpsHiveIntakeSource struct {
+	ID          string
+	ProfileSlug string
+	Kind        string
+	Title       string
+	Detail      string
+	Content     string
+	Status      string
+	CreatedAt   time.Time
+}
+
+type CreateOpsHiveIntakeSourceParams struct {
+	ProfileSlug string
+	Kind        string
+	Title       string
+	Detail      string
+	Content     string
+	Status      string
+}
+
+const opsHiveIntakeDefaultProfileSlug = "transpara-ai"
+
 // Reaction is a single emoji reaction on a node.
 type Reaction struct {
 	Emoji string   `json:"emoji"`
@@ -529,8 +551,83 @@ CREATE TABLE IF NOT EXISTS hive_diagnostics (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_hive_diagnostics_created ON hive_diagnostics(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ops_hive_intake_sources (
+    id         TEXT PRIMARY KEY,
+    profile_slug TEXT NOT NULL DEFAULT 'transpara-ai',
+    kind       TEXT NOT NULL DEFAULT 'Text',
+    title      TEXT NOT NULL DEFAULT '',
+    detail     TEXT NOT NULL DEFAULT '',
+    content    TEXT NOT NULL DEFAULT '',
+    status     TEXT NOT NULL DEFAULT 'parsed',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE ops_hive_intake_sources ADD COLUMN IF NOT EXISTS profile_slug TEXT NOT NULL DEFAULT 'transpara-ai';
+ALTER TABLE ops_hive_intake_sources ALTER COLUMN profile_slug SET DEFAULT 'transpara-ai';
+UPDATE ops_hive_intake_sources SET profile_slug = 'transpara-ai' WHERE profile_slug = '' OR profile_slug = 'default';
+CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_created ON ops_hive_intake_sources(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_profile_created ON ops_hive_intake_sources(profile_slug, created_at DESC);
 `)
 	return err
+}
+
+func (s *Store) CreateOpsHiveIntakeSource(ctx context.Context, p CreateOpsHiveIntakeSourceParams) (*OpsHiveIntakeSource, error) {
+	source := &OpsHiveIntakeSource{
+		ID:          newID(),
+		ProfileSlug: p.ProfileSlug,
+		Kind:        p.Kind,
+		Title:       p.Title,
+		Detail:      p.Detail,
+		Content:     p.Content,
+		Status:      p.Status,
+	}
+	if source.ProfileSlug == "" {
+		source.ProfileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	if source.Kind == "" {
+		source.Kind = "Text"
+	}
+	if source.Status == "" {
+		source.Status = "parsed"
+	}
+	err := s.db.QueryRowContext(ctx,
+		`INSERT INTO ops_hive_intake_sources (id, profile_slug, kind, title, detail, content, status)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 RETURNING created_at`,
+		source.ID, source.ProfileSlug, source.Kind, source.Title, source.Detail, source.Content, source.Status,
+	).Scan(&source.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create ops hive intake source: %w", err)
+	}
+	return source, nil
+}
+
+func (s *Store) ListOpsHiveIntakeSources(ctx context.Context, profileSlug string, limit int) ([]OpsHiveIntakeSource, error) {
+	if profileSlug == "" {
+		profileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	if limit <= 0 {
+		limit = 25
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, profile_slug, kind, title, detail, content, status, created_at
+		 FROM ops_hive_intake_sources
+		 WHERE profile_slug = $1
+		 ORDER BY created_at DESC
+		 LIMIT $2`, profileSlug, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list ops hive intake sources: %w", err)
+	}
+	defer rows.Close()
+	sources := []OpsHiveIntakeSource{}
+	for rows.Next() {
+		var source OpsHiveIntakeSource
+		if err := rows.Scan(&source.ID, &source.ProfileSlug, &source.Kind, &source.Title, &source.Detail, &source.Content, &source.Status, &source.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan ops hive intake source: %w", err)
+		}
+		sources = append(sources, source)
+	}
+	return sources, rows.Err()
 }
 
 // ────────────────────────────────────────────────────────────────────

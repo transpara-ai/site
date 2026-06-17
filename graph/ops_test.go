@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
@@ -223,29 +224,40 @@ func TestHandleOpsHiveRendersNativeSummary(t *testing.T) {
 }
 
 func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
-	h, _, _ := testHandlers(t)
+	h, store, _ := testHandlers(t)
+	if _, err := store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`); err != nil {
+		t.Fatalf("clear intake sources: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`)
+	})
 	mux := http.NewServeMux()
 	h.Register(mux)
 
 	tests := []struct {
-		path string
-		want []string
+		path      string
+		want      []string
+		forbidden []string
 	}{
 		{
-			path: "/ops/hive/intake?profile=transpara",
-			want: []string{"Hive intake", "Source input", "Live interpretation", "checkout-redesign.md"},
+			path:      "/ops/hive/intake?profile=transpara",
+			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "No intake sources saved yet"},
+			forbidden: []string{"<iframe", "Hive operator projection source is not configured", "checkout-redesign.md"},
 		},
 		{
-			path: "/ops/hive/runs?profile=transpara",
-			want: []string{"Hive runs", "Run tower", "run_static_001", "Build onboarding control surface"},
+			path:      "/ops/hive/runs?profile=transpara",
+			want:      []string{"Hive runs", "Run tower", "run_static_001", "Build onboarding control surface"},
+			forbidden: []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"},
 		},
 		{
-			path: "/ops/hive/agents?profile=transpara",
-			want: []string{"Hive agents", "Agent topology", "guardian", "architect"},
+			path:      "/ops/hive/agents?profile=transpara",
+			want:      []string{"Hive agents", "Agent topology", "guardian", "architect"},
+			forbidden: []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"},
 		},
 		{
-			path: "/ops/hive/resources?profile=transpara",
-			want: []string{"Hive resources", "Run budget", "Approval queue", "Read-only mode"},
+			path:      "/ops/hive/resources?profile=transpara",
+			want:      []string{"Hive resources", "Run budget", "Approval queue", "Read-only mode"},
+			forbidden: []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"},
 		},
 	}
 
@@ -264,12 +276,160 @@ func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
 					t.Fatalf("GET %s: body does not contain %q", tt.path, want)
 				}
 			}
-			for _, forbidden := range []string{"<iframe", `method="post"`, `action="/ops/hive`, "Hive operator projection source is not configured"} {
+			for _, forbidden := range tt.forbidden {
 				if strings.Contains(body, forbidden) {
 					t.Fatalf("GET %s: body contains forbidden %q", tt.path, forbidden)
 				}
 			}
 		})
+	}
+}
+
+func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	if _, err := store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`); err != nil {
+		t.Fatalf("clear intake sources: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`)
+	})
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	postSource := func(profileSlug string, values url.Values) {
+		t.Helper()
+		values.Set("profile", profileSlug)
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusSeeOther {
+			t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 303; body: %s", w.Code, w.Body.String())
+		}
+		if got, want := w.Header().Get("Location"), "/ops/hive/intake?profile="+profileSlug; got != want {
+			t.Fatalf("POST /ops/hive/intake/sources: Location = %q, want %q", got, want)
+		}
+	}
+
+	postSource("transpara", url.Values{
+		"source_kind": {"text"},
+		"title":       {"Checkout PRD"},
+		"content":     {"PRD\nAcceptance criteria: operator can review intake sources before launch."},
+	})
+	postSource("transpara", url.Values{
+		"source_kind": {"url"},
+		"content":     {"https://example.com/customer-notes"},
+	})
+	postSource("transpara", url.Values{
+		"source_kind": {"repo"},
+		"content":     {"transpara-ai/site"},
+	})
+	postSource("transpara-ai", url.Values{
+		"source_kind": {"text"},
+		"title":       {"Default profile only"},
+		"content":     {"Default-profile material should not appear in the Transpara intake."},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
+		}
+	}
+	if !strings.Contains(body, "cap pending") {
+		t.Fatal("GET /ops/hive/intake: body does not show pending budget cap")
+	}
+	if strings.Contains(body, "$18.00") {
+		t.Fatal("GET /ops/hive/intake rendered a numeric budget estimate for draft sources")
+	}
+	if strings.Contains(body, "checkout-redesign.md") || strings.Contains(body, "No intake sources saved yet") {
+		t.Fatal("GET /ops/hive/intake rendered static or empty-state sources after persisted sources")
+	}
+	if strings.Contains(body, "Default profile only") {
+		t.Fatal("GET /ops/hive/intake rendered source from another profile")
+	}
+}
+
+func TestHandleOpsHiveIntakeRejectsMissingSourceContent(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader("source_kind=text"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "source content is required") {
+		t.Fatalf("POST /ops/hive/intake/sources: body = %q", w.Body.String())
+	}
+}
+
+func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	values := url.Values{
+		"source_kind": {"text"},
+		"content":     {strings.Repeat("x", opsHiveIntakeMaxContentBytes+1)},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("POST /ops/hive/intake/sources: status = %d, want 400", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "source content must be 20000 bytes or less") {
+		t.Fatalf("POST /ops/hive/intake/sources: body = %q", w.Body.String())
+	}
+}
+
+func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
+	values := url.Values{
+		"source_kind": {"text"},
+		"title":       {strings.Repeat("A", 80)},
+		"content":     {"requirements for the intake card"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsHiveIntakeSourceParamsFromForm(req)
+	if err != nil {
+		t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+	}
+	if len(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
+		t.Fatalf("Title = %q, want 72-char truncated title with ellipsis", params.Title)
+	}
+}
+
+func TestOpsHiveIntakeSourceParamsTruncatesMultibyteTitleOnRuneBoundary(t *testing.T) {
+	values := url.Values{
+		"source_kind": {"text"},
+		"title":       {strings.Repeat("界", 80)},
+		"content":     {"requirements for the intake card"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsHiveIntakeSourceParamsFromForm(req)
+	if err != nil {
+		t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+	}
+	if !utf8.ValidString(params.Title) {
+		t.Fatalf("Title is invalid UTF-8: %q", params.Title)
+	}
+	if utf8.RuneCountInString(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
+		t.Fatalf("Title = %q, want 72-rune truncated title with ellipsis", params.Title)
 	}
 }
 

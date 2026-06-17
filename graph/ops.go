@@ -18,6 +18,8 @@ import (
 	"github.com/transpara-ai/site/profile"
 )
 
+const opsHiveIntakeMaxContentBytes = 20000
+
 type OpsSurface struct {
 	ID          string
 	Label       string
@@ -48,6 +50,7 @@ type OpsPageData struct {
 
 type OpsHiveShellData struct {
 	Active    string
+	Profile   string
 	Intake    OpsHiveIntakeView
 	Runs      []OpsHiveRunView
 	Agents    []OpsHiveAgentView
@@ -63,10 +66,13 @@ type OpsHiveShellCard struct {
 }
 
 type OpsHiveSourceView struct {
-	Kind   string
-	Title  string
-	Detail string
-	Status string
+	ID        string
+	Kind      string
+	Title     string
+	Detail    string
+	Content   string
+	Status    string
+	CreatedAt string
 }
 
 type OpsHiveMissingFieldView struct {
@@ -81,6 +87,8 @@ type OpsHiveIntakeView struct {
 	SuggestedMode   string
 	AuthorityLevel  string
 	EstimatedBudget string
+	StorageStatus   string
+	Error           string
 	Sources         []OpsHiveSourceView
 	MissingFields   []OpsHiveMissingFieldView
 }
@@ -867,12 +875,42 @@ func opsHiveResponseError(resp *http.Response) string {
 }
 
 func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {
+	shell := buildOpsHiveShellData("intake")
+	shell.Profile = opsHiveProfileSlugFromRequest(r)
+	if h.store != nil {
+		shell.Intake = h.buildOpsHiveIntakeView(r)
+	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Hive intake",
-		Description: "Static Site-owned intake shell for source capture, interpretation, and launch readiness.",
+		Description: "Site-owned intake shell for persisted source capture, interpretation, and launch readiness.",
 		Active:      "hive",
-		HiveShell:   buildOpsHiveShellData("intake"),
+		HiveShell:   shell,
 	})
+}
+
+func (h *Handlers) handleOpsHiveIntakeSourceCreate(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, "graph store is not configured", http.StatusInternalServerError)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	params, err := opsHiveIntakeSourceParamsFromForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if _, err := h.store.CreateOpsHiveIntakeSource(r.Context(), params); err != nil {
+		http.Error(w, "could not save intake source", http.StatusInternalServerError)
+		return
+	}
+	target := "/ops/hive/intake"
+	if profile := strings.TrimSpace(r.FormValue("profile")); profile != "" {
+		target += "?profile=" + url.QueryEscape(params.ProfileSlug)
+	}
+	http.Redirect(w, r, target, http.StatusSeeOther)
 }
 
 func (h *Handlers) handleOpsHiveRuns(w http.ResponseWriter, r *http.Request) {
@@ -1152,7 +1190,7 @@ func opsHiveShellCards() []OpsHiveShellCard {
 			Label:       "Intake",
 			Href:        "/ops/hive/intake",
 			Description: "Source capture, interpretation, and brief readiness.",
-			Status:      "static sample",
+			Status:      "persisted drafts",
 		},
 		{
 			ID:          "runs",
@@ -1187,6 +1225,7 @@ func buildOpsHiveShellData(active string) *OpsHiveShellData {
 			SuggestedMode:   "full product pipeline",
 			AuthorityLevel:  "human launch required",
 			EstimatedBudget: "$18.00",
+			StorageStatus:   "sample only",
 			Sources: []OpsHiveSourceView{
 				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
 				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
@@ -1215,6 +1254,226 @@ func buildOpsHiveShellData(active string) *OpsHiveShellData {
 			{Label: "Token budget", Used: "84k", Limit: "460k", Status: "clear", Detail: "Sample aggregate across active agents."},
 			{Label: "Artifact store", Used: "7", Limit: "collected", Status: "clear", Detail: "Outputs stay inspectable and causally linked."},
 		},
+	}
+}
+
+func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
+	profileSlug := opsHiveProfileSlugFromRequest(r)
+	view := OpsHiveIntakeView{
+		Status:          "collecting sources",
+		Confidence:      "0.00",
+		SuggestedMode:   "intake pending",
+		AuthorityLevel:  "human launch required",
+		EstimatedBudget: "not estimated",
+		StorageStatus:   "persisted",
+	}
+	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	if err != nil {
+		view.Error = "Could not load persisted intake sources."
+		view.MissingFields = opsHiveIntakeMissingFields(nil)
+		return view
+	}
+	view.Sources = opsHiveIntakeSourceViews(sources)
+	view.MissingFields = opsHiveIntakeMissingFields(view.Sources)
+	if len(view.Sources) > 0 {
+		view.Confidence = fmt.Sprintf("%.2f", opsHiveIntakeConfidence(view.Sources))
+		view.SuggestedMode = opsHiveIntakeSuggestedMode(view.Sources)
+		view.EstimatedBudget = "cap pending"
+		view.Status = "draft ready"
+	}
+	return view
+}
+
+func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView {
+	out := make([]OpsHiveSourceView, 0, len(sources))
+	for _, source := range sources {
+		out = append(out, OpsHiveSourceView{
+			ID:        source.ID,
+			Kind:      source.Kind,
+			Title:     source.Title,
+			Detail:    source.Detail,
+			Content:   source.Content,
+			Status:    source.Status,
+			CreatedAt: source.CreatedAt.Format("2006-01-02 15:04"),
+		})
+	}
+	return out
+}
+
+func opsHiveProfileSlugFromRequest(r *http.Request) string {
+	if slug := strings.TrimSpace(r.FormValue("profile")); slug != "" {
+		if p := profile.Lookup(slug); p != nil {
+			return p.GetSlug()
+		}
+	}
+	if p := profile.FromContext(r.Context()); p != nil {
+		return p.GetSlug()
+	}
+	return opsHiveIntakeDefaultProfileSlug
+}
+
+func opsHiveIntakeMissingFields(sources []OpsHiveSourceView) []OpsHiveMissingFieldView {
+	hasSource, hasURL, hasRepo := false, false, false
+	for _, source := range sources {
+		hasSource = true
+		switch strings.ToLower(source.Kind) {
+		case "url":
+			hasURL = true
+		case "repo":
+			hasRepo = true
+		}
+	}
+	fields := []OpsHiveMissingFieldView{
+		{Label: "Source material", Detail: "Paste text, add a URL, or add repository context.", Status: "missing"},
+		{Label: "URL reference", Detail: "Add at least one external reference URL when available.", Status: "warning"},
+		{Label: "Repo context", Detail: "Add owner/repo context before launch planning.", Status: "warning"},
+		{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+	}
+	if hasSource {
+		fields[0].Status = "ready"
+	}
+	if hasURL {
+		fields[1].Status = "ready"
+	}
+	if hasRepo {
+		fields[2].Status = "ready"
+	}
+	return fields
+}
+
+func opsHiveIntakeConfidence(sources []OpsHiveSourceView) float64 {
+	score := 0.35
+	seen := map[string]bool{}
+	for _, source := range sources {
+		seen[strings.ToLower(source.Kind)] = true
+	}
+	if seen["prd"] || seen["spec"] || seen["plan"] || seen["text"] {
+		score += 0.2
+	}
+	if seen["url"] {
+		score += 0.15
+	}
+	if seen["repo"] {
+		score += 0.2
+	}
+	if len(sources) >= 3 {
+		score += 0.1
+	}
+	if score > 0.99 {
+		return 0.99
+	}
+	return score
+}
+
+func opsHiveIntakeSuggestedMode(sources []OpsHiveSourceView) string {
+	hasRepo, hasText := false, false
+	for _, source := range sources {
+		switch strings.ToLower(source.Kind) {
+		case "repo":
+			hasRepo = true
+		case "prd", "spec", "plan", "text":
+			hasText = true
+		}
+	}
+	if hasRepo && hasText {
+		return "full product pipeline"
+	}
+	if hasRepo {
+		return "repo-scoped planning"
+	}
+	return "brief drafting"
+}
+
+func opsHiveIntakeSourceParamsFromForm(r *http.Request) (CreateOpsHiveIntakeSourceParams, error) {
+	rawKind := strings.TrimSpace(r.FormValue("source_kind"))
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := strings.TrimSpace(r.FormValue("content"))
+	if content == "" {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("source content is required")
+	}
+	if len(content) > opsHiveIntakeMaxContentBytes {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("source content must be %d bytes or less", opsHiveIntakeMaxContentBytes)
+	}
+	kind, status := opsHiveClassifyIntakeSource(rawKind, title, content)
+	if title == "" {
+		title = opsHiveIntakeSourceTitle(kind, content)
+	} else {
+		title = truncateOpsHiveIntakeTitle(title)
+	}
+	return CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: opsHiveProfileSlugFromRequest(r),
+		Kind:        kind,
+		Title:       title,
+		Detail:      opsHiveIntakeSourceDetail(kind, content),
+		Content:     content,
+		Status:      status,
+	}, nil
+}
+
+func opsHiveClassifyIntakeSource(rawKind, title, content string) (string, string) {
+	kind := strings.ToLower(strings.TrimSpace(rawKind))
+	haystack := strings.ToLower(title + " " + content)
+	switch kind {
+	case "url":
+		return "URL", "classified"
+	case "repo":
+		return "Repo", "scoped"
+	case "text", "":
+		switch {
+		case strings.Contains(haystack, "acceptance") || strings.Contains(haystack, "prd") || strings.Contains(haystack, "requirements"):
+			return "PRD", "parsed"
+		case strings.Contains(haystack, "api") || strings.Contains(haystack, "contract") || strings.Contains(haystack, "schema"):
+			return "Spec", "parsed"
+		case strings.Contains(haystack, "milestone") || strings.Contains(haystack, "plan") || strings.Contains(haystack, "roadmap"):
+			return "Plan", "parsed"
+		default:
+			return "Text", "parsed"
+		}
+	default:
+		return "Text", "parsed"
+	}
+}
+
+func opsHiveIntakeSourceTitle(kind, content string) string {
+	firstLine := strings.TrimSpace(strings.Split(content, "\n")[0])
+	if kind == "URL" {
+		if parsed, err := url.Parse(firstLine); err == nil && parsed.Host != "" {
+			path := strings.Trim(parsed.Path, "/")
+			if path != "" {
+				return truncateOpsHiveIntakeTitle(parsed.Host + "/" + path)
+			}
+			return parsed.Host
+		}
+	}
+	return truncateOpsHiveIntakeTitle(firstLine)
+}
+
+func truncateOpsHiveIntakeTitle(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "Untitled source"
+	}
+	runes := []rune(value)
+	if len(runes) <= 72 {
+		return value
+	}
+	return strings.TrimSpace(string(runes[:69])) + "..."
+}
+
+func opsHiveIntakeSourceDetail(kind, content string) string {
+	switch kind {
+	case "URL":
+		return "Reference URL captured for review"
+	case "Repo":
+		return "Repository context captured for scoping"
+	case "PRD":
+		return "Product intent and acceptance criteria captured"
+	case "Spec":
+		return "Technical contract source captured"
+	case "Plan":
+		return "Implementation plan source captured"
+	default:
+		return fmt.Sprintf("Text source captured (%d bytes)", len(content))
 	}
 }
 

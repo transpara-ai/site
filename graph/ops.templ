@@ -497,7 +497,7 @@ templ opsHiveShell(shell *OpsHiveShellData) {
 				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">no Hive dependency</span>
 			</header>
 			if shell.Active == "intake" {
-				@opsHiveIntakeShell(shell.Intake)
+				@opsHiveIntakeShell(shell.Intake, shell.Profile)
 			} else if shell.Active == "runs" {
 				@opsHiveRunsShell(shell.Runs)
 			} else if shell.Active == "agents" {
@@ -509,29 +509,63 @@ templ opsHiveShell(shell *OpsHiveShellData) {
 	</section>
 }
 
-templ opsHiveIntakeShell(intake OpsHiveIntakeView) {
+templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 	<div class="grid gap-4 p-4 lg:grid-cols-[1.05fr_.95fr]">
 		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge">
 				<h3 class="text-sm font-medium text-warm">Source input</h3>
-				<p class="text-xs text-warm-faint mt-1">Static sample wells only; persistence lands in a later issue.</p>
+				<p class="text-xs text-warm-faint mt-1">Persisted source cards for draft brief assembly. Launch remains unavailable.</p>
+				if intake.StorageStatus != "" {
+					<p class="text-[11px] text-warm-faint mt-1">Storage: { intake.StorageStatus }</p>
+				}
 			</header>
 			<div class="p-4 space-y-3">
-				<div class="border border-dashed border-brand/30 bg-brand/5 rounded-lg p-5 text-center">
-					<p class="text-sm text-warm">Drop spec, PRD, plan, or screenshot here</p>
-					<p class="text-xs text-warm-faint mt-2">Read-only placeholder. No upload or launch action is wired.</p>
-				</div>
+				<form method="post" action="/ops/hive/intake/sources" class="border border-brand/30 bg-brand/5 rounded-lg p-4 space-y-3">
+					if profileSlug != "" {
+						<input type="hidden" name="profile" value={ profileSlug }/>
+					}
+					<div class="grid gap-3 md:grid-cols-[9rem_1fr]">
+						<label class="block text-[11px] text-warm-faint">
+							Type
+							<select name="source_kind" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand">
+								<option value="text">Text</option>
+								<option value="url">URL</option>
+								<option value="repo">Repo</option>
+							</select>
+						</label>
+						<label class="block text-[11px] text-warm-faint">
+							Title
+							<input name="title" maxlength="72" placeholder="Optional title" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+						</label>
+					</div>
+					<label class="block text-[11px] text-warm-faint">
+						Source
+						<textarea name="content" required maxlength="20000" rows="4" placeholder="Paste PRD/spec/plan text, a URL, or owner/repo context" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y"></textarea>
+					</label>
+					<button type="submit" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Add source</button>
+				</form>
+				if intake.Error != "" {
+					<p class="text-xs text-red-300">{ intake.Error }</p>
+				}
 				<div class="grid gap-3">
+					if len(intake.Sources) == 0 {
+						<div class="border border-edge bg-surface rounded-lg p-4">
+							<p class="text-sm text-warm-faint">No intake sources saved yet.</p>
+						</div>
+					}
 					for _, source := range intake.Sources {
 						<div class="border border-edge bg-surface rounded-lg p-3">
 							<div class="flex items-start justify-between gap-3">
 								<div class="min-w-0">
 									<h4 class="text-sm font-medium text-warm truncate">{ source.Title }</h4>
-									<p class="text-xs text-warm-faint mt-1">{ source.Kind }</p>
+									<p class="text-xs text-warm-faint mt-1">{ source.Kind } / { source.CreatedAt }</p>
 								</div>
 								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(source.Status) }>{ source.Status }</span>
 							</div>
 							<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ source.Detail }</p>
+							if source.Content != "" {
+								<p class="text-[11px] text-warm-faint mt-2 leading-relaxed line-clamp-2">{ source.Content }</p>
+							}
 						</div>
 					}
 				</div>
@@ -566,7 +600,7 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView) {
 				<div class="border border-edge bg-surface rounded-lg p-3">
 					<p class="text-xs text-warm-faint">Authority level</p>
 					<p class="text-sm text-warm mt-1">{ intake.AuthorityLevel }</p>
-					<p class="text-xs text-warm-muted mt-2">Launch controls intentionally remain display-only until Hive supplies the runtime contract.</p>
+					<p class="text-xs text-warm-muted mt-2">Launch controls intentionally remain unavailable until a separate governed launch integration is reviewed.</p>
 				</div>
 			</div>
 		</section>
