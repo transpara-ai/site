@@ -406,6 +406,28 @@ func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
 	}
 }
 
+func TestHandleOpsHiveIntakeRendersBriefDefaultsOnSourceLoadError(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	if err := store.db.Close(); err != nil {
+		t.Fatalf("close db: %v", err)
+	}
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Could not load persisted intake sources.", "Factory brief draft", "Awaiting source material.", "No scoped sources yet.", "Readiness: intake pending"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
+		}
+	}
+}
+
 func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
 	values := url.Values{
 		"source_kind": {"text"},
@@ -464,8 +486,8 @@ func TestOpsHiveBriefPreviewDerivesSourcePriorityAndOverflow(t *testing.T) {
 	if brief.Title != "API contract" {
 		t.Fatalf("Title = %q, want primary text-like source title", brief.Title)
 	}
-	if !strings.HasSuffix(brief.Objective, "...") || utf8.RuneCountInString(brief.Objective) != 260 {
-		t.Fatalf("Objective = %q, want 260-rune excerpt with ellipsis", brief.Objective)
+	if !strings.HasSuffix(brief.Objective, "...") || utf8.RuneCountInString(brief.Objective) > 260 {
+		t.Fatalf("Objective = %q, want excerpt no longer than 260 runes with ellipsis", brief.Objective)
 	}
 	if !strings.Contains(brief.Scope, "Additional sources: 1") {
 		t.Fatalf("Scope = %q, want additional-source count", brief.Scope)

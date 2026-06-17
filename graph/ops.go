@@ -81,6 +81,8 @@ type OpsHiveMissingFieldView struct {
 	Status string
 }
 
+// OpsHiveBriefPreviewView is render-only. Operators can edit the fields locally
+// while assembling a draft; persistence and launch remain separate governed work.
 type OpsHiveBriefPreviewView struct {
 	Title      string
 	Objective  string
@@ -1194,6 +1196,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
+		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
 		return view
 	}
 	view.Sources = opsHiveIntakeSourceViews(sources)
