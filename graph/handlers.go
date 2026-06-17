@@ -368,6 +368,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /ops/hive/model-policy", h.writeWrap(h.handleOpsHiveModelPolicySubmit))
 	mux.Handle("GET /ops/hive/intake", h.writeWrap(h.handleOpsHiveIntake))
 	mux.Handle("POST /ops/hive/intake/sources", h.writeWrap(h.handleOpsHiveIntakeSourceCreate))
+	mux.Handle("POST /ops/hive/intake/launch", h.writeWrap(h.handleOpsHiveIntakeLaunch))
 	mux.Handle("GET /ops/hive/runs", h.writeWrap(h.handleOpsHiveRuns))
 	mux.Handle("GET /ops/hive/agents", h.writeWrap(h.handleOpsHiveAgents))
 	mux.Handle("GET /ops/hive/resources", h.writeWrap(h.handleOpsHiveResources))
