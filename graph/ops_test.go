@@ -241,7 +241,7 @@ func TestHandleOpsHiveStaticChildRoutesRender(t *testing.T) {
 	}{
 		{
 			path:      "/ops/hive/intake?profile=transpara",
-			want:      []string{"Hive intake", "Source input", "Live interpretation", "Add source", "No intake sources saved yet"},
+			want:      []string{"Hive intake", "Source input", "Live interpretation", "Factory brief", `name="brief_title"`, "No scoped sources yet.", "No intake sources saved yet"},
 			forbidden: []string{"<iframe", "Hive operator projection source is not configured", "checkout-redesign.md"},
 		},
 		{
@@ -337,7 +337,7 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 		t.Fatalf("GET /ops/hive/intake: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted"} {
+	for _, want := range []string{"Checkout PRD", "PRD", "parsed", "example.com/customer-notes", "URL", "classified", "transpara-ai/site", "Repo", "scoped", "draft ready", "full product pipeline", "persisted", "Factory brief", `name="brief_objective"`, "Acceptance criteria: operator can review intake sources before launch.", "URL reference: ready", "Repo context: ready", "Budget cap: warning", "Readiness: draft ready / full product pipeline"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
 		}
