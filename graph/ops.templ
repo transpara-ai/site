@@ -663,12 +663,128 @@ templ opsHiveAuthorityProjection(h *OpsHiveData) {
 			}
 		</header>
 		<div class="grid gap-3 p-4 lg:grid-cols-2">
+			@opsHiveRuntimeEvidence(h.RuntimeEvidence)
 			@opsHivePendingApprovals(h.PendingApprovals)
 			@opsHiveAuthorityDecisions(h.AuthorityDecisions)
 			@opsHiveLifecycle(h.Lifecycle)
 			@opsHiveKeyAudit(h.KeyAuditTraces)
 			@opsHiveModelSelection(h.ModelSelection)
 		</div>
+	</section>
+}
+
+templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
+	<section class="border border-edge bg-void/20 rounded-lg overflow-hidden lg:col-span-2">
+		<header class="px-3 py-2 border-b border-edge">
+			<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h3 class="text-sm font-medium text-warm">Runtime evidence</h3>
+					if e.Source != "" {
+						<p class="text-xs text-warm-faint mt-1">Source: { e.Source }</p>
+					}
+				</div>
+				if e.Status != "" {
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(e.Status) }>{ e.Status }</span>
+				}
+			</div>
+		</header>
+		if opsHiveRuntimeEvidenceEmpty(e) {
+			<p class="px-3 py-5 text-sm text-warm-faint">No runtime evidence projection returned.</p>
+		} else {
+			<div class="p-3 space-y-3">
+				<div class="grid gap-2 md:grid-cols-4">
+					@opsMetric("Status", opsValueOr(e.Status, "unknown"), "latest run")
+					@opsMetric("Active", fmt.Sprintf("%d", e.AgentEvents.ObservedActive), "bounded window")
+					@opsMetric("Spawned", fmt.Sprintf("%d", e.AgentEvents.Spawned), opsValueOr(e.AgentEvents.Scope, "events"))
+					@opsMetric("Stopped", fmt.Sprintf("%d", e.AgentEvents.Stopped), "bounded tally")
+				</div>
+				<div class="grid gap-3 lg:grid-cols-2">
+					<section class="border border-edge bg-surface rounded-lg p-3">
+						<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Observed run</h4>
+						if e.LastRun == nil {
+							<p class="text-sm text-warm-faint mt-3">No hive.run.started event observed.</p>
+						} else {
+							<div class="mt-3 space-y-2">
+								<p class="text-sm text-warm break-all">{ opsValueOr(e.LastRun.SeedIdea, "runtime run") }</p>
+								<dl class="grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 text-[11px]">
+									<dt class="text-warm-faint">Conversation</dt>
+									<dd class="text-warm-muted truncate">{ e.LastRun.ConversationID }</dd>
+									<dt class="text-warm-faint">Started</dt>
+									<dd class="text-warm-muted">{ formatOpsTime(e.LastRun.StartedAt) }</dd>
+									<dt class="text-warm-faint">Completed</dt>
+									<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(e.LastRun.CompletedAt), "not observed") }</dd>
+									<dt class="text-warm-faint">Agents</dt>
+									<dd class="text-warm-muted">{ opsHiveOptionalInt(e.LastRun.AgentCount, "not observed") }</dd>
+									<dt class="text-warm-faint">Duration</dt>
+									<dd class="text-warm-muted">{ opsHiveOptionalDurationMs(e.LastRun.DurationMs, "not observed") }</dd>
+									<dt class="text-warm-faint">Cost</dt>
+									<dd class="text-warm-muted">{ opsHiveOptionalFloatUSD(e.LastRun.TotalCost, "not observed") }</dd>
+									<dt class="text-warm-faint">Repo</dt>
+									<dd class="text-warm-muted truncate">{ opsValueOr(e.LastRun.RepoPath, "not projected") }</dd>
+								</dl>
+							</div>
+						}
+					</section>
+					<section class="border border-edge bg-surface rounded-lg p-3">
+						<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Queued launch intent</h4>
+						if e.LastQueuedRunRequest == nil {
+							<p class="text-sm text-warm-faint mt-3">No queued run request projected.</p>
+						} else {
+							<div class="mt-3 space-y-2">
+								<p class="text-sm text-warm break-all">{ opsValueOr(e.LastQueuedRunRequest.Title, e.LastQueuedRunRequest.RunID) }</p>
+								<dl class="grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 text-[11px]">
+									<dt class="text-warm-faint">Run</dt>
+									<dd class="text-warm-muted truncate">{ e.LastQueuedRunRequest.RunID }</dd>
+									<dt class="text-warm-faint">Evidence</dt>
+									<dd class="text-warm-muted truncate">{ opsValueOr(e.LastQueuedRunRequest.EvidenceKind, "queued request") }</dd>
+									<dt class="text-warm-faint">Authority</dt>
+									<dd class="text-warm-muted truncate">{ opsValueOr(e.LastQueuedRunRequest.AuthorityInitialLevel, "unknown") }</dd>
+									<dt class="text-warm-faint">Budget</dt>
+									<dd class="text-warm-muted">{ opsHiveOptionalInt(e.LastQueuedRunRequest.BudgetMaxIterations, "?") } iter / { opsHiveOptionalFloatUSD(e.LastQueuedRunRequest.BudgetMaxCostUSD, "?") }</dd>
+									<dt class="text-warm-faint">Targets</dt>
+									<dd class="text-warm-muted truncate">{ opsEvidenceJoin(e.LastQueuedRunRequest.TargetRepos) }</dd>
+									<dt class="text-warm-faint">Created</dt>
+									<dd class="text-warm-muted">{ formatOpsTime(e.LastQueuedRunRequest.CreatedAt) }</dd>
+								</dl>
+							</div>
+						}
+					</section>
+				</div>
+				if len(e.AgentEvents.ActiveAgents) > 0 {
+					<div class="grid gap-2 md:grid-cols-2">
+						for _, agent := range e.AgentEvents.ActiveAgents {
+							<div class="border border-edge bg-surface rounded-lg p-3">
+								<div class="flex items-start justify-between gap-3">
+									<div class="min-w-0">
+										<h4 class="text-sm font-medium text-warm truncate">{ opsValueOr(agent.Name, "agent") }</h4>
+										<p class="text-xs text-warm-faint mt-1 truncate">{ opsValueOr(agent.Role, "role") }</p>
+									</div>
+									<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">active</span>
+								</div>
+								<dl class="grid grid-cols-[5.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+									<dt class="text-warm-faint">Actor</dt>
+									<dd class="text-warm-muted truncate">{ agent.ActorID }</dd>
+									<dt class="text-warm-faint">Model</dt>
+									<dd class="text-warm-muted truncate">{ agent.Model }</dd>
+									<dt class="text-warm-faint">Spawned</dt>
+									<dd class="text-warm-muted">{ formatOpsTime(agent.SpawnedAt) }</dd>
+								</dl>
+							</div>
+						}
+					</div>
+				}
+				if len(e.Limitations) > 0 {
+					<div class="border border-amber-400/30 bg-amber-400/10 rounded-lg p-3">
+						<p class="text-xs font-medium text-amber-300">Evidence boundaries</p>
+						<ul class="mt-2 space-y-1 text-xs text-amber-100/80">
+							for _, item := range e.Limitations {
+								<li>{ item }</li>
+							}
+						</ul>
+					</div>
+				}
+			</div>
+		}
 	</section>
 }
 
