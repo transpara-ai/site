@@ -624,6 +624,47 @@ func TestHandleOpsApprovalsRendersProjectedQueue(t *testing.T) {
 			t.Fatalf("GET /ops/approvals: body does not contain %q; body: %s", want, body)
 		}
 	}
+	if got := strings.Count(body, "Review decision"); got != 1 {
+		t.Fatalf("GET /ops/approvals: Review decision link count = %d, want 1", got)
+	}
+}
+
+func TestHandleOpsApprovalsRendersPartialProjectionWarningWithQueue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"source":"eventgraph",
+			"errors":["key audit projection timed out"],
+			"pending_approvals":[{"event_id":"ev-pr","request_id":"req-pr","requesting_actor":"actor-guardian","action_name":"pull_request.create","target":"transpara-ai/site codex/branch","justification":"draft PR is ready"}],
+			"authority_decisions":[],
+			"key_audit_traces":[]
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/approvals", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/approvals: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"key audit projection timed out",
+		"req-pr",
+		"Review decision",
+		"Pending",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/approvals: body does not contain %q; body: %s", want, body)
+		}
+	}
 }
 
 func TestOpsHiveModelPolicySubmitForwardsToHive(t *testing.T) {
@@ -1355,6 +1396,45 @@ func TestOpsDecisionSubmitRequiresReasonForApproveDeny(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("response body does not contain %q; body: %s", want, body)
 		}
+	}
+}
+
+func TestOpsDecisionSubmitIgnoresPostedApprover(t *testing.T) {
+	var gotBody string
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			bs, _ := io.ReadAll(r.Body)
+			gotBody = string(bs)
+		}
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodGet {
+			_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+		}
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionApprove + "&approver=actor_attacker&reason=reviewed")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if gotBody == "" {
+		t.Fatal("hive POST body is empty, want forwarded decision")
+	}
+	if strings.Contains(gotBody, "actor_attacker") || strings.Contains(gotBody, "approver") {
+		t.Fatalf("forwarded body must not include operator-supplied approver, got %q", gotBody)
+	}
+	if !strings.Contains(gotBody, `"reason":"reviewed"`) {
+		t.Fatalf("forwarded body = %q, want reason", gotBody)
+	}
+	if w.Code >= 400 {
+		t.Fatalf("site returned %d", w.Code)
 	}
 }
 

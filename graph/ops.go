@@ -346,6 +346,7 @@ type OpsApprovalsData struct {
 	GeneratedAt        string
 	ProjectionSource   string
 	ProjectionError    string
+	ProjectionWarning  string
 	PendingApprovals   []OpsApprovalQueueItem
 	AuthorityDecisions []OpsHiveDecision
 	KeyAuditTraces     []OpsHiveKeyAuditTrace
@@ -914,7 +915,6 @@ func (h *Handlers) handleOpsDecisionSubmit(w http.ResponseWriter, r *http.Reques
 	requestID := strings.TrimSpace(r.FormValue("request_id"))
 	decision := strings.TrimSpace(r.FormValue("decision"))
 	reason := strings.TrimSpace(r.FormValue("reason"))
-	approver := strings.TrimSpace(r.FormValue("approver"))
 
 	// Normalise the UI wire value to the hive-canonical past-tense form.
 	// opsDecisionApprove ("approve") → hive receives "approved"
@@ -948,7 +948,6 @@ func (h *Handlers) handleOpsDecisionSubmit(w http.ResponseWriter, r *http.Reques
 	payload := map[string]string{
 		"request_id": requestID,
 		"decision":   hiveDecision,
-		"approver":   approver,
 		"reason":     reason,
 	}
 	bodyBytes, err := json.Marshal(payload)
@@ -1612,7 +1611,7 @@ func fetchOpsApprovals(r *http.Request) *OpsApprovalsData {
 		data.GeneratedAt = formatOpsTime(projection.GeneratedAt)
 	}
 	if len(projection.Errors) > 0 {
-		data.ProjectionError = strings.Join(projection.Errors, "; ")
+		data.ProjectionWarning = strings.Join(projection.Errors, "; ")
 	}
 	data.PendingApprovals = make([]OpsApprovalQueueItem, 0, len(projection.PendingApprovals))
 	for _, approval := range projection.PendingApprovals {

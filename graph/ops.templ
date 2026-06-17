@@ -130,15 +130,12 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 				<p class="text-sm text-warm-muted leading-relaxed">It also does not produce ExecutionReceipt production output or rely on policy-bundle evidence.</p>
 				<form method="post" action="/ops/decision" class="grid gap-3 md:grid-cols-3">
 					<input type="hidden" name="request_id" value={ d.RequestID }/>
-					<div class="md:col-span-3 grid gap-3 md:grid-cols-[16rem_1fr]">
-						<label class="block">
-							<span class="text-xs text-warm-faint">Approver actor</span>
-							<input name="approver" placeholder="actor_human" class="mt-1 w-full rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint"/>
-						</label>
+					<div class="md:col-span-3 grid gap-3">
 						<label class="block">
 							<span class="text-xs text-warm-faint">Decision reason</span>
 							<textarea name="reason" required rows="3" class="mt-1 w-full rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Explain the operator-visible rationale.">{ d.DecisionReason }</textarea>
 						</label>
+						<p class="text-[11px] text-warm-faint">Approver attribution is assigned by Hive's configured decision writer; Site does not accept operator-entered actor IDs.</p>
 					</div>
 					for _, action := range d.Actions {
 						<div class={ "border rounded-lg p-3 min-h-[8rem] flex flex-col",
@@ -274,6 +271,9 @@ templ opsApprovalsQueue(a *OpsApprovalsData) {
 			if a.ProjectionError != "" {
 				<p class="px-4 py-4 text-sm text-amber-300">{ a.ProjectionError }</p>
 			} else {
+				if a.ProjectionWarning != "" {
+					<p class="px-4 pt-4 text-sm text-amber-300">{ a.ProjectionWarning }</p>
+				}
 				<div class="grid gap-3 p-4 md:grid-cols-3">
 					@opsMetric("Pending", fmt.Sprintf("%d", len(a.PendingApprovals)), "authority requests")
 					@opsMetric("Decisions", fmt.Sprintf("%d", len(a.AuthorityDecisions)), "recent records")
