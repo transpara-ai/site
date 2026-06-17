@@ -1019,6 +1019,46 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 					"evidence_kind":"queued_request_not_runtime_start",
 					"created_at":"2026-05-09T05:59:00Z"
 				},
+				"artifacts":[{
+					"event_id":"event-artifact",
+					"run_id":"run_123",
+					"artifact_id":"artifact_factory_brief",
+					"label":"factory_brief",
+					"title":"Factory brief",
+					"media_type":"text/markdown",
+					"uri":"eventgraph://artifact/artifact_factory_brief",
+					"summary":"brief ready for operator inspection",
+					"producer_actor_id":"actor_builder",
+					"causes":[{"event_id":"event-spawn","event_type":"hive.agent.spawned","scope":"run"}],
+					"cause_status":"caused",
+					"created_at":"2026-05-09T06:01:30Z"
+				}],
+				"run_events":[{
+					"event_id":"event-artifact",
+					"event_type":"factory.artifact.created",
+					"conversation_id":"conv_runtime",
+					"created_at":"2026-05-09T06:01:30Z",
+					"causes":["event-spawn"],
+					"inspector_kind":"curated_eventgraph_event",
+					"content":{"artifact_id":"artifact_factory_brief","label":"factory_brief","media_type":"text/markdown"}
+				},{
+					"event_id":"event-request",
+					"event_type":"factory.run.requested",
+					"conversation_id":"conv_runtime",
+					"created_at":"2026-05-09T05:59:00Z",
+					"causes":["event-source"],
+					"inspector_kind":"curated_eventgraph_event",
+					"content":{"secret":"should-not-render"},
+					"content_error":"content omitted: factory.run.requested is not in the runtime inspector allowlist"
+				}],
+				"causal_graph":{
+					"scope":"latest_run_conversation",
+					"conversation_id":"conv_runtime",
+					"limit":50,
+					"truncated":false,
+					"nodes":[{"event_id":"event-spawn","event_type":"hive.agent.spawned","label":"Agent spawned: implementer/builder","scope":"run"},{"event_id":"event-artifact","event_type":"factory.artifact.created","label":"Artifact: Factory brief","artifact_id":"artifact_factory_brief","scope":"run"}],
+					"edges":[{"from_event_id":"event-spawn","to_event_id":"event-artifact","scope":"run"}]
+				},
 				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
 			},
 			"model_selection":{
@@ -1067,6 +1107,15 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 	}
 	if got.RuntimeEvidence.LastQueuedRunRequest == nil || got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD == nil || *got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD != 0 {
 		t.Fatalf("RuntimeEvidence queued request = %#v", got.RuntimeEvidence.LastQueuedRunRequest)
+	}
+	if len(got.RuntimeEvidence.Artifacts) != 1 || got.RuntimeEvidence.Artifacts[0].ArtifactID != "artifact_factory_brief" || got.RuntimeEvidence.Artifacts[0].CauseStatus != "caused" {
+		t.Fatalf("RuntimeEvidence artifacts = %#v", got.RuntimeEvidence.Artifacts)
+	}
+	if len(got.RuntimeEvidence.RunEvents) != 2 || got.RuntimeEvidence.RunEvents[1].ContentError == "" {
+		t.Fatalf("RuntimeEvidence run events = %#v", got.RuntimeEvidence.RunEvents)
+	}
+	if got.RuntimeEvidence.CausalGraph.Scope != "latest_run_conversation" || len(got.RuntimeEvidence.CausalGraph.Edges) != 1 {
+		t.Fatalf("RuntimeEvidence causal graph = %#v", got.RuntimeEvidence.CausalGraph)
 	}
 	if got.ModelSelection.ReloadMode != "hot-reload" || !got.ModelSelection.HotReload {
 		t.Fatalf("ModelSelection reload metadata = %#v", got.ModelSelection)
@@ -1450,6 +1499,95 @@ func TestHandleOpsHiveRendersRuntimeEvidenceBoundariesWithoutRun(t *testing.T) {
 	}
 }
 
+func TestHandleOpsHiveRendersArtifactsGraphAndEventInspector(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"running",
+				"last_run":{"started_event_id":"event-run-start","conversation_id":"conv_runtime","started_at":"2026-05-09T06:00:00Z","seed_idea":"artifact graph run"},
+				"agent_events":{"scope":"events_since_latest_hive.run.started","spawned":1,"stopped":0,"observed_active":1},
+				"artifacts":[{
+					"event_id":"event-artifact",
+					"run_id":"run_123",
+					"artifact_id":"artifact_factory_brief",
+					"label":"factory_brief",
+					"title":"Factory brief",
+					"media_type":"text/markdown",
+					"uri":"eventgraph://artifact/artifact_factory_brief",
+					"summary":"brief ready for operator inspection",
+					"producer_actor_id":"actor_builder",
+					"causes":[{"event_id":"event-spawn","event_type":"hive.agent.spawned","scope":"run"}],
+					"cause_status":"caused",
+					"created_at":"2026-05-09T06:01:30Z"
+				}],
+				"run_events":[{
+					"event_id":"event-artifact",
+					"event_type":"factory.artifact.created",
+					"conversation_id":"conv_runtime",
+					"created_at":"2026-05-09T06:01:30Z",
+					"causes":["event-spawn"],
+					"inspector_kind":"curated_eventgraph_event",
+					"content":{"artifact_id":"artifact_factory_brief","label":"factory_brief","media_type":"text/markdown"}
+				},{
+					"event_id":"event-request",
+					"event_type":"factory.run.requested",
+					"conversation_id":"conv_runtime",
+					"created_at":"2026-05-09T05:59:00Z",
+					"causes":["event-source"],
+					"inspector_kind":"curated_eventgraph_event",
+					"content":{"secret":"should-not-render"},
+					"content_error":"content omitted: factory.run.requested is not in the runtime inspector allowlist"
+				}],
+				"causal_graph":{
+					"scope":"latest_run_conversation",
+					"conversation_id":"conv_runtime",
+					"limit":50,
+					"truncated":true,
+					"nodes":[{"event_id":"event-spawn","event_type":"hive.agent.spawned","label":"Agent spawned: implementer/builder","scope":"run"},{"event_id":"event-artifact","event_type":"factory.artifact.created","label":"Artifact: Factory brief","artifact_id":"artifact_factory_brief","scope":"run"}],
+					"edges":[{"from_event_id":"event-spawn","to_event_id":"event-artifact","scope":"run"}]
+				},
+				"limitations":["artifact and causal graph projections are bounded by the operator projection limit"]
+			}
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Artifacts", "Factory brief", "Run-local causal graph", "Event inspector", "factory.artifact.created", "media_type", "content omitted: factory.run.requested", "event-spawn", "event-artifact", "truncated"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/hive"`) ||
+		strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive artifact graph view exposes mutation controls")
+	}
+	if strings.Contains(body, "should-not-render") {
+		t.Fatal("GET /ops/hive rendered event content despite content_error")
+	}
+}
+
 func TestOpsHiveRuntimeEvidenceEmptyPreservesAgentMetadata(t *testing.T) {
 	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
 		AgentEvents: OpsHiveRuntimeAgentEvents{Scope: "events_since_latest_hive.run.started"},
@@ -1465,6 +1603,21 @@ func TestOpsHiveRuntimeEvidenceEmptyPreservesAgentMetadata(t *testing.T) {
 		AgentEvents: OpsHiveRuntimeAgentEvents{LastAgentEventAt: "2026-05-09T06:01:00Z"},
 	}) {
 		t.Fatal("runtime evidence with last agent event time was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		Artifacts: []OpsHiveRuntimeArtifact{{ArtifactID: "artifact_1"}},
+	}) {
+		t.Fatal("runtime evidence with artifacts was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		RunEvents: []OpsHiveRuntimeEvent{{EventID: "event_1"}},
+	}) {
+		t.Fatal("runtime evidence with run events was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		CausalGraph: OpsHiveCausalGraph{Scope: "latest_run_conversation"},
+	}) {
+		t.Fatal("runtime evidence with causal graph was classified as empty")
 	}
 }
 
