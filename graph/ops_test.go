@@ -448,6 +448,38 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 			"authority_decisions":[{"decision_id":"decision-1","request_id":"req-2","approver_actor":"actor-approver","outcome":"approved","approved_action":"agent.revoke","approved_target":"actor-revoked","rationale":"valid evidence","created_at":"2026-05-09T10:00:00Z"}],
 			"lifecycle":[{"actor_id":"actor-target","display_name":"builder","role":"builder","lifecycle_status":"retired","authority_scope":"hive:read","key_provenance":"generated","updated_at":"2026-05-09T09:00:00Z"}],
 			"key_audit_traces":[{"event_id":"event-key","event_type":"agent.key.registered","actor_id":"actor-target","key_provenance":"generated","public_key":"abc","created_at":"2026-05-09T08:00:00Z"}],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"completed",
+				"last_run":{
+					"started_event_id":"event-run-start",
+					"conversation_id":"conv_runtime",
+					"started_at":"2026-05-09T06:00:00Z",
+					"seed_idea":"prove runtime evidence",
+					"repo_path":"/repos/hive",
+					"completed_event_id":"event-run-complete",
+					"completed_at":"2026-05-09T06:02:00Z",
+					"agent_count":1,
+					"duration_ms":120000,
+					"total_cost":0
+				},
+				"agent_events":{"scope":"events_since_latest_hive.run.started","spawned":1,"stopped":1,"observed_active":0},
+				"last_queued_run_request":{
+					"event_id":"event-request",
+					"conversation_id":"conv_request",
+					"run_id":"run_123",
+					"title":"Queued run",
+					"operator_id":"site-ops",
+					"status":"queued",
+					"target_repos":["transpara-ai/hive"],
+					"authority_initial_level":"Required",
+					"budget_max_iterations":0,
+					"budget_max_cost_usd":0,
+					"evidence_kind":"queued_request_not_runtime_start",
+					"created_at":"2026-05-09T05:59:00Z"
+				},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
+			},
 			"model_selection":{
 				"source":"hive",
 				"catalog_source":"embedded-defaults",
@@ -488,6 +520,12 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 	}
 	if len(got.KeyAuditTraces) != 1 || got.KeyAuditTraces[0].EventType != "agent.key.registered" {
 		t.Fatalf("KeyAuditTraces = %#v", got.KeyAuditTraces)
+	}
+	if got.RuntimeEvidence.Status != "completed" || got.RuntimeEvidence.LastRun == nil || got.RuntimeEvidence.LastRun.TotalCost == nil || *got.RuntimeEvidence.LastRun.TotalCost != 0 {
+		t.Fatalf("RuntimeEvidence = %#v", got.RuntimeEvidence)
+	}
+	if got.RuntimeEvidence.LastQueuedRunRequest == nil || got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD == nil || *got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD != 0 {
+		t.Fatalf("RuntimeEvidence queued request = %#v", got.RuntimeEvidence.LastQueuedRunRequest)
 	}
 	if got.ModelSelection.ReloadMode != "hot-reload" || !got.ModelSelection.HotReload {
 		t.Fatalf("ModelSelection reload metadata = %#v", got.ModelSelection)
@@ -535,6 +573,20 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 			"authority_decisions":[{"decision_id":"decision-1","request_id":"req-2","approver_actor":"actor-approver","outcome":"denied","approved_action":"agent.revoke","approved_target":"actor-revoked","rationale":"insufficient evidence","created_at":"2026-05-09T10:00:00Z"}],
 			"lifecycle":[{"actor_id":"actor-builder","display_name":"builder","role":"builder","lifecycle_status":"active","authority_scope":"hive:read","key_provenance":"external","updated_at":"2026-05-09T09:00:00Z"}],
 			"key_audit_traces":[{"event_id":"event-key","event_type":"agent.key.registered","actor_id":"actor-builder","key_provenance":"external","public_key":"abc","created_at":"2026-05-09T08:00:00Z"}],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"completed",
+				"last_run":{"started_event_id":"event-run-start","completed_event_id":"event-run-complete","conversation_id":"conv_runtime","started_at":"2026-05-09T06:00:00Z","completed_at":"2026-05-09T06:03:00Z","seed_idea":"render runtime evidence","repo_path":"/repos/hive","agent_count":1,"duration_ms":120000,"total_cost":0},
+				"agent_events":{
+					"scope":"events_since_latest_hive.run.started",
+					"spawned":2,
+					"stopped":0,
+					"observed_active":1,
+					"active_agents":[{"name":"builder","role":"implementer","model":"claude-sonnet-4-6","actor_id":"actor-runtime-evidence-only","spawned_event_id":"event-spawn","spawned_at":"2026-05-09T06:01:00Z"}]
+				},
+				"last_queued_run_request":{"event_id":"event-request","conversation_id":"conv_request","run_id":"run_123","title":"Queued run","status":"queued","target_repos":["transpara-ai/hive"],"authority_initial_level":"Required","budget_max_iterations":0,"budget_max_cost_usd":0,"evidence_kind":"queued_request_not_runtime_start","created_at":"2026-05-09T05:59:00Z"},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof","hive.run.started and hive.run.completed prove Hive runtime event emission, not production deployment"]
+			},
 			"model_selection":{
 				"source":"hive",
 				"catalog_source":"embedded-defaults",
@@ -561,7 +613,7 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
+	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
@@ -669,10 +721,79 @@ func TestHandleOpsHiveRendersModelSelectionEmptyStateForOlderProjection(t *testi
 	if !strings.Contains(body, "No model-selection projection returned.") {
 		t.Fatalf("GET /ops/hive: body does not contain model-selection empty state")
 	}
+	if !strings.Contains(body, "No runtime evidence projection returned.") {
+		t.Fatalf("GET /ops/hive: body does not contain runtime-evidence empty state")
+	}
 	if strings.Contains(body, `method="post"`) ||
 		strings.Contains(body, `action="/ops/hive"`) ||
 		strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive older projection exposes mutation controls")
+	}
+}
+
+func TestHandleOpsHiveRendersRuntimeEvidenceBoundariesWithoutRun(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"not_observed",
+				"agent_events":{"scope":"none","spawned":0,"stopped":0,"observed_active":0},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
+			}
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Runtime evidence", "not_observed", "No hive.run.started event observed.", "Evidence boundaries", "queued launch intent"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "No runtime evidence projection returned.") {
+		t.Fatal("GET /ops/hive hid current runtime-evidence boundaries behind the older-projection empty state")
+	}
+	if strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/hive"`) ||
+		strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive runtime-evidence boundaries expose mutation controls")
+	}
+}
+
+func TestOpsHiveRuntimeEvidenceEmptyPreservesAgentMetadata(t *testing.T) {
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{Scope: "events_since_latest_hive.run.started"},
+	}) {
+		t.Fatal("runtime evidence with agent-event scope was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{LastAgentEventID: "event-agent"},
+	}) {
+		t.Fatal("runtime evidence with last agent event id was classified as empty")
+	}
+	if opsHiveRuntimeEvidenceEmpty(OpsHiveRuntimeEvidence{
+		AgentEvents: OpsHiveRuntimeAgentEvents{LastAgentEventAt: "2026-05-09T06:01:00Z"},
+	}) {
+		t.Fatal("runtime evidence with last agent event time was classified as empty")
 	}
 }
 

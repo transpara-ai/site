@@ -262,6 +262,7 @@ type OpsHiveData struct {
 	AuthorityDecisions []OpsHiveDecision
 	Lifecycle          []OpsHiveLifecycle
 	KeyAuditTraces     []OpsHiveKeyAuditTrace
+	RuntimeEvidence    OpsHiveRuntimeEvidence
 	ModelSelection     OpsHiveModelSelection
 	RecentCommits      []RecentCommit
 	RecentEvents       []DiagEntry
@@ -275,8 +276,68 @@ type OpsHiveProjection struct {
 	AuthorityDecisions []OpsHiveDecision      `json:"authority_decisions"`
 	Lifecycle          []OpsHiveLifecycle     `json:"lifecycle"`
 	KeyAuditTraces     []OpsHiveKeyAuditTrace `json:"key_audit_traces"`
+	RuntimeEvidence    OpsHiveRuntimeEvidence `json:"runtime_evidence"`
 	ModelSelection     OpsHiveModelSelection  `json:"model_selection"`
 	Errors             []string               `json:"errors"`
+}
+
+type OpsHiveRuntimeEvidence struct {
+	Source               string                    `json:"source"`
+	Status               string                    `json:"status"`
+	LastRun              *OpsHiveRuntimeRun        `json:"last_run"`
+	AgentEvents          OpsHiveRuntimeAgentEvents `json:"agent_events"`
+	LastQueuedRunRequest *OpsHiveQueuedRunRequest  `json:"last_queued_run_request"`
+	Limitations          []string                  `json:"limitations"`
+}
+
+type OpsHiveRuntimeRun struct {
+	StartedEventID   string   `json:"started_event_id"`
+	ConversationID   string   `json:"conversation_id"`
+	StartedAt        string   `json:"started_at"`
+	SeedIdea         string   `json:"seed_idea"`
+	RepoPath         string   `json:"repo_path"`
+	CompletedEventID string   `json:"completed_event_id"`
+	CompletedAt      string   `json:"completed_at"`
+	AgentCount       *int     `json:"agent_count"`
+	DurationMs       *int64   `json:"duration_ms"`
+	TotalCost        *float64 `json:"total_cost"`
+}
+
+type OpsHiveRuntimeAgentEvents struct {
+	Scope            string                `json:"scope"`
+	Spawned          int                   `json:"spawned"`
+	Stopped          int                   `json:"stopped"`
+	ObservedActive   int                   `json:"observed_active"`
+	ActiveAgents     []OpsHiveRuntimeAgent `json:"active_agents"`
+	LastAgentEventID string                `json:"last_agent_event_id"`
+	LastAgentEventAt string                `json:"last_agent_event_at"`
+}
+
+type OpsHiveRuntimeAgent struct {
+	Name           string `json:"name"`
+	Role           string `json:"role"`
+	Model          string `json:"model"`
+	ActorID        string `json:"actor_id"`
+	SpawnedEventID string `json:"spawned_event_id"`
+	SpawnedAt      string `json:"spawned_at"`
+}
+
+type OpsHiveQueuedRunRequest struct {
+	EventID               string   `json:"event_id"`
+	ConversationID        string   `json:"conversation_id"`
+	RunID                 string   `json:"run_id"`
+	Title                 string   `json:"title"`
+	OperatorID            string   `json:"operator_id"`
+	Status                string   `json:"status"`
+	TargetRepos           []string `json:"target_repos"`
+	AuthorityInitialLevel string   `json:"authority_initial_level"`
+	AuthorityScope        string   `json:"authority_scope"`
+	BudgetMaxIterations   *int     `json:"budget_max_iterations"`
+	BudgetMaxCostUSD      *float64 `json:"budget_max_cost_usd"`
+	SourceEventID         string   `json:"source_event_id"`
+	BriefEventID          string   `json:"brief_event_id"`
+	EvidenceKind          string   `json:"evidence_kind"`
+	CreatedAt             string   `json:"created_at"`
 }
 
 type OpsHiveModelSelection struct {
@@ -764,6 +825,45 @@ func opsHiveMaxCostValue(value *float64) string {
 		return ""
 	}
 	return strconv.FormatFloat(*value, 'f', -1, 64)
+}
+
+func opsHiveOptionalInt(value *int, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return strconv.Itoa(*value)
+}
+
+func opsHiveOptionalFloatUSD(value *float64, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return fmt.Sprintf("$%.2f", *value)
+}
+
+func opsHiveOptionalDurationMs(value *int64, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	if *value < 1000 {
+		return fmt.Sprintf("%dms", *value)
+	}
+	return formatOpsDuration(float64(*value) / 1000)
+}
+
+func opsHiveRuntimeEvidenceEmpty(e OpsHiveRuntimeEvidence) bool {
+	return e.Source == "" &&
+		e.Status == "" &&
+		e.LastRun == nil &&
+		e.LastQueuedRunRequest == nil &&
+		e.AgentEvents.Spawned == 0 &&
+		e.AgentEvents.Stopped == 0 &&
+		e.AgentEvents.ObservedActive == 0 &&
+		e.AgentEvents.Scope == "" &&
+		e.AgentEvents.LastAgentEventID == "" &&
+		e.AgentEvents.LastAgentEventAt == "" &&
+		len(e.AgentEvents.ActiveAgents) == 0 &&
+		len(e.Limitations) == 0
 }
 
 func opsHiveResponseError(resp *http.Response) string {
@@ -1827,6 +1927,7 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.AuthorityDecisions = projection.AuthorityDecisions
 	data.Lifecycle = projection.Lifecycle
 	data.KeyAuditTraces = projection.KeyAuditTraces
+	data.RuntimeEvidence = projection.RuntimeEvidence
 	data.ModelSelection = projection.ModelSelection
 }
 
