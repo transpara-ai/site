@@ -1178,7 +1178,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	if len(view.Sources) > 0 {
 		view.Confidence = fmt.Sprintf("%.2f", opsHiveIntakeConfidence(view.Sources))
 		view.SuggestedMode = opsHiveIntakeSuggestedMode(view.Sources)
-		view.EstimatedBudget = "$18.00"
+		view.EstimatedBudget = "cap pending"
 		view.Status = "draft ready"
 	}
 	return view
@@ -1297,6 +1297,8 @@ func opsHiveIntakeSourceParamsFromForm(r *http.Request) (CreateOpsHiveIntakeSour
 	kind, status := opsHiveClassifyIntakeSource(rawKind, title, content)
 	if title == "" {
 		title = opsHiveIntakeSourceTitle(kind, content)
+	} else {
+		title = truncateOpsHiveIntakeTitle(title)
 	}
 	return CreateOpsHiveIntakeSourceParams{
 		ProfileSlug: opsHiveProfileSlugFromRequest(r),

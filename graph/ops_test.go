@@ -341,6 +341,12 @@ func TestHandleOpsHiveIntakePersistsSources(t *testing.T) {
 			t.Fatalf("GET /ops/hive/intake: body does not contain %q", want)
 		}
 	}
+	if !strings.Contains(body, "cap pending") {
+		t.Fatal("GET /ops/hive/intake: body does not show pending budget cap")
+	}
+	if strings.Contains(body, "$18.00") {
+		t.Fatal("GET /ops/hive/intake rendered a numeric budget estimate for draft sources")
+	}
 	if strings.Contains(body, "checkout-redesign.md") || strings.Contains(body, "No intake sources saved yet") {
 		t.Fatal("GET /ops/hive/intake rendered static or empty-state sources after persisted sources")
 	}
@@ -384,6 +390,24 @@ func TestHandleOpsHiveIntakeRejectsOversizedSourceContent(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "source content must be 20000 bytes or less") {
 		t.Fatalf("POST /ops/hive/intake/sources: body = %q", w.Body.String())
+	}
+}
+
+func TestOpsHiveIntakeSourceParamsTruncatesProvidedTitle(t *testing.T) {
+	values := url.Values{
+		"source_kind": {"text"},
+		"title":       {strings.Repeat("A", 80)},
+		"content":     {"requirements for the intake card"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsHiveIntakeSourceParamsFromForm(req)
+	if err != nil {
+		t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+	}
+	if len(params.Title) != 72 || !strings.HasSuffix(params.Title, "...") {
+		t.Fatalf("Title = %q, want 72-char truncated title with ellipsis", params.Title)
 	}
 }
 
