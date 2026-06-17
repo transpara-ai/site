@@ -82,6 +82,18 @@ type OpsHiveMissingFieldView struct {
 	Status string
 }
 
+// OpsHiveBriefPreviewView is render-only. Operators can edit the fields locally
+// while assembling a draft; persistence and launch remain separate governed work.
+type OpsHiveBriefPreviewView struct {
+	Title      string
+	Objective  string
+	Scope      string
+	Acceptance string
+	Risks      string
+	Readiness  string
+	Missing    []OpsHiveMissingFieldView
+}
+
 type OpsHiveIntakeView struct {
 	Status          string
 	Confidence      string
@@ -92,6 +104,7 @@ type OpsHiveIntakeView struct {
 	Error           string
 	Sources         []OpsHiveSourceView
 	MissingFields   []OpsHiveMissingFieldView
+	Brief           OpsHiveBriefPreviewView
 }
 
 type OpsHiveRunView struct {
@@ -263,6 +276,7 @@ type OpsHiveData struct {
 	AuthorityDecisions []OpsHiveDecision
 	Lifecycle          []OpsHiveLifecycle
 	KeyAuditTraces     []OpsHiveKeyAuditTrace
+	RuntimeEvidence    OpsHiveRuntimeEvidence
 	ModelSelection     OpsHiveModelSelection
 	RecentCommits      []RecentCommit
 	RecentEvents       []DiagEntry
@@ -276,8 +290,68 @@ type OpsHiveProjection struct {
 	AuthorityDecisions []OpsHiveDecision      `json:"authority_decisions"`
 	Lifecycle          []OpsHiveLifecycle     `json:"lifecycle"`
 	KeyAuditTraces     []OpsHiveKeyAuditTrace `json:"key_audit_traces"`
+	RuntimeEvidence    OpsHiveRuntimeEvidence `json:"runtime_evidence"`
 	ModelSelection     OpsHiveModelSelection  `json:"model_selection"`
 	Errors             []string               `json:"errors"`
+}
+
+type OpsHiveRuntimeEvidence struct {
+	Source               string                    `json:"source"`
+	Status               string                    `json:"status"`
+	LastRun              *OpsHiveRuntimeRun        `json:"last_run"`
+	AgentEvents          OpsHiveRuntimeAgentEvents `json:"agent_events"`
+	LastQueuedRunRequest *OpsHiveQueuedRunRequest  `json:"last_queued_run_request"`
+	Limitations          []string                  `json:"limitations"`
+}
+
+type OpsHiveRuntimeRun struct {
+	StartedEventID   string   `json:"started_event_id"`
+	ConversationID   string   `json:"conversation_id"`
+	StartedAt        string   `json:"started_at"`
+	SeedIdea         string   `json:"seed_idea"`
+	RepoPath         string   `json:"repo_path"`
+	CompletedEventID string   `json:"completed_event_id"`
+	CompletedAt      string   `json:"completed_at"`
+	AgentCount       *int     `json:"agent_count"`
+	DurationMs       *int64   `json:"duration_ms"`
+	TotalCost        *float64 `json:"total_cost"`
+}
+
+type OpsHiveRuntimeAgentEvents struct {
+	Scope            string                `json:"scope"`
+	Spawned          int                   `json:"spawned"`
+	Stopped          int                   `json:"stopped"`
+	ObservedActive   int                   `json:"observed_active"`
+	ActiveAgents     []OpsHiveRuntimeAgent `json:"active_agents"`
+	LastAgentEventID string                `json:"last_agent_event_id"`
+	LastAgentEventAt string                `json:"last_agent_event_at"`
+}
+
+type OpsHiveRuntimeAgent struct {
+	Name           string `json:"name"`
+	Role           string `json:"role"`
+	Model          string `json:"model"`
+	ActorID        string `json:"actor_id"`
+	SpawnedEventID string `json:"spawned_event_id"`
+	SpawnedAt      string `json:"spawned_at"`
+}
+
+type OpsHiveQueuedRunRequest struct {
+	EventID               string   `json:"event_id"`
+	ConversationID        string   `json:"conversation_id"`
+	RunID                 string   `json:"run_id"`
+	Title                 string   `json:"title"`
+	OperatorID            string   `json:"operator_id"`
+	Status                string   `json:"status"`
+	TargetRepos           []string `json:"target_repos"`
+	AuthorityInitialLevel string   `json:"authority_initial_level"`
+	AuthorityScope        string   `json:"authority_scope"`
+	BudgetMaxIterations   *int     `json:"budget_max_iterations"`
+	BudgetMaxCostUSD      *float64 `json:"budget_max_cost_usd"`
+	SourceEventID         string   `json:"source_event_id"`
+	BriefEventID          string   `json:"brief_event_id"`
+	EvidenceKind          string   `json:"evidence_kind"`
+	CreatedAt             string   `json:"created_at"`
 }
 
 type OpsHiveModelSelection struct {
@@ -784,6 +858,45 @@ func opsHiveMaxCostValue(value *float64) string {
 	return strconv.FormatFloat(*value, 'f', -1, 64)
 }
 
+func opsHiveOptionalInt(value *int, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return strconv.Itoa(*value)
+}
+
+func opsHiveOptionalFloatUSD(value *float64, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	return fmt.Sprintf("$%.2f", *value)
+}
+
+func opsHiveOptionalDurationMs(value *int64, fallback string) string {
+	if value == nil {
+		return fallback
+	}
+	if *value < 1000 {
+		return fmt.Sprintf("%dms", *value)
+	}
+	return formatOpsDuration(float64(*value) / 1000)
+}
+
+func opsHiveRuntimeEvidenceEmpty(e OpsHiveRuntimeEvidence) bool {
+	return e.Source == "" &&
+		e.Status == "" &&
+		e.LastRun == nil &&
+		e.LastQueuedRunRequest == nil &&
+		e.AgentEvents.Spawned == 0 &&
+		e.AgentEvents.Stopped == 0 &&
+		e.AgentEvents.ObservedActive == 0 &&
+		e.AgentEvents.Scope == "" &&
+		e.AgentEvents.LastAgentEventID == "" &&
+		e.AgentEvents.LastAgentEventAt == "" &&
+		len(e.AgentEvents.ActiveAgents) == 0 &&
+		len(e.Limitations) == 0
+}
+
 func opsHiveResponseError(resp *http.Response) string {
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
 	if msg := strings.TrimSpace(string(body)); msg != "" {
@@ -1155,26 +1268,28 @@ func opsHiveShellCards() []OpsHiveShellCard {
 }
 
 func buildOpsHiveShellData(active string) *OpsHiveShellData {
+	intake := OpsHiveIntakeView{
+		Status:          "draft ready",
+		Confidence:      "0.91",
+		SuggestedMode:   "full product pipeline",
+		AuthorityLevel:  "human launch required",
+		EstimatedBudget: "$18.00",
+		StorageStatus:   "sample only",
+		Sources: []OpsHiveSourceView{
+			{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
+			{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
+			{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
+		},
+		MissingFields: []OpsHiveMissingFieldView{
+			{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
+			{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
+			{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
+		},
+	}
+	intake.Brief = opsHiveBriefPreview(intake.Sources, intake.MissingFields, intake.Status, intake.SuggestedMode)
 	return &OpsHiveShellData{
 		Active: active,
-		Intake: OpsHiveIntakeView{
-			Status:          "draft ready",
-			Confidence:      "0.91",
-			SuggestedMode:   "full product pipeline",
-			AuthorityLevel:  "human launch required",
-			EstimatedBudget: "$18.00",
-			StorageStatus:   "sample only",
-			Sources: []OpsHiveSourceView{
-				{Kind: "PRD", Title: "checkout-redesign.md", Detail: "Product intent and acceptance criteria", Status: "parsed"},
-				{Kind: "URL", Title: "customer-notes", Detail: "Reference source queued for review", Status: "classified"},
-				{Kind: "Repo", Title: "transpara-ai/site", Detail: "UI boundary context selected", Status: "scoped"},
-			},
-			MissingFields: []OpsHiveMissingFieldView{
-				{Label: "Rollback owner", Detail: "Name the human owner for launch rollback.", Status: "missing"},
-				{Label: "Budget cap", Detail: "Confirm max spend before run launch.", Status: "warning"},
-				{Label: "Target branch", Detail: "Choose the exact repo branch or draft-PR target.", Status: "ready"},
-			},
-		},
+		Intake: intake,
 		Runs: []OpsHiveRunView{
 			{ID: "run_static_001", Title: "Build onboarding control surface", Status: "active", Guardian: "clear", Budget: "18% used", Phase: "Design", Approvals: 2, Artifacts: 7, UpdatedAt: "sample now"},
 			{ID: "run_static_002", Title: "Refine evidence inspection flow", Status: "waiting", Guardian: "watch", Budget: "4% used", Phase: "Research", Approvals: 0, Artifacts: 3, UpdatedAt: "sample 12m ago"},
@@ -1209,6 +1324,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
+		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
 		return view
 	}
 	view.Sources = opsHiveIntakeSourceViews(sources)
@@ -1219,6 +1335,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		view.EstimatedBudget = "cap pending"
 		view.Status = "draft ready"
 	}
+	view.Brief = opsHiveBriefPreview(view.Sources, view.MissingFields, view.Status, view.SuggestedMode)
 	return view
 }
 
@@ -1236,6 +1353,100 @@ func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView
 		})
 	}
 	return out
+}
+
+func opsHiveBriefPreview(sources []OpsHiveSourceView, missing []OpsHiveMissingFieldView, status, mode string) OpsHiveBriefPreviewView {
+	primary := opsHivePrimaryBriefSource(sources)
+	title := "Factory brief draft"
+	objective := "Awaiting source material."
+	if primary.Title != "" {
+		title = primary.Title
+	}
+	if primary.Content != "" {
+		objective = opsHiveBriefExcerpt(primary.Content, 260)
+	}
+	return OpsHiveBriefPreviewView{
+		Title:      title,
+		Objective:  objective,
+		Scope:      opsHiveBriefScope(sources),
+		Acceptance: opsHiveBriefAcceptance(missing),
+		Risks:      opsHiveBriefRisks(missing),
+		Readiness:  opsHiveBriefReadiness(sources, status, mode),
+		Missing:    missing,
+	}
+}
+
+func opsHivePrimaryBriefSource(sources []OpsHiveSourceView) OpsHiveSourceView {
+	for _, source := range sources {
+		switch strings.ToLower(source.Kind) {
+		case "prd", "spec", "plan", "text":
+			return source
+		}
+	}
+	if len(sources) > 0 {
+		return sources[0]
+	}
+	return OpsHiveSourceView{}
+}
+
+func opsHiveBriefScope(sources []OpsHiveSourceView) string {
+	if len(sources) == 0 {
+		return "No scoped sources yet."
+	}
+	var b strings.Builder
+	for i, source := range sources {
+		if i >= 5 {
+			fmt.Fprintf(&b, "Additional sources: %d\n", len(sources)-i)
+			break
+		}
+		fmt.Fprintf(&b, "%s: %s\n", source.Kind, source.Title)
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func opsHiveBriefAcceptance(missing []OpsHiveMissingFieldView) string {
+	lines := []string{}
+	for _, field := range missing {
+		if field.Status != "ready" {
+			lines = append(lines, "Resolve "+field.Label+": "+field.Detail)
+		}
+	}
+	if len(lines) == 0 {
+		return "Current source prerequisites are present."
+	}
+	return strings.Join(lines, "\n")
+}
+
+func opsHiveBriefRisks(missing []OpsHiveMissingFieldView) string {
+	lines := []string{"Launch controls remain unavailable until governed launch integration is reviewed."}
+	for _, field := range missing {
+		if field.Status != "ready" {
+			lines = append(lines, field.Label+": "+field.Detail)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+func opsHiveBriefReadiness(sources []OpsHiveSourceView, status, mode string) string {
+	if len(sources) == 0 {
+		return "intake pending"
+	}
+	return status + " / " + mode
+}
+
+func opsHiveBriefExcerpt(value string, limit int) string {
+	value = strings.Join(strings.Fields(value), " ")
+	if value == "" {
+		return "Awaiting source material."
+	}
+	if limit < 4 {
+		return value
+	}
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return strings.TrimSpace(string(runes[:limit-3])) + "..."
 }
 
 func opsHiveProfileSlugFromRequest(r *http.Request) string {
@@ -1902,6 +2113,7 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.AuthorityDecisions = projection.AuthorityDecisions
 	data.Lifecycle = projection.Lifecycle
 	data.KeyAuditTraces = projection.KeyAuditTraces
+	data.RuntimeEvidence = projection.RuntimeEvidence
 	data.ModelSelection = projection.ModelSelection
 }
 
