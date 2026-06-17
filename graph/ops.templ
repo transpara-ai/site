@@ -590,25 +590,25 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 					</div>
 					<label class="block text-[11px] text-warm-faint">
 						Title
-						<input name="brief_title" maxlength="72" value={ intake.Brief.Title } class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
+						<input maxlength="72" value={ intake.Brief.Title } class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
 					</label>
 					<label class="block text-[11px] text-warm-faint">
 						Objective
-						<textarea name="brief_objective" rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Objective }</textarea>
+						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Objective }</textarea>
 					</label>
 					<div class="grid gap-3 md:grid-cols-2">
 						<label class="block text-[11px] text-warm-faint">
 							Scope
-							<textarea name="brief_scope" rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Scope }</textarea>
+							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Scope }</textarea>
 						</label>
 						<label class="block text-[11px] text-warm-faint">
 							Acceptance
-							<textarea name="brief_acceptance" rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Acceptance }</textarea>
+							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Acceptance }</textarea>
 						</label>
 					</div>
 					<label class="block text-[11px] text-warm-faint">
 						Risks
-						<textarea name="brief_risks" rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Risks }</textarea>
+						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Risks }</textarea>
 					</label>
 					<div class="flex flex-wrap gap-2">
 						for _, field := range intake.Brief.Missing {

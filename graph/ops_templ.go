@@ -2399,66 +2399,66 @@ func opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) templ.Comp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 218, "</span></div><label class=\"block text-[11px] text-warm-faint\">Title <input name=\"brief_title\" maxlength=\"72\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 218, "</span></div><label class=\"block text-[11px] text-warm-faint\">Title <input maxlength=\"72\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var126 string
 		templ_7745c5c3_Var126, templ_7745c5c3_Err = templ.ResolveAttributeValue(intake.Brief.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 593, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 593, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var126)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 219, "\" class=\"mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand\"></label> <label class=\"block text-[11px] text-warm-faint\">Objective <textarea name=\"brief_objective\" rows=\"3\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 219, "\" class=\"mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand\"></label> <label class=\"block text-[11px] text-warm-faint\">Objective <textarea rows=\"3\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var127 string
 		templ_7745c5c3_Var127, templ_7745c5c3_Err = templ.JoinStringErrs(intake.Brief.Objective)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 597, Col: 220}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 597, Col: 197}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var127))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 220, "</textarea></label><div class=\"grid gap-3 md:grid-cols-2\"><label class=\"block text-[11px] text-warm-faint\">Scope <textarea name=\"brief_scope\" rows=\"4\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 220, "</textarea></label><div class=\"grid gap-3 md:grid-cols-2\"><label class=\"block text-[11px] text-warm-faint\">Scope <textarea rows=\"4\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var128 string
 		templ_7745c5c3_Var128, templ_7745c5c3_Err = templ.JoinStringErrs(intake.Brief.Scope)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 602, Col: 213}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 602, Col: 194}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var128))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 221, "</textarea></label> <label class=\"block text-[11px] text-warm-faint\">Acceptance <textarea name=\"brief_acceptance\" rows=\"4\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 221, "</textarea></label> <label class=\"block text-[11px] text-warm-faint\">Acceptance <textarea rows=\"4\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var129 string
 		templ_7745c5c3_Var129, templ_7745c5c3_Err = templ.JoinStringErrs(intake.Brief.Acceptance)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 606, Col: 223}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 606, Col: 199}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var129))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 222, "</textarea></label></div><label class=\"block text-[11px] text-warm-faint\">Risks <textarea name=\"brief_risks\" rows=\"3\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 222, "</textarea></label></div><label class=\"block text-[11px] text-warm-faint\">Risks <textarea rows=\"3\" class=\"mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var130 string
 		templ_7745c5c3_Var130, templ_7745c5c3_Err = templ.JoinStringErrs(intake.Brief.Risks)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 611, Col: 212}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 611, Col: 193}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var130))
 		if templ_7745c5c3_Err != nil {
