@@ -1391,10 +1391,10 @@ func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
 }
 
 func TestOpsDecisionSubmitRequiresReasonForApproveDeny(t *testing.T) {
-	hivePostHit := false
+	hivePostHits := 0
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			hivePostHit = true
+			hivePostHits++
 			t.Fatal("hive POST /api/hive/operator-decision must not be called without a decision reason")
 		}
 		w.WriteHeader(http.StatusOK)
@@ -1407,27 +1407,31 @@ func TestOpsDecisionSubmitRequiresReasonForApproveDeny(t *testing.T) {
 	mux := http.NewServeMux()
 	h.Register(mux)
 
-	form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionApprove)
-	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
+	for _, decision := range []string{opsDecisionApprove, opsDecisionDeny} {
+		t.Run(decision, func(t *testing.T) {
+			form := strings.NewReader("request_id=req-civic-roles&decision=" + decision)
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
 
-	if hivePostHit {
-		t.Fatal("hive POST was hit")
-	}
-	if w.Code >= 400 {
-		t.Fatalf("site returned %d", w.Code)
-	}
-	body := w.Body.String()
-	for _, want := range []string{
-		"Governance POST failed: decision_reason is required for approve/deny",
-		"effect = none",
-		"decision_reason is required for approve/deny",
-	} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("response body does not contain %q; body: %s", want, body)
-		}
+			if hivePostHits != 0 {
+				t.Fatal("hive POST was hit")
+			}
+			if w.Code >= 400 {
+				t.Fatalf("site returned %d", w.Code)
+			}
+			body := w.Body.String()
+			for _, want := range []string{
+				"Governance POST failed: decision_reason is required for approve/deny",
+				"effect = none",
+				"decision_reason is required for approve/deny",
+			} {
+				if !strings.Contains(body, want) {
+					t.Fatalf("response body does not contain %q; body: %s", want, body)
+				}
+			}
+		})
 	}
 }
 
@@ -1537,6 +1541,34 @@ func TestOpsDecisionRequestMoreEvidenceIsHandledLocally(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("response body does not contain %q; body: %s", want, body)
 		}
+	}
+}
+
+func TestOpsDecisionRequestMoreEvidenceBypassesReasonRequiredInHTML(t *testing.T) {
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?action=request-more-evidence&target_ref=pr://transpara-ai/site/82&reason=operator+review", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/decision: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	moreEvidenceValue := `value="` + opsDecisionMoreEvidence + `"`
+	moreEvidencePos := strings.Index(body, moreEvidenceValue)
+	if moreEvidencePos < 0 {
+		t.Fatalf("GET /ops/decision: body does not contain %s; body: %s", moreEvidenceValue, body)
+	}
+	buttonEnd := strings.Index(body[moreEvidencePos:], ">")
+	if buttonEnd < 0 {
+		t.Fatalf("GET /ops/decision: more-evidence button is malformed; body: %s", body)
+	}
+	buttonMarkup := body[moreEvidencePos : moreEvidencePos+buttonEnd]
+	if !strings.Contains(buttonMarkup, "formnovalidate") {
+		t.Fatalf("request-more-evidence button markup = %q, want formnovalidate", buttonMarkup)
 	}
 }
 

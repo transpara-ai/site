@@ -148,7 +148,7 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 							</div>
 							<p class="text-xs text-warm-muted mt-3 leading-relaxed flex-1">{ action.Description }</p>
 							<p class="text-[11px] text-warm-faint mt-2">requested_action: { action.WireValue }</p>
-							<button name="decision" value={ action.WireValue } class="mt-3 w-full text-xs px-3 py-2 rounded-md border border-brand/40 bg-brand/10 text-brand hover:bg-brand/20 transition-colors">{ action.Label }</button>
+							<button name="decision" value={ action.WireValue } formnovalidate?={ action.WireValue == opsDecisionMoreEvidence } class="mt-3 w-full text-xs px-3 py-2 rounded-md border border-brand/40 bg-brand/10 text-brand hover:bg-brand/20 transition-colors">{ action.Label }</button>
 						</div>
 					}
 				</form>
