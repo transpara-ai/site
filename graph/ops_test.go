@@ -422,7 +422,7 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 					"spawned":2,
 					"stopped":0,
 					"observed_active":1,
-					"active_agents":[{"name":"builder","role":"implementer","model":"claude-sonnet-4-6","actor_id":"actor-builder","spawned_event_id":"event-spawn","spawned_at":"2026-05-09T06:01:00Z"}]
+					"active_agents":[{"name":"builder","role":"implementer","model":"claude-sonnet-4-6","actor_id":"actor-runtime-evidence-only","spawned_event_id":"event-spawn","spawned_at":"2026-05-09T06:01:00Z"}]
 				},
 				"last_queued_run_request":{"event_id":"event-request","conversation_id":"conv_request","run_id":"run_123","title":"Queued run","status":"queued","target_repos":["transpara-ai/hive"],"authority_initial_level":"Required","budget_max_iterations":0,"budget_max_cost_usd":0,"evidence_kind":"queued_request_not_runtime_start","created_at":"2026-05-09T05:59:00Z"},
 				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof","hive.run.started and hive.run.completed prove Hive runtime event emission, not production deployment"]
@@ -453,7 +453,7 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
+	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
@@ -568,6 +568,54 @@ func TestHandleOpsHiveRendersModelSelectionEmptyStateForOlderProjection(t *testi
 		strings.Contains(body, `action="/ops/hive"`) ||
 		strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive older projection exposes mutation controls")
+	}
+}
+
+func TestHandleOpsHiveRendersRuntimeEvidenceBoundariesWithoutRun(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"not_observed",
+				"agent_events":{"scope":"none","spawned":0,"stopped":0,"observed_active":0},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
+			}
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Runtime evidence", "not_observed", "No hive.run.started event observed.", "Evidence boundaries", "queued launch intent"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/hive: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "No runtime evidence projection returned.") {
+		t.Fatal("GET /ops/hive hid current runtime-evidence boundaries behind the older-projection empty state")
+	}
+	if strings.Contains(body, `method="post"`) ||
+		strings.Contains(body, `action="/ops/hive"`) ||
+		strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive runtime-evidence boundaries expose mutation controls")
 	}
 }
 

@@ -3005,9 +3005,9 @@ func opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var157 string
-				templ_7745c5c3_Var157, templ_7745c5c3_Err = templ.JoinStringErrs(formatOpsTime(e.LastRun.StartedAt))
+				templ_7745c5c3_Var157, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(formatOpsTime(e.LastRun.StartedAt), "not observed"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 713, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 713, Col: 101}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var157))
 				if templ_7745c5c3_Err != nil {

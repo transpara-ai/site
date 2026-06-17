@@ -710,7 +710,7 @@ templ opsHiveRuntimeEvidence(e OpsHiveRuntimeEvidence) {
 									<dt class="text-warm-faint">Conversation</dt>
 									<dd class="text-warm-muted truncate">{ e.LastRun.ConversationID }</dd>
 									<dt class="text-warm-faint">Started</dt>
-									<dd class="text-warm-muted">{ formatOpsTime(e.LastRun.StartedAt) }</dd>
+									<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(e.LastRun.StartedAt), "not observed") }</dd>
 									<dt class="text-warm-faint">Completed</dt>
 									<dd class="text-warm-muted">{ opsValueOr(formatOpsTime(e.LastRun.CompletedAt), "not observed") }</dd>
 									<dt class="text-warm-faint">Agents</dt>
