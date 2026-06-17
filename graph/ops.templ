@@ -67,6 +67,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					}
 				} else if data.Decision != nil {
 					@opsDecisionSurface(data.Decision)
+				} else if data.Approvals != nil {
+					@opsApprovalsQueue(data.Approvals)
 				} else if data.EmbedURL != "" {
 					<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 						<div class="px-4 py-3 border-b border-edge flex items-center justify-between gap-3">
@@ -128,6 +130,13 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 				<p class="text-sm text-warm-muted leading-relaxed">It also does not produce ExecutionReceipt production output or rely on policy-bundle evidence.</p>
 				<form method="post" action="/ops/decision" class="grid gap-3 md:grid-cols-3">
 					<input type="hidden" name="request_id" value={ d.RequestID }/>
+					<div class="md:col-span-3 grid gap-3">
+						<label class="block">
+							<span class="text-xs text-warm-faint">Decision reason</span>
+							<textarea name="reason" required rows="3" class="mt-1 w-full rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Explain the operator-visible rationale.">{ d.DecisionReason }</textarea>
+						</label>
+						<p class="text-[11px] text-warm-faint">Approver attribution is assigned by Hive's configured decision writer; Site does not accept operator-entered actor IDs.</p>
+					</div>
 					for _, action := range d.Actions {
 						<div class={ "border rounded-lg p-3 min-h-[8rem] flex flex-col",
 							templ.KV("border-brand/40 bg-brand/10", action.WireValue == d.RequestedAction),
@@ -139,7 +148,7 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 							</div>
 							<p class="text-xs text-warm-muted mt-3 leading-relaxed flex-1">{ action.Description }</p>
 							<p class="text-[11px] text-warm-faint mt-2">requested_action: { action.WireValue }</p>
-							<button name="decision" value={ action.WireValue } class="mt-3 w-full text-xs px-3 py-2 rounded-md border border-brand/40 bg-brand/10 text-brand hover:bg-brand/20 transition-colors">{ action.Label }</button>
+							<button name="decision" value={ action.WireValue } formnovalidate?={ action.WireValue == opsDecisionMoreEvidence } class="mt-3 w-full text-xs px-3 py-2 rounded-md border border-brand/40 bg-brand/10 text-brand hover:bg-brand/20 transition-colors">{ action.Label }</button>
 						</div>
 					}
 				</form>
@@ -243,6 +252,133 @@ templ opsDecisionSurface(d *OpsDecisionData) {
 				</div>
 			</div>
 		</section>
+	</section>
+}
+
+templ opsApprovalsQueue(a *OpsApprovalsData) {
+	<section class="space-y-4">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Authority approval queue</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">Pending requests, recent decisions, and audit refs are projected from Hive. Site forwards supported approve/deny decisions to Hive; EventGraph remains truth.</p>
+					if a.ProjectionSource != "" || a.GeneratedAt != "" {
+						<p class="text-xs text-warm-faint mt-2">{ opsValueOr(a.ProjectionSource, "projection") } · { opsValueOr(a.GeneratedAt, "time unknown") }</p>
+					}
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">effect = none</span>
+			</header>
+			if a.ProjectionError != "" {
+				<p class="px-4 py-4 text-sm text-amber-300">{ a.ProjectionError }</p>
+			} else {
+				if a.ProjectionWarning != "" {
+					<p class="px-4 pt-4 text-sm text-amber-300">{ a.ProjectionWarning }</p>
+				}
+				<div class="grid gap-3 p-4 md:grid-cols-3">
+					@opsMetric("Pending", fmt.Sprintf("%d", len(a.PendingApprovals)), "authority requests")
+					@opsMetric("Decisions", fmt.Sprintf("%d", len(a.AuthorityDecisions)), "recent records")
+					@opsMetric("Audit refs", fmt.Sprintf("%d", len(a.KeyAuditTraces)), "key/audit traces")
+				</div>
+			}
+		</section>
+		if a.ProjectionError == "" {
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Pending approvals</h2>
+					<p class="text-xs text-warm-faint mt-1">Each row includes the causal request id and source event id used for audit.</p>
+				</header>
+				if len(a.PendingApprovals) == 0 {
+					<p class="px-4 py-6 text-sm text-warm-faint">No pending authority requests projected.</p>
+				} else {
+					<div class="divide-y divide-edge">
+						for _, item := range a.PendingApprovals {
+							<div class="px-4 py-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+								<div class="min-w-0">
+									<div class="flex flex-wrap items-center gap-2">
+										<h3 class="text-sm font-medium text-warm break-all">{ opsValueOr(item.ActionName, "authority request") }</h3>
+										<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsDecisionStatusClass(item.ResolveStatus) }>{ item.ResolveStatus }</span>
+									</div>
+									<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ opsValueOr(item.Justification, "no justification projected") }</p>
+									<dl class="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-1 mt-3 text-xs">
+										<dt class="text-warm-faint">request_id</dt><dd class="text-warm-muted break-all">{ item.RequestID }</dd>
+										<dt class="text-warm-faint">event_id</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.EventID, "missing") }</dd>
+										<dt class="text-warm-faint">actor</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.RequestingActor, "unknown") }</dd>
+										<dt class="text-warm-faint">target</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.Target, "missing") }</dd>
+										<dt class="text-warm-faint">environment</dt><dd class="text-warm-muted break-all">{ opsValueOr(item.Environment, "unspecified") }</dd>
+										if item.RiskSummary != "" {
+											<dt class="text-warm-faint">risk</dt><dd class="text-warm-muted break-all">{ item.RiskSummary }</dd>
+										}
+										if item.ProposedOperation != "" {
+											<dt class="text-warm-faint">operation</dt><dd class="text-warm-muted break-all">{ item.ProposedOperation }</dd>
+										}
+										<dt class="text-warm-faint">created</dt><dd class="text-warm-muted break-all">{ formatOpsTime(item.CreatedAt) }</dd>
+									</dl>
+								</div>
+								<div class="lg:w-44">
+									if item.ResolveEnabled {
+										<a href={ templ.SafeURL(item.DecisionHref) } class="inline-flex w-full items-center justify-center rounded-md border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/20 transition-colors">Review decision</a>
+									} else {
+										<p class="rounded-md border border-edge bg-void/20 px-3 py-2 text-xs text-warm-faint">Hive decision POST currently resolves draft-PR requests only; this item is audit-visible but not actionable here.</p>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				}
+			</section>
+			<section class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+				<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+					<header class="px-4 py-3 border-b border-edge">
+						<h2 class="text-sm font-medium text-warm">Recent authority decisions</h2>
+					</header>
+					if len(a.AuthorityDecisions) == 0 {
+						<p class="px-4 py-6 text-sm text-warm-faint">No authority decisions projected.</p>
+					} else {
+						<div class="divide-y divide-edge">
+							for _, d := range a.AuthorityDecisions {
+								<div class="px-4 py-3">
+									<div class="flex items-start justify-between gap-3">
+										<h3 class="text-sm font-medium text-warm break-all">{ opsValueOr(d.Outcome, "decision") }</h3>
+										<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsDecisionStatusClass(d.Outcome) }>{ opsValueOr(d.Outcome, "recorded") }</span>
+									</div>
+									<dl class="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-1 mt-3 text-xs">
+										<dt class="text-warm-faint">decision_id</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.DecisionID, d.EventID) }</dd>
+										<dt class="text-warm-faint">request_id</dt><dd class="text-warm-muted break-all">{ d.RequestID }</dd>
+										<dt class="text-warm-faint">approver</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.ApproverActor, "unknown") }</dd>
+										<dt class="text-warm-faint">action</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.ApprovedAction, d.RequestedAction) }</dd>
+										<dt class="text-warm-faint">target</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.ApprovedTarget, d.RequestedTarget) }</dd>
+										<dt class="text-warm-faint">reason</dt><dd class="text-warm-muted break-all">{ opsValueOr(d.Rationale, "missing") }</dd>
+									</dl>
+								</div>
+							}
+						</div>
+					}
+				</section>
+				<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+					<header class="px-4 py-3 border-b border-edge">
+						<h2 class="text-sm font-medium text-warm">Guardian audit refs</h2>
+					</header>
+					if len(a.KeyAuditTraces) == 0 {
+						<p class="px-4 py-6 text-sm text-warm-faint">No key or audit traces projected.</p>
+					} else {
+						<div class="divide-y divide-edge">
+							for _, trace := range a.KeyAuditTraces {
+								<div class="px-4 py-3">
+									<h3 class="text-sm font-medium text-warm break-all">{ opsValueOr(trace.EventType, "audit event") }</h3>
+									<dl class="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-1 mt-3 text-xs">
+										<dt class="text-warm-faint">event_id</dt><dd class="text-warm-muted break-all">{ trace.EventID }</dd>
+										<dt class="text-warm-faint">actor</dt><dd class="text-warm-muted break-all">{ opsValueOr(trace.ActorID, trace.SubjectActorID) }</dd>
+										<dt class="text-warm-faint">request</dt><dd class="text-warm-muted break-all">{ opsValueOr(trace.AuthorityRequest, "none") }</dd>
+										<dt class="text-warm-faint">decision</dt><dd class="text-warm-muted break-all">{ opsValueOr(trace.DecisionEvent, "none") }</dd>
+										<dt class="text-warm-faint">created</dt><dd class="text-warm-muted break-all">{ formatOpsTime(trace.CreatedAt) }</dd>
+									</dl>
+								</div>
+							}
+						</div>
+					}
+				</section>
+			</section>
+		}
 	</section>
 }
 

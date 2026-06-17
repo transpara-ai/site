@@ -705,6 +705,136 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 	}
 }
 
+func TestHandleOpsApprovalsRendersProjectedQueue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/operator-projection" {
+			t.Fatalf("unexpected path %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[
+				{"event_id":"ev-pr","request_id":"req-pr","requesting_actor":"actor-guardian","action_name":"pull_request.create","target":"transpara-ai/site codex/branch","environment":"pre-live","justification":"draft PR is ready","risk_summary":"bounded PR creation","created_at":"2026-05-09T11:00:00Z"},
+				{"event_id":"ev-spawn","request_id":"req-spawn","requesting_actor":"actor-guardian","action_name":"agent.spawn.persistent","target":"builder","environment":"pre-live","justification":"persistent role trial","proposed_operation":"spawn builder","created_at":"2026-05-09T10:00:00Z"}
+			],
+			"authority_decisions":[{"event_id":"ev-decision","decision_id":"decision-1","request_id":"req-old","approver_actor":"actor-human","outcome":"approved","approved_action":"pull_request.create","approved_target":"transpara-ai/site codex/old","rationale":"evidence checked","created_at":"2026-05-09T09:00:00Z"}],
+			"key_audit_traces":[{"event_id":"audit-key","event_type":"agent.key.registered","actor_id":"actor-builder","authority_request":"req-spawn","decision_event":"decision-1","created_at":"2026-05-09T08:00:00Z"}]
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/approvals?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/approvals: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Authority approval queue",
+		"Pending",
+		"req-pr",
+		"ev-pr",
+		"actor-guardian",
+		"Review decision",
+		`/ops/decision?profile=transpara&amp;request_id=req-pr`,
+		"req-spawn",
+		"projected only",
+		"Hive decision POST currently resolves draft-PR requests only",
+		"Recent authority decisions",
+		"decision-1",
+		"evidence checked",
+		"Guardian audit refs",
+		"audit-key",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/approvals: body does not contain %q; body: %s", want, body)
+		}
+	}
+	if got := strings.Count(body, "Review decision"); got != 1 {
+		t.Fatalf("GET /ops/approvals: Review decision link count = %d, want 1", got)
+	}
+	for _, forbidden := range []string{"<form", "<button", `name="decision"`, `method="post"`, `action="/ops/approvals"`, `data-authority-action`} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops/approvals rendered mutation control %q", forbidden)
+		}
+	}
+}
+
+func TestHandleOpsApprovalsRendersPartialProjectionWarningWithQueue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"source":"eventgraph",
+			"errors":["key audit projection timed out"],
+			"pending_approvals":[{"event_id":"ev-pr","request_id":"req-pr","requesting_actor":"actor-guardian","action_name":"pull_request.create","target":"transpara-ai/site codex/branch","justification":"draft PR is ready"}],
+			"authority_decisions":[],
+			"key_audit_traces":[]
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/approvals", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/approvals: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"key audit projection timed out",
+		"req-pr",
+		"Review decision",
+		"Pending",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/approvals: body does not contain %q; body: %s", want, body)
+		}
+	}
+}
+
+func TestHandleOpsApprovalsProjectionErrorRendersWithoutQueue(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "projection unavailable", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/approvals", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/approvals: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "hive operator projection returned 503 Service Unavailable") {
+		t.Fatalf("GET /ops/approvals: body does not contain projection error; body: %s", body)
+	}
+	for _, forbidden := range []string{"Pending approvals", "Review decision", "No pending authority requests projected"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops/approvals: body contains queue content %q despite fatal projection error; body: %s", forbidden, body)
+		}
+	}
+}
+
 func TestOpsHiveModelPolicySubmitForwardsToHive(t *testing.T) {
 	var gotPath, gotAuth string
 	var gotPayload map[string]any
@@ -1378,6 +1508,9 @@ func TestOpsDecisionRejectsNonDraftPRRequest(t *testing.T) {
 	if len(data.BlockedReasons) == 0 {
 		t.Fatal("BlockedReasons is empty, want a reason explaining the action is out of scope")
 	}
+	if len(data.Actions) != 0 {
+		t.Fatalf("Actions = %d, want 0 for blocked non-draft-PR request", len(data.Actions))
+	}
 }
 
 func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
@@ -1465,6 +1598,90 @@ func TestOpsDecisionSubmitForwardsToHive(t *testing.T) {
 	})
 }
 
+func TestOpsDecisionSubmitRequiresReasonForApproveDeny(t *testing.T) {
+	hivePostHits := 0
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			hivePostHits++
+			t.Fatal("hive POST /api/hive/operator-decision must not be called without a decision reason")
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for _, decision := range []string{opsDecisionApprove, opsDecisionDeny} {
+		t.Run(decision, func(t *testing.T) {
+			form := strings.NewReader("request_id=req-civic-roles&decision=" + decision)
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if hivePostHits != 0 {
+				t.Fatal("hive POST was hit")
+			}
+			if w.Code >= 400 {
+				t.Fatalf("site returned %d", w.Code)
+			}
+			body := w.Body.String()
+			for _, want := range []string{
+				"Governance POST failed: decision_reason is required for approve/deny",
+				"effect = none",
+				"decision_reason is required for approve/deny",
+			} {
+				if !strings.Contains(body, want) {
+					t.Fatalf("response body does not contain %q; body: %s", want, body)
+				}
+			}
+		})
+	}
+}
+
+func TestOpsDecisionSubmitIgnoresPostedApprover(t *testing.T) {
+	var gotBody string
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			bs, _ := io.ReadAll(r.Body)
+			gotBody = string(bs)
+		}
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodGet {
+			_, _ = w.Write([]byte(`{"source":"test","pending_approvals":[]}`))
+		}
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	form := strings.NewReader("request_id=req-civic-roles&decision=" + opsDecisionApprove + "&approver=actor_attacker&reason=reviewed")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/decision", form)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if gotBody == "" {
+		t.Fatal("hive POST body is empty, want forwarded decision")
+	}
+	if strings.Contains(gotBody, "actor_attacker") || strings.Contains(gotBody, "approver") {
+		t.Fatalf("forwarded body must not include operator-supplied approver, got %q", gotBody)
+	}
+	if !strings.Contains(gotBody, `"reason":"reviewed"`) {
+		t.Fatalf("forwarded body = %q, want reason", gotBody)
+	}
+	if w.Code >= 400 {
+		t.Fatalf("site returned %d", w.Code)
+	}
+}
+
 // TestOpsDecisionButtonConstantsMatchHandler is a round-trip guard: it asserts
 // that opsDecisionActions()[0].WireValue (the approve button's emitted value)
 // equals opsDecisionApprove — the constant the handler switch also uses.
@@ -1532,6 +1749,34 @@ func TestOpsDecisionRequestMoreEvidenceIsHandledLocally(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Fatalf("response body does not contain %q; body: %s", want, body)
 		}
+	}
+}
+
+func TestOpsDecisionRequestMoreEvidenceBypassesReasonRequiredInHTML(t *testing.T) {
+	h := testOpsDecisionHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/decision?action=request-more-evidence&target_ref=pr://transpara-ai/site/82&reason=operator+review", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/decision: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	moreEvidenceValue := `value="` + opsDecisionMoreEvidence + `"`
+	moreEvidencePos := strings.Index(body, moreEvidenceValue)
+	if moreEvidencePos < 0 {
+		t.Fatalf("GET /ops/decision: body does not contain %s; body: %s", moreEvidenceValue, body)
+	}
+	buttonEnd := strings.Index(body[moreEvidencePos:], ">")
+	if buttonEnd < 0 {
+		t.Fatalf("GET /ops/decision: more-evidence button is malformed; body: %s", body)
+	}
+	buttonMarkup := body[moreEvidencePos : moreEvidencePos+buttonEnd]
+	if !strings.Contains(buttonMarkup, "formnovalidate") {
+		t.Fatalf("request-more-evidence button markup = %q, want formnovalidate", buttonMarkup)
 	}
 }
 
