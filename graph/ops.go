@@ -125,6 +125,7 @@ type OpsHiveRunLaunchView struct {
 	RunID        string
 	Status       string
 	FirstEventID string
+	OperatorID   string
 	Title        string
 	TargetRepos  string
 	Budget       string
@@ -1004,6 +1005,10 @@ func (h *Handlers) handleOpsHiveIntakeSourceCreate(w http.ResponseWriter, r *htt
 }
 
 func (h *Handlers) handleOpsHiveIntakeLaunch(w http.ResponseWriter, r *http.Request) {
+	if err := requireOpsHiveSameOrigin(r); err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
@@ -1027,11 +1032,32 @@ func (h *Handlers) handleOpsHiveIntakeLaunch(w http.ResponseWriter, r *http.Requ
 	storeParams.Status = response.Status
 	storeParams.FirstEventID = response.FirstEventID
 	if _, err := h.store.CreateOpsHiveRunLaunch(r.Context(), storeParams); err != nil {
-		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, "could not store queued run id: "+err.Error())
+		h.renderOpsHiveIntakeLaunchError(w, r, profileSlug, "Hive accepted queued run "+response.RunID+" but Site could not store queued run proof: "+err.Error())
 		return
 	}
 	target := "/ops/hive/runs?profile=" + url.QueryEscape(profileSlug) + "&run_id=" + url.QueryEscape(response.RunID)
 	http.Redirect(w, r, target, http.StatusSeeOther)
+}
+
+func requireOpsHiveSameOrigin(r *http.Request) error {
+	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
+		return requireOpsHiveRequestHost(r, origin)
+	}
+	if referer := strings.TrimSpace(r.Header.Get("Referer")); referer != "" {
+		return requireOpsHiveRequestHost(r, referer)
+	}
+	return nil
+}
+
+func requireOpsHiveRequestHost(r *http.Request, rawURL string) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Host == "" {
+		return errors.New("invalid request origin")
+	}
+	if !strings.EqualFold(parsed.Host, r.Host) {
+		return errors.New("cross-origin launch request")
+	}
+	return nil
 }
 
 func (h *Handlers) renderOpsHiveIntakeLaunchError(w http.ResponseWriter, r *http.Request, profileSlug, msg string) {
@@ -1060,7 +1086,7 @@ func (h *Handlers) handleOpsHiveRuns(w http.ResponseWriter, r *http.Request) {
 	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Hive runs",
-		Description: "Static Site-owned run tower with sample pipeline, approval, artifact, and Guardian state.",
+		Description: "Site-owned run tower with sample pipeline state and stored queued-launch proof.",
 		Active:      "hive",
 		HiveShell:   shell,
 	})
@@ -1475,10 +1501,11 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 	if err != nil {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, err
 	}
-	intakeID := "site_" + opsHiveSafeLaunchID(profileSlug)
+	operatorID := "site_operator_" + opsHiveSafeLaunchID(h.userID(r))
+	intakeID := "site_" + opsHiveSafeLaunchID(profileSlug) + "_" + newID()
 	title := brief.Title
 	payload := opsHiveRunLaunchPayload{
-		OperatorID: "site_operator_" + opsHiveSafeLaunchID(profileSlug),
+		OperatorID: operatorID,
 		IntakeID:   intakeID,
 		Title:      title,
 		Brief: opsHiveRunLaunchBrief{
@@ -1505,6 +1532,7 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 	}
 	storeParams := CreateOpsHiveRunLaunchParams{
 		ProfileSlug:         profileSlug,
+		OperatorID:          operatorID,
 		IntakeID:            intakeID,
 		Title:               title,
 		TargetRepos:         targetRepos,
@@ -1537,6 +1565,7 @@ func opsHiveRunLaunchViews(launches []OpsHiveRunLaunch, selectedRunID string) []
 			RunID:        launch.RunID,
 			Status:       launch.Status,
 			FirstEventID: launch.FirstEventID,
+			OperatorID:   launch.OperatorID,
 			Title:        launch.Title,
 			TargetRepos:  strings.Join(launch.TargetRepos, ", "),
 			Budget:       fmt.Sprintf("%d iter / $%.2f", launch.BudgetMaxIterations, launch.BudgetMaxCostUSD),

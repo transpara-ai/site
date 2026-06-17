@@ -429,6 +429,30 @@ func TestHandleOpsHiveIntakeLaunchQueuesRun(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&gotPayload); err != nil {
 			t.Fatalf("decode run launch payload: %v", err)
 		}
+		if gotPayload.OperatorID != "site_operator_test-user-1" {
+			http.Error(w, "operator_id is not the authenticated Site user", http.StatusBadRequest)
+			return
+		}
+		if !strings.HasPrefix(gotPayload.IntakeID, "site_transpara_") {
+			http.Error(w, "intake_id must be unique and profile scoped", http.StatusBadRequest)
+			return
+		}
+		if gotPayload.Authority.InitialLevel != "Required" || gotPayload.Authority.Scope != "operator-launch" || gotPayload.Authority.PolicyRef == "" {
+			http.Error(w, "authority packet does not match Hive run launch contract", http.StatusBadRequest)
+			return
+		}
+		if gotPayload.Budget.MaxIterations <= 0 || gotPayload.Budget.MaxCostUSD < 0 {
+			http.Error(w, "budget does not match Hive run launch contract", http.StatusBadRequest)
+			return
+		}
+		if len(gotPayload.TargetRepos) == 0 || !strings.Contains(gotPayload.TargetRepos[0], "/") {
+			http.Error(w, "target_repos does not match Hive run launch contract", http.StatusBadRequest)
+			return
+		}
+		if len(gotPayload.Sources) == 0 || gotPayload.Sources[0].Type == "" || gotPayload.Sources[0].Ref == "" {
+			http.Error(w, "sources do not match Hive run launch contract", http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		w.Write([]byte(`{"run_id":"run_queued_site","status":"queued","first_event_id":"event_source"}`))
@@ -457,13 +481,13 @@ func TestHandleOpsHiveIntakeLaunchQueuesRun(t *testing.T) {
 	if gotAuth != "Bearer secret" {
 		t.Fatalf("Authorization = %q, want Bearer secret", gotAuth)
 	}
-	if gotPayload.OperatorID != "site_operator_transpara" || gotPayload.IntakeID != "site_transpara" {
+	if gotPayload.OperatorID != "site_operator_test-user-1" || !strings.HasPrefix(gotPayload.IntakeID, "site_transpara_") {
 		t.Fatalf("identity = operator:%q intake:%q", gotPayload.OperatorID, gotPayload.IntakeID)
 	}
 	if gotPayload.Title != "Factory launch spec" || gotPayload.Brief.Title != "Factory launch spec" {
 		t.Fatalf("title = payload:%q brief:%q", gotPayload.Title, gotPayload.Brief.Title)
 	}
-	if gotPayload.Brief.Readiness != "draft ready / full product pipeline" || !strings.Contains(gotPayload.Brief.Objective, "queue a governed Hive run request") {
+	if gotPayload.Brief.Readiness != "draft ready / brief drafting" || !strings.Contains(gotPayload.Brief.Objective, "queue a governed Hive run request") {
 		t.Fatalf("brief = %#v", gotPayload.Brief)
 	}
 	if len(gotPayload.Sources) != 1 || gotPayload.Sources[0].Type != "spec" || !strings.HasPrefix(gotPayload.Sources[0].Ref, "site-intake-source:") {
@@ -489,6 +513,9 @@ func TestHandleOpsHiveIntakeLaunchQueuesRun(t *testing.T) {
 	if launches[0].RunID != "run_queued_site" || launches[0].Status != "queued" || launches[0].FirstEventID != "event_source" {
 		t.Fatalf("stored launch = %#v", launches[0])
 	}
+	if launches[0].OperatorID != "site_operator_test-user-1" || launches[0].IntakeID != gotPayload.IntakeID {
+		t.Fatalf("stored identity = operator:%q intake:%q", launches[0].OperatorID, launches[0].IntakeID)
+	}
 	if launches[0].BudgetMaxIterations != 4 || launches[0].BudgetMaxCostUSD != 12.50 {
 		t.Fatalf("stored budget = %#v", launches[0])
 	}
@@ -500,7 +527,7 @@ func TestHandleOpsHiveIntakeLaunchQueuesRun(t *testing.T) {
 		t.Fatalf("GET /ops/hive/runs: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Queued Hive run requests", "run_queued_site", "event_source", "transpara-ai/hive, transpara-ai/work", "4 iter / $12.50", "not runtime-start evidence"} {
+	for _, want := range []string{"Queued Hive run requests", "run_queued_site", "event_source", "site_operator_test-user-1", "transpara-ai/hive, transpara-ai/work", "4 iter / $12.50", "not runtime-start evidence"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive/runs: body does not contain %q", want)
 		}
@@ -559,6 +586,71 @@ func TestHandleOpsHiveIntakeLaunchRendersHiveError(t *testing.T) {
 	}
 }
 
+func TestHandleOpsHiveIntakeLaunchSurfacesStoreFailureWithRunID(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	clearOpsHiveLaunchTables(t, store)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: "transpara",
+		Kind:        "Text",
+		Title:       "Operator notes",
+		Content:     "Queue launch only when Hive accepts the authority packet.",
+		Status:      "parsed",
+	}); err != nil {
+		t.Fatalf("create intake source: %v", err)
+	}
+	if _, err := store.CreateOpsHiveRunLaunch(t.Context(), CreateOpsHiveRunLaunchParams{
+		ProfileSlug:         "transpara",
+		OperatorID:          "site_operator_test-user-1",
+		IntakeID:            "site_transpara_existing",
+		RunID:               "run_existing",
+		Status:              "queued",
+		FirstEventID:        "event_existing",
+		Title:               "Existing launch",
+		TargetRepos:         []string{"transpara-ai/hive"},
+		BudgetMaxIterations: 1,
+		BudgetMaxCostUSD:    1,
+	}); err != nil {
+		t.Fatalf("seed existing launch: %v", err)
+	}
+
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte(`{"run_id":"run_existing","status":"queued","first_event_id":"event_new"}`))
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	form := url.Values{
+		"profile":        {"transpara"},
+		"target_repos":   {"transpara-ai/hive"},
+		"max_iterations": {"4"},
+		"max_cost_usd":   {"12.50"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/launch", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /ops/hive/intake/launch: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Hive accepted queued run run_existing but Site could not store queued run proof") {
+		t.Fatalf("POST /ops/hive/intake/launch: body does not surface accepted run id: %s", body)
+	}
+	launches, err := store.ListOpsHiveRunLaunches(t.Context(), "transpara", 10)
+	if err != nil {
+		t.Fatalf("list run launches: %v", err)
+	}
+	if len(launches) != 1 {
+		t.Fatalf("stored launches after duplicate run_id = %#v, want existing launch only", launches)
+	}
+}
+
 func TestHandleOpsHiveIntakeLaunchRequiresSource(t *testing.T) {
 	h, store, _ := testHandlers(t)
 	clearOpsHiveLaunchTables(t, store)
@@ -581,6 +673,29 @@ func TestHandleOpsHiveIntakeLaunchRequiresSource(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "add at least one intake source before queueing a Hive run") {
 		t.Fatalf("POST /ops/hive/intake/launch: body = %s", w.Body.String())
+	}
+}
+
+func TestHandleOpsHiveIntakeLaunchRejectsCrossOriginPost(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	clearOpsHiveLaunchTables(t, store)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	form := url.Values{
+		"profile":        {"transpara"},
+		"target_repos":   {"transpara-ai/hive"},
+		"max_iterations": {"4"},
+		"max_cost_usd":   {"12.50"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/launch", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "https://evil.test")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("POST /ops/hive/intake/launch: status = %d, want 403; body: %s", w.Code, w.Body.String())
 	}
 }
 

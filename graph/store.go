@@ -199,6 +199,7 @@ type CreateOpsHiveIntakeSourceParams struct {
 type OpsHiveRunLaunch struct {
 	ID                  string
 	ProfileSlug         string
+	OperatorID          string
 	IntakeID            string
 	RunID               string
 	Status              string
@@ -212,6 +213,7 @@ type OpsHiveRunLaunch struct {
 
 type CreateOpsHiveRunLaunchParams struct {
 	ProfileSlug         string
+	OperatorID          string
 	IntakeID            string
 	RunID               string
 	Status              string
@@ -597,6 +599,7 @@ CREATE INDEX IF NOT EXISTS idx_ops_hive_intake_sources_profile_created ON ops_hi
 CREATE TABLE IF NOT EXISTS ops_hive_run_launches (
     id                    TEXT PRIMARY KEY,
     profile_slug          TEXT NOT NULL DEFAULT 'transpara-ai',
+    operator_id           TEXT NOT NULL DEFAULT '',
     intake_id             TEXT NOT NULL DEFAULT '',
     run_id                TEXT NOT NULL,
     status                TEXT NOT NULL DEFAULT 'queued',
@@ -607,6 +610,7 @@ CREATE TABLE IF NOT EXISTS ops_hive_run_launches (
     budget_max_cost_usd   FLOAT8 NOT NULL DEFAULT 0,
     created_at            TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE ops_hive_run_launches ADD COLUMN IF NOT EXISTS operator_id TEXT NOT NULL DEFAULT '';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_hive_run_launches_run_id ON ops_hive_run_launches(run_id);
 CREATE INDEX IF NOT EXISTS idx_ops_hive_run_launches_profile_created ON ops_hive_run_launches(profile_slug, created_at DESC);
 `)
@@ -676,6 +680,7 @@ func (s *Store) CreateOpsHiveRunLaunch(ctx context.Context, p CreateOpsHiveRunLa
 	launch := &OpsHiveRunLaunch{
 		ID:                  newID(),
 		ProfileSlug:         p.ProfileSlug,
+		OperatorID:          p.OperatorID,
 		IntakeID:            p.IntakeID,
 		RunID:               p.RunID,
 		Status:              p.Status,
@@ -696,10 +701,10 @@ func (s *Store) CreateOpsHiveRunLaunch(ctx context.Context, p CreateOpsHiveRunLa
 		return nil, fmt.Errorf("marshal target repos: %w", err)
 	}
 	err = s.db.QueryRowContext(ctx,
-		`INSERT INTO ops_hive_run_launches (id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		`INSERT INTO ops_hive_run_launches (id, profile_slug, operator_id, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		 RETURNING created_at`,
-		launch.ID, launch.ProfileSlug, launch.IntakeID, launch.RunID, launch.Status, launch.FirstEventID, launch.Title, targetRepos, launch.BudgetMaxIterations, launch.BudgetMaxCostUSD,
+		launch.ID, launch.ProfileSlug, launch.OperatorID, launch.IntakeID, launch.RunID, launch.Status, launch.FirstEventID, launch.Title, targetRepos, launch.BudgetMaxIterations, launch.BudgetMaxCostUSD,
 	).Scan(&launch.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create ops hive run launch: %w", err)
@@ -715,7 +720,7 @@ func (s *Store) ListOpsHiveRunLaunches(ctx context.Context, profileSlug string, 
 		limit = 10
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
+		`SELECT id, profile_slug, operator_id, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
 		 FROM ops_hive_run_launches
 		 WHERE profile_slug = $1
 		 ORDER BY created_at DESC
@@ -740,7 +745,7 @@ func (s *Store) GetOpsHiveRunLaunch(ctx context.Context, profileSlug, runID stri
 		profileSlug = opsHiveIntakeDefaultProfileSlug
 	}
 	row := s.db.QueryRowContext(ctx,
-		`SELECT id, profile_slug, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
+		`SELECT id, profile_slug, operator_id, intake_id, run_id, status, first_event_id, title, target_repos, budget_max_iterations, budget_max_cost_usd, created_at
 		 FROM ops_hive_run_launches
 		 WHERE profile_slug = $1 AND run_id = $2`, profileSlug, runID)
 	launch, err := scanOpsHiveRunLaunch(row)
@@ -760,7 +765,7 @@ type opsHiveRunLaunchScanner interface {
 func scanOpsHiveRunLaunch(row opsHiveRunLaunchScanner) (OpsHiveRunLaunch, error) {
 	var launch OpsHiveRunLaunch
 	var targetRepos []byte
-	if err := row.Scan(&launch.ID, &launch.ProfileSlug, &launch.IntakeID, &launch.RunID, &launch.Status, &launch.FirstEventID, &launch.Title, &targetRepos, &launch.BudgetMaxIterations, &launch.BudgetMaxCostUSD, &launch.CreatedAt); err != nil {
+	if err := row.Scan(&launch.ID, &launch.ProfileSlug, &launch.OperatorID, &launch.IntakeID, &launch.RunID, &launch.Status, &launch.FirstEventID, &launch.Title, &targetRepos, &launch.BudgetMaxIterations, &launch.BudgetMaxCostUSD, &launch.CreatedAt); err != nil {
 		return OpsHiveRunLaunch{}, fmt.Errorf("scan ops hive run launch: %w", err)
 	}
 	if len(targetRepos) > 0 {
