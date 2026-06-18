@@ -138,4 +138,4 @@ Next deep dive: the Existence Graph — the final layer. What happens when human
 
 ---
 
-*This is Post 25 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: [The Governance Graph](/blog/the-governance-graph) (Layer 11 deep dive) Post 9: [The Cult Test](/blog/the-cult-test) (religions as cultural primitive paths) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 25 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: [The Governance Graph](/blog/the-governance-graph) (Layer 11 deep dive) Post 9: [The Cult Test](/blog/the-cult-test) (religions as cultural primitive paths) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

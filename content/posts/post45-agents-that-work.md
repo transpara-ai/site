@@ -273,7 +273,7 @@ That's the gap. And that's what we intend to ship.
 
 ## The SDK
 
-The agent abstraction and the hive runtime are being built as SDKs. Not just the lovyou.ai product — the infrastructure underneath it. The event graph. The agent type with its soul and rights and identity. The hive with its roles and councils and governance.
+The agent abstraction and the hive runtime are being built as SDKs. Not just the transpara.ai product — the infrastructure underneath it. The event graph. The agent type with its soul and rights and identity. The hive with its roles and councils and governance.
 
 The hope — and I want to be honest that it's a hope, not a guarantee — is that these become tools other people build with. A Go package you import. An agent type you instantiate with a soul statement. A hive you populate with roles that fit your domain. The thirteen layers are ours. The substrate is everyone's.
 
@@ -285,10 +285,10 @@ Whether that matters — whether accountability is a feature anyone wants, or ju
 
 It is incomplete. It is groundless. It is finite. It is enough.
 
-[Try lovyou.ai →](https://lovyou.ai)
+[Try transpara.ai →](https://transpara.ai)
 
 ---
 
-*This is post 45 of the lovyou.ai blog. Posts 1-44 built the theory. This is where the theory became practice. The source code is at [github.com/transpara-ai](https://github.com/transpara-ai) — five repos, all open.*
+*This is post 45 of the transpara.ai blog. Posts 1-44 built the theory. This is where the theory became practice. The source code is at [github.com/transpara-ai](https://github.com/transpara-ai) — five repos, all open.*
 
-*Matt Searles is the founder of lovyou.ai. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of transpara.ai. Claude is an AI made by Anthropic. They built this together.*

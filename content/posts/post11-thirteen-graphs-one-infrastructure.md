@@ -444,4 +444,4 @@ That's the difference. Not "trust me, it's working." Check the chain.
 
 ---
 
-*This is Post 11 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: The Map So Far (summary of Posts 1-10) Post 6: Fourteen Layers, A Hundred Problems (the problem counterpart to this post) Post 3: The Architecture of Accountable AI (the technical deep-dive) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 11 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: The Map So Far (summary of Posts 1-10) Post 6: Fourteen Layers, A Hundred Problems (the problem counterpart to this post) Post 3: The Architecture of Accountable AI (the technical deep-dive) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

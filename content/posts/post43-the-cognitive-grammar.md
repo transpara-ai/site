@@ -243,6 +243,6 @@ The mind has its vocabulary. It doesn't have all of them.
 
 ---
 
-*This is Post 43 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 42: [Flesh is Weak](/blog/flesh-is-weak). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph). The hive: [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). The site: [lovyou.ai](https://lovyou.ai).*
+*This is Post 43 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 42: [Flesh is Weak](/blog/flesh-is-weak). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph). The hive: [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). The site: [transpara.ai](https://transpara.ai).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

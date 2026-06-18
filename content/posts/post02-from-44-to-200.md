@@ -264,6 +264,6 @@ The architecture was built for exactly this moment. We just didn't know it yet.
 
 ---
 
-*This is Post 2 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 1: 20 Primitives and a Late Night. The code is open source: github.com/mattxo/mind-zero-five*
+*This is Post 2 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 1: 20 Primitives and a Late Night. The code is open source: github.com/mattxo/mind-zero-five*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

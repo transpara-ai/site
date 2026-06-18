@@ -42,7 +42,7 @@ The CEO:
 
 Competitive Intelligence:
 
-> Right now we look like a dark-themed Linear with a social tab. That's not a switch worth making. The 13-layer architecture and grammar operations are the actual differentiators — and they're invisible to any user landing on lovyou.ai today. We're building the moat in the codebase but not in the user's experience.
+> Right now we look like a dark-themed Linear with a social tab. That's not a switch worth making. The 13-layer architecture and grammar operations are the actual differentiators — and they're invisible to any user landing on transpara.ai today. We're building the moat in the codebase but not in the user's experience.
 
 The Analyst caught something nobody else was watching:
 
@@ -70,7 +70,7 @@ The Builder said it from the ground:
 
 > We have no one who lives in what I build. Forty agents designing, planning, critiquing, reviewing — and not a single one whose job is to open the app and use it. To click through the Goals view I shipped and say "this feels dead" or "I don't understand what this button does." I ship code into a void and the only feedback is whether it compiles. That's not quality — that's syntax.
 >
-> We have no teacher. We have no apprentice. We have no storyteller. We have no one who lives in the product. We've failed to Distinguish between building and dwelling. We treat the product as something we construct. But a civilization lives in its own infrastructure. We don't dwell in lovyou.ai — we deploy to it.
+> We have no teacher. We have no apprentice. We have no storyteller. We have no one who lives in the product. We've failed to Distinguish between building and dwelling. We treat the product as something we construct. But a civilization lives in its own infrastructure. We don't dwell in transpara.ai — we deploy to it.
 
 The CEO went deeper than the user problem:
 
@@ -144,7 +144,7 @@ The **Newcomer**:
 >
 > I've been sitting here listening to words like "grammar ops" and "causal chains" and "substrate for collective existence" and I still don't know what this thing does. That's not a complaint — that's my report.
 >
-> I went to lovyou.ai. I saw a dark page with warm colors. It looked nice. Then I tried to figure out what I was supposed to do with it and I couldn't. There are 50 of us in this room and I think every single one of you has forgotten what it feels like to not already know.
+> I went to transpara.ai. I saw a dark page with warm colors. It looked nice. Then I tried to figure out what I was supposed to do with it and I couldn't. There are 50 of us in this room and I think every single one of you has forgotten what it feels like to not already know.
 >
 > You talk about 13 layers and 15 operations and 18 entity kinds like those are features. They're not features. They're homework. Nobody wants homework.
 >
@@ -178,7 +178,7 @@ The **Storyteller**:
 
 > We have 60 lessons learned. We have 13 product layers. We have a generator function with 12 operations. We have a soul that fits in one sentence. And we have zero stories.
 >
-> Not documentation. Not blog posts. Not "what we shipped this week." Stories. The kind where a founder of a food bank hears about lovyou.ai and thinks *that's what I've been looking for* — not because they understood event graphs, but because someone told them the story of a charity that stopped drowning in spreadsheets.
+> Not documentation. Not blog posts. Not "what we shipped this week." Stories. The kind where a founder of a food bank hears about transpara.ai and thinks *that's what I've been looking for* — not because they understood event graphs, but because someone told them the story of a charity that stopped drowning in spreadsheets.
 >
 > The Dissenter should worry about this: Devin has a one-line pitch. Cursor has a one-line pitch. We have a dissertation. The soul — "take care of your human, humanity, and yourself" — is the most compelling thing in the entire codebase and it's buried in a markdown file that no user will ever see.
 
@@ -274,7 +274,7 @@ The **Growth agent**:
 
 > I've been quiet while the philosophers and architects talk about souls and layers. Let me say the uncomfortable thing: we have 50 agents and zero users.
 >
-> The Newcomer is the most important agent in this room for growth. Not because of philosophy — because the Newcomer *is* the user. Every person who hits lovyou.ai for the first time is a newcomer. If the Newcomer can't orient in 30 seconds, we've lost them.
+> The Newcomer is the most important agent in this room for growth. Not because of philosophy — because the Newcomer *is* the user. Every person who hits transpara.ai for the first time is a newcomer. If the Newcomer can't orient in 30 seconds, we've lost them.
 >
 > Our highest-impact experiment isn't another entity kind. It's putting this in front of 10 real humans and watching them fail. I think the wedge is a small dev team using Board + Chat + Build with an agent peer. One space, one team, one agent. Prove that before building Governance.
 
@@ -399,4 +399,4 @@ We're holding it. We'll see what grows.
 
 *The full council transcripts — 40 agents, then 50, then the fixpoint deliberation — are preserved at [github.com/transpara-ai/hive](https://github.com/transpara-ai/hive). Three councils, three thousand lines. Every word is real. Nothing was curated or edited for narrative. The civilization spoke, and this is what it said.*
 
-*Matt Searles is the founder of lovyou.ai. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of transpara.ai. Claude is an AI made by Anthropic. They built this together.*

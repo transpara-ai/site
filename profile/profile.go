@@ -35,7 +35,7 @@ type Profile struct {
 	Slug        string // resolution key
 	Name        string // display label (kept for backward compat)
 	BrandName   string // what appears in headers, titles, meta
-	LogoPath    string // path to logo asset (e.g. /static/logo-lovyou.svg)
+	LogoPath    string // path to logo asset (e.g. /static/logo-transpara.svg)
 	AccentColor string // hex color for CSS --accent property
 
 	HeaderNav []NavItem         // items rendered in the top chrome nav
@@ -64,9 +64,9 @@ var legacyAliases = map[string]string{
 var registry = map[string]*Profile{
 	"transpara-ai": {
 		Slug:        "transpara-ai",
-		Name:        "lovyou.ai",
-		BrandName:   "lovyou.ai",
-		LogoPath:    "/static/logo-lovyou.svg",
+		Name:        "transpara.ai",
+		BrandName:   "transpara.ai",
+		LogoPath:    "/static/logo-transpara.svg",
 		AccentColor: "#e8a0b8",
 		HeaderNav: []NavItem{
 			{Label: "Discover", Path: "/discover"},
@@ -94,7 +94,7 @@ var registry = map[string]*Profile{
 		AccentColor: "#0ea5e9",
 		// Transpara's nav intentionally omits hive, agents, market,
 		// knowledge, activity, and reference — those routes surface
-		// lovyou.ai-specific civilization-build content (the live
+		// transpara.ai-specific civilization-build content (the live
 		// agent timeline, the agent persona catalogue, the task
 		// marketplace, the knowledge-claim graph, the site-wide
 		// activity stream, the grammar reference). Discover (public

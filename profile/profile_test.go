@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestDefault_returnsLovyouAI(t *testing.T) {
+func TestDefault_returnsDefaultSlug(t *testing.T) {
 	p := Default()
 	if p == nil {
 		t.Fatal("Default() returned nil")
@@ -78,15 +78,12 @@ func TestRegistry_fieldsPopulated(t *testing.T) {
 
 func TestRegistry_profilesDiverge(t *testing.T) {
 	// Phase 4 precondition: the two registered profiles must differ
-	// on every brand-bearing field, otherwise the divergence tests
+	// on BrandName + AccentColor (the logo is shared after the Transpara rebrand), otherwise the divergence tests
 	// downstream (bounded-diff) would silently pass against a tie.
 	l := Lookup(DefaultSlug)
 	p := Lookup("transpara")
 	if l.BrandName == p.BrandName {
 		t.Errorf("registry BrandNames collide: %q", l.BrandName)
-	}
-	if l.LogoPath == p.LogoPath {
-		t.Errorf("registry LogoPaths collide: %q", l.LogoPath)
 	}
 	if l.AccentColor == p.AccentColor {
 		t.Errorf("registry AccentColors collide: %q", l.AccentColor)

@@ -29,9 +29,9 @@ Let me just say the numbers, because the numbers are the point.
 
 ```
 npm install @transpara-ai/eventgraph
-pip install lovyou-eventgraph
+pip install transpara-eventgraph
 cargo add eventgraph
-dotnet add package LovYou.EventGraph
+dotnet add package Transpara.EventGraph
 go get github.com/transpara-ai/eventgraph/go
 ```
 
@@ -189,6 +189,6 @@ Ship it.
 
 ---
 
-*This is Post 39 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 38: [The Grammar That Knows How to Die](/blog/the-grammar-that-knows-how-to-die). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
+*This is Post 39 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 38: [The Grammar That Knows How to Die](/blog/the-grammar-that-knows-how-to-die). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

@@ -18,7 +18,7 @@ That question turned out to be a seed. This is the story of what grew from it.
 
 ## The Method
 
-I was working with ChatGPT at the time — this was before I'd started building with Claude, before LovYou existed as anything more than an itch I couldn't scratch. I had a technique I'd been using: incremental specification loading. You feed the model your vision one piece at a time, ending each message with "Respond ok" — forcing it to hold context without elaborating, building the full picture before asking for synthesis.
+I was working with ChatGPT at the time — this was before I'd started building with Claude, before Transpara existed as anything more than an itch I couldn't scratch. I had a technique I'd been using: incremental specification loading. You feed the model your vision one piece at a time, ending each message with "Respond ok" — forcing it to hold context without elaborating, building the full picture before asking for synthesis.
 
 It sounds simple. It is simple. But it produces dramatically cleaner output than iterative refinement, because the model has the complete shape of what you're describing before it tries to decompose it. You're loading the context buffer without letting it discharge prematurely.
 
@@ -134,7 +134,7 @@ That last point — expansion is built-in — turned out to be more literally tr
 
 ## The Hive
 
-I built LovYou. Not the version that exists now — the first version, hive0. A multi-agent system based on those 20 primitives, where specialised agents collaborate through an event graph to build software, make decisions, and manage themselves.
+I built Transpara. Not the version that exists now — the first version, hive0. A multi-agent system based on those 20 primitives, where specialised agents collaborate through an event graph to build software, make decisions, and manage themselves.
 
 The agents multiplied. Not because I planned it, but because the system kept identifying roles it needed. PM. Implementer. QA. DevOps. Code reviewer. Those are the obvious ones — the agents any software team needs. But then came the others: Philosopher. Critic. Harmony. Mediator. Gap-detector. Failure-analyst. Sanity-checker. Philanthropy. Politician.
 
@@ -194,4 +194,4 @@ The primitives were the seed. What grew from them surprised both of us.
 
 ---
 
-*This is Post 1 of a series on LovYou, mind-zero, and the architecture of accountable AI. The code is open source: github.com/mattxo Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 1 of a series on Transpara, mind-zero, and the architecture of accountable AI. The code is open source: github.com/mattxo Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

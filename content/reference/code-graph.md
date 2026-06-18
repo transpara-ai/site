@@ -628,7 +628,7 @@ Skin(name: lovatts_professional,
   density: Density(compact),
   shape: Shape(rounded))
 
-Skin(name: lovyou_warm,
+Skin(name: transpara_warm,
   palette: Palette(earth),
   typography: Typography(humanist),
   spacing: Spacing(base: 4px),
@@ -1156,6 +1156,6 @@ Not "trust us, we designed it well." Walk the chain. Check the code graph. Verif
 
 ---
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*
 
-*The code: github.com/lovyou-ai/eventgraph*
+*The code: github.com/transpara-ai/eventgraph*

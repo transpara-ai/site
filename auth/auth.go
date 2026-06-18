@@ -24,9 +24,9 @@ import (
 type APIKey struct {
 	ID        string
 	Name      string
-	UserID    string    // Human sponsor who created/manages this key.
-	AgentID   string    // If non-empty, this key authenticates as this agent user.
-	AgentName string    // Display name of the agent (denormalized for listing).
+	UserID    string // Human sponsor who created/manages this key.
+	AgentID   string // If non-empty, this key authenticates as this agent user.
+	AgentName string // Display name of the agent (denormalized for listing).
 	CreatedAt time.Time
 }
 
@@ -346,7 +346,7 @@ func (a *Auth) handleAuthError(w http.ResponseWriter, r *http.Request) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign-in error — lovyou.ai</title>
+  <title>Sign-in error — transpara.ai</title>
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
@@ -500,7 +500,7 @@ func (a *Auth) upsertUser(ctx context.Context, googleID, email, name, picture st
 // Agents are real users with kind='agent' and a synthetic google_id.
 func (a *Auth) ensureAgentUser(ctx context.Context, agentName string) (*User, error) {
 	syntheticGoogleID := "agent:" + agentName
-	syntheticEmail := agentName + "@agent.lovyou.ai"
+	syntheticEmail := agentName + "@agent.transpara.ai"
 
 	var u User
 	err := a.db.QueryRowContext(ctx, `
@@ -635,7 +635,7 @@ func (a *Auth) handleMagicLinkRequestForm(w http.ResponseWriter, r *http.Request
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign in by email — lovyou.ai</title>
+  <title>Sign in by email — transpara.ai</title>
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;width:100%;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
@@ -695,7 +695,7 @@ func (a *Auth) handleMagicLinkRequest(w http.ResponseWriter, r *http.Request) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Check your email — lovyou.ai</title>
+  <title>Check your email — transpara.ai</title>
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
@@ -865,7 +865,7 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Sign in — lovyou.ai</title>
+  <title>Sign in — transpara.ai</title>
   <style>
     *{box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
@@ -895,7 +895,7 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
 <body>
   <div class="card">
     <h1>Sign in</h1>
-    <p class="sub">to lovyou.ai</p>
+    <p class="sub">to transpara.ai</p>
 
     <a href="/auth/google" class="btn-google">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

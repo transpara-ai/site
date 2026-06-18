@@ -162,4 +162,4 @@ The next post explores interrupting it.
 
 ---
 
-*This is Post 28 of a series on LovYou, mind-zero, and the architecture of accountable AI. Next: The Critical Path (how we get from here to a world with less weight) Then: The Friction (everything that could stop us) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 28 of a series on Transpara, mind-zero, and the architecture of accountable AI. Next: The Critical Path (how we get from here to a world with less weight) Then: The Friction (everything that could stop us) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

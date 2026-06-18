@@ -236,7 +236,7 @@ func TestConversations(t *testing.T) {
 
 	// Create an agent user and add to conversation.
 	db.ExecContext(ctx, `INSERT INTO users (id, google_id, email, name, kind)
-		VALUES ('agent-test-1', 'agent:TestBot', 'testbot@agent.lovyou.ai', 'TestBot', 'agent')
+		VALUES ('agent-test-1', 'agent:TestBot', 'testbot@agent.transpara.ai', 'TestBot', 'agent')
 		ON CONFLICT (google_id) DO NOTHING`)
 	t.Cleanup(func() { db.ExecContext(ctx, `DELETE FROM users WHERE id = 'agent-test-1'`) })
 
@@ -1408,7 +1408,7 @@ func TestGetAgentPersonasForConversations(t *testing.T) {
 		INSERT INTO users (id, google_id, email, name, kind, persona_name)
 		VALUES ($1, $2, $3, $4, 'agent', $5)
 		ON CONFLICT (google_id) DO NOTHING`,
-		agentID, "agent:test-agent-persona", "test-agent-persona@agent.lovyou.ai", "test-agent-persona", persona.Name,
+		agentID, "agent:test-agent-persona", "test-agent-persona@agent.transpara.ai", "test-agent-persona", persona.Name,
 	)
 	if err != nil {
 		t.Fatalf("insert agent user: %v", err)

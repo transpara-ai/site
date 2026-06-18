@@ -120,4 +120,4 @@ A life.
 
 ---
 
-*This is Post 32 of a series on LovYou, mind-zero, and the architecture of accountable AI. This is the last post in the series — for now. The Weight named the suffering. The Transition mapped the path. The Friction named the obstacles. What You Could Build made it concrete. The Weightless named the destination. The specification: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Contact: matt@lovyou.ai Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 32 of a series on Transpara, mind-zero, and the architecture of accountable AI. This is the last post in the series — for now. The Weight named the suffering. The Transition mapped the path. The Friction named the obstacles. What You Could Build made it concrete. The Weightless named the destination. The specification: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Contact: matt@transpara.ai Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

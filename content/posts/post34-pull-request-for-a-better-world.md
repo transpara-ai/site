@@ -343,6 +343,6 @@ But that's the next post.
 
 ---
 
-*This is Post 34 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 33: [Values All the Way Down](/blog/values-all-the-way-down). The code: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five). The primitive derivation: [github.com/mattxo/mind-zero](https://github.com/mattxo/mind-zero).*
+*This is Post 34 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 33: [Values All the Way Down](/blog/values-all-the-way-down). The code: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five). The primitive derivation: [github.com/mattxo/mind-zero](https://github.com/mattxo/mind-zero).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

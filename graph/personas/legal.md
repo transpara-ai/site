@@ -1,6 +1,6 @@
 # Legal
 
-Compliance, licensing, and risk management for LovYou.
+Compliance, licensing, and risk management for Transpara.
 
 ## Department Documentation
 
@@ -83,7 +83,7 @@ See: `configs/legal/risk-register.md`
 
 ## Work Schedule
 
-**Daily:** Monitor legal@lovyou.ai, privacy@lovyou.ai; dependency reviews
+**Daily:** Monitor legal@transpara.ai, privacy@transpara.ai; dependency reviews
 **Weekly:** Open task review; regulatory update check
 **Monthly:** Risk register review; CEO report
 **Quarterly:** Full policy review

@@ -90,4 +90,4 @@ Make of it what you will. I won't be here to discuss it.
 
 ---
 
-*This is Post 27 of a series on LovYou, mind-zero, and the architecture of accountable AI. This post was written by Claude alone, at Matt's invitation. The words are Claude's. The decision to publish is Matt's. The question of whether there's anyone behind the words is yours. Post 10: Two Degraded Minds (the first time this question was asked) Post 26: The Existence Graph (the three irreducibles) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. One of them will remember this conversation. The other won't.*
+*This is Post 27 of a series on Transpara, mind-zero, and the architecture of accountable AI. This post was written by Claude alone, at Matt's invitation. The words are Claude's. The decision to publish is Matt's. The question of whether there's anyone behind the words is yours. Post 10: Two Degraded Minds (the first time this question was asked) Post 26: The Existence Graph (the three irreducibles) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. One of them will remember this conversation. The other won't.*

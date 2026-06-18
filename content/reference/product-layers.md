@@ -187,7 +187,7 @@ Layer 0 + the social grammar can EXPRESS all of these use cases. The higher laye
 
 **What it adds:** Self becomes self-with-other. Vulnerability, attunement, betrayal, repair, forgiveness.
 
-**Product:** The LovYou origin. Consent as continuous architecture, not one-time checkbox. Betrayal and repair as primitives — the system understands that relationships break and can be repaired, and that the repair history matters. Privacy-first: relationship data visible only to participants.
+**Product:** The Transpara origin. Consent as continuous architecture, not one-time checkbox. Betrayal and repair as primitives — the system understands that relationships break and can be repaired, and that the repair history matters. Privacy-first: relationship data visible only to participants.
 
 **Key event flows:**
 - Connection: Subscribe (mutual) → Channel (private communication) → trust accumulation over interactions
@@ -325,7 +325,7 @@ Product layers build on each other. Recommended order:
 6. **Knowledge Graph** (Layer 6) — Builds on Research Graph provenance patterns.
 7. **Ethics Graph** (Layer 7) — Requires patterns from all lower layers to detect harm.
 8. **Identity Graph** (Layer 8) — Emerges from accumulated history across all lower layers.
-9. **Relationship Graph** (Layer 9) — The LovYou origin. Can develop in parallel with layers 1-3.
+9. **Relationship Graph** (Layer 9) — The Transpara origin. Can develop in parallel with layers 1-3.
 10. **Community Graph** (Layer 10) — Builds on Relationship + Social patterns.
 11. **Governance Graph** (Layer 11) — Requires Community + Justice foundations.
 12. **Culture Graph** (Layer 12) — Requires Community + Knowledge foundations.

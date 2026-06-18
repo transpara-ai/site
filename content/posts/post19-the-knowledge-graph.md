@@ -158,4 +158,4 @@ Next deep dive: the Ethics Graph — what happens when harm detection, accountab
 
 ---
 
-_This is Post 19 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: [The Research Graph](/blog/the-research-graph) (Layer 5 deep dive) Post 13: [The Same 200 Primitives, Weighted Differently](/blog/the-same-200-primitives) (why neither left nor right foregrounds Layer 6) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together._
+_This is Post 19 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: [The Research Graph](/blog/the-research-graph) (Layer 5 deep dive) Post 13: [The Same 200 Primitives, Weighted Differently](/blog/the-same-200-primitives) (why neither left nor right foregrounds Layer 6) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together._

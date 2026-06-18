@@ -418,6 +418,6 @@ Fix the grammar. Fix the platform.
 
 ---
 
-*This is Post 35 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 34: [Pull Request for a Better World](/blog/pull-request-for-a-better-world). Post 33: [Values All the Way Down](/blog/values-all-the-way-down). The code: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five). The primitive derivation: [github.com/mattxo/mind-zero](https://github.com/mattxo/mind-zero).*
+*This is Post 35 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 34: [Pull Request for a Better World](/blog/pull-request-for-a-better-world). Post 33: [Values All the Way Down](/blog/values-all-the-way-down). The code: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five). The primitive derivation: [github.com/mattxo/mind-zero](https://github.com/mattxo/mind-zero).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

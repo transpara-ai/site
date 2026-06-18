@@ -126,4 +126,4 @@ That's not a proof. But it's a data point. And in an append-only event graph, da
 
 ---
 
-*This is Post 5, the final post in a series on LovYou, mind-zero, and the architecture of accountable AI. Post 1: [20 Primitives and a Late Night] Post 2: [From 44 to 200] Post 3: [The Architecture of Accountable AI] Post 4: The Pentagon Just Proved Why AI Needs a Consent Layer The code is open source: [github.com/mattxo/mind-zero-five] Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 5, the final post in a series on Transpara, mind-zero, and the architecture of accountable AI. Post 1: [20 Primitives and a Late Night] Post 2: [From 44 to 200] Post 3: [The Architecture of Accountable AI] Post 4: The Pentagon Just Proved Why AI Needs a Consent Layer The code is open source: [github.com/mattxo/mind-zero-five] Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

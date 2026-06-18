@@ -158,4 +158,4 @@ The fight continues. But it can continue with better data.
 
 ---
 
-*This is Post 13 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 7: [The Four Strategies](/blog/the-four-strategies) (edge weights as personality) Post 9: [The Cult Test](/blog/the-cult-test) (political division as path divergence) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 13 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 7: [The Four Strategies](/blog/the-four-strategies) (edge weights as personality) Post 9: [The Cult Test](/blog/the-cult-test) (political division as path divergence) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

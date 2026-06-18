@@ -30,7 +30,7 @@ func TestMindFindAgentParticipant(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE name = $1`, agentName)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestMindOnMessage(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestMindOnCouncilConvened(t *testing.T) {
 		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, row.id)
 		_, err := db.ExecContext(ctx,
 			`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-			row.id, "agent:"+row.name, row.name+"@test.lovyou.ai", row.name)
+			row.id, "agent:"+row.name, row.name+"@test.transpara.ai", row.name)
 		if err != nil {
 			t.Fatalf("create agent %s: %v", row.name, err)
 		}
@@ -249,7 +249,7 @@ func TestMindTaskWork(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	t.Cleanup(func() {
 		db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'task-work-test'`)
 		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
@@ -323,7 +323,7 @@ func TestMindSimpleTask(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:SimpleAgent", "simple@test.lovyou.ai", "SimpleAgent")
+		agentID, "agent:SimpleAgent", "simple@test.transpara.ai", "SimpleAgent")
 	t.Cleanup(func() {
 		db.ExecContext(ctx, `DELETE FROM spaces WHERE slug = 'simple-task-test'`)
 		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
@@ -408,7 +408,7 @@ func TestBuildSystemPromptPersonaRouting(t *testing.T) {
 		db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 		_, err := db.ExecContext(ctx,
 			`INSERT INTO users (id, google_id, email, name, kind, persona_name) VALUES ($1, $2, $3, $4, 'agent', $4)`,
-			agentID, "agent:"+personaSlug, personaSlug+"@test.lovyou.ai", personaSlug)
+			agentID, "agent:"+personaSlug, personaSlug+"@test.transpara.ai", personaSlug)
 		if err != nil {
 			t.Fatalf("create agent user: %v", err)
 		}
@@ -448,7 +448,7 @@ func TestReplyToInjectsUserMemories(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:ReplyMemAgent", "replymem@test.lovyou.ai", "ReplyMemAgent")
+		agentID, "agent:ReplyMemAgent", "replymem@test.transpara.ai", "ReplyMemAgent")
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestMindE2E(t *testing.T) {
 
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -803,7 +803,7 @@ func TestReplyToInjectsDocuments(t *testing.T) {
 
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, fmt.Sprintf("agent:%s-%d", agentName, nonce), fmt.Sprintf("%s-%d@test.lovyou.ai", agentName, nonce), agentName)
+		agentID, fmt.Sprintf("agent:%s-%d", agentName, nonce), fmt.Sprintf("%s-%d@test.transpara.ai", agentName, nonce), agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -872,7 +872,7 @@ func TestReplyToNoDocumentsNoSpaceKnowledge(t *testing.T) {
 
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, fmt.Sprintf("agent:%s-%d", agentName, nonce), fmt.Sprintf("%s-%d@test.lovyou.ai", agentName, nonce), agentName)
+		agentID, fmt.Sprintf("agent:%s-%d", agentName, nonce), fmt.Sprintf("%s-%d@test.transpara.ai", agentName, nonce), agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
@@ -928,7 +928,7 @@ func TestMindOnQuestionAsked_WithAgent(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}

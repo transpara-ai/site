@@ -1,6 +1,6 @@
 # Social Grammar
 
-The semantic graph grammar for social interaction. Derived in Post 35 of the LovYou series.
+The semantic graph grammar for social interaction. Derived in Post 35 of the Transpara series.
 
 This is a **product layer** specification — these operations are compositions of Layer 0 primitives, designed for building social interfaces on the event graph.
 
