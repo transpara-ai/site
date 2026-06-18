@@ -1,4 +1,4 @@
-# Site Map & Discovery — `http://nucbuntu/` (lovyou-ai profile)
+# Site Map & Discovery — `http://nucbuntu/` (transpara-ai profile)
 
 **Version:** 0.2.0 · **Date:** 2026-04-20
 **Author:** Claude Opus 4.7
@@ -21,7 +21,7 @@
 
 > **Purpose.** Ground truth for the display-profiles redesign. Before we swap looks, we need an exhaustive inventory of every route, every link, and every global UI surface that a profile has to account for.
 >
-> **Scope.** The existing site served from `nucbuntu`, which today renders the **lovyou-ai** profile only. Companion artifacts cover the profile system, the Transpara profile design, and wireframes.
+> **Scope.** The existing site served from `nucbuntu`, which today renders the **transpara-ai** profile only. Companion artifacts cover the profile system, the Transpara profile design, and wireframes.
 
 ---
 
@@ -41,7 +41,7 @@ graph TD
     Root --> Reference["/reference"]
     Root --> Blog["/blog"]
     Root --> App["/app"]
-    Root --> GitHub["github.com/lovyou-ai"]
+    Root --> GitHub["github.com/transpara-ai"]
 
     Vision --> VLayers["/vision/layer/0 … /13<br/>14 layer pages"]
     Agents --> AProfiles["/agents/harmony<br/>/agents/mourner<br/>/agents/steward<br/>/agents/teacher<br/>/agents/witness"]
@@ -166,10 +166,10 @@ Observed posts:
 
 | Surface | Items |
 |---------|-------|
-| **Header nav** | lovyou.ai (logo) · Discover · Hive · Agents · Blog · My Work |
+| **Header nav** | transpara.ai (logo) · Discover · Hive · Agents · Blog · My Work |
 | **Footer nav** | Discover · Hive · Agents · Market · Knowledge · Activity · Search · Blog · Reference · GitHub |
 | **Global search overlay** | `⌘K` / `esc`, backed by `/search` |
-| **External** | `https://github.com/lovyou-ai` |
+| **External** | `https://github.com/transpara-ai` |
 
 ---
 
@@ -237,7 +237,7 @@ These were found via source recon (`cmd/site/main.go` + `graph/handlers.go`) and
 The site is a good candidate for a profile system, with three important caveats that the recon clarified:
 
 1. **Three chrome variants** — the profile system must explicitly scope across public, `/app/*`, and `/hive` (see observation 5).
-2. **`/hive` under the Transpara profile is an iframe** — not a proxy, not a rebuild. The iframe loads `http://nucbuntu:8080/telemetry/` and the dashboard handles its own auth via cookie. Under the lovyou-ai profile, `/hive` keeps its existing Phase Timeline.
+2. **`/hive` under the Transpara profile is an iframe** — not a proxy, not a rebuild. The iframe loads `http://nucbuntu:8080/telemetry/` and the dashboard handles its own auth via cookie. Under the transpara-ai profile, `/hive` keeps its existing Phase Timeline.
 3. **API and ingest routes are profile-invisible** — they return JSON or redirects, never HTML, and the profile's overrides registry should explicitly exclude them from any layout-wrap behavior.
 
 The next artifact — **Display Profile System — Architecture & Strategy** — lays out the profile-system shape and the migration plan. The third artifact covers the Transpara profile's specific look-and-feel. The fourth is the wireframes. The fifth is the home-page prototype.

@@ -72,7 +72,7 @@ But ~40 hardcoded hex values still appear throughout the codebase,
 shadowing the tokens. Before we introduce profile-swap machinery in
 Phase 3, the CSS has to consistently reference tokens, not raw hex.
 Otherwise a profile swap would miss those 40 spots and the Transpara
-skin would leak lovyou-ai colors.
+skin would leak transpara-ai colors.
 
 SCOPE
 
@@ -177,7 +177,7 @@ PASS 3 — VERIFY
    - False positives in comments (acceptable)
 7. Visual regression: launch the site locally and screenshot at
    least three representative routes in both themes. Currently
-   the site is single-theme (lovyou-ai dark), so screenshot in
+   the site is single-theme (transpara-ai dark), so screenshot in
    the current theme only:
    - `/` (home)
    - `/hive` (Phase Timeline)

@@ -43,7 +43,7 @@ output will be used to produce v0.3.0 corrections to design artifacts
 CONTEXT
 I've produced five design artifacts for refactoring the site at
 http://nucbuntu/ into a profile-driven system that supports multiple
-visual identities (lovyou-ai today, Transpara next, others later). The
+visual identities (transpara-ai today, Transpara next, others later). The
 artifacts assume a specific stack, theming approach, and /hive wiring
 strategy. Before I commit to the 8-step migration plan in Artifact 02 §6,
 I need ground truth: what does the actual codebase look like?
@@ -124,7 +124,7 @@ A.4 Route map (verify Artifact 01)
 A.5 /hive route — current implementation
 - Locate the `/hive` handler and template.
 - What does it render today? (The design says "Phase Timeline editorial
-  page" under lovyou-ai profile.)
+  page" under transpara-ai profile.)
 - Is there any existing proxy / iframe / API-call logic?
 - What data does it consume?
 
@@ -328,4 +328,4 @@ The biggest risk in our current design is Artifact 02 §7 (the three `/hive` wir
 
 If any of those assumptions is wrong, the recommendation flips to the iframe approach (Option 2) or — worst case — forces the API-only rebuild (Option 3, currently listed as roadmap). The recon settles this before you burn days on the wrong branch.
 
-Secondary risk: the theming-surface grep. If the lovyou-ai site already uses CSS custom properties extensively, Phase 1 of the migration plan is two days, not five. If it has 400+ hardcoded hex values spread across Go templates, Phase 1 is more like a week. Either way, knowing is cheaper than guessing.
+Secondary risk: the theming-surface grep. If the transpara-ai site already uses CSS custom properties extensively, Phase 1 of the migration plan is two days, not five. If it has 400+ hardcoded hex values spread across Go templates, Phase 1 is more like a week. Either way, knowing is cheaper than guessing.

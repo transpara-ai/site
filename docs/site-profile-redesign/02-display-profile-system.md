@@ -16,11 +16,11 @@
 | 0.1.0 | 2026-04-20 | Initial profile-system design: five-concern profile abstraction (identity · theme · layout · nav · route overrides), request-time resolution flow, 8-step migration plan, three `/hive` wiring options, sequencing estimate (~2–3 weeks), open questions. |
 | 0.2.0 | 2026-04-20 | Dark mode support: profile YAML theme block restructured into `light` / `dark` / `shared` palette sub-blocks with `defaultMode`, `toggle`, and `persistence` keys. Added `themeToggle: true` to nav config. Comparison table (§10) gained a Theme model row. |
 | 0.2.1 | 2026-04-20 | Added standard Transpara frontmatter and revision history table. No content change. |
-| 0.3.0 | 2026-04-20 | Recon corrections: **§7 `/hive` wiring recommendation flipped** from Option 1 (reverse proxy + shell injection) to Option 2 (iframe to `work:8080/telemetry/`) — the dashboard's hard-coded embed-detection regex `/\/telemetry\/?$/` makes Option 1 a silent-failure footgun at `/hive`. Iframe wins on CORS (already `*`), cookies (same-origin inside frame), embed detection (pathname matches natively), and asset rewriting (none needed). **§6 migration plan expanded**: profile scope now covers all three chrome surfaces (public / `/app` / `/hive`) per CEO decision; Tailwind build step added to Phase 1 (replacing in-browser CDN with a real CSS file); Phase 1 token-extraction scope reduced (site already has a 12-token `@theme` block). **§4 YAML updated**: `routeOverrides."/hive"` now `iframe()` not `proxy()`. **§10 table updated**: `/hive` row now captures both lovyou-ai (Phase Timeline) and Transpara (iframe to work-server) realities. Sequencing re-estimate: ~3–4 weeks for full-refactor scope. |
+| 0.3.0 | 2026-04-20 | Recon corrections: **§7 `/hive` wiring recommendation flipped** from Option 1 (reverse proxy + shell injection) to Option 2 (iframe to `work:8080/telemetry/`) — the dashboard's hard-coded embed-detection regex `/\/telemetry\/?$/` makes Option 1 a silent-failure footgun at `/hive`. Iframe wins on CORS (already `*`), cookies (same-origin inside frame), embed detection (pathname matches natively), and asset rewriting (none needed). **§6 migration plan expanded**: profile scope now covers all three chrome surfaces (public / `/app` / `/hive`) per CEO decision; Tailwind build step added to Phase 1 (replacing in-browser CDN with a real CSS file); Phase 1 token-extraction scope reduced (site already has a 12-token `@theme` block). **§4 YAML updated**: `routeOverrides."/hive"` now `iframe()` not `proxy()`. **§10 table updated**: `/hive` row now captures both transpara-ai (Phase Timeline) and Transpara (iframe to work-server) realities. Sequencing re-estimate: ~3–4 weeks for full-refactor scope. |
 
 ---
 
-> **Purpose.** Define the profile-system abstraction that lets the site at `http://nucbuntu/` host multiple visual identities — today **lovyou-ai**, tomorrow **Transpara**, later others — without forking routes or duplicating pages.
+> **Purpose.** Define the profile-system abstraction that lets the site at `http://nucbuntu/` host multiple visual identities — today **transpara-ai**, tomorrow **Transpara**, later others — without forking routes or duplicating pages.
 >
 > **Key idea.** A display profile is a *presentation-layer bundle* that is orthogonal to routes and data. The URL space, the data sources, and the component tree do not change between profiles. Only the shell, tokens, navigation, and a small page-override registry do.
 
@@ -28,7 +28,7 @@
 
 ## 1. Executive summary
 
-The site is today a single-theme, manifesto-driven web presence for **lovyou.ai**. Routes, data, and layout are all hand-authored against one visual language. We want to keep the routes and the data, and make the **look, layout, logos, and navigation** swappable per profile.
+The site is today a single-theme, manifesto-driven web presence for **transpara.ai**. Routes, data, and layout are all hand-authored against one visual language. We want to keep the routes and the data, and make the **look, layout, logos, and navigation** swappable per profile.
 
 The first new profile, **Transpara**, is modelled on `https://docs.transpara.com` — a light, docs-style shell — and reuses the existing live dashboard at `http://nucbuntu:8080/telemetry` as its `/hive` page.
 
@@ -41,7 +41,7 @@ The key idea: a profile is a declarative bundle of identity, theme tokens, layou
 ```mermaid
 graph LR
     subgraph Current["Current site"]
-        A["nucbuntu/ — lovyou.ai<br/>Dark · editorial · manifesto<br/>2-tier nav (header + wide footer)"]
+        A["nucbuntu/ — transpara.ai<br/>Dark · editorial · manifesto<br/>2-tier nav (header + wide footer)"]
     end
     subgraph Target["Transpara visual target"]
         B["docs.transpara.com<br/>Docusaurus-based<br/>Light · card-grid home<br/>Home / Guides / Changelog<br/>Minimal footer"]
@@ -67,7 +67,7 @@ graph LR
 
 ### What each source contributes
 
-- **lovyou-ai (current) — nucbuntu.** Dark, editorial, manifesto-driven. Two-tier nav (header: Discover / Hive / Agents / Blog / My Work — footer adds Market, Knowledge, Activity, Search, Reference, GitHub). Routes are content-driven and already templated; `/app/<space>/<view>` is a shell, and most marketing pages are prose.
+- **transpara-ai (current) — nucbuntu.** Dark, editorial, manifesto-driven. Two-tier nav (header: Discover / Hive / Agents / Blog / My Work — footer adds Market, Knowledge, Activity, Search, Reference, GitHub). Routes are content-driven and already templated; `/app/<space>/<view>` is a shell, and most marketing pages are prose.
 - **docs.transpara.com.** Docusaurus-based, clean and corporate. Top navbar with a small square logo + wordmark, three top-level items (Home / Guides / Changelog), a visible search box (`ctrl-K`), a single-column hero with a banner strip (*"Explore the new Transpara Platform"*), and a grid of card links below (Get started, Using Visual KPI, Design, Interfaces, Setup and Installation, Tutorial, FAQ). Footer is a single copyright line. Light background, neutral text, restrained accent color, sans-serif throughout.
 - **`nucbuntu:8080/telemetry`.** Already titled *"Transpara-AI — Telemetry"*. A live dashboard: Expansion Phases, Agent Status (12 agents), Hive Health (event rate, severity, mode), Event Stream, Concept Stack, Repository Strata, Role Tiers, Governance, plus a connect-API modal. Ideal substrate for the Transpara profile's `/hive`.
 
@@ -168,8 +168,8 @@ profile: transpara
 The existing profile stays unchanged in substance, but gains the explicit three-shell declaration so the system treats both profiles uniformly:
 
 ```yaml
-profile: lovyou-ai
-  identity: { name: "lovyou.ai", wordmark: "lovyou.ai", logoDark: ... }
+profile: transpara-ai
+  identity: { name: "transpara.ai", wordmark: "transpara.ai", logoDark: ... }
   theme:    { mode: dark, tokens: { --bg: "#0b0c0f", --primary: "#d5ff3f", --font-heading: "serif-display", ... } }
   layout:
     shells:
@@ -192,7 +192,7 @@ flowchart LR
     Resolve -->|host/subdomain| A["transpara.nucbuntu → transpara"]
     Resolve -->|cookie| B["profile=transpara → transpara"]
     Resolve -->|query param| C["?profile=transpara → transpara"]
-    Resolve -->|fallback| D["default → lovyou-ai"]
+    Resolve -->|fallback| D["default → transpara-ai"]
 
     A --> Context["Profile context<br/>tokens · nav · layout · overrides"]
     B --> Context
@@ -220,9 +220,9 @@ flowchart LR
 flowchart TD
     Step1["1 · Token refactor<br/>Rewrite ~40 hardcoded hex values<br/>to var(--color-...)<br/>12-token @theme block already exists<br/><i>~1–2 days</i>"]
     Step2["2 · Tailwind build step<br/>Replace @tailwindcss/browser CDN<br/>with real Tailwind build<br/>Output real CSS file<br/>Update Dockerfile + deploy.sh<br/><i>~2–3 days</i>"]
-    Step3["3 · Profile context<br/>Resolve once per request<br/>Expose profile/tokens/nav/shells/overrides<br/>Default: lovyou-ai"]
-    Step4["4 · Abstract THREE shells<br/>Public: ShellEditorial (lovyou) vs ShellDocs (Transpara)<br/>App: ShellAppDense (tokens swap, structure preserved)<br/>Hive: ShellPhaseTimeline (lovyou) vs ShellHiveIframe (Transpara)"]
-    Step5["5 · Logo + wordmark component<br/>Resolve from profile.identity<br/>Remove hard-coded 'lovyou.ai' strings"]
+    Step3["3 · Profile context<br/>Resolve once per request<br/>Expose profile/tokens/nav/shells/overrides<br/>Default: transpara-ai"]
+    Step4["4 · Abstract THREE shells<br/>Public: ShellEditorial (transpara) vs ShellDocs (Transpara)<br/>App: ShellAppDense (tokens swap, structure preserved)<br/>Hive: ShellPhaseTimeline (transpara) vs ShellHiveIframe (Transpara)"]
+    Step5["5 · Logo + wordmark component<br/>Resolve from profile.identity<br/>Remove hard-coded 'transpara.ai' strings"]
     Step6["6 · Route-visibility map<br/>Each route declares<br/>which profiles expose it in which tier"]
     Step7["7 · Page overrides registry<br/>(profile, route) → component | iframe<br/>Falls back to default page if unset"]
     Step8["8 · Build the Transpara profile<br/>All three surfaces (public · app · hive)<br/>Ship behind ?profile=transpara flag<br/>Dark mode toggle included"]
@@ -243,18 +243,18 @@ flowchart TD
 
 1. **Token refactor.** Recon confirms the site already has a 12-token `@theme` block in `views/layout.templ`. The remaining work is rewriting ~15 raw hex values in prose classes + ~25 in `graph/views.templ` to use `var(--color-...)`. Much smaller than originally estimated. *~1–2 days.*
 2. **Tailwind build step.** Replace `@tailwindcss/browser` CDN with a real Tailwind build. This is a scope-add per CEO decision: it unlocks proper CSS purging, predictable output, and avoids the FOUC risk of client-side JIT. Touches `Makefile`, `Dockerfile`, `deploy.sh`, and introduces a `static/css/site.css` artifact. *~2–3 days.*
-3. **Introduce a Profile context.** Resolve the active profile once per request from host/subdomain/cookie/query. Expose `profile`, `tokens`, `nav`, `shells`, `overrides` to every page. Default: `lovyou-ai`. Plumbs through templ components via a context struct.
+3. **Introduce a Profile context.** Resolve the active profile once per request from host/subdomain/cookie/query. Expose `profile`, `tokens`, `nav`, `shells`, `overrides` to every page. Default: `transpara-ai`. Plumbs through templ components via a context struct.
 4. **Abstract the three shells.** Recon revealed three distinct chrome templates that the profile system must all address:
-   - **Public** (`views.Layout`): split into `ShellEditorial` (lovyou-ai dark manifesto) and `ShellDocs` (Transpara docs-like).
+   - **Public** (`views.Layout`): split into `ShellEditorial` (transpara-ai dark manifesto) and `ShellDocs` (Transpara docs-like).
    - **App** (`graph.themeBlock + graph.simpleHeader`): one `ShellAppDense` shared across profiles — only tokens swap.
-   - **Hive** (`graph.HivePage`): split into `ShellPhaseTimeline` (lovyou-ai Phase Timeline — current) and `ShellHiveIframe` (Transpara thin wrapper hosting iframe to `work:8080/telemetry/`).
+   - **Hive** (`graph.HivePage`): split into `ShellPhaseTimeline` (transpara-ai Phase Timeline — current) and `ShellHiveIframe` (Transpara thin wrapper hosting iframe to `work:8080/telemetry/`).
 
    Each shell reads `profile.layout.shells.<surface>` and selects. Header/footer become data-driven from `profile.nav`.
-5. **Logo + wordmark component.** One component that resolves the asset from `profile.identity`; remove hard-coded `"lovyou.ai"` strings from templates.
+5. **Logo + wordmark component.** One component that resolves the asset from `profile.identity`; remove hard-coded `"transpara.ai"` strings from templates.
 6. **Route-visibility map.** Each route declares which profiles expose it in which nav tier. Routes still exist for everyone — they just aren't advertised if a profile omits them. Applies to user-facing routes only; API/ingest routes in Artifact 01 §7.2 are invisible to the profile system.
-7. **Page overrides registry.** A lookup `(profile, route) → component | iframe`. Falls back to the default page if unset. This is how `/hive` gets an iframe under Transpara without touching lovyou-ai's Phase Timeline.
+7. **Page overrides registry.** A lookup `(profile, route) → component | iframe`. Falls back to the default page if unset. This is how `/hive` gets an iframe under Transpara without touching transpara-ai's Phase Timeline.
 8. **Build the Transpara profile** across all three surfaces: docs-style home + card grid (public), re-themed productivity chrome (`/app/*`), iframe mission-control (`/hive`). Dark mode toggle ships in the header. Initial release behind `?profile=transpara` flag before promoting to a subdomain like `transpara.nucbuntu` or a default for certain hosts.
-9. **Test matrix.** Snapshot representative routes × profiles × themes: `/`, `/hive`, `/blog`, `/blog/<post>`, `/reference`, `/discover`, `/app/demo/board` × {lovyou-ai, Transpara} × {light, dark, system}. Lock in visual diffs.
+9. **Test matrix.** Snapshot representative routes × profiles × themes: `/`, `/hive`, `/blog`, `/blog/<post>`, `/reference`, `/discover`, `/app/demo/board` × {transpara-ai, Transpara} × {light, dark, system}. Lock in visual diffs.
 
 ### On `/app/**` under the full-refactor scope
 
@@ -315,9 +315,9 @@ The embedded dashboard renders in its own color scheme, which does **not** follo
 
 Recommendation: ship Option 2 with the seam, file a roadmap issue for dashboard theme-param support.
 
-### Lovyou-ai `/hive` is unaffected
+### Transpara-ai `/hive` is unaffected
 
-Under the lovyou-ai profile, `/hive` keeps its current live Phase Timeline page (DB + hive loop state + recent commits via `git log`). No iframe, no proxy, no changes. The profile's `routeOverrides` mechanism swaps implementations cleanly: `(transpara, /hive) → iframe wrapper`; `(lovyou-ai, /hive) → existing handleHive`.
+Under the transpara-ai profile, `/hive` keeps its current live Phase Timeline page (DB + hive loop state + recent commits via `git log`). No iframe, no proxy, no changes. The profile's `routeOverrides` mechanism swaps implementations cleanly: `(transpara, /hive) → iframe wrapper`; `(transpara-ai, /hive) → existing handleHive`.
 
 ---
 
@@ -343,26 +343,26 @@ Questions resolved by CEO decisions on 2026-04-20 are marked ✓. Still-open ite
 
 **Resolved:**
 
-- ✓ **`/hive` semantics under Transpara** — replace Phase Timeline with Mission Control iframe. Phase Timeline stays under lovyou-ai profile.
+- ✓ **`/hive` semantics under Transpara** — replace Phase Timeline with Mission Control iframe. Phase Timeline stays under transpara-ai profile.
 - ✓ **Profile system scope** — covers all three chrome surfaces (public, `/app`, `/hive`). Full-refactor scope.
 - ✓ **Tailwind strategy** — introduce a proper Tailwind build step in Phase 1. Output a real CSS file; retire the browser-JIT CDN.
 - ✓ **Telemetry co-location** — recon confirms work-server runs on nucbuntu at `:8080`, reachable via loopback from the site server. Iframe wiring works today.
 
 **Still open — decisions needed before Phase 6:**
 
-1. **Profile selection in production** — subdomain (`transpara.nucbuntu` vs `lovyou.nucbuntu`), host header, cookie, or query param? This changes the plumbing in Step 3. Default proposal: query param `?profile=transpara` for v1 testing, promote to subdomain for GA.
+1. **Profile selection in production** — subdomain (`transpara.nucbuntu` vs `transpara.nucbuntu`), host header, cookie, or query param? This changes the plumbing in Step 3. Default proposal: query param `?profile=transpara` for v1 testing, promote to subdomain for GA.
 2. **Transpara brand assets** — logo / wordmark / favicon: ready assets, or plain text wordmark + placeholder mark for v1? The HTML prototype (Artifact 05) ships with a procedural "T" mark as a placeholder.
 3. **Dashboard theme coupling** — the embedded Mission Control dashboard renders in its own fixed color scheme and does not follow the Transpara theme toggle. Accept the seam for v1, or prioritize a work-server PR to support `?theme=light|dark` on the dashboard URL?
-4. **Lovyou-ai explicit shell declarations** — the updated profile YAML (§4) now shows `shells: { public: editorial, app: app-dense, hive: phase-timeline }` for lovyou-ai. The `app-dense` and `phase-timeline` shell names are new labels; no code change required for lovyou-ai, just explicit naming. Confirm this naming is acceptable.
+4. **Transpara-ai explicit shell declarations** — the updated profile YAML (§4) now shows `shells: { public: editorial, app: app-dense, hive: phase-timeline }` for transpara-ai. The `app-dense` and `phase-timeline` shell names are new labels; no code change required for transpara-ai, just explicit naming. Confirm this naming is acceptable.
 5. **Cleanup fallout** — `summary/.github/workflows/deploy.yml` still POSTs to the removed `/telemetry/refresh` endpoint. File an issue now, or defer?
 
 ---
 
-## 10. What is intentionally different vs. lovyou-ai
+## 10. What is intentionally different vs. transpara-ai
 
 The contrast should be visible at a glance:
 
-| Aspect | lovyou-ai | Transpara |
+| Aspect | transpara-ai | Transpara |
 |--------|-----------|-----------|
 | **Theme model** | Dark only, no toggle | Light default + dark + system, with toggle |
 | **Background** | Near-black | White (light) / deep navy `#0b1220` (dark) |

@@ -14,7 +14,7 @@
 | Version | Date | Description |
 |---------|------|-------------|
 | 0.1.1 | 2026-04-21 | Path correction: Companion references to the Phase 1 and Phase 2 findings docs prefixed with `docs/site-profile-redesign/` to reflect the relocation done in PR #21. (Precondition paths were already corrected inside PR #21 itself.) No scope change. |
-| 0.1.0 | 2026-04-21 | Initial Phase 3 prompt. Scope: introduce a `Profile` abstraction with request-time resolution via pluggable resolver (CEO decision #4), plumb `Profile` through context to templ layouts as struct param, register two profiles (`lovyou-ai`, `transpara`) with identical rendering, gate behind `PROFILE_SYSTEM_DISABLED` feature flag. No visual change. **Commit trailer convention updated:** Paperclip is removed from this project; Phase 3 uses `Co-Authored-By: transpara-ai <transpara-ai@transpara.com>`. |
+| 0.1.0 | 2026-04-21 | Initial Phase 3 prompt. Scope: introduce a `Profile` abstraction with request-time resolution via pluggable resolver (CEO decision #4), plumb `Profile` through context to templ layouts as struct param, register two profiles (`transpara-ai`, `transpara`) with identical rendering, gate behind `PROFILE_SYSTEM_DISABLED` feature flag. No visual change. **Commit trailer convention updated:** Paperclip is removed from this project; Phase 3 uses `Co-Authored-By: transpara-ai <transpara-ai@transpara.com>`. |
 
 ---
 
@@ -86,7 +86,7 @@ interface with QueryParamResolver + DefaultResolver implementations,
 write resolution middleware that attaches Profile to context.Context,
 update templ layout components to accept *Profile as a struct param,
 update handlers to extract Profile from context and pass it through.
-Register two profiles (lovyou-ai, transpara) with identical rendering.
+Register two profiles (transpara-ai, transpara) with identical rendering.
 Gate the entire system behind a PROFILE_SYSTEM_DISABLED feature flag.
 No visual change of any kind.
 
@@ -104,14 +104,14 @@ construction. This is the entire value of this phase.
 
 The feature flag exists as a cheap revert. If Phase 3 ships and
 anything downstream misbehaves, PROFILE_SYSTEM_DISABLED=1 falls back
-to always-lovyou-ai behavior without code changes or rollback.
+to always-transpara-ai behavior without code changes or rollback.
 
 SCOPE
 
 IN SCOPE:
 - New package at repo root: profile/
     profile/profile.go      — Profile struct + registry + two
-                              profiles (lovyou-ai default, transpara)
+                              profiles (transpara-ai default, transpara)
     profile/resolver.go     — Resolver interface + QueryParamResolver
                               + DefaultResolver + chain composition
     profile/context.go      — unexported context key type,
@@ -228,7 +228,7 @@ Produce phase-3-profile-context-plan.md at the repo root covering:
    - Interface shape.
    - QueryParamResolver behavior: reads ?profile=<slug>, returns
      the matching Profile or nil if unknown.
-   - DefaultResolver behavior: always returns lovyou-ai.
+   - DefaultResolver behavior: always returns transpara-ai.
    - Chain composition: a slice of resolvers tried in order,
      first non-nil wins. Default is terminal.
 
@@ -245,7 +245,7 @@ PASS 2 — EDIT
 Suggested commit sequence (order matters for bisect-ability):
 
   1. `feat(profile): add Profile struct and registry`
-     (profile/profile.go — struct definition, lovyou-ai and
+     (profile/profile.go — struct definition, transpara-ai and
       transpara profiles registered, default selector, no wiring)
 
   2. `feat(profile): add Resolver interface and implementations`
@@ -299,14 +299,14 @@ PASS 3 — VERIFY
    does not touch Phase 1 or Phase 2 surfaces.
 8. Local smoke test, documented step by step in findings §E:
    a. Boot the site locally. Request `/` with no query param.
-      Verify lovyou-ai profile is attached to the request
+      Verify transpara-ai profile is attached to the request
       context (temporary debug log acceptable; remove before
       final commit).
    b. Request `/?profile=transpara`. Verify transpara profile
       attaches.
-   c. Request `/?profile=nonsense`. Verify fallback to lovyou-ai
+   c. Request `/?profile=nonsense`. Verify fallback to transpara-ai
       (DefaultResolver terminates the chain).
-   d. Set PROFILE_SYSTEM_DISABLED=1, restart. Verify lovyou-ai
+   d. Set PROFILE_SYSTEM_DISABLED=1, restart. Verify transpara-ai
       attaches regardless of query param.
 9. Byte-identical HTML check (the bar for "no visual change"):
    `curl -s http://localhost:PORT/ > /tmp/a.html`
@@ -334,7 +334,7 @@ Commit format: Conventional commits, lowercase subject, imperative:
 
   Introduce profile/profile.go with the Profile struct (Slug, Name
   fields), a package-level registry of known profiles, and two
-  entries: lovyou-ai (default) and transpara. No wiring to HTTP or
+  entries: transpara-ai (default) and transpara. No wiring to HTTP or
   handlers in this commit — struct and registry only.
 
   Co-Authored-By: transpara-ai <transpara-ai@transpara.com>
@@ -532,7 +532,7 @@ If Phase 3 feels underwhelming to review, it's probably correctly scoped. If it 
 
 **Risk 4 — Templ output non-determinism.** The byte-identical-HTML bar assumes templ output is deterministic. It should be — but if any component uses `time.Now()`, a request ID, a random value, or any other non-stable input in rendered HTML, the diff won't be clean. Pass 1 audit should flag any such components. If found, the verification bar softens to "structurally identical modulo timestamps/request IDs," documented in findings §F.
 
-**Risk 5 — Feature-flag behavior on `/hive`.** CEO decision #1 makes `/hive` under Transpara an iframe to `work:8080/telemetry/`. When `PROFILE_SYSTEM_DISABLED=1`, the site is always lovyou-ai, which means `/hive` should render the lovyou-ai chrome around the iframe (current behavior). Pass 3 verification must include the disabled-flag case on `/hive` specifically to confirm no regression.
+**Risk 5 — Feature-flag behavior on `/hive`.** CEO decision #1 makes `/hive` under Transpara an iframe to `work:8080/telemetry/`. When `PROFILE_SYSTEM_DISABLED=1`, the site is always transpara-ai, which means `/hive` should render the transpara-ai chrome around the iframe (current behavior). Pass 3 verification must include the disabled-flag case on `/hive` specifically to confirm no regression.
 
 **Risk 6 — Co-author trailer change.** Phases 1 and 2 used `Co-Authored-By: Paperclip <noreply@paperclip.ing>`. Phase 3 switches to `Co-Authored-By: transpara-ai <transpara-ai@transpara.com>` because Paperclip is removed from this project. Claude Code inheriting pattern-matching from Phase 1/2 findings may reach for the old trailer. The prompt explicitly forbids this, but it's worth watching the first commit to confirm compliance.
 
@@ -544,8 +544,8 @@ If Claude Code hits any of these, findings §F. Same discipline as Phases 1 and 
 
 ## One tactical note on the two-profile registration
 
-The `transpara` profile in Phase 3 is a placeholder — same `Name` field value as `lovyou-ai`, identical rendering, no visual or structural differences. It exists only so the resolver has a valid non-default target to resolve to. This is deliberate: it proves the chain works end-to-end without introducing any Phase 6 scope.
+The `transpara` profile in Phase 3 is a placeholder — same `Name` field value as `transpara-ai`, identical rendering, no visual or structural differences. It exists only so the resolver has a valid non-default target to resolve to. This is deliberate: it proves the chain works end-to-end without introducing any Phase 6 scope.
 
-The temptation will be to put `"Transpara"` in the `Name` field of the Transpara profile. Don't — if `Name` is used anywhere in rendering (a page `<title>`, a footer, an `alt` attribute), the byte-identical-HTML check will fail. For Phase 3, both profiles carry whatever `Name` value the current site uses (likely the lovyou-ai display name). Phase 4 is where `Name` differentiates, because Phase 4 is where layouts begin branching on profile.
+The temptation will be to put `"Transpara"` in the `Name` field of the Transpara profile. Don't — if `Name` is used anywhere in rendering (a page `<title>`, a footer, an `alt` attribute), the byte-identical-HTML check will fail. For Phase 3, both profiles carry whatever `Name` value the current site uses (likely the transpara-ai display name). Phase 4 is where `Name` differentiates, because Phase 4 is where layouts begin branching on profile.
 
 Tiny thing, easy to overlook, catches the byte-identical check in an ugly way if missed.
