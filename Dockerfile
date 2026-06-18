@@ -28,7 +28,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 # Build uses vendored deps (populated by `go mod vendor` on the host before
-# `fly deploy`). The vendor dir is required because go.mod has a `replace`
+# building this image). The vendor dir is required because go.mod has a `replace`
 # directive pointing at the sibling eventgraph repo, which is outside the
 # Docker build context.
 COPY . .

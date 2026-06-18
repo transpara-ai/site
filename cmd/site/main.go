@@ -912,7 +912,7 @@ func main() {
 		views.KnowledgePage(vc, stateFilter, query, profile.FromContext(r.Context())).Render(r.Context(), w)
 	})
 
-	// Health check for Fly.io.
+	// Health check (on-prem service / systemd probe).
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "ok")
@@ -1000,7 +1000,7 @@ func main() {
 // ────────────────────────────────────────────────────────────────────
 
 // canonicalHost redirects non-canonical hostnames to lovyou.ai.
-// Skips health checks (Fly probes via internal IP) and localhost.
+// Skips health checks (probed via internal IP) and localhost.
 func canonicalHost(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/health" {
@@ -1056,7 +1056,9 @@ func isProductionEnvironment(getenv func(string) string) bool {
 			return false
 		}
 	}
-	return strings.TrimSpace(getenv("FLY_APP_NAME")) != ""
+	// On-prem only: production must be declared explicitly via an env var above;
+	// default to non-production. No cloud-provider env inference.
+	return false
 }
 
 // ────────────────────────────────────────────────────────────────────
