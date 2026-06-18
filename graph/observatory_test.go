@@ -3,6 +3,7 @@ package graph
 import (
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -322,6 +323,75 @@ func TestFetchObservatoryTraceEscapesPathAndVerifiesTask(t *testing.T) {
 	// UUID-shaped IDs (the real case) pass the allowlist.
 	if !obsTaskIDPattern.MatchString("0197524e-9b7c-7cc3-b8c3-1a2b3c4d5e6f") {
 		t.Error("UUID task IDs must pass the allowlist")
+	}
+}
+
+func TestHandleOpsObservatoryRendersReadOnlyProjection(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/telemetry/status":
+			w.Write([]byte(`{"agents":[],"hive":{},"timestamp":"2026-06-18T08:00:00Z"}`))
+		case "/telemetry/agents/history":
+			w.Write([]byte(`{"agents":[]}`))
+		case "/telemetry/overview":
+			w.Write([]byte(`{"actors":[],"agents":[],"phases":[],"recent_events":[],"timestamp":"2026-06-18T08:00:00Z"}`))
+		case "/telemetry/pipeline/report":
+			w.Write([]byte(`{"report":null}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+	t.Setenv("WORK_API_KEY", "")
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/observatory", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/observatory: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Observatory",
+		"Civilization vitals",
+		"Live event pulse",
+		"Authority projection",
+		"read-only projection",
+		"EventGraph remains truth",
+		"decisions happen on governed surfaces only",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/observatory: body does not contain %q", want)
+		}
+	}
+	surface := body
+	if start := strings.Index(surface, "Civilization vitals"); start >= 0 {
+		surface = surface[start:]
+	}
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	for _, forbidden := range []*regexp.Regexp{
+		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
+		regexp.MustCompile(`(?i)hx-(post|put|patch|delete)\s*=`),
+		regexp.MustCompile(`(?i)data-authority-action\s*=`),
+	} {
+		if forbidden.MatchString(surface) {
+			t.Fatalf("GET /ops/observatory: body contains mutation control marker %q", forbidden)
+		}
+	}
+	for _, forbidden := range []string{"Certify release", "Approve authority", "Execute work"} {
+		if strings.Contains(surface, forbidden) {
+			t.Fatalf("GET /ops/observatory: body contains mutation control text %q", forbidden)
+		}
 	}
 }
 
