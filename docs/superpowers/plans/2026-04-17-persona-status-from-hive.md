@@ -628,7 +628,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/lovyou-ai/site/graph/personas"
+	"github.com/transpara-ai/site/graph/personas"
 )
 ```
 
@@ -723,7 +723,7 @@ Add the import at the top of `graph/store_test.go` if not already present:
 ```go
 import (
 	// ...existing imports...
-	"github.com/lovyou-ai/site/graph/personas"
+	"github.com/transpara-ai/site/graph/personas"
 )
 ```
 

@@ -28,6 +28,6 @@ dev:
 	templ generate --watch &
 	go run ./cmd/site/
 
+# on-prem deploy — private to Transpara-AI; build + restart the systemd user service (see deploy.sh)
 deploy:
-	go mod vendor
-	fly deploy
+	./deploy.sh

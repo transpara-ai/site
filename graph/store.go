@@ -4489,7 +4489,7 @@ func (s *Store) SeedDemoSpace(ctx context.Context) string {
 	var agentUserID string
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO users (id, google_id, email, name, kind)
-		VALUES ($1, $2, 'demo@agent.lovyou.ai', 'Demo Agent', 'agent')
+		VALUES ($1, $2, 'demo@agent.transpara.ai', 'Demo Agent', 'agent')
 		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
 		RETURNING id`,
 		newID(), demoGoogleID,
@@ -4502,7 +4502,7 @@ func (s *Store) SeedDemoSpace(ctx context.Context) string {
 	// Create the demo space.
 	space, err := s.CreateSpace(ctx,
 		DemoSpaceSlug,
-		"lovyou.ai Demo",
+		"transpara.ai Demo",
 		"A live preview — tasks, posts, and agent conversations you can explore without signing in.",
 		agentUserID,
 		SpaceProject,
@@ -4618,7 +4618,7 @@ func (s *Store) EnsureAgentsSpace(ctx context.Context) *Space {
 	var ownerID string
 	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO users (id, google_id, email, name, kind)
-		VALUES ($1, $2, 'agents@system.lovyou.ai', 'Agents', 'agent')
+		VALUES ($1, $2, 'agents@system.transpara.ai', 'Agents', 'agent')
 		ON CONFLICT (google_id) DO UPDATE SET name = EXCLUDED.name
 		RETURNING id`,
 		newID(), agentsGoogleID,

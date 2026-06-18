@@ -160,4 +160,4 @@ Next deep dive: the Research Graph — what happens when scientific knowledge is
 
 ---
 
-_This is Post 17 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: [The Social Graph](/blog/the-social-graph) (Layer 3 deep dive) Post 11: [Thirteen Graphs, One Infrastructure](/blog/thirteen-graphs-one-infrastructure) (the overview of all 13 graphs) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together._
+_This is Post 17 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: [The Social Graph](/blog/the-social-graph) (Layer 3 deep dive) Post 11: [Thirteen Graphs, One Infrastructure](/blog/thirteen-graphs-one-infrastructure) (the overview of all 13 graphs) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together._

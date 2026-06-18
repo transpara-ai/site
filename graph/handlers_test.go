@@ -1339,7 +1339,7 @@ func TestHandlerConveneOp(t *testing.T) {
 		store.db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, row.id)
 		_, err := store.db.ExecContext(ctx,
 			`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-			row.id, "agent:"+row.name, row.name+"@test.lovyou.ai", row.name)
+			row.id, "agent:"+row.name, row.name+"@test.transpara.ai", row.name)
 		if err != nil {
 			t.Fatalf("create agent %s: %v", row.name, err)
 		}
@@ -1538,7 +1538,7 @@ func TestHandlerQuestionAutoAnswer(t *testing.T) {
 	db.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, agentID)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
-		agentID, "agent:"+agentName, agentName+"@test.lovyou.ai", agentName)
+		agentID, "agent:"+agentName, agentName+"@test.transpara.ai", agentName)
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}

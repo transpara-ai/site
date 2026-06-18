@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 make dev        # Development: starts templ --watch + go run
 make build      # Production: templ generate + go build -o site ./cmd/site/
 make run        # Build then run the binary
-make deploy     # fly deploy
+make deploy     # on-prem deploy — build + restart the systemd user service (see deploy.sh)
 
 templ generate  # Regenerate *_templ.go from *.templ files (required after any .templ edit)
 
@@ -42,7 +42,7 @@ Use `docker-compose.yml` for local PostgreSQL. The app fails to start if require
 - **Templ** for type-safe HTML templating
 - **Tailwind CSS v4** + **HTMX v2** via CDN (inline in `views/layout.templ`)
 - **PostgreSQL** via `lib/pq`
-- **Fly.io** deployment (Sydney, 8GB/2CPU)
+- **On-prem** deployment — private to Transpara-AI, behind the firewall; build + a `systemd --user` service (`deploy.sh`). NOT publicly deployed; no commercial cloud.
 
 ### Key Packages
 

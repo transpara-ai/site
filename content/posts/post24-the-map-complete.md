@@ -18,7 +18,7 @@ This post is the complete guide. Every post, what it covers, and where it fits i
 
 ### Post 1 -- 20 Primitives and a Late Night
 
-A social platform (LovYou) needed trust infrastructure. 20 primitives -- consent, transparency, dignity, accountability. A multi-agent AI system (hive0) left running autonomously for two days derived 44 foundation primitives on its own.
+A social platform (Transpara) needed trust infrastructure. 20 primitives -- consent, transparency, dignity, accountability. A multi-agent AI system (hive0) left running autonomously for two days derived 44 foundation primitives on its own.
 
 ### Post 2 -- From 44 to 200
 
@@ -130,7 +130,7 @@ Identity as emergent behaviour, not issued credential. You are what you've done 
 
 ### Post 22 -- The Relationship Graph (Layer 9: Relationship)
 
-The layer LovYou was built for. Dating apps that profit from loneliness. Consent as continuous architecture. Vulnerability as protected state. Attunement as visible pattern. Human-AI relationships modelled honestly with visible asymmetries. Betrayal, repair, and forgiveness as primitives no technology has ever modelled.
+The layer Transpara was built for. Dating apps that profit from loneliness. Consent as continuous architecture. Vulnerability as protected state. Attunement as visible pattern. Human-AI relationships modelled honestly with visible asymmetries. Betrayal, repair, and forgiveness as primitives no technology has ever modelled.
 
 ### Post 23 -- The Community Graph (Layer 10: Population)
 
@@ -168,4 +168,4 @@ We built a map. The map might match the territory. The only way to find out is t
 
 ---
 
-*The code is open source: github.com/mattxo/mind-zero-five. Start here: Post 1 -- 20 Primitives and a Late Night. Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*The code is open source: github.com/mattxo/mind-zero-five. Start here: Post 1 -- 20 Primitives and a Late Night. Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

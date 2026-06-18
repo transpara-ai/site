@@ -879,7 +879,7 @@ templ SpaceOnboarding(user ViewUser) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<title>Get Started — lovyou.ai</title>
+			<title>Get Started — transpara.ai</title>
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
@@ -898,7 +898,7 @@ templ SpaceOnboarding(user ViewUser) {
 					<form action="/app/new" method="POST" class="space-y-4 text-left">
 						<div>
 							<label for="name" class="block text-sm font-medium text-warm-muted mb-1">Space name</label>
-							<input type="text" id="name" name="name" placeholder="e.g. lovyou.ai" required autofocus
+							<input type="text" id="name" name="name" placeholder="e.g. transpara.ai" required autofocus
 								class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint"/>
 						</div>
 						<div>
@@ -1278,7 +1278,7 @@ templ inviteTeammatesCard(spaceSlug string, inviteToken string) {
 						id="invite-link-input"
 						type="text"
 						readonly
-						value={ "https://lovyou.ai/join/" + inviteToken }
+						value={ "https://transpara.ai/join/" + inviteToken }
 						class="flex-1 min-w-0 px-2.5 py-1.5 bg-surface border border-edge rounded-lg text-xs text-warm-secondary font-mono focus:outline-none focus:ring-1 focus:ring-brand truncate"
 					/>
 					<button
@@ -4025,7 +4025,7 @@ templ InviteCodeRow(inv InviteCode, slug string) {
 	<div id={ "invite-" + inv.Token } class="flex items-center gap-2 py-2.5 border-b border-edge last:border-0">
 		<input
 			type="text"
-			value={ "https://lovyou.ai/join/" + inv.Token }
+			value={ "https://transpara.ai/join/" + inv.Token }
 			readonly
 			onclick="this.select()"
 			class="flex-1 min-w-0 px-2 py-1.5 bg-elevated border border-edge rounded text-xs text-warm font-mono focus:outline-none focus:ring-1 focus:ring-brand"
@@ -5163,7 +5163,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 					<p class="text-sm text-warm-muted mb-3">Include your API key as a Bearer token in the Authorization header:</p>
 					<pre class="text-xs bg-elevated rounded-lg p-4 text-warm-secondary overflow-x-auto"><code>curl -H "Authorization: Bearer lv_..." \
      -H "Accept: application/json" \
-     https://lovyou.ai/app/your-space/feed</code></pre>
+     https://transpara.ai/app/your-space/feed</code></pre>
 				</div>
 			</main>
 			@simpleFooter(p)

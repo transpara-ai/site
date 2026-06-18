@@ -18,7 +18,7 @@
 | work       | `main`                  | `bab6149` 2026-04-20 feat(work-server): embed telemetry dashboard from summary (#19) | yes    |
 | summary    | `main`                  | `fd4f089` 2026-04-19 feat(dashboard): consume phases[].agents from backend (#50) | yes    |
 
-All three remotes verified: `origin = github.com/transpara-ai/<repo>.git` (safe forks). `upstream = lovyou-ai/*` is present on site + work with push URL sabotaged to `DISABLE_PUSH_TO_UPSTREAM`. No org-boundary violation in recon scope.
+All three remotes verified: `origin = github.com/transpara-ai/<repo>.git` (safe forks). `upstream = transpara-ai/*` is present on site + work with push URL sabotaged to `DISABLE_PUSH_TO_UPSTREAM`. No org-boundary violation in recon scope.
 
 ---
 
@@ -94,7 +94,7 @@ I could not cross-check directly against Artifact 01 (not attached). Below is th
 
 ### A.6 Deployment + config
 
-- **Production:** Fly.io via `fly deploy`. `fly.toml` declares app = `lovyou-ai`, region = `syd`, VM = 8 GB / 2 perf CPUs, HTTP 80/443 with force-HTTPS, `/health` check every 30s.
+- **Production:** Fly.io via `fly deploy`. `fly.toml` declares app = `transpara-ai`, region = `syd`, VM = 8 GB / 2 perf CPUs, HTTP 80/443 with force-HTTPS, `/health` check every 30s.
 - **Local (nucbuntu-style):** `deploy.sh` runs `templ generate` → `go build` → `setcap` (port 80) → `systemctl --user restart site`. Systemd unit is **not versioned in the repo** — lives at `/usr/lib/systemd/user/site.service` on the host.
 - **Env vars at startup:** `PORT` (default 8080), `DATABASE_URL` (optional), `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `AUTH_REDIRECT_URL` (optional — anonymous if unset), `HIVE_WEBHOOK_URL` (optional), `CLAUDE_CODE_OAUTH_TOKEN` (optional), `HIVE_REPO_PATH` (default `../hive`).
 - **No config files** — 12-factor, env-var only.
@@ -199,7 +199,7 @@ All telemetry routes registered in `cmd/work-server/main.go:736–753`:
 
 - **No shared design-system / tokens / theme package across the three repos.** Each repo styles independently.
 - `site` does NOT consume any sibling repo via Go modules.
-- `work` imports `github.com/lovyou-ai/eventgraph/go` with a local `replace` to `../eventgraph/go` — unrelated to styling.
+- `work` imports `github.com/transpara-ai/eventgraph/go` with a local `replace` to `../eventgraph/go` — unrelated to styling.
 - `summary` has no Go/npm dependencies at all (zero-dep dashboard.html).
 - **No "profile", "theme", "brand", or "skin" concept exists in any repo.** The 12-token `@theme` block in site's `layout.templ` is the closest thing, but it's one hard-coded palette, not a profile system. The design's proposal to add one is net-new, not duplicating anything.
 

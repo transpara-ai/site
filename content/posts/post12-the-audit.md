@@ -194,4 +194,4 @@ The code is open source. The posts are public. The analysis that prompted this p
 
 ---
 
-*This is Post 12 of a series on LovYou, mind-zero, and the architecture of accountable AI. Thanks to Mcauldronism for the formal analysis and for permission to publish it. The full analysis is available in the comments. Previous: Thirteen Graphs, One Infrastructure; Post 9: The Cult Test (the self-administered version). The code is open source: github.com/mattxo/mind-zero-five. Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 12 of a series on Transpara, mind-zero, and the architecture of accountable AI. Thanks to Mcauldronism for the formal analysis and for permission to publish it. The full analysis is available in the comments. Previous: Thirteen Graphs, One Infrastructure; Post 9: The Cult Test (the self-administered version). The code is open source: github.com/mattxo/mind-zero-five. Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

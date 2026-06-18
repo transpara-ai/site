@@ -144,4 +144,4 @@ Bad self-governance that's transparent and escapable is structurally better than
 
 ---
 
-_This is Post 16 of a series on LovYou, mind-zero, and accountable AI architecture. Previous: The Market Graph (Layer 2 deep dive) Post 11: Thirteen Graphs, One Infrastructure (all 13 graphs overview) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together._
+_This is Post 16 of a series on Transpara, mind-zero, and accountable AI architecture. Previous: The Market Graph (Layer 2 deep dive) Post 11: Thirteen Graphs, One Infrastructure (all 13 graphs overview) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together._

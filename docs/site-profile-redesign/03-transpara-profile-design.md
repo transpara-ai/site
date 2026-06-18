@@ -83,7 +83,7 @@ These do not change between themes.
 | Token | Value | Role |
 |-------|-------|------|
 | `--radius` | `6px` | Default corner radius |
-| `--density` | `comfortable` | Slightly denser than lovyou-ai |
+| `--density` | `comfortable` | Slightly denser than transpara-ai |
 | `--font-sans` | `"Inter", system-ui, sans-serif` | Body + headings |
 | `--font-mono` | `"JetBrains Mono", ui-monospace` | Code blocks, metric values |
 | `--font-heading` | `var(--font-sans)` | **No editorial serif** — same Inter family |
@@ -129,7 +129,7 @@ flowchart LR
 - **User clicks toggle** — cycles through three states: `light → dark → system`. *System* means "follow OS preference, update live if it changes". This is the same pattern GitHub, Vercel, Linear, and docs.transpara.com's peers all use.
 - **Persistence** — the user's choice lives in `localStorage` under a namespaced key (`transpara.theme`). Cookies are acceptable if SSR theming is required (avoids FOUC on first paint).
 - **No theme flash on load** — a tiny inline script in `<head>` reads the stored value and sets `data-theme` **before** the stylesheet renders. This is a ~500-byte inline script; the cost of getting it wrong is a very ugly white-to-dark flash on every page load.
-- **Persistence is per-profile** — the lovyou-ai profile has no toggle and stays dark. Storing a Transpara preference does not affect lovyou-ai. Keys are namespaced.
+- **Persistence is per-profile** — the transpara-ai profile has no toggle and stays dark. Storing a Transpara preference does not affect transpara-ai. Keys are namespaced.
 
 ### 3.3 Toggle UI
 
@@ -280,7 +280,7 @@ For v1, accept the seam. File a roadmap issue against `work`.
 - Iframe fills the remaining viewport.
 - Minimal single-line footer.
 
-**Lovyou-ai profile is unaffected.** Under lovyou-ai, `/hive` keeps its current live Phase Timeline (DB + hive loop state + `git log`). No iframe, no proxy. The profile override registry swaps implementations cleanly.
+**Transpara-ai profile is unaffected.** Under transpara-ai, `/hive` keeps its current live Phase Timeline (DB + hive loop state + `git log`). No iframe, no proxy. The profile override registry swaps implementations cleanly.
 
 ### 6.3 `/blog` and `/blog/*` — Docs-style articles
 
@@ -304,7 +304,7 @@ Same layout as `/blog/*`. Left tree nav reflects the reference taxonomy:
 
 ### 6.5 `/app/**` — Full profile participation
 
-Under the Transpara profile, `/app/*` pages use the **`AppDenseShell`** template — the same structural layout as lovyou-ai's `graph.themeBlock + graph.simpleHeader`, but with Transpara tokens swapped in and the theme toggle surfaced in the header.
+Under the Transpara profile, `/app/*` pages use the **`AppDenseShell`** template — the same structural layout as transpara-ai's `graph.themeBlock + graph.simpleHeader`, but with Transpara tokens swapped in and the theme toggle surfaced in the header.
 
 **What changes under Transpara:**
 - Palette swaps to Transpara tokens (teal primary, Inter typography, light-default/dark-optional).
@@ -337,7 +337,7 @@ This is the pragmatic meaning of "full profile participation" from the CEO's sco
 | `DocsSidebar` | Left tree nav for `/reference/**` and long `/blog/*` | ✓ |
 | `OnPageTOC` | Sticky right-side TOC, populated from headings | ✓ |
 | `HiveIframeShell` | Thin Transpara shell wrapping an iframe to `work:8080/telemetry/` — page-header strip with title, live dot, wall clock, host; iframe fills the body | ✓ for the shell chrome; iframe content is theme-fixed (see §6.2) |
-| `AppDenseShell` | Productivity chrome for `/app/*` — equivalent to lovyou-ai's `graph.themeBlock + simpleHeader`, tokens swap per profile | ✓ |
+| `AppDenseShell` | Productivity chrome for `/app/*` — equivalent to transpara-ai's `graph.themeBlock + simpleHeader`, tokens swap per profile | ✓ |
 | `CodeBlock` | Monospace code with syntax highlighting | ✓ — swap syntax theme on toggle |
 | `FooterMinimal` | Single line: © · GitHub · Status | ✓ |
 
@@ -453,11 +453,11 @@ Ships in `<head>` before the stylesheet to avoid a theme flash on initial paint:
 
 ---
 
-## 9. What is intentionally different vs lovyou-ai
+## 9. What is intentionally different vs transpara-ai
 
 The contrast is visible at a glance:
 
-| Aspect | lovyou-ai | Transpara |
+| Aspect | transpara-ai | Transpara |
 |--------|-----------|-----------|
 | **Theme model** | Dark only, no toggle | Light default + dark + system, with toggle |
 | **Background** | Near-black | White (light) / deep navy `#0b1220` (dark) |
@@ -492,7 +492,7 @@ The profile has landed when all of the following are true.
 - [ ] Network tab shows live SSE connection to `/telemetry/sse` on the work-server origin.
 - [ ] Site theme toggle still works and re-themes the Transpara shell around the iframe.
 - [ ] Dashboard content inside the iframe does NOT follow the toggle — documented seam (see §6.2).
-- [ ] Lovyou-ai profile `/hive` unchanged — still renders Phase Timeline, not an iframe.
+- [ ] Transpara-ai profile `/hive` unchanged — still renders Phase Timeline, not an iframe.
 
 **Theme toggle:**
 - [ ] Toggle icon is visible in the header on every page.

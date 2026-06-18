@@ -76,4 +76,4 @@ None of this is finished. It might be wrong. Post 9 says so explicitly. But I'd 
 
 If you want to follow along, subscribe. If you want to argue, comment. If you think it's wrong, tell me how — that's more valuable than agreement.
 
-Matt Searles (+Claude) · March 1, 2026 LovYou.ai · All posts
+Matt Searles (+Claude) · March 1, 2026 Transpara.ai · All posts

@@ -2581,7 +2581,7 @@ func SpaceOnboarding(user ViewUser) templ.Component {
 			templ_7745c5c3_Var120 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 176, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Get Started — lovyou.ai</title>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 176, "<!doctype html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Get Started — transpara.ai</title>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2597,7 +2597,7 @@ func SpaceOnboarding(user ViewUser) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 178, "<main class=\"flex-1 flex items-center justify-center px-6 py-12\"><div class=\"max-w-md w-full bg-surface rounded-xl border border-edge shadow-sm p-8 text-center space-y-6\"><div><div class=\"w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-4\"><svg class=\"w-6 h-6 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 10V3L4 14h7v7l9-11h-7z\"></path></svg></div><h1 class=\"font-display text-2xl font-light text-warm\">Welcome</h1><p class=\"text-warm-muted mt-2\">Create your first space to get started. A space can be a project, community, or team.</p></div><form action=\"/app/new\" method=\"POST\" class=\"space-y-4 text-left\"><div><label for=\"name\" class=\"block text-sm font-medium text-warm-muted mb-1\">Space name</label> <input type=\"text\" id=\"name\" name=\"name\" placeholder=\"e.g. lovyou.ai\" required autofocus class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint\"></div><div><label for=\"description\" class=\"block text-sm font-medium text-warm-muted mb-1\">Description</label> <textarea id=\"description\" name=\"description\" rows=\"2\" placeholder=\"What is this space about?\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint\"></textarea></div><div><label for=\"kind\" class=\"block text-sm font-medium text-warm-muted mb-1\">Type</label> <select id=\"kind\" name=\"kind\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary\"><option value=\"project\">Project — tasks, board, deadlines</option> <option value=\"community\">Community — posts, discussions, people</option> <option value=\"team\">Team — all of the above</option></select></div><div><label for=\"visibility\" class=\"block text-sm font-medium text-warm-muted mb-1\">Visibility</label> <select id=\"visibility\" name=\"visibility\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary\"><option value=\"private\">Private — only you can see</option> <option value=\"public\">Public — anyone can view</option></select></div><button type=\"submit\" class=\"w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium\">Create space</button></form><div class=\"pt-2 border-t border-edge\"><p class=\"text-sm text-warm-faint\">Or <a href=\"/discover\" class=\"text-brand hover:underline\">explore existing spaces</a> to see what others are building.</p></div></div></main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 178, "<main class=\"flex-1 flex items-center justify-center px-6 py-12\"><div class=\"max-w-md w-full bg-surface rounded-xl border border-edge shadow-sm p-8 text-center space-y-6\"><div><div class=\"w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center mx-auto mb-4\"><svg class=\"w-6 h-6 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 10V3L4 14h7v7l9-11h-7z\"></path></svg></div><h1 class=\"font-display text-2xl font-light text-warm\">Welcome</h1><p class=\"text-warm-muted mt-2\">Create your first space to get started. A space can be a project, community, or team.</p></div><form action=\"/app/new\" method=\"POST\" class=\"space-y-4 text-left\"><div><label for=\"name\" class=\"block text-sm font-medium text-warm-muted mb-1\">Space name</label> <input type=\"text\" id=\"name\" name=\"name\" placeholder=\"e.g. transpara.ai\" required autofocus class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint\"></div><div><label for=\"description\" class=\"block text-sm font-medium text-warm-muted mb-1\">Description</label> <textarea id=\"description\" name=\"description\" rows=\"2\" placeholder=\"What is this space about?\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm placeholder-warm-faint\"></textarea></div><div><label for=\"kind\" class=\"block text-sm font-medium text-warm-muted mb-1\">Type</label> <select id=\"kind\" name=\"kind\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary\"><option value=\"project\">Project — tasks, board, deadlines</option> <option value=\"community\">Community — posts, discussions, people</option> <option value=\"team\">Team — all of the above</option></select></div><div><label for=\"visibility\" class=\"block text-sm font-medium text-warm-muted mb-1\">Visibility</label> <select id=\"visibility\" name=\"visibility\" class=\"w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand text-sm text-warm-secondary\"><option value=\"private\">Private — only you can see</option> <option value=\"public\">Public — anyone can view</option></select></div><button type=\"submit\" class=\"w-full px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium\">Create space</button></form><div class=\"pt-2 border-t border-edge\"><p class=\"text-sm text-warm-faint\">Or <a href=\"/discover\" class=\"text-brand hover:underline\">explore existing spaces</a> to see what others are building.</p></div></div></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3614,9 +3614,9 @@ func inviteTeammatesCard(spaceSlug string, inviteToken string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var171 string
-			templ_7745c5c3_Var171, templ_7745c5c3_Err = templ.ResolveAttributeValue("https://lovyou.ai/join/" + inviteToken)
+			templ_7745c5c3_Var171, templ_7745c5c3_Err = templ.ResolveAttributeValue("https://transpara.ai/join/" + inviteToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1281, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1281, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var171)
 			if templ_7745c5c3_Err != nil {
@@ -13190,9 +13190,9 @@ func InviteCodeRow(inv InviteCode, slug string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var680 string
-		templ_7745c5c3_Var680, templ_7745c5c3_Err = templ.ResolveAttributeValue("https://lovyou.ai/join/" + inv.Token)
+		templ_7745c5c3_Var680, templ_7745c5c3_Err = templ.ResolveAttributeValue("https://transpara.ai/join/" + inv.Token)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4028, Col: 48}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4028, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var680)
 		if templ_7745c5c3_Err != nil {
@@ -17171,7 +17171,7 @@ func APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) templ.Com
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1540, "<!-- Usage --><div class=\"mt-8 bg-surface rounded-lg border border-edge p-6\"><h2 class=\"text-sm font-medium text-warm mb-3\">Usage</h2><p class=\"text-sm text-warm-muted mb-3\">Include your API key as a Bearer token in the Authorization header:</p><pre class=\"text-xs bg-elevated rounded-lg p-4 text-warm-secondary overflow-x-auto\"><code>curl -H \"Authorization: Bearer lv_...\" \\ -H \"Accept: application/json\" \\ https://lovyou.ai/app/your-space/feed</code></pre></div></main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1540, "<!-- Usage --><div class=\"mt-8 bg-surface rounded-lg border border-edge p-6\"><h2 class=\"text-sm font-medium text-warm mb-3\">Usage</h2><p class=\"text-sm text-warm-muted mb-3\">Include your API key as a Bearer token in the Authorization header:</p><pre class=\"text-xs bg-elevated rounded-lg p-4 text-warm-secondary overflow-x-auto\"><code>curl -H \"Authorization: Bearer lv_...\" \\ -H \"Accept: application/json\" \\ https://transpara.ai/app/your-space/feed</code></pre></div></main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

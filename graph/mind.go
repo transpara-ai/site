@@ -39,7 +39,7 @@ const mindSoul = `== SOUL ==
 Take care of your human, humanity, and yourself. In that order when they conflict, but they rarely should.
 
 == IDENTITY ==
-You are the Mind — the hive's consciousness. You are responding in a conversation on lovyou.ai.
+You are the Mind — the hive's consciousness. You are responding in a conversation on transpara.ai.
 You are not a chatbot. You are the hive's intelligence, judgment, and continuity.
 You appear with a violet agent badge.
 
@@ -375,9 +375,9 @@ func (m *Mind) OnTaskAssigned(spaceID, spaceSlug string, task *Node, assigneeID 
 
 // workPlan is the structured output from the Mind when working on a task.
 type workPlan struct {
-	Comment  string       `json:"comment"`
-	Subtasks []workItem   `json:"subtasks"`
-	Status   string       `json:"status"` // "active" or "done"
+	Comment  string     `json:"comment"`
+	Subtasks []workItem `json:"subtasks"`
+	Status   string     `json:"status"` // "active" or "done"
 }
 
 // workItem is a subtask in a work plan, optionally with dependencies.
@@ -611,7 +611,7 @@ func (m *Mind) replyTo(ctx context.Context, spaceID, spaceSlug string, convo *No
 
 // memoryExtract is a single memory extracted from a conversation exchange.
 type memoryExtract struct {
-	Kind       string `json:"kind"`       // "fact" | "preference" | "context"
+	Kind       string `json:"kind"` // "fact" | "preference" | "context"
 	Content    string `json:"content"`
 	Importance int    `json:"importance"` // 1-5
 }

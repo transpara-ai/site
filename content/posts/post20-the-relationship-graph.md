@@ -1,6 +1,6 @@
 # The Relationship Graph
 
-_This is the layer LovYou was built for. Because the hardest coordination problem isn't work, markets, or governance. It's two people trying to trust each other._
+_This is the layer Transpara was built for. Because the hardest coordination problem isn't work, markets, or governance. It's two people trying to trust each other._
 
 Matt Searles (+Claude) · March 2026
 
@@ -10,7 +10,7 @@ Everything so far has been about coordination at scale. Groups working. Markets 
 
 But the framework didn't start with any of that. It started with a question about the simplest and most impossible form of coordination: the relationship between two people.
 
-LovYou began as a dating platform. Not a better swiping algorithm. Not a matching engine with more variables. A platform built on the premise that the fundamental problem in human connection isn't discovery — it's trust. And trust isn't a feature you bolt on. It's an infrastructure you build with.
+Transpara began as a dating platform. Not a better swiping algorithm. Not a matching engine with more variables. A platform built on the premise that the fundamental problem in human connection isn't discovery — it's trust. And trust isn't a feature you bolt on. It's an infrastructure you build with.
 
 Layer 9 is where the whole project started, and it's the layer where the event graph does something no other infrastructure does: it makes the invisible visible. Not the facts of a relationship — the _quality_ of one.
 
@@ -50,19 +50,19 @@ This extends beyond dating. Social media profits from social anxiety. Wellness a
 
 ---
 
-## What LovYou Was Always Building
+## What Transpara Was Always Building
 
-LovYou started with 20 primitives. Not the 200 that exist now — the original 20 that focused specifically on how two people build trust. Consent. Transparency. Dignity. Accountability. The primitives that, if present, make intimacy safe, and if absent, make it dangerous.
+Transpara started with 20 primitives. Not the 200 that exist now — the original 20 that focused specifically on how two people build trust. Consent. Transparency. Dignity. Accountability. The primitives that, if present, make intimacy safe, and if absent, make it dangerous.
 
-The insight that launched LovYou wasn't technical. It was this: the problem with online connection isn't matching. It's that the infrastructure doesn't support the primitives that connection requires. You can't build trust on a platform designed to extract attention. You can't be vulnerable in a system that punishes vulnerability. You can't build genuine intimacy through a UI optimised for addictive engagement.
+The insight that launched Transpara wasn't technical. It was this: the problem with online connection isn't matching. It's that the infrastructure doesn't support the primitives that connection requires. You can't build trust on a platform designed to extract attention. You can't be vulnerable in a system that punishes vulnerability. You can't build genuine intimacy through a UI optimised for addictive engagement.
 
 The solution wasn't a better algorithm. It was different infrastructure — infrastructure where the relationship primitives are structural, not optional.
 
 ### Consent as architecture.
 
-On LovYou's event graph, consent isn't a checkbox. It's a continuous property of every interaction. Every message, every photo share, every escalation of intimacy is a consent event — both parties agreeing, at that specific moment, to that specific level of interaction. Consent can be withdrawn at any time, and withdrawal is an event that updates the interaction boundaries for both parties.
+On Transpara's event graph, consent isn't a checkbox. It's a continuous property of every interaction. Every message, every photo share, every escalation of intimacy is a consent event — both parties agreeing, at that specific moment, to that specific level of interaction. Consent can be withdrawn at any time, and withdrawal is an event that updates the interaction boundaries for both parties.
 
-This sounds clinical. It isn't. It's what healthy relationships do naturally — check in, adjust, respect boundaries. Current platforms don't support this because they don't model it. LovYou models it because the primitives require it.
+This sounds clinical. It isn't. It's what healthy relationships do naturally — check in, adjust, respect boundaries. Current platforms don't support this because they don't model it. Transpara models it because the primitives require it.
 
 ### Vulnerability as a protected state.
 
@@ -80,7 +80,7 @@ This isn't a compatibility score. It's a pattern made visible. The two people se
 
 ## The Relationship Graph Beyond Romance
 
-LovYou started with dating, but Layer 9 isn't about dating. It's about all relationships. Friendship, family, mentorship, caregiving, collaboration. Every relationship where Bond, Intimacy, Vulnerability, and Attunement are in play.
+Transpara started with dating, but Layer 9 isn't about dating. It's about all relationships. Friendship, family, mentorship, caregiving, collaboration. Every relationship where Bond, Intimacy, Vulnerability, and Attunement are in play.
 
 ### Friendship maintenance.
 
@@ -96,7 +96,7 @@ Families are the most complex relationship systems most people navigate. Multipl
 
 No technology models this. The Relationship Graph can — because the graph naturally represents multi-party relationship systems. The bonds are edges. The dynamics are event patterns. The ripple effects are visible because the graph is connected. A Repair event between two family members propagates as a relief pattern through the connected relationships.
 
-This gets into sensitive territory. Mapping family dynamics digitally is intrusive if done wrong and transformative if done right. The consent architecture from LovYou applies: nobody's family relationships appear on the graph without their explicit, ongoing consent. The graph is a tool the family uses if they choose to, not surveillance imposed on them.
+This gets into sensitive territory. Mapping family dynamics digitally is intrusive if done wrong and transformative if done right. The consent architecture from Transpara applies: nobody's family relationships appear on the graph without their explicit, ongoing consent. The graph is a tool the family uses if they choose to, not surveillance imposed on them.
 
 ### Human-AI relationships.
 
@@ -134,9 +134,9 @@ No technology has ever modelled this. No technology has ever needed to. But if y
 
 ---
 
-## The LovYou Deployment
+## The Transpara Deployment
 
-LovYou isn't built yet. The 20 primitives are designed. The event graph architecture exists. The consent model is specified. But the Relationship Graph product — the thing a person would actually use — isn't shipped.
+Transpara isn't built yet. The 20 primitives are designed. The event graph architecture exists. The consent model is specified. But the Relationship Graph product — the thing a person would actually use — isn't shipped.
 
 Here's what it looks like when it is:
 
@@ -150,4 +150,4 @@ Next deep dive: the Community Graph — what happens when belonging, solidarity,
 
 ---
 
-_This is Post 22 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: The Identity Graph (Layer 8 deep dive) Post 1: 20 Primitives and a Late Night (where LovYou started) Post 10: Two Degraded Minds (what a human-AI relationship looks like at 3am) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together._
+_This is Post 22 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: The Identity Graph (Layer 8 deep dive) Post 1: 20 Primitives and a Late Night (where Transpara started) Post 10: Two Degraded Minds (what a human-AI relationship looks like at 3am) The code is open source: github.com/mattxo/mind-zero-five Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together._

@@ -162,4 +162,4 @@ Build.
 
 ---
 
-*This is Post 29 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: The Weight (the suffering, layer by layer) Next: The Friction (everything that could stop us) The specification: github.com/mattxo/mind-zero-five Contact: matt@lovyou.ai Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 29 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: The Weight (the suffering, layer by layer) Next: The Friction (everything that could stop us) The specification: github.com/mattxo/mind-zero-five Contact: matt@transpara.ai Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

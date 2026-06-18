@@ -1,6 +1,6 @@
 # Values All the Way Down
 
-## How the mind-zero / LovYou architecture embeds ethics in data structures, not disclaimers — and what it says about the person who built it.
+## How the mind-zero / Transpara architecture embeds ethics in data structures, not disclaimers — and what it says about the person who built it.
 
 ---
 
@@ -316,6 +316,6 @@ Build it. See who shows up.
 
 ---
 
-*This is Post 33 of a series on LovYou, mind-zero, and the architecture of accountable AI. The code is open source: github.com/mattxo/mind-zero-five. The primitive derivation: github.com/mattxo/mind-zero.*
+*This is Post 33 of a series on Transpara, mind-zero, and the architecture of accountable AI. The code is open source: github.com/mattxo/mind-zero-five. The primitive derivation: github.com/mattxo/mind-zero.*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

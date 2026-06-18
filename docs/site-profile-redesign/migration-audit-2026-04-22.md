@@ -78,15 +78,15 @@ Root `*.md`: only `CLAUDE.md`. Clean. PR #26 relocated the Phase-3 files out of 
 | `go vet ./...` | 2 pre-existing warnings at `graph/store.go:3543-3544` (self-assignment of `dc.SpaceSlug` / `dc.SpaceName`); predate Phase 4; no new warnings |
 | `TestBoundedDiff_LayoutAcrossProfiles` (isolated) | PASS — normalises `data-profile` attribute, `BrandName`, `LogoPath`, `AccentColor` |
 
-## Hardcoded `lovyou.ai` in Templates
+## Hardcoded `transpara.ai` in Templates
 
 | File:Line | String | Classification |
 |---|---|---|
-| `graph/views.templ:864` | `<title>Get Started — lovyou.ai</title>` | DEAD CODE — `SpaceOnboarding`, no handler call site (§G exclusion) |
-| `graph/views.templ:883` | `placeholder="e.g. lovyou.ai"` | DEAD CODE — same `SpaceOnboarding` form input |
-| `graph/views.templ:1265` | `value={ "https://lovyou.ai/join/" + inviteToken }` | EXPECTED — real invite URL (noted Phase 4 §A as "revisit when per-profile domains land") |
-| `graph/views.templ:4012` | `value={ "https://lovyou.ai/join/" + inv.Token }` | EXPECTED — same invite pattern, different flow |
-| `graph/views.templ:5150` | `https://lovyou.ai/app/your-space/feed` | EXPECTED — documentation example endpoint in `APIKeysView` curl snippet |
+| `graph/views.templ:864` | `<title>Get Started — transpara.ai</title>` | DEAD CODE — `SpaceOnboarding`, no handler call site (§G exclusion) |
+| `graph/views.templ:883` | `placeholder="e.g. transpara.ai"` | DEAD CODE — same `SpaceOnboarding` form input |
+| `graph/views.templ:1265` | `value={ "https://transpara.ai/join/" + inviteToken }` | EXPECTED — real invite URL (noted Phase 4 §A as "revisit when per-profile domains land") |
+| `graph/views.templ:4012` | `value={ "https://transpara.ai/join/" + inv.Token }` | EXPECTED — same invite pattern, different flow |
+| `graph/views.templ:5150` | `https://transpara.ai/app/your-space/feed` | EXPECTED — documentation example endpoint in `APIKeysView` curl snippet |
 
 No `SHOULD BE PROFILE-DRIVEN` items on `main`. The only hardcoded branding that actually reaches render output is inside `graph.simpleFooter` (nav links + tagline), flagged separately in the PR #30 code review.
 
@@ -94,7 +94,7 @@ No `SHOULD BE PROFILE-DRIVEN` items on `main`. The only hardcoded branding that 
 
 | Profile | BrandName | Logo exists on disk | Accent | HeaderNav | FooterNav | Copy |
 |---|---|---|---|---|---|---|
-| `lovyou-ai` | `lovyou.ai` | `static/logo-lovyou.svg` ✓ | `#e8a0b8` | field not defined on `main` | field not defined on `main` | field not defined on `main` |
+| `transpara-ai` | `transpara.ai` | `static/logo-transpara.svg` ✓ | `#e8a0b8` | field not defined on `main` | field not defined on `main` | field not defined on `main` |
 | `transpara` | `Transpara` | `static/logo-transpara.svg` ✓ | `#0ea5e9` | field not defined on `main` | field not defined on `main` | field not defined on `main` |
 
 Both logo files exist at the paths the registry references. No empty or missing fields within Phase 4 scope. `HeaderNav` / `FooterNav` / `Copy` land with PR #30.
@@ -103,11 +103,11 @@ Both logo files exist at the paths the registry references. No empty or missing 
 
 | Repo | Relevant hits | Assessment |
 |---|---|---|
-| `hive` | Internal loop / council docs reference `lovyou.ai` | clean — no user-facing templates |
+| `hive` | Internal loop / council docs reference `transpara.ai` | clean — no user-facing templates |
 | `work` | Design docs mention the civilization; `dashboard/dashboard.html:802` hardcodes `<span class="topbar-brand">Transpara-AI</span>` | clean — dashboard already Transpara-branded (internal mission-control board, not the public site) |
-| `eventgraph` | Blog posts, CODE_OF_CONDUCT, SECURITY reference `lovyou.ai` | clean — public docs reflect the org identity by design; not profile-configurable |
+| `eventgraph` | Blog posts, CODE_OF_CONDUCT, SECURITY reference `transpara.ai` | clean — public docs reflect the org identity by design; not profile-configurable |
 | `agent` | Only agent persona design prompts | clean |
-| `summary` | `dashboard.html:802` shows `Transpara-AI` topbar; `README.md:1` is `# lovyou.ai — Summary`; design docs reference the civilization | clean — static architecture poster, explicitly separate from the profile system per `work/docs/designs/telemetry-mission-control-design-v0.4.1.md:26` ("not the branded LovYou deployment on Fly.io, and not the static GitHub Pages architecture poster") |
+| `summary` | `dashboard.html:802` shows `Transpara-AI` topbar; `README.md:1` is `# transpara.ai — Summary`; design docs reference the civilization | clean — static architecture poster, explicitly separate from the profile system per `work/docs/designs/telemetry-mission-control-design-v0.4.1.md:26` ("not the branded Transpara deployment on Fly.io, and not the static GitHub Pages architecture poster") |
 
 No cross-repo surfaces need the profile system plumbed through. Each external repo has a clear identity and is a separate deployment.
 
@@ -115,13 +115,13 @@ No cross-repo surfaces need the profile system plumbed through. Each external re
 
 Prioritised:
 
-1. **Merge PR #30 (Phase 5 nav + copy + findings).** Gate: address the `simpleFooter` omission flagged in the code-review comment, either by threading `GetFooterNav()` + `GetCopy("tagline", ...)` through `graph.simpleFooter`, or by explicitly scoping it out in the §G comment block / findings doc as intentional. As-is, orphan-page footers under `?profile=transpara` will render lovyou.ai-flavored nav, contradicting the PR's "all three shells" scope claim.
+1. **Merge PR #30 (Phase 5 nav + copy + findings).** Gate: address the `simpleFooter` omission flagged in the code-review comment, either by threading `GetFooterNav()` + `GetCopy("tagline", ...)` through `graph.simpleFooter`, or by explicitly scoping it out in the §G comment block / findings doc as intentional. As-is, orphan-page footers under `?profile=transpara` will render transpara.ai-flavored nav, contradicting the PR's "all three shells" scope claim.
 2. **Clean up stale remote branches on `transpara-ai/site`.** Fourteen remote branches correspond to already-merged PRs and can be deleted. `feat/profile-nav` stays; everything else in the Stale Branches list can go.
 3. **Local branch cleanup on the site checkout.** `git branch -d` the nine merged/abandoned local branches. Keep `main` and `feat/profile-nav`.
 4. **Decide on `SpaceOnboarding`.** Still dead code — hardcoded title, hardcoded placeholder, `@simpleHeader(user, nil)` / `@simpleFooter(nil)`, no handler calls anywhere. Either revive the onboarding flow or delete the template. Carried forward since Phase 4.
 5. **Archive Phase 4 and Phase 5 prompt artifacts.** Prompts for Phases 4 and 5 were supplied inline in-session; prior phases all have a `0N-prompt-<name>.md` archive file. Consider back-filling `10-prompt-phase-4-profile-differentiation.md` and `11-prompt-phase-5-nav-and-copy.md` (or equivalent) for session-continuity.
 6. **Fix `go vet` self-assignment warnings** at `graph/store.go:3543-3544`. Two lines, pre-existing (predate Phase 4). Trivial cleanup in a dedicated commit.
-7. *(Optional, Phase 6+ deferred)* `SubdomainResolver` / `HostHeaderResolver` in `profile/resolver.go` — one Resolver implementation + one-line `Chain` addition in `cmd/site/main.go`. Unblocks `transpara.lovyou.ai` or `transpara.com` deployments. Not urgent until a separate-host deployment actually exists.
+7. *(Optional, Phase 6+ deferred)* `SubdomainResolver` / `HostHeaderResolver` in `profile/resolver.go` — one Resolver implementation + one-line `Chain` addition in `cmd/site/main.go`. Unblocks `transpara.transpara.ai` or `transpara.com` deployments. Not urgent until a separate-host deployment actually exists.
 8. *(Optional)* `Profile.Name` is increasingly redundant — no template reads it post-Phase-4; all callers are tests + registry literals. Small noise-reduction commit.
 
 ---
@@ -130,9 +130,9 @@ Prioritised:
 
 Single-session audit driven by an inline prompt covering four parts:
 
-- **Part 1** — `gh pr list` + `git branch -r` / `git branch` across all six `lovyou-ai-*` repos.
-- **Part 2** — deep audit on `site`: branch hygiene on `main`, doc inventory, repo-root cleanliness, profile-package integrity, full `templ generate` + `go build` + `go test` + `go vet` toolchain, hardcoded-`lovyou.ai` grep across all `*.templ`, bounded-diff test in isolation, registry completeness check.
-- **Part 3** — cross-repo grep for `lovyou.ai` / `brand` / `profile` in `*.go`, `*.md`, `*.html`, `*.tsx`, `*.ts` on the other five repos, filtering for user-facing surfaces.
+- **Part 1** — `gh pr list` + `git branch -r` / `git branch` across all six `transpara-ai-*` repos.
+- **Part 2** — deep audit on `site`: branch hygiene on `main`, doc inventory, repo-root cleanliness, profile-package integrity, full `templ generate` + `go build` + `go test` + `go vet` toolchain, hardcoded-`transpara.ai` grep across all `*.templ`, bounded-diff test in isolation, registry completeness check.
+- **Part 3** — cross-repo grep for `transpara.ai` / `brand` / `profile` in `*.go`, `*.md`, `*.html`, `*.tsx`, `*.ts` on the other five repos, filtering for user-facing surfaces.
 - **Part 4** — structured report.
 
 All checks ran from `main` at `22e612e`. Phase 5 scope (HeaderNav / FooterNav / Copy) is explicitly out of scope for this audit since it's unmerged on `feat/profile-nav` — those findings are documented in the forthcoming `phase-5-nav-and-copy-findings-v0.1.0.md` that lands with PR #30.

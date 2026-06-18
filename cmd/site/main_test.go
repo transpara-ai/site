@@ -19,13 +19,12 @@ func TestValidateProductionAuthConfigFailsClosedWithoutOAuth(t *testing.T) {
 	}
 }
 
-func TestValidateProductionAuthConfigTreatsFlyAsProduction(t *testing.T) {
-	env := map[string]string{
-		"FLY_APP_NAME": "transpara-site",
-	}
+func TestNoEnvDefaultsToNonProduction(t *testing.T) {
+	// With no environment declared, default to non-production (on-prem opt-in).
+	env := map[string]string{}
 
-	if err := validateProductionAuthConfig(mapGetter(env)); err == nil {
-		t.Fatal("expected Fly runtime without OAuth config to fail closed")
+	if err := validateProductionAuthConfig(mapGetter(env)); err != nil {
+		t.Fatalf("empty env must default to non-production: %v", err)
 	}
 }
 

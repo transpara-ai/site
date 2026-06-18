@@ -285,8 +285,8 @@ The full composition grammar specs and the Go reference implementation are open 
 
 ---
 
-*This is Post 36 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
+*This is Post 36 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*
 
 *Next: what happens when a single event chain crosses four grammars — and why existing systems can't even represent the question.*

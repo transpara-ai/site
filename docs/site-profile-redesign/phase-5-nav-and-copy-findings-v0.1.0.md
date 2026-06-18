@@ -22,7 +22,7 @@ Six commits on `feat/profile-nav`, in two thematic halves.
 
 4. **`bef58cd`** — `Copy map[string]string` field on `Profile` plus the nil-AND-nil-map-safe accessor `GetCopy(key, fallback string) string`. Templates supply the inline default; profile only overrides keys it cares about. Default profile leaves `Copy` nil (every key returns fallback → today's text unchanged). Secondary profile populates 6 keys whose tone diverges sharply: `tagline`, `home.hero.subtitle`, `home.subhero.body`, `discover.empty`, `welcome.subtitle`, `apikeys.desc`. +4 tests covering nil receiver, missing key, existing key, and a guard that the default profile has nil `Copy` (so an accidental default override cannot silently change today's rendering).
 5. **`7f7b802`** — Replace 6 hardcoded copy strings in `views/layout.templ`, `views/home.templ`, `views/discover.templ`, and `graph/views.templ` with `p.GetCopy(key, fallback)`. Fallbacks preserve the current default-profile text verbatim so the default render is byte-identical to today. Two of the fallbacks (`apikeys.desc`, `home.subhero.body`) keep `p.GetBrandName()` interpolation — any future profile that omits the override still gets brand-aware copy.
-6. **`369d1f2`** — Extend the bounded-diff test's normaliser with `copyKeysInLayout` map: for each key whose rendered text appears inside the `views.Layout` shell, both the fallback (lovyou render) and the override (read live from `p.Copy[key]` in the transpara render) rewrite to a shared `{{COPY_<key>}}` placeholder. Today only `tagline` appears in `Layout`; the other five Copy keys live inside `Home` / `Discover` / `Welcome` / `APIKeysView` — known coverage gap, called out in the test comment.
+6. **`369d1f2`** — Extend the bounded-diff test's normaliser with `copyKeysInLayout` map: for each key whose rendered text appears inside the `views.Layout` shell, both the fallback (transpara render) and the override (read live from `p.Copy[key]` in the transpara render) rewrite to a shared `{{COPY_<key>}}` placeholder. Today only `tagline` appears in `Layout`; the other five Copy keys live inside `Home` / `Discover` / `Welcome` / `APIKeysView` — known coverage gap, called out in the test comment.
 
 ## B. Profile divergence summary (after Phase 5)
 
@@ -30,19 +30,19 @@ What now legitimately differs between the two registered profiles, ordered by ph
 
 | Surface | Default profile | Secondary profile (`transpara`) | Phase |
 |---|---|---|---|
-| `BrandName` | `lovyou.ai` | `Transpara` | 4 |
-| `LogoPath` | `/static/logo-lovyou.svg` | `/static/logo-transpara.svg` | 4 |
+| `BrandName` | `transpara.ai` | `Transpara` | 4 |
+| `LogoPath` | `/static/logo-transpara.svg` | `/static/logo-transpara.svg` | 4 |
 | `AccentColor` | `#e8a0b8` (pink) | `#0ea5e9` (blue) | 4 |
-| `<title>` suffix | `— lovyou.ai` | `— Transpara` | 4 |
-| `og:site_name` | `lovyou.ai` | `Transpara` | 4 |
-| `<html data-profile>` | `lovyou-ai` | `transpara` | 4 |
+| `<title>` suffix | `— transpara.ai` | `— Transpara` | 4 |
+| `og:site_name` | `transpara.ai` | `Transpara` | 4 |
+| `<html data-profile>` | `transpara-ai` | `transpara` | 4 |
 | `--accent` CSS var | `#e8a0b8` | `#0ea5e9` | 4 |
 | `text-brand` / `bg-brand` / `border-brand` runtime color | pink | blue (via `var(--color-brand: var(--accent, #e8a0b8))`) | 4 |
 | Header nav links | Discover, Hive, Agents, Blog | Discover, Blog | 5 |
 | Footer nav links | Discover, Hive, Agents, Market, Knowledge, Activity, Search, Blog, Reference (+ GitHub) | Discover, Blog (+ GitHub) | 5 |
 | Footer tagline | "Humans and agents, building together." | "Operations intelligence for the people on the floor." | 5 |
 | Home hero subtitle | "Assign tasks to an AI agent…" | "Surface what the plant is telling you, before it costs you a shift…" | 5 |
-| Home sub-hero body | "Autonomous AI agents are building lovyou.ai, live…" | "Autonomous agents reason about your operation in real time…" | 5 |
+| Home sub-hero body | "Autonomous AI agents are building transpara.ai, live…" | "Autonomous agents reason about your operation in real time…" | 5 |
 | Discover empty state | "No public spaces yet." | "No shared workspaces yet." | 5 |
 | Welcome subtitle | "You're in. Let's set up your first space…" | "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data…" | 5 |
 | APIKeysView body | "Authenticate agents and scripts to interact with `<brand>` programmatically." | "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling." | 5 |
@@ -59,9 +59,9 @@ Three things still **identical** across profiles by design (and worth being expl
 | Phase | Normalisation surface | Mechanism |
 |---|---|---|
 | 4 | `BrandName`, `LogoPath`, `AccentColor` | substring `strings.ReplaceAll` per profile |
-| 4 | `Slug`, scoped to the `data-profile` attribute | substring scoped to `data-profile="…"` literal — bare slug would clobber `https://github.com/lovyou-ai` |
+| 4 | `Slug`, scoped to the `data-profile` attribute | substring scoped to `data-profile="…"` literal — bare slug would clobber `https://github.com/transpara-ai` |
 | 5 | Nav links | regex `(?:<a href="/[^"]*" class="hover:text-brand transition-colors[^"]*">[^<]*</a>\s*)+` collapses runs to `{{NAV_LINKS}}` — handles divergent link counts |
-| 5 | Copy overrides in Layout scope | `copyKeysInLayout` map: fallback (lovyou render) and `p.Copy[key]` (transpara render) both rewrite to `{{COPY_<key>}}` |
+| 5 | Copy overrides in Layout scope | `copyKeysInLayout` map: fallback (transpara render) and `p.Copy[key]` (transpara render) both rewrite to `{{COPY_<key>}}` |
 
 The test's two assertions are unchanged:
 1. **Raw outputs DIFFER** — pinned divergence actually happens in render output.
@@ -80,14 +80,14 @@ A new field added to `Profile` that reaches the rendered HTML must either land i
 ## E. Deferred to Phase 6+
 
 - **Data scoping per profile.** Every space / node / op / agent persona is still visible to every profile. If `transpara` needs a disjoint content universe — different default spaces, agents, blog posts — that's a store-layer change. Likely the largest single piece of remaining work.
-- **Auth routing per profile.** Google OAuth login, the invite flow (`https://lovyou.ai/join/<token>` URLs), the API-key bootstrap path, the canonical-host redirect in `cmd/site/main.go` — none of these are profile-aware. Once `transpara` wants its own hostname or a different invite domain, the URL builder + the auth callback URL set both have to become profile-driven.
+- **Auth routing per profile.** Google OAuth login, the invite flow (`https://transpara.ai/join/<token>` URLs), the API-key bootstrap path, the canonical-host redirect in `cmd/site/main.go` — none of these are profile-aware. Once `transpara` wants its own hostname or a different invite domain, the URL builder + the auth callback URL set both have to become profile-driven.
 - **Full theming.** Phase 4 ships one CSS variable (`--accent`) flowing through one Tailwind utility (`text-brand`/`bg-brand`/`border-brand`). State colors (`--color-state-active` / `--color-state-review` / `--color-state-done` / `--color-priority-urgent`), warm palette tokens, font pairing — all stayed on fixed values. Profile-aware *full* theming would extend the same `var(--*)` cascade pattern to those tokens. Cheap once a profile actually needs different state colors.
-- **Host-based resolution.** The resolver chain is `QueryParamResolver` → `DefaultResolver`. A `SubdomainResolver` or `HostHeaderResolver` is one Resolver implementation + one line in the `Chain` literal in `cmd/site/main.go` — Phase 3's whole architectural payoff. Add it the moment a `transpara.lovyou.ai` or `transpara.com` deployment exists.
+- **Host-based resolution.** The resolver chain is `QueryParamResolver` → `DefaultResolver`. A `SubdomainResolver` or `HostHeaderResolver` is one Resolver implementation + one line in the `Chain` literal in `cmd/site/main.go` — Phase 3's whole architectural payoff. Add it the moment a `transpara.transpara.ai` or `transpara.com` deployment exists.
 - **Per-link responsive visibility.** `views.Layout` and `graph.simpleHeader` nav loops dropped the `hidden md:inline` per-link class modifier when they switched to `range p.GetHeaderNav()`. `Agents` and `Blog` (Layout) and `Blog` (simpleHeader) used to hide below the `md` breakpoint; they show at every viewport now. If mobile layout in those shells needs to match the pre-Phase-5 behaviour exactly, an `MdHidden bool` field on `NavItem` is the natural extension. Not done yet because two profiles' nav sets are short enough that mobile crowding isn't a real problem.
 - **Bounded-diff coverage of `appLayout` and `HivePage`.** The bounded-diff test only renders `views.Layout` (the public shell). `appLayout` (the `/app/*` chrome) and `HivePage` (the hive surface) are package-internal in `graph` — adding a parallel leakage alarm inside the `graph` package is straightforward but only worth doing once a divergence in one of those shells matters.
 - **Bounded-diff coverage of out-of-Layout Copy keys.** Only `tagline` appears inside `views.Layout`'s render scope. The other five Copy keys (Home / Discover / Welcome / APIKeysView body sentences) aren't normalised because `Layout` doesn't render them. Per-template diff tests would close this gap; deferred for now.
 - **Real i18n absorbing the Copy registry.** The 6-key `Copy` map is a deliberate pattern proof, not infrastructure. The accessor signature (`GetCopy(key, fallback string) string`) stays compatible with a richer key namespace (e.g. `<lang>.<surface>.<key>`) so a real translation system can absorb the field without changing the call sites.
-- **`SpaceOnboarding` resolution.** Still dead code with `nil` profile plumbed through its `@simpleHeader(user, nil)` / `@simpleFooter(nil)` calls and a hardcoded `<title>Get Started — lovyou.ai</title>`. Either revive it (thread `p`, route the title through `GetBrandName`, possibly add a Copy key for its body) or delete it. Carried forward from Phase 4.
+- **`SpaceOnboarding` resolution.** Still dead code with `nil` profile plumbed through its `@simpleHeader(user, nil)` / `@simpleFooter(nil)` calls and a hardcoded `<title>Get Started — transpara.ai</title>`. Either revive it (thread `p`, route the title through `GetBrandName`, possibly add a Copy key for its body) or delete it. Carried forward from Phase 4.
 
 ## F. Surprises and course-corrections
 

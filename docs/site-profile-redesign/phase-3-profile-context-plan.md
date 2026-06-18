@@ -148,10 +148,10 @@ type Profile struct {
 **Registry:** `map[string]*Profile` keyed by `Slug`, with a `DefaultSlug` constant.
 
 ```go
-const DefaultSlug = "lovyou-ai"
+const DefaultSlug = "transpara-ai"
 
 var registry = map[string]*Profile{
-    "lovyou-ai": {Slug: "lovyou-ai", Name: "lovyou.ai"},
+    "transpara-ai": {Slug: "transpara-ai", Name: "transpara.ai"},
     "transpara": {Slug: "transpara", Name: "Transpara"},
 }
 
@@ -160,7 +160,7 @@ func Lookup(slug string) *Profile // returns registry[slug] (nil if unknown)
 func All() []*Profile           // iteration helper for tests/future admin
 ```
 
-**Both registry entries carry the lovyou-ai display `Name` value** — per Artifact 09 "one tactical note on the two-profile registration": if the Name differs, any layout that renders Name (page title, footer, alt text) will produce divergent HTML and break the byte-identical-HTML verification. Phase 3 explicitly holds Name identical. Phase 4 is where Name differentiates once layouts begin branching on profile.
+**Both registry entries carry the transpara-ai display `Name` value** — per Artifact 09 "one tactical note on the two-profile registration": if the Name differs, any layout that renders Name (page title, footer, alt text) will produce divergent HTML and break the byte-identical-HTML verification. Phase 3 explicitly holds Name identical. Phase 4 is where Name differentiates once layouts begin branching on profile.
 
 Actually — Phase 3 layouts receive `p` but *must not read `p.Name` anywhere*. If any existing template reads from a field added to Profile, byte-identical-HTML breaks. The safest stance: the Phase 3 struct ships with Slug + Name, layouts ignore both fields entirely, and Phase 4 introduces the first read. To belt-and-brace this: both registered profiles hold identical Name values until Phase 4 intentionally forks.
 

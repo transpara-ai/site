@@ -144,4 +144,4 @@ Next deep dive: the Knowledge Graph — what happens when claims, sources, and t
 
 ---
 
-*This is Post 18 of a series on LovYou, mind-zero, and the architecture of accountable AI. Previous: [The Justice Graph](/blog/the-justice-graph) (Layer 4 deep dive) Post 12: [The Audit](/blog/the-audit) (the first external analysis of this research project) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*This is Post 18 of a series on Transpara, mind-zero, and the architecture of accountable AI. Previous: [The Justice Graph](/blog/the-justice-graph) (Layer 4 deep dive) Post 12: [The Audit](/blog/the-audit) (the first external analysis of this research project) The code is open source: [github.com/mattxo/mind-zero-five](https://github.com/mattxo/mind-zero-five) Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*

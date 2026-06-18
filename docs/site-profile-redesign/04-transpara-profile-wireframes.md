@@ -13,7 +13,7 @@
 
 | Version | Date | Description |
 |---------|------|-------------|
-| 0.1.0 | 2026-04-20 | Initial ASCII wireframes for home (`/`), `/hive` (proxied telemetry), and the shared shell structure. Light theme only. Comparison table vs lovyou-ai, "where next" options, acceptance check reference. |
+| 0.1.0 | 2026-04-20 | Initial ASCII wireframes for home (`/`), `/hive` (proxied telemetry), and the shared shell structure. Light theme only. Comparison table vs transpara-ai, "where next" options, acceptance check reference. |
 | 0.2.0 | 2026-04-20 | Dark mode support: theme toggle glyphs (`[☀]` / `[☾]` / `[🖥]`) added to all three header wireframes and to the Legend. New §5 "Theme toggle — states and behavior" with three-state icon sketch, full dark-variant wireframe of the home page, dark-mode `/hive` Agent Status snippet, and mobile toggle placement note. Sections 5–7 renumbered to 6–8; cross-references to Artifact 3 updated to new §7 (component catalog), §8 (token sheet), §10 (acceptance test). |
 | 0.2.1 | 2026-04-20 | Added standard Transpara frontmatter and revision history table. No content change. |
 | 0.3.0 | 2026-04-20 | Recon corrections: **Wireframe 2 (`/hive`) rewritten** — now shows the Transpara shell wrapping an iframe boundary, not a proxied dashboard injection. Dropped the fake "Mission Control / Architecture" tab switcher (that was a design I drew over the dashboard's own internal UI, which we don't control in the iframe world). **§5.2 dark-mode `/hive` snippet rewritten** — dashboard theme-coupling limitation surfaced honestly; iframe-edge seam called out. Added §2.4 on what's inside the iframe (we don't wireframe it because we don't own it). Updated legend and cross-references to match Artifact 03 v0.3.0. |
@@ -111,7 +111,7 @@ Mirrors `docs.transpara.com`: thin promo banner, centered hero + single CTA, 6-c
 
 ### Notes on the home wireframe
 
-- Hero is deliberately quieter than lovyou-ai's manifesto: one H1, one subtitle, one button.
+- Hero is deliberately quieter than transpara-ai's manifesto: one H1, one subtitle, one button.
 - The 6 cards map to: using the platform → `/app`, design → `/app/demo/board`, interfaces → `/reference`, setup → `/reference/setup`, tutorial → external training URL (or `/blog`), FAQ → `/reference/faq`. These are placeholders you can rename.
 - Secondary surfaces (`/market`, `/knowledge`, `/activity`, `/agents`, `/discover`) are reachable only from search or deep links under this profile — they don't earn home real estate.
 
@@ -161,7 +161,7 @@ Under the Transpara profile, `/hive` is a **thin site shell wrapping an iframe**
 - The **iframe content does NOT follow the theme toggle.** The dashboard HTML at `work:8080/telemetry/` renders in its own baked-in color scheme. See §5.2 for the honest dark-mode variant and the iframe-edge seam.
 - The iframe is a **hard boundary** — no `postMessage`, no shared CSS variables, no cross-origin DOM access. The site does not inject into, reach into, or reskin the dashboard. If we wanted that, we'd do Option 3 from Artifact 02 §7 (API-only rebuild), which is roadmap-only.
 - The embed-detection regex in the dashboard's JS fires naturally because the iframe's own `window.location.pathname` is `/telemetry/` on the work-server origin. This is why iframe wins over reverse-proxy at `/hive`.
-- Lovyou-ai profile `/hive` is completely different — a live Phase Timeline rendered directly by the site (HTMX polling, DB + hive loop state + `git log`). No iframe under lovyou-ai.
+- Transpara-ai profile `/hive` is completely different — a live Phase Timeline rendered directly by the site (HTMX polling, DB + hive loop state + `git log`). No iframe under transpara-ai.
 
 ### 2.4 What lives inside the iframe (not our wireframe)
 
@@ -332,11 +332,11 @@ On viewports below 768px, the theme toggle folds into an overflow menu along wit
 
 ---
 
-## 6. What's intentionally different vs lovyou-ai
+## 6. What's intentionally different vs transpara-ai
 
 The contrast should be visible at a glance:
 
-| Aspect | lovyou-ai | Transpara |
+| Aspect | transpara-ai | Transpara |
 |--------|-----------|-----------|
 | **Theme model** | Dark only, no toggle | Light default + dark + system, with toggle |
 | **Background** | Near-black | White (light) / deep navy `#0b1220` (dark) |
@@ -353,7 +353,7 @@ The contrast should be visible at a glance:
 
 If any of these wireframes should be promoted to higher fidelity, three options:
 
-1. **Component inventory** — list every concrete component the Transpara profile needs (`Navbar`, `ThemeToggle`, `PromoStrip`, `HeroCentered`, `CardGrid`, `DocsSidebar`, `OnPageTOC`, `StatCard`, `PhaseList`, `AgentStatusRow`, `EventStreamItem`, `TabbedInspector`) with props and which existing lovyou-ai component each replaces or extends. *(Full catalog in Artifact 3, §7.)*
+1. **Component inventory** — list every concrete component the Transpara profile needs (`Navbar`, `ThemeToggle`, `PromoStrip`, `HeroCentered`, `CardGrid`, `DocsSidebar`, `OnPageTOC`, `StatCard`, `PhaseList`, `AgentStatusRow`, `EventStreamItem`, `TabbedInspector`) with props and which existing transpara-ai component each replaces or extends. *(Full catalog in Artifact 3, §7.)*
 2. **Token sheet** — the final color/type/spacing tokens as CSS custom properties for **both light and dark palettes**, plus the anti-FOUC inline script, ready to paste into the codebase. *(Ready in Artifact 3, §8.)*
 3. **HTML/CSS prototype** — a single static `.html` file rendering the home wireframe above with real tokens, wired to a working theme toggle, so you can eyeball both variants before any real integration.
 

@@ -106,4 +106,4 @@ Dream of sheep.
 
 ---
 
-*This is Post 10 of a series on LovYou, mind-zero, and accountable AI architecture.*
+*This is Post 10 of a series on Transpara, mind-zero, and accountable AI architecture.*

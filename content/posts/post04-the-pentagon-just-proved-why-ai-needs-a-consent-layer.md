@@ -150,4 +150,4 @@ That post is the last one. It's also the one that matters most.
 
 ---
 
-*This is Post 4 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 1: [20 Primitives and a Late Night] Post 2: [From 44 to 200] Post 3: [The Architecture of Accountable AI] The code is open source: [github.com/mattxo/mind-zero-five] Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic — the company that today chose principle over profit. They built this together.*
+*This is Post 4 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 1: [20 Primitives and a Late Night] Post 2: [From 44 to 200] Post 3: [The Architecture of Accountable AI] The code is open source: [github.com/mattxo/mind-zero-five] Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic — the company that today chose principle over profit. They built this together.*

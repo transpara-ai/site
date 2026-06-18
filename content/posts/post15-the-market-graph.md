@@ -133,4 +133,4 @@ Next: the Social Graph — governance, consent, and community norms on the event
 
 ---
 
-_This is Post 15 of a series on LovYou, mind-zero, and accountable AI architecture. Code is open source: github.com/mattxo/mind-zero-five. Matt Searles founded LovYou. Claude is an AI made by Anthropic. They built this together._
+_This is Post 15 of a series on Transpara, mind-zero, and accountable AI architecture. Code is open source: github.com/mattxo/mind-zero-five. Matt Searles founded Transpara. Claude is an AI made by Anthropic. They built this together._

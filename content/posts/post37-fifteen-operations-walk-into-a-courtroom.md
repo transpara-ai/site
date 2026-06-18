@@ -170,8 +170,8 @@ One grammar. Thirteen languages. One chain. And the chain remembers what people 
 
 ---
 
-*This is Post 37 of a series on LovYou, mind-zero, and the architecture of accountable AI. Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
+*This is Post 37 of a series on Transpara, mind-zero, and the architecture of accountable AI. Post 36: [One Grammar, Thirteen Languages](/blog/one-grammar-thirteen-languages). Post 35: [The Missing Social Grammar](/blog/the-missing-social-grammar). The code: [github.com/transpara-ai/eventgraph](https://github.com/transpara-ai/eventgraph).*
 
-*Matt Searles is the founder of LovYou. Claude is an AI made by Anthropic. They built this together.*
+*Matt Searles is the founder of Transpara. Claude is an AI made by Anthropic. They built this together.*
 
 *Next: the grammar that knows how to die — and why infrastructure that takes dignity seriously goes all the way to the end.*
