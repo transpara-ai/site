@@ -1,4 +1,4 @@
-// Command site serves lovyou.ai — the home of the hive's products.
+// Command site serves the Transpara-AI internal product UI (private).
 package main
 
 import (
@@ -315,7 +315,7 @@ func main() {
 		if clientID != "" && clientSecret != "" {
 			redirectURL := os.Getenv("AUTH_REDIRECT_URL")
 			if redirectURL == "" {
-				redirectURL = "https://lovyou.ai/auth/callback"
+				log.Fatal("AUTH_REDIRECT_URL must be set when Google OAuth is configured (no public-domain default)")
 			}
 			secure := redirectURL[:5] == "https"
 
@@ -361,7 +361,7 @@ func main() {
 					user := auth.UserFromBearer(db, r)
 					if user == nil {
 						user = &auth.User{
-							ID: "anonymous", Name: "Anonymous", Email: "anon@lovyou.ai",
+							ID: "anonymous", Name: "Anonymous", Email: "anon@transpara.local",
 						}
 					}
 					ctx := auth.ContextWithUser(r.Context(), user)
@@ -918,69 +918,18 @@ func main() {
 		fmt.Fprint(w, "ok")
 	})
 
-	// Robots and sitemap.
+	// Robots — private site; disallow indexing.
 	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprint(w, "User-agent: *\nAllow: /\nSitemap: https://lovyou.ai/sitemap.xml\n")
-	})
-	mux.HandleFunc("GET /sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		var b strings.Builder
-		b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>`)
-		b.WriteString("\n")
-		b.WriteString(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)
-		b.WriteString("\n")
-		addURL := func(path string) {
-			b.WriteString("<url><loc>https://lovyou.ai")
-			b.WriteString(path)
-			b.WriteString("</loc></url>\n")
-		}
-		// Static pages.
-		addURL("/")
-		addURL("/blog")
-		addURL("/discover")
-		addURL("/agents")
-		addURL("/market")
-		addURL("/activity")
-		addURL("/knowledge")
-		addURL("/reference")
-		addURL("/reference/grammar")
-		addURL("/reference/cognitive-grammar")
-		addURL("/reference/grammars")
-		addURL("/reference/agents")
-		addURL("/reference/higher-order-ops")
-		addURL("/reference/code-graph")
-		// Blog posts.
-		for _, post := range posts {
-			addURL("/blog/" + post.Slug)
-		}
-		// Layers.
-		for _, layer := range layers {
-			addURL(fmt.Sprintf("/reference/layers/%d", layer.Number))
-		}
-		// Primitives.
-		for _, layer := range layers {
-			for _, prim := range layer.Primitives {
-				addURL("/reference/primitives/" + prim.Slug)
-			}
-		}
-		for _, prim := range agentPrims {
-			addURL("/reference/primitives/" + prim.Slug)
-		}
-		// Grammars.
-		for _, g := range grammars {
-			addURL("/reference/grammars/" + g.Slug)
-		}
-		b.WriteString("</urlset>\n")
-		fmt.Fprint(w, b.String())
+		fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
 	})
 
 	addr := ":" + p
-	log.Printf("lovyou.ai listening on %s", addr)
+	log.Printf("site listening on %s", addr)
 
 	// Profile middleware slots between noCache and the mux so every route
 	// handler sees a non-nil *profile.Profile in its request context.
-	// Outer wraps run first (canonicalHost → noCache) to short-circuit
+	// noCache (outer wrap) runs first to short-circuit
 	// bad-host / cached requests before paying resolution cost. Adding a
 	// future resolver (subdomain, cookie, host header) is one line in the
 	// Chain literal below — that's the extensibility contract of Phase 3.
@@ -989,7 +938,7 @@ func main() {
 		profile.CookieResolver{},
 		profile.DefaultResolver{},
 	}
-	handler := canonicalHost(noCache(profile.Middleware(profileChain)(mux)))
+	handler := noCache(profile.Middleware(profileChain)(mux))
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
@@ -998,34 +947,6 @@ func main() {
 // ────────────────────────────────────────────────────────────────────
 // Middleware
 // ────────────────────────────────────────────────────────────────────
-
-// canonicalHost redirects non-canonical hostnames to lovyou.ai.
-// Skips health checks (probed via internal IP) and localhost.
-func canonicalHost(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" {
-			next.ServeHTTP(w, r)
-			return
-		}
-		host := r.Host
-		// Allow canonical domain, localhost, loopback, and LAN hostnames (no dot = bare hostname like "nucbuntu").
-		if host != "" && host != "lovyou.ai" && !strings.HasPrefix(host, "localhost") && !strings.HasPrefix(host, "127.0.0.1") && !strings.HasPrefix(host, "192.168.") && !strings.HasPrefix(host, "10.") && !isBareName(host) {
-			target := "https://lovyou.ai" + r.URL.RequestURI()
-			http.Redirect(w, r, target, http.StatusMovedPermanently)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-// isBareName returns true if host is a bare LAN hostname (no dots before any port).
-func isBareName(host string) bool {
-	h := host
-	if i := strings.LastIndex(h, ":"); i != -1 {
-		h = h[:i]
-	}
-	return !strings.Contains(h, ".")
-}
 
 func noCache(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
