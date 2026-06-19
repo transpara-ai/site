@@ -49,7 +49,9 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 						</a>
 					}
 				</nav>
-				if data.Observatory != nil {
+				if data.Civilization != nil {
+					@opsCivilizationAssembly(data.Civilization)
+				} else if data.Observatory != nil {
 					@opsObservatorySummary(data.Observatory)
 				} else if data.Telemetry != nil {
 					@opsTelemetrySummary(data.Telemetry)

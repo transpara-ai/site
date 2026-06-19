@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -54,6 +55,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/telemetry",
 		"/ops/observatory",
 		"/ops/observatory/events",
+		"/ops/civilization",
 		"/ops/hive",
 		"/ops/evidence",
 		"/ops/decision",
@@ -68,6 +70,74 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 				t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusUnauthorized, w.Body.String())
 			}
 		})
+	}
+}
+
+func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
+	h, _, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/civilization: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Civilization Assembly",
+		`data-civilization-assembly="read-only"`,
+		"docs#163 v4.0 Site Civilization Assembly authority packet",
+		"typed Site fallback snapshot",
+		"EventGraph Civilization Assembly projection",
+		"Registered method",
+		"GET only",
+		"No mutation handler is registered for this page.",
+		"not runtime-projected",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
+		}
+	}
+	start := strings.Index(body, `data-civilization-assembly="read-only"`)
+	if start < 0 {
+		t.Fatal("GET /ops/civilization: missing read-only assembly marker")
+	}
+	surface := body[start:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	forbidden := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)<form\b`),
+		regexp.MustCompile(`(?i)<button\b`),
+		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
+		regexp.MustCompile(`(?i)hx-[a-z-]+\s*=`),
+		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
+		regexp.MustCompile(`(?i)\son[a-z]+\s*=`),
+		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
+	}
+	for _, re := range forbidden {
+		if re.MatchString(surface) {
+			t.Fatalf("GET /ops/civilization: body contains mutation control marker %q", re)
+		}
+	}
+}
+
+func TestOpsCivilizationRouteIsGetOnly(t *testing.T) {
+	h, _, _ := testHandlers(t)
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/civilization", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /ops/civilization: status = %d, want %d; body: %s", w.Code, http.StatusMethodNotAllowed, w.Body.String())
 	}
 }
 

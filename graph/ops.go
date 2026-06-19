@@ -31,22 +31,23 @@ type OpsSurface struct {
 }
 
 type OpsPageData struct {
-	Title       string
-	Description string
-	Active      string
-	View        string // optional sub-view selector; "forensic" shows the full evidence tiers
-	Surfaces    []OpsSurface
-	EmbedURL    string
-	EmbedLabel  string
-	Telemetry   *OpsTelemetryData
-	Work        *OpsWorkData
-	Hive        *OpsHiveData
-	HiveShell   *OpsHiveShellData
-	Evidence    *OpsEvidenceData
-	Decision    *OpsDecisionData
-	Approvals   *OpsApprovalsData
-	Observatory *OpsObservatoryData
-	LegacyURL   string
+	Title        string
+	Description  string
+	Active       string
+	View         string // optional sub-view selector; "forensic" shows the full evidence tiers
+	Surfaces     []OpsSurface
+	EmbedURL     string
+	EmbedLabel   string
+	Telemetry    *OpsTelemetryData
+	Work         *OpsWorkData
+	Hive         *OpsHiveData
+	HiveShell    *OpsHiveShellData
+	Evidence     *OpsEvidenceData
+	Decision     *OpsDecisionData
+	Approvals    *OpsApprovalsData
+	Observatory  *OpsObservatoryData
+	Civilization *OpsCivilizationAssemblyData
+	LegacyURL    string
 }
 
 type OpsHiveShellData struct {
@@ -845,8 +846,17 @@ var evidenceOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Operations",
-		Description: "Site-owned operator shell for work, telemetry, hive status, evidence, and refinery review.",
+		Description: "Site-owned operator shell for work, telemetry, hive status, civilization assembly, evidence, and refinery review.",
 		Active:      "overview",
+	})
+}
+
+func (h *Handlers) handleOpsCivilization(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:        "Civilization Assembly",
+		Description:  "Read-only v4.0 assembly projection for roles, tiers, model-selection posture, and authority boundaries. Site displays unavailable truth sources as unavailable; it does not execute work.",
+		Active:       "civilization",
+		Civilization: buildOpsCivilizationAssemblyData(),
 	})
 }
 
@@ -1408,6 +1418,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Target:      "work /telemetry/* + hive operator projection",
 			Owner:       "site read-only projection",
 			Status:      "read-only",
+		},
+		{
+			ID:          "civilization",
+			Label:       "Civilization",
+			Description: "Assembly view for bootstrap roles, emergence, tiers, model-selection posture, and non-authority boundaries.",
+			Href:        "/ops/civilization",
+			Target:      "EventGraph Civilization Assembly projection",
+			Owner:       "site read-only projection",
+			Status:      "v4.0 bounded",
 		},
 		{
 			ID:          "hive",
