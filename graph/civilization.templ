@@ -1,0 +1,143 @@
+package graph
+
+templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
+	<div class="space-y-4">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Civilization Assembly</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">A v4.0 read-only assembly view for the civilization roles, tiers, model-selection posture, and authority boundaries.</p>
+					<p class="text-xs text-warm-faint mt-2">Authorization: { data.AuthoritySource }</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">{ data.ProjectionStatus }</span>
+			</header>
+			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
+				<dt class="text-warm-faint">projection source</dt>
+				<dd class="text-warm-muted">{ data.ProjectionSource }</dd>
+				<dt class="text-warm-faint">projection target</dt>
+				<dd class="text-warm-muted">{ data.ProjectionTarget }</dd>
+				<dt class="text-warm-faint">model source</dt>
+				<dd class="text-warm-muted">{ data.Civilization.ModelSource }</dd>
+				<dt class="text-warm-faint">generated</dt>
+				<dd class="text-warm-muted">{ data.GeneratedAt }</dd>
+			</dl>
+		</section>
+		<section class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+			for _, item := range data.Boundary {
+				<div class="border border-edge bg-surface rounded-lg p-4 min-h-[8rem]">
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="text-sm font-medium text-warm">{ item.Label }</h3>
+						<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ item.State }</span>
+					</div>
+					<p class="text-xs text-warm-muted mt-3 leading-relaxed">{ item.Detail }</p>
+				</div>
+			}
+		</section>
+		<section class="border border-edge bg-surface rounded-lg p-4">
+			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Role topology</h2>
+					<p class="text-[11px] text-warm-faint mt-1">Bootstrap definitions are visible; runtime activity, authority, and emergence remain not projected unless a backing source provides them.</p>
+				</div>
+				<div class="shrink-0 text-right">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest mb-1">Global Model Selection Mode</p>
+					@obsModelModeToggle(data.Civilization.GlobalModelMode)
+					<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { data.Civilization.GlobalModeProvenance }</p>
+					<p class="text-[11px] text-warm-faint mt-1 max-w-xs">{ data.Civilization.GlobalModeReason }</p>
+				</div>
+			</div>
+			<div class="grid gap-3 md:grid-cols-4 mb-4">
+				for _, level := range data.Civilization.OrgLevels {
+					<div class="border border-edge bg-void/20 rounded-md p-3 min-h-[8rem]">
+						<div class="flex items-start justify-between gap-2">
+							<h3 class="text-sm font-medium text-warm">Tier { level.Tier }</h3>
+							<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ level.Used }</span>
+						</div>
+						<p class="text-xs text-warm-muted mt-2">{ level.Label }</p>
+						<p class="text-[11px] text-warm-faint mt-2 leading-relaxed">{ level.Detail }</p>
+					</div>
+				}
+			</div>
+			<div class="overflow-x-auto border border-edge rounded-md">
+				<table class="w-full text-xs">
+					<thead>
+						<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
+							<th class="py-2 px-3 font-medium">Role</th>
+							<th class="py-2 px-3 font-medium">Agent</th>
+							<th class="py-2 px-3 font-medium">Level</th>
+							<th class="py-2 px-3 font-medium">Category</th>
+							<th class="py-2 px-3 font-medium">Status</th>
+							<th class="py-2 px-3 font-medium">Operate</th>
+							<th class="py-2 px-3 font-medium">Model</th>
+							<th class="py-2 px-3 font-medium">Mode</th>
+							<th class="py-2 px-3 font-medium">Line</th>
+							<th class="py-2 px-3 font-medium">Why</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, row := range data.Civilization.Roster {
+							<tr class="border-b border-edge/50 align-top">
+								<td class="py-2 px-3 text-warm">
+									<p>{ row.Role }</p>
+									<p class="text-[10px] text-warm-faint">{ row.Origin }</p>
+								</td>
+								<td class="py-2 px-3 text-warm-muted">{ row.Agent }</td>
+								<td class="py-2 px-3 text-warm-muted">Tier { row.Tier }</td>
+								<td class="py-2 px-3 text-warm-muted">{ row.Category }</td>
+								<td class="py-2 px-3 text-warm-muted">{ row.Status }</td>
+								<td class="py-2 px-3 text-warm-muted">{ row.CanOperate }</td>
+								<td class="py-2 px-3 text-warm-muted">{ row.Model }</td>
+								<td class="py-2 px-3">
+									@obsModelModeToggle(row.ModelMode)
+									<p class="text-[10px] text-warm-faint mt-1">{ row.ModelModeProvenance }</p>
+								</td>
+								<td class="py-2 px-3 text-warm-faint">
+									<p>reports: { row.ReportsTo }</p>
+									<p>escalates: { row.EscalationPath }</p>
+								</td>
+								<td class="py-2 px-3 text-warm-faint max-w-[18rem]">
+									<p>{ row.Why }</p>
+									<p class="mt-1">{ row.Evidence }</p>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<section class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Emergence queue</h2>
+				</header>
+				if len(data.Civilization.Emergence) == 0 {
+					<p class="px-4 py-5 text-sm text-warm-faint">No role emergence events or spawn approvals are projected.</p>
+				} else {
+					<div class="divide-y divide-edge">
+						for _, step := range data.Civilization.Emergence {
+							<div class="px-4 py-3">
+								<div class="flex items-start justify-between gap-3">
+									<h3 class="text-sm font-medium text-warm truncate">{ step.Subject }</h3>
+									<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ step.State }</span>
+								</div>
+								<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ step.Why }</p>
+								<p class="text-[11px] text-warm-faint mt-1">{ step.Evidence }</p>
+							</div>
+						}
+					</div>
+				}
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Findings</h2>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, finding := range data.Civilization.Findings {
+						<p class="px-4 py-3 text-xs text-warm-muted leading-relaxed">{ finding }</p>
+					}
+				</div>
+			</section>
+		</section>
+		<p class="text-[11px] text-warm-faint">Generated { data.GeneratedAt } · read-only projection · EventGraph remains the target truth source · this page has no execution authority</p>
+	</div>
+}
