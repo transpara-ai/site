@@ -29,7 +29,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-4\"><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-base font-medium text-warm\">Civilization Assembly</h2><p class=\"text-sm text-warm-muted mt-2 leading-relaxed\">A v4.0 read-only assembly view for the civilization roles, tiers, model-selection posture, and authority boundaries.</p><p class=\"text-xs text-warm-faint mt-2\">Authorization: ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-4\" data-civilization-assembly=\"read-only\"><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-base font-medium text-warm\">Civilization Assembly</h2><p class=\"text-sm text-warm-muted mt-2 leading-relaxed\">A v4.0 read-only assembly view for the civilization roles, tiers, model-selection posture, and authority boundaries.</p><p class=\"text-xs text-warm-faint mt-2\">Authorization: ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

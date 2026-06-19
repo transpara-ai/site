@@ -89,6 +89,7 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		"Civilization Assembly",
+		`data-civilization-assembly="read-only"`,
 		"docs#163 v4.0 Site Civilization Assembly authority packet",
 		"typed Site fallback snapshot",
 		"EventGraph Civilization Assembly projection",
@@ -101,13 +102,23 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
 		}
 	}
+	start := strings.Index(body, `data-civilization-assembly="read-only"`)
+	if start < 0 {
+		t.Fatal("GET /ops/civilization: missing read-only assembly marker")
+	}
+	surface := body[start:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
 	forbidden := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)<form\b`),
+		regexp.MustCompile(`(?i)<button\b`),
 		regexp.MustCompile(`(?i)hx-(post|put|patch|delete)\s*=`),
 		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
+		regexp.MustCompile(`(?i)onclick\s*=`),
 	}
 	for _, re := range forbidden {
-		if re.MatchString(body) {
+		if re.MatchString(surface) {
 			t.Fatalf("GET /ops/civilization: body contains mutation control marker %q", re)
 		}
 	}
