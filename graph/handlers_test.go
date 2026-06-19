@@ -113,9 +113,11 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	forbidden := []*regexp.Regexp{
 		regexp.MustCompile(`(?i)<form\b`),
 		regexp.MustCompile(`(?i)<button\b`),
-		regexp.MustCompile(`(?i)hx-(post|put|patch|delete)\s*=`),
+		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
+		regexp.MustCompile(`(?i)hx-[a-z-]+\s*=`),
 		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
-		regexp.MustCompile(`(?i)onclick\s*=`),
+		regexp.MustCompile(`(?i)\son[a-z]+\s*=`),
+		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
 	}
 	for _, re := range forbidden {
 		if re.MatchString(surface) {
