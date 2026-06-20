@@ -16,9 +16,11 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<dd class="text-warm-muted">{ data.ProjectionSource }</dd>
 				<dt class="text-warm-faint">projection target</dt>
 				<dd class="text-warm-muted">{ data.ProjectionTarget }</dd>
+				<dt class="text-warm-faint">projection freshness</dt>
+				<dd class="text-warm-muted">{ data.ProjectionFreshness }</dd>
 				<dt class="text-warm-faint">model source</dt>
 				<dd class="text-warm-muted">{ data.Civilization.ModelSource }</dd>
-				<dt class="text-warm-faint">generated</dt>
+				<dt class="text-warm-faint">site rendered</dt>
 				<dd class="text-warm-muted">{ data.GeneratedAt }</dd>
 			</dl>
 		</section>
@@ -33,11 +35,36 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 			}
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Projection facts</h2>
+			</header>
+			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[12rem_1fr]">
+				for _, row := range data.StatusRows {
+					<dt class="text-warm-faint">{ row.Label }</dt>
+					<dd class="text-warm-muted">{ row.Value }</dd>
+				}
+			</dl>
+		</section>
+		if len(data.ReferenceGroups) > 0 {
+			<section class="grid gap-3 md:grid-cols-2">
+				for _, group := range data.ReferenceGroups {
+					<div class="border border-edge bg-surface rounded-lg p-4">
+						<h2 class="text-sm font-medium text-warm">{ group.Label }</h2>
+						<ul class="mt-3 space-y-2">
+							for _, ref := range group.Refs {
+								<li class="text-xs text-warm-muted break-all">{ ref }</li>
+							}
+						</ul>
+					</div>
+				}
+			</section>
+		}
 		<section class="border border-edge bg-surface rounded-lg p-4">
 			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
 				<div>
 					<h2 class="text-sm font-medium text-warm">Role topology</h2>
-					<p class="text-[11px] text-warm-faint mt-1">Bootstrap definitions are visible; runtime activity, authority, and emergence remain not projected unless a backing source provides them.</p>
+					<p class="text-[11px] text-warm-faint mt-1">Role bindings are rendered from projection input only; missing tiers, runtime activity, authority, and emergence remain not projected.</p>
 				</div>
 				<div class="shrink-0 text-right">
 					<p class="text-[10px] text-warm-faint uppercase tracking-widest mb-1">Global Model Selection Mode</p>
@@ -138,6 +165,6 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 			</section>
 		</section>
-		<p class="text-[11px] text-warm-faint">Generated { data.GeneratedAt } · read-only projection · EventGraph remains the target truth source · this page has no execution authority</p>
+		<p class="text-[11px] text-warm-faint">Rendered { data.GeneratedAt } · read-only projection consumer · EventGraph remains the target truth source · this page has no execution authority</p>
 	</div>
 }
