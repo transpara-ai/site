@@ -17,6 +17,7 @@ const (
 	opsCivilizationFieldUnavailable = "unavailable"
 
 	opsCivilizationProjectionStaleAfter = 24 * time.Hour
+	opsCivilizationProjectionFutureSkew = 5 * time.Minute
 )
 
 type OpsCivilizationAssemblyData struct {
@@ -245,7 +246,11 @@ func opsCivilizationProjectionFreshness(projection *OpsCivilizationAssemblyProje
 		return "unknown"
 	}
 	generatedAt := projection.GeneratedAt.UTC()
-	if now.UTC().Sub(generatedAt) > opsCivilizationProjectionStaleAfter {
+	now = now.UTC()
+	if generatedAt.After(now.Add(opsCivilizationProjectionFutureSkew)) {
+		return "skewed"
+	}
+	if now.Sub(generatedAt) > opsCivilizationProjectionStaleAfter {
 		return "stale"
 	}
 	return "current"
@@ -437,6 +442,7 @@ func opsCivilizationFindings(projection *OpsCivilizationAssemblyProjection, stat
 		"EventGraph Civilization Assembly projection derivation status: " + status + ".",
 		"Projection freshness: " + freshness + ".",
 		"Even a complete projection derivation does not close Gate T, approve production readiness, execute runtime work, deploy, mutate protected settings, increase autonomy, or allocate value.",
+		"This route is display-only and carries no authority to execute, deploy, mutate protected settings, or allocate value.",
 	}
 	if projection.AuthorityState.Summary != "" {
 		findings = append(findings, "Authority state: "+projection.AuthorityState.Summary)
@@ -518,33 +524,37 @@ func opsCivilizationBoundary(projection *OpsCivilizationAssemblyProjection, stat
 }
 
 func opsCivilizationStatusRows(projection *OpsCivilizationAssemblyProjection, status string, freshness string) []OpsCivilizationStatusRow {
-	rows := []OpsCivilizationStatusRow{
-		{Label: "projection id", Value: "not projected"},
-		{Label: "schema version", Value: "not projected"},
-		{Label: "subject", Value: "civilization_assembly"},
-		{Label: "source state", Value: "not projected"},
-		{Label: "source events/window", Value: "not projected"},
-		{Label: "projection generated", Value: "not projected"},
-		{Label: "freshness", Value: freshness},
-		{Label: "derivation status", Value: status},
-		{Label: "authority state", Value: "unavailable"},
-		{Label: "external committee", Value: "unavailable"},
-		{Label: "work evidence", Value: "unavailable"},
-		{Label: "site consumer", Value: "unavailable"},
+	rows := make([]OpsCivilizationStatusRow, 0, 12)
+	add := func(label string, value string) {
+		rows = append(rows, OpsCivilizationStatusRow{Label: label, Value: value})
 	}
 	if projection == nil {
+		add("projection id", "not projected")
+		add("schema version", "not projected")
+		add("subject", "civilization_assembly")
+		add("source state", "not projected")
+		add("source events/window", "not projected")
+		add("projection generated", "not projected")
+		add("freshness", freshness)
+		add("derivation status", status)
+		add("authority state", "unavailable")
+		add("external committee", "unavailable")
+		add("work evidence", "unavailable")
+		add("site consumer", "unavailable")
 		return rows
 	}
-	rows[0].Value = opsCivilizationValue(projection.ProjectionID, "not projected")
-	rows[1].Value = opsCivilizationValue(projection.ProjectionSchemaVersion, "not projected")
-	rows[2].Value = opsCivilizationValue(projection.ProjectionSubject, "not projected")
-	rows[3].Value = opsCivilizationValue(projection.SourceEventGraphHeadOrStateVersion, "not projected")
-	rows[4].Value = opsCivilizationJoin(projection.SourceEventIDsOrQueryWindow, "not projected")
-	rows[5].Value = opsCivilizationTime(projection.GeneratedAt)
-	rows[8].Value = opsCivilizationStatusSummary(projection.AuthorityState.Status, projection.AuthorityState.Summary)
-	rows[9].Value = opsCivilizationStatusSummary(projection.ExternalCommitteeState.Status, projection.ExternalCommitteeState.Summary)
-	rows[10].Value = opsCivilizationStatusSummary(projection.WorkEvidenceSummary.Status, projection.WorkEvidenceSummary.Summary)
-	rows[11].Value = opsCivilizationStatusSummary(projection.SiteConsumerStatus.Status, projection.SiteConsumerStatus.Summary)
+	add("projection id", opsCivilizationValue(projection.ProjectionID, "not projected"))
+	add("schema version", opsCivilizationValue(projection.ProjectionSchemaVersion, "not projected"))
+	add("subject", opsCivilizationValue(projection.ProjectionSubject, "not projected"))
+	add("source state", opsCivilizationValue(projection.SourceEventGraphHeadOrStateVersion, "not projected"))
+	add("source events/window", opsCivilizationJoin(projection.SourceEventIDsOrQueryWindow, "not projected"))
+	add("projection generated", opsCivilizationTime(projection.GeneratedAt))
+	add("freshness", freshness)
+	add("derivation status", status)
+	add("authority state", opsCivilizationStatusSummary(projection.AuthorityState.Status, projection.AuthorityState.Summary))
+	add("external committee", opsCivilizationStatusSummary(projection.ExternalCommitteeState.Status, projection.ExternalCommitteeState.Summary))
+	add("work evidence", opsCivilizationStatusSummary(projection.WorkEvidenceSummary.Status, projection.WorkEvidenceSummary.Summary))
+	add("site consumer", opsCivilizationStatusSummary(projection.SiteConsumerStatus.Status, projection.SiteConsumerStatus.Summary))
 	return rows
 }
 

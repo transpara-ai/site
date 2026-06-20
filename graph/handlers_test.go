@@ -112,20 +112,7 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	if end := strings.Index(surface, "</main>"); end >= 0 {
 		surface = surface[:end]
 	}
-	forbidden := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)<form\b`),
-		regexp.MustCompile(`(?i)<button\b`),
-		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
-		regexp.MustCompile(`(?i)hx-[a-z-]+\s*=`),
-		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
-		regexp.MustCompile(`(?i)\son[a-z]+\s*=`),
-		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
-	}
-	for _, re := range forbidden {
-		if re.MatchString(surface) {
-			t.Fatalf("GET /ops/civilization: body contains mutation control marker %q", re)
-		}
-	}
+	assertNoCivilizationMutationControls(t, surface)
 }
 
 func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
@@ -212,6 +199,45 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	}
 }
 
+func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T) {
+	now := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
+	projection := &OpsCivilizationAssemblyProjection{
+		ProjectionID:                       `civ-proj-<button onclick="x">`,
+		ProjectionSchemaVersion:            "1.0.0",
+		ProjectionSubject:                  "civilization_assembly",
+		GeneratedAt:                        now,
+		SourceEventGraphHeadOrStateVersion: "sha256:hostile",
+		SourceEventIDsOrQueryWindow:        []string{`<form method="post">`},
+		DerivationStatus:                   opsCivilizationProjectionStatusComplete,
+		AuthorityState: OpsCivilizationAssemblyAuthorityState{
+			Status:  opsCivilizationFieldAvailable,
+			Summary: `<button onclick="steal()">approve</button>`,
+		},
+		ActorRoster: []OpsCivilizationAssemblyActorSummary{
+			{ID: `actor_<input>`, ActorID: `actor-<script>`, ActorType: `human`, Status: `active`},
+		},
+		RoleBindings: []OpsCivilizationAssemblyRoleBinding{
+			{ActorID: `actor-<script>`, Role: `<button onclick="x">operator</button>`, SourceRef: `<a hx-post="/mutate">`, SourceType: "AuthorityDecision"},
+		},
+		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
+			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, now)
+	var body strings.Builder
+	if err := opsCivilizationAssembly(data).Render(context.Background(), &body); err != nil {
+		t.Fatalf("render projection component: %v", err)
+	}
+	html := body.String()
+	assertNoCivilizationMutationControls(t, html)
+	for _, escaped := range []string{"&lt;button", "&lt;form", "&lt;select", "&lt;a"} {
+		if !strings.Contains(html, escaped) {
+			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
+		}
+	}
+}
+
 func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *testing.T) {
 	now := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
 	tests := []struct {
@@ -220,6 +246,8 @@ func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *
 		wantStatus    string
 		wantFreshness string
 		wantFinding   string
+		wantRefGroup  string
+		wantRef       string
 	}{
 		{
 			name:          "missing projection",
@@ -244,6 +272,8 @@ func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *
 			wantStatus:    opsCivilizationProjectionStatusPartial,
 			wantFreshness: "current",
 			wantFinding:   "1 open gate(s) remain projected",
+			wantRefGroup:  "withheld/unavailable fields",
+			wantRef:       "authority_state: source records missing",
 		},
 		{
 			name: "failed projection",
@@ -268,6 +298,17 @@ func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *
 			wantFreshness: "stale",
 			wantFinding:   "Projection freshness: stale.",
 		},
+		{
+			name: "future dated projection",
+			projection: &OpsCivilizationAssemblyProjection{
+				ProjectionID:     "civ-proj-skewed",
+				GeneratedAt:      now.Add(10 * time.Minute),
+				DerivationStatus: opsCivilizationProjectionStatusComplete,
+			},
+			wantStatus:    opsCivilizationProjectionStatusComplete,
+			wantFreshness: "skewed",
+			wantFinding:   "Projection freshness: skewed.",
+		},
 	}
 
 	for _, tt := range tests {
@@ -281,6 +322,9 @@ func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *
 			}
 			if !findingContains(data, tt.wantFinding) {
 				t.Fatalf("findings do not contain %q: %+v", tt.wantFinding, data.Civilization.Findings)
+			}
+			if tt.wantRefGroup != "" && !referenceGroupContains(data, tt.wantRefGroup, tt.wantRef) {
+				t.Fatalf("reference group %q missing %q: %+v", tt.wantRefGroup, tt.wantRef, data.ReferenceGroups)
 			}
 		})
 	}
@@ -340,6 +384,24 @@ func findingContains(data *OpsCivilizationAssemblyData, needle string) bool {
 		}
 	}
 	return false
+}
+
+func assertNoCivilizationMutationControls(t *testing.T, surface string) {
+	t.Helper()
+	forbidden := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)<form\b`),
+		regexp.MustCompile(`(?i)<button\b`),
+		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
+		regexp.MustCompile(`(?i)<[^>]+hx-[a-z-]+\s*=`),
+		regexp.MustCompile(`(?i)<[^>]+method\s*=\s*['"]?post`),
+		regexp.MustCompile(`(?i)<[^>]+\son[a-z]+\s*=`),
+		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
+	}
+	for _, re := range forbidden {
+		if re.MatchString(surface) {
+			t.Fatalf("civilization assembly body contains mutation control marker %q", re)
+		}
+	}
 }
 
 func TestHandlerCreateSpace(t *testing.T) {
