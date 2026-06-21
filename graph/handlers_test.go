@@ -90,13 +90,15 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	for _, want := range []string{
 		"Civilization Assembly",
 		`data-civilization-assembly="read-only"`,
-		"docs#163 v4.0 Site Civilization Assembly authority packet",
-		"typed Site fallback snapshot",
+		"docs v4.0 Event 10 Site Civilization projection-consumer AuthorityDecision",
+		"EventGraph Civilization Assembly projection unavailable to Site",
 		"EventGraph Civilization Assembly projection",
+		"Projection facts",
+		"derivation status",
 		"Registered method",
 		"GET only",
 		"No mutation handler is registered for this page.",
-		"not runtime-projected",
+		"EventGraph projection-shaped input was not available",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
@@ -110,19 +112,221 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	if end := strings.Index(surface, "</main>"); end >= 0 {
 		surface = surface[:end]
 	}
-	forbidden := []*regexp.Regexp{
-		regexp.MustCompile(`(?i)<form\b`),
-		regexp.MustCompile(`(?i)<button\b`),
-		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
-		regexp.MustCompile(`(?i)hx-[a-z-]+\s*=`),
-		regexp.MustCompile(`(?i)method\s*=\s*['"]?post`),
-		regexp.MustCompile(`(?i)\son[a-z]+\s*=`),
-		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
+	assertNoCivilizationMutationControls(t, surface)
+}
+
+func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
+	generatedAt := time.Date(2026, 6, 20, 10, 30, 0, 0, time.UTC)
+	now := generatedAt.Add(30 * time.Minute)
+	projection := &OpsCivilizationAssemblyProjection{
+		ProjectionID:                       "civ-proj-001",
+		ProjectionSchemaVersion:            "1.0.0",
+		ProjectionSubject:                  "civilization_assembly",
+		GeneratedAt:                        generatedAt,
+		SourceEventGraphHeadOrStateVersion: "sha256:abc123",
+		SourceEventIDsOrQueryWindow:        []string{"authority_decision_001", "site_consumer_civ_001"},
+		DerivationStatus:                   opsCivilizationProjectionStatusComplete,
+		AuthorityState: OpsCivilizationAssemblyAuthorityState{
+			Status:     opsCivilizationFieldAvailable,
+			Summary:    "authority chain derived from EventGraph records",
+			SourceRefs: []string{"authority_decision_001"},
+		},
+		ExternalCommitteeState: OpsCivilizationAssemblyCommitteeState{
+			Status:         opsCivilizationFieldAvailable,
+			Summary:        "External Committee approval records present",
+			ApprovalRefs:   []string{"human_approval_001"},
+			CommitteeRoles: []string{"External Committee"},
+		},
+		ActorRoster: []OpsCivilizationAssemblyActorSummary{
+			{ID: "actor_identity_001", ActorID: "civilization-operator", ActorType: "human", IdentityMode: "verified", Status: "active"},
+		},
+		RoleBindings: []OpsCivilizationAssemblyRoleBinding{
+			{ActorID: "civilization-operator", Role: "External Committee", SourceRef: "authority_decision_001", SourceType: "AuthorityDecision"},
+		},
+		AgentLifecycleSummary: []OpsCivilizationAssemblyLifecycleSummary{
+			{ID: "lifecycle_001", ActorID: "civilization-operator", FromState: "candidate", ToState: "active", Status: "verified"},
+		},
+		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+			Status:      opsCivilizationFieldAvailable,
+			Summary:     "work evidence derived from task and gate records",
+			TestRunRefs: []string{"test_run_001"},
+		},
+		SiteConsumerStatus: OpsCivilizationAssemblyFieldStatus{
+			Status:     opsCivilizationFieldAvailable,
+			Summary:    "read-only Civilization Assembly Site consumer evidence present",
+			SourceRefs: []string{"site_consumer_civ_001"},
+		},
+		BoundaryFlags:  []string{"read_only_site_consumer", "no_runtime_execution"},
+		ProvenanceRefs: []string{"authority_decision_001", "site_consumer_civ_001"},
+		ValidationRefs: []string{"test_run_001"},
 	}
-	for _, re := range forbidden {
-		if re.MatchString(surface) {
-			t.Fatalf("GET /ops/civilization: body contains mutation control marker %q", re)
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, now)
+
+	if data.ProjectionStatus != opsCivilizationProjectionStatusComplete {
+		t.Fatalf("projection status = %q, want complete", data.ProjectionStatus)
+	}
+	if data.ProjectionFreshness != "current" {
+		t.Fatalf("projection freshness = %q, want current", data.ProjectionFreshness)
+	}
+	if !strings.Contains(data.ProjectionSource, "civ-proj-001") {
+		t.Fatalf("projection source does not include projection id: %q", data.ProjectionSource)
+	}
+	if got := statusRowValue(data, "projection generated"); got != "2026-06-20 10:30:00 UTC" {
+		t.Fatalf("projection generated = %q", got)
+	}
+	if got := statusRowValue(data, "authority state"); !strings.Contains(got, "available - authority chain") {
+		t.Fatalf("authority state row = %q", got)
+	}
+	if got := boundaryState(data, "Authority state"); got != opsCivilizationFieldAvailable {
+		t.Fatalf("authority boundary = %q, want available", got)
+	}
+	if got := boundaryState(data, "Site consumer"); got != opsCivilizationFieldAvailable {
+		t.Fatalf("site consumer boundary = %q, want available", got)
+	}
+	if len(data.Civilization.Roster) != 1 {
+		t.Fatalf("roster len = %d, want 1: %+v", len(data.Civilization.Roster), data.Civilization.Roster)
+	}
+	row := data.Civilization.Roster[0]
+	if row.Role != "External Committee" || row.Agent != "civilization-operator" || row.Origin != "AuthorityDecision" {
+		t.Fatalf("unexpected projected roster row: %+v", row)
+	}
+	if !referenceGroupContains(data, "validation refs", "test_run_001") {
+		t.Fatalf("validation refs missing test_run_001: %+v", data.ReferenceGroups)
+	}
+	if findingContains(data, "fallback") {
+		t.Fatal("projection consumer retained a fallback finding")
+	}
+}
+
+func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T) {
+	now := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
+	projection := &OpsCivilizationAssemblyProjection{
+		ProjectionID:                       `civ-proj-<button onclick="x">`,
+		ProjectionSchemaVersion:            "1.0.0",
+		ProjectionSubject:                  "civilization_assembly",
+		GeneratedAt:                        now,
+		SourceEventGraphHeadOrStateVersion: "sha256:hostile",
+		SourceEventIDsOrQueryWindow:        []string{`<form method="post">`},
+		DerivationStatus:                   opsCivilizationProjectionStatusComplete,
+		AuthorityState: OpsCivilizationAssemblyAuthorityState{
+			Status:  opsCivilizationFieldAvailable,
+			Summary: `<button onclick="steal()">approve</button>`,
+		},
+		ActorRoster: []OpsCivilizationAssemblyActorSummary{
+			{ID: `actor_<input>`, ActorID: `actor-<script>`, ActorType: `human`, Status: `active`},
+		},
+		RoleBindings: []OpsCivilizationAssemblyRoleBinding{
+			{ActorID: `actor-<script>`, Role: `<button onclick="x">operator</button>`, SourceRef: `<a hx-post="/mutate">`, SourceType: "AuthorityDecision"},
+		},
+		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
+			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, now)
+	var body strings.Builder
+	if err := opsCivilizationAssembly(data).Render(context.Background(), &body); err != nil {
+		t.Fatalf("render projection component: %v", err)
+	}
+	html := body.String()
+	assertNoCivilizationMutationControls(t, html)
+	for _, escaped := range []string{"&lt;button", "&lt;form", "&lt;select", "&lt;a"} {
+		if !strings.Contains(html, escaped) {
+			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
+	}
+}
+
+func TestBuildOpsCivilizationPreservesUnavailablePartialFailedAndStaleStates(t *testing.T) {
+	now := time.Date(2026, 6, 20, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name          string
+		projection    *OpsCivilizationAssemblyProjection
+		wantStatus    string
+		wantFreshness string
+		wantFinding   string
+		wantRefGroup  string
+		wantRef       string
+	}{
+		{
+			name:          "missing projection",
+			projection:    nil,
+			wantStatus:    opsCivilizationProjectionStatusUnavailable,
+			wantFreshness: "unknown",
+			wantFinding:   "EventGraph projection-shaped input was not available",
+		},
+		{
+			name: "partial projection",
+			projection: &OpsCivilizationAssemblyProjection{
+				ProjectionID:     "civ-proj-partial",
+				GeneratedAt:      now.Add(-time.Hour),
+				DerivationStatus: opsCivilizationProjectionStatusPartial,
+				OpenGateSummary: []OpsCivilizationAssemblyGateSummary{
+					{ID: "gate_t", GateName: "Gate T", Status: "open"},
+				},
+				WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
+					{Field: "authority_state", Status: opsCivilizationFieldUnavailable, Reason: "source records missing"},
+				},
+			},
+			wantStatus:    opsCivilizationProjectionStatusPartial,
+			wantFreshness: "current",
+			wantFinding:   "1 open gate(s) remain projected",
+			wantRefGroup:  "withheld/unavailable fields",
+			wantRef:       "authority_state: source records missing",
+		},
+		{
+			name: "failed projection",
+			projection: &OpsCivilizationAssemblyProjection{
+				ProjectionID:     "civ-proj-failed",
+				GeneratedAt:      now.Add(-time.Hour),
+				DerivationStatus: opsCivilizationProjectionStatusFailed,
+				FailureReasons:   []string{"dangling authority reference"},
+			},
+			wantStatus:    opsCivilizationProjectionStatusFailed,
+			wantFreshness: "current",
+			wantFinding:   "Projection failure reason: dangling authority reference",
+		},
+		{
+			name: "stale complete projection",
+			projection: &OpsCivilizationAssemblyProjection{
+				ProjectionID:     "civ-proj-stale",
+				GeneratedAt:      now.Add(-25 * time.Hour),
+				DerivationStatus: opsCivilizationProjectionStatusComplete,
+			},
+			wantStatus:    opsCivilizationProjectionStatusComplete,
+			wantFreshness: "stale",
+			wantFinding:   "Projection freshness: stale.",
+		},
+		{
+			name: "future dated projection",
+			projection: &OpsCivilizationAssemblyProjection{
+				ProjectionID:     "civ-proj-skewed",
+				GeneratedAt:      now.Add(10 * time.Minute),
+				DerivationStatus: opsCivilizationProjectionStatusComplete,
+			},
+			wantStatus:    opsCivilizationProjectionStatusComplete,
+			wantFreshness: "skewed",
+			wantFinding:   "Projection freshness: skewed.",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := buildOpsCivilizationAssemblyDataFromProjection(tt.projection, now)
+			if data.ProjectionStatus != tt.wantStatus {
+				t.Fatalf("projection status = %q, want %q", data.ProjectionStatus, tt.wantStatus)
+			}
+			if data.ProjectionFreshness != tt.wantFreshness {
+				t.Fatalf("projection freshness = %q, want %q", data.ProjectionFreshness, tt.wantFreshness)
+			}
+			if !findingContains(data, tt.wantFinding) {
+				t.Fatalf("findings do not contain %q: %+v", tt.wantFinding, data.Civilization.Findings)
+			}
+			if tt.wantRefGroup != "" && !referenceGroupContains(data, tt.wantRefGroup, tt.wantRef) {
+				t.Fatalf("reference group %q missing %q: %+v", tt.wantRefGroup, tt.wantRef, data.ReferenceGroups)
+			}
+		})
 	}
 }
 
@@ -138,6 +342,65 @@ func TestOpsCivilizationRouteIsGetOnly(t *testing.T) {
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /ops/civilization: status = %d, want %d; body: %s", w.Code, http.StatusMethodNotAllowed, w.Body.String())
+	}
+}
+
+func statusRowValue(data *OpsCivilizationAssemblyData, label string) string {
+	for _, row := range data.StatusRows {
+		if row.Label == label {
+			return row.Value
+		}
+	}
+	return ""
+}
+
+func boundaryState(data *OpsCivilizationAssemblyData, label string) string {
+	for _, item := range data.Boundary {
+		if item.Label == label {
+			return item.State
+		}
+	}
+	return ""
+}
+
+func referenceGroupContains(data *OpsCivilizationAssemblyData, label string, ref string) bool {
+	for _, group := range data.ReferenceGroups {
+		if group.Label != label {
+			continue
+		}
+		for _, item := range group.Refs {
+			if item == ref {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func findingContains(data *OpsCivilizationAssemblyData, needle string) bool {
+	for _, finding := range data.Civilization.Findings {
+		if strings.Contains(finding, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func assertNoCivilizationMutationControls(t *testing.T, surface string) {
+	t.Helper()
+	forbidden := []*regexp.Regexp{
+		regexp.MustCompile(`(?i)<form\b`),
+		regexp.MustCompile(`(?i)<button\b`),
+		regexp.MustCompile(`(?i)<(input|select|textarea)\b`),
+		regexp.MustCompile(`(?i)<[^>]+hx-[a-z-]+\s*=`),
+		regexp.MustCompile(`(?i)<[^>]+method\s*=\s*['"]?post`),
+		regexp.MustCompile(`(?i)<[^>]+\son[a-z]+\s*=`),
+		regexp.MustCompile(`(?i)<a\b[^>]*\bhx-[a-z-]+\s*=`),
+	}
+	for _, re := range forbidden {
+		if re.MatchString(surface) {
+			t.Fatalf("civilization assembly body contains mutation control marker %q", re)
+		}
 	}
 }
 

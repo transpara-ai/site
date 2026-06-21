@@ -1,15 +1,36 @@
 package graph
 
-import "time"
+import (
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+)
+
+const (
+	opsCivilizationProjectionStatusComplete    = "complete"
+	opsCivilizationProjectionStatusPartial     = "partial"
+	opsCivilizationProjectionStatusUnavailable = "unavailable"
+	opsCivilizationProjectionStatusFailed      = "failed"
+
+	opsCivilizationFieldAvailable   = "available"
+	opsCivilizationFieldUnavailable = "unavailable"
+
+	opsCivilizationProjectionStaleAfter = 24 * time.Hour
+	opsCivilizationProjectionFutureSkew = 5 * time.Minute
+)
 
 type OpsCivilizationAssemblyData struct {
-	GeneratedAt      string
-	AuthoritySource  string
-	ProjectionSource string
-	ProjectionTarget string
-	ProjectionStatus string
-	Civilization     ObsCivilization
-	Boundary         []OpsCivilizationBoundary
+	GeneratedAt         string
+	AuthoritySource     string
+	ProjectionSource    string
+	ProjectionTarget    string
+	ProjectionStatus    string
+	ProjectionFreshness string
+	Civilization        ObsCivilization
+	Boundary            []OpsCivilizationBoundary
+	StatusRows          []OpsCivilizationStatusRow
+	ReferenceGroups     []OpsCivilizationReferenceGroup
 }
 
 type OpsCivilizationBoundary struct {
@@ -18,42 +39,602 @@ type OpsCivilizationBoundary struct {
 	Detail string
 }
 
+type OpsCivilizationStatusRow struct {
+	Label string
+	Value string
+}
+
+type OpsCivilizationReferenceGroup struct {
+	Label string
+	Refs  []string
+}
+
+type OpsCivilizationAssemblyProjection struct {
+	ProjectionID                       string                                    `json:"projection_id"`
+	ProjectionSchemaVersion            string                                    `json:"projection_schema_version"`
+	ProjectionSubject                  string                                    `json:"projection_subject"`
+	GeneratedAt                        time.Time                                 `json:"generated_at"`
+	SourceEventGraphHeadOrStateVersion string                                    `json:"source_eventgraph_head_or_state_version"`
+	SourceEventIDsOrQueryWindow        []string                                  `json:"source_event_ids_or_query_window"`
+	DerivationStatus                   string                                    `json:"derivation_status"`
+	AuthorityState                     OpsCivilizationAssemblyAuthorityState     `json:"authority_state"`
+	ExternalCommitteeState             OpsCivilizationAssemblyCommitteeState     `json:"external_committee_state"`
+	ActorRoster                        []OpsCivilizationAssemblyActorSummary     `json:"actor_roster"`
+	RoleBindings                       []OpsCivilizationAssemblyRoleBinding      `json:"role_bindings"`
+	AgentLifecycleSummary              []OpsCivilizationAssemblyLifecycleSummary `json:"agent_lifecycle_summary"`
+	FactoryOrderSummary                []OpsCivilizationAssemblyFactoryOrder     `json:"factory_order_summary"`
+	WorkEvidenceSummary                OpsCivilizationAssemblyWorkEvidence       `json:"work_evidence_summary"`
+	SiteConsumerStatus                 OpsCivilizationAssemblyFieldStatus        `json:"site_consumer_status"`
+	OpenGateSummary                    []OpsCivilizationAssemblyGateSummary      `json:"open_gate_summary"`
+	ResidualRiskSummary                []OpsCivilizationAssemblyResidualRisk     `json:"residual_risk_summary"`
+	WithheldOrUnavailableFields        []OpsCivilizationAssemblyUnavailableField `json:"withheld_or_unavailable_fields"`
+	BoundaryFlags                      []string                                  `json:"boundary_flags"`
+	ProvenanceRefs                     []string                                  `json:"provenance_refs"`
+	ValidationRefs                     []string                                  `json:"validation_refs"`
+	FailureReasons                     []string                                  `json:"failure_reasons,omitempty"`
+}
+
+type OpsCivilizationAssemblyFieldStatus struct {
+	Status     string   `json:"status"`
+	Summary    string   `json:"summary"`
+	SourceRefs []string `json:"source_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyUnavailableField struct {
+	Field  string `json:"field"`
+	Status string `json:"status"`
+	Reason string `json:"reason"`
+}
+
+type OpsCivilizationAssemblyAuthorityState struct {
+	Status             string                                     `json:"status"`
+	Summary            string                                     `json:"summary"`
+	AuthorityRequests  []OpsCivilizationAssemblyAuthorityRequest  `json:"authority_requests,omitempty"`
+	AuthorityDecisions []OpsCivilizationAssemblyAuthorityDecision `json:"authority_decisions,omitempty"`
+	ExecutionReceipts  []OpsCivilizationAssemblyExecutionReceipt  `json:"execution_receipts,omitempty"`
+	SourceRefs         []string                                   `json:"source_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyAuthorityRequest struct {
+	ID         string `json:"id"`
+	ActorID    string `json:"actor_id"`
+	ActorRole  string `json:"actor_role"`
+	Action     string `json:"action"`
+	TargetType string `json:"target_type"`
+	TargetID   string `json:"target_id"`
+	RiskClass  string `json:"risk_class"`
+	Status     string `json:"status,omitempty"`
+}
+
+type OpsCivilizationAssemblyAuthorityDecision struct {
+	ID                 string   `json:"id"`
+	AuthorityRequestID string   `json:"authority_request_id"`
+	DeciderActorID     string   `json:"decider_actor_id"`
+	DeciderRole        string   `json:"decider_role"`
+	Decision           string   `json:"decision"`
+	Status             string   `json:"status,omitempty"`
+	Scope              []string `json:"scope,omitempty"`
+}
+
+type OpsCivilizationAssemblyExecutionReceipt struct {
+	ID                  string `json:"id"`
+	AuthorityDecisionID string `json:"authority_decision_id"`
+	Action              string `json:"action"`
+	TargetID            string `json:"target_id"`
+	Result              string `json:"result"`
+	Status              string `json:"status,omitempty"`
+}
+
+type OpsCivilizationAssemblyCommitteeState struct {
+	Status         string   `json:"status"`
+	Summary        string   `json:"summary"`
+	DecisionRefs   []string `json:"decision_refs,omitempty"`
+	ApprovalRefs   []string `json:"approval_refs,omitempty"`
+	CommitteeRoles []string `json:"committee_roles,omitempty"`
+}
+
+type OpsCivilizationAssemblyActorSummary struct {
+	ID           string `json:"id"`
+	ActorID      string `json:"actor_id"`
+	ActorType    string `json:"actor_type"`
+	IdentityMode string `json:"identity_mode"`
+	Status       string `json:"status,omitempty"`
+}
+
+type OpsCivilizationAssemblyRoleBinding struct {
+	ActorID    string `json:"actor_id"`
+	Role       string `json:"role"`
+	SourceRef  string `json:"source_ref"`
+	SourceType string `json:"source_type"`
+}
+
+type OpsCivilizationAssemblyLifecycleSummary struct {
+	ID                  string  `json:"id"`
+	ActorID             string  `json:"actor_id"`
+	FromState           string  `json:"from_state,omitempty"`
+	ToState             string  `json:"to_state,omitempty"`
+	TrustLevel          string  `json:"trust_level,omitempty"`
+	AuthorityDecisionID *string `json:"authority_decision_id,omitempty"`
+	Status              string  `json:"status,omitempty"`
+}
+
+type OpsCivilizationAssemblyFactoryOrder struct {
+	ID                      string   `json:"id"`
+	Status                  string   `json:"status,omitempty"`
+	RiskClass               string   `json:"risk_class"`
+	ReleasePolicy           string   `json:"release_policy"`
+	RequirementRefs         []string `json:"requirement_refs,omitempty"`
+	AcceptanceCriterionRefs []string `json:"acceptance_criterion_refs,omitempty"`
+	TaskRefs                []string `json:"task_refs,omitempty"`
+	ReleaseCandidateRefs    []string `json:"release_candidate_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyWorkEvidence struct {
+	Status          string   `json:"status"`
+	Summary         string   `json:"summary"`
+	TaskRefs        []string `json:"task_refs,omitempty"`
+	ArtifactRefs    []string `json:"artifact_refs,omitempty"`
+	TestRunRefs     []string `json:"test_run_refs,omitempty"`
+	GateResultRefs  []string `json:"gate_result_refs,omitempty"`
+	AuditReportRefs []string `json:"audit_report_refs,omitempty"`
+	SourceRefs      []string `json:"source_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyGateSummary struct {
+	ID                 string   `json:"id"`
+	GateName           string   `json:"gate_name"`
+	Status             string   `json:"status,omitempty"`
+	FactoryOrderID     string   `json:"factory_order_id,omitempty"`
+	ReleaseCandidateID *string  `json:"release_candidate_id,omitempty"`
+	EvidenceRefs       []string `json:"evidence_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyResidualRisk struct {
+	ID       string `json:"id"`
+	Kind     string `json:"kind"`
+	Severity string `json:"severity,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Summary  string `json:"summary"`
+}
+
 func buildOpsCivilizationAssemblyData() *OpsCivilizationAssemblyData {
-	civ := buildObsCivilization(nil, nil)
-	civ.Findings = append([]string{
-		"EventGraph-backed Civilization Assembly projection is not connected in Site yet; this page uses typed Site fallback data for visualization only.",
-		"Unknown, unavailable, and not-projected states are preserved instead of inferred from missing projection data.",
-		"This route is display-only and carries no authority to execute, deploy, mutate protected settings, or allocate value.",
-	}, civ.Findings...)
+	return buildOpsCivilizationAssemblyDataFromProjection(nil, time.Now().UTC())
+}
+
+func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationAssemblyProjection, now time.Time) *OpsCivilizationAssemblyData {
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	status := opsCivilizationProjectionStatus(projection)
+	freshness := opsCivilizationProjectionFreshness(projection, now)
+	civ := opsCivilizationFromProjection(projection, status, freshness)
 
 	return &OpsCivilizationAssemblyData{
-		GeneratedAt:      time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
-		AuthoritySource:  "docs#163 v4.0 Site Civilization Assembly authority packet",
-		ProjectionSource: "typed Site fallback snapshot; no live EventGraph assembly payload fetched",
-		ProjectionTarget: "EventGraph Civilization Assembly projection",
-		ProjectionStatus: "non-authoritative visualization",
-		Civilization:     civ,
-		Boundary: []OpsCivilizationBoundary{
+		GeneratedAt:         now.UTC().Format("2006-01-02 15:04:05 UTC"),
+		AuthoritySource:     "docs v4.0 Event 10 Site Civilization projection-consumer AuthorityDecision",
+		ProjectionSource:    opsCivilizationProjectionSource(projection),
+		ProjectionTarget:    "EventGraph Civilization Assembly projection",
+		ProjectionStatus:    status,
+		ProjectionFreshness: freshness,
+		Civilization:        civ,
+		Boundary:            opsCivilizationBoundary(projection, status, freshness),
+		StatusRows:          opsCivilizationStatusRows(projection, status, freshness),
+		ReferenceGroups:     opsCivilizationReferenceGroups(projection),
+	}
+}
+
+func opsCivilizationProjectionStatus(projection *OpsCivilizationAssemblyProjection) string {
+	if projection == nil {
+		return opsCivilizationProjectionStatusUnavailable
+	}
+	switch strings.ToLower(strings.TrimSpace(projection.DerivationStatus)) {
+	case opsCivilizationProjectionStatusComplete:
+		return opsCivilizationProjectionStatusComplete
+	case opsCivilizationProjectionStatusPartial:
+		return opsCivilizationProjectionStatusPartial
+	case opsCivilizationProjectionStatusFailed:
+		return opsCivilizationProjectionStatusFailed
+	case opsCivilizationProjectionStatusUnavailable, "":
+		return opsCivilizationProjectionStatusUnavailable
+	default:
+		return strings.TrimSpace(projection.DerivationStatus)
+	}
+}
+
+func opsCivilizationProjectionFreshness(projection *OpsCivilizationAssemblyProjection, now time.Time) string {
+	if projection == nil || projection.GeneratedAt.IsZero() {
+		return "unknown"
+	}
+	generatedAt := projection.GeneratedAt.UTC()
+	now = now.UTC()
+	if generatedAt.After(now.Add(opsCivilizationProjectionFutureSkew)) {
+		return "skewed"
+	}
+	if now.Sub(generatedAt) > opsCivilizationProjectionStaleAfter {
+		return "stale"
+	}
+	return "current"
+}
+
+func opsCivilizationProjectionSource(projection *OpsCivilizationAssemblyProjection) string {
+	if projection == nil {
+		return "EventGraph Civilization Assembly projection unavailable to Site"
+	}
+	return "EventGraph Civilization Assembly projection " + opsCivilizationValue(projection.ProjectionID, "projection id unavailable")
+}
+
+func opsCivilizationFromProjection(projection *OpsCivilizationAssemblyProjection, status string, freshness string) ObsCivilization {
+	if projection == nil {
+		return opsCivilizationUnavailable("EventGraph projection-shaped input was not available; Site rendered no inferred runtime truth.")
+	}
+
+	civ := ObsCivilization{
+		OrgLevels:            opsCivilizationProjectionOrgLevels(false),
+		Roster:               opsCivilizationRoster(projection),
+		Emergence:            opsCivilizationEmergence(projection),
+		GlobalModelMode:      "unknown",
+		GlobalModeProvenance: "not projected",
+		GlobalModeReason:     "Model Selection Mode is not a field in the Civilization Assembly projection.",
+		ModelSource:          "not projected by Civilization Assembly projection",
+	}
+	if len(civ.Roster) > 0 {
+		civ.OrgLevels = opsCivilizationProjectionOrgLevels(true)
+	}
+	civ.Findings = opsCivilizationFindings(projection, status, freshness)
+	return civ
+}
+
+func opsCivilizationUnavailable(reason string) ObsCivilization {
+	return ObsCivilization{
+		OrgLevels:            opsCivilizationProjectionOrgLevels(false),
+		GlobalModelMode:      "unknown",
+		GlobalModeProvenance: "not projected",
+		GlobalModeReason:     "EventGraph Civilization Assembly projection unavailable",
+		ModelSource:          "EventGraph Civilization Assembly projection unavailable",
+		Emergence: []ObsEmergenceStep{
 			{
-				Label:  "Route authority",
-				State:  "bounded",
-				Detail: "One read-only Site surface authorized by the merged v4.0 packet.",
-			},
-			{
-				Label:  "Registered method",
-				State:  "GET only",
-				Detail: "No mutation handler is registered for this page.",
-			},
-			{
-				Label:  "Truth source",
-				State:  "target unavailable",
-				Detail: "EventGraph remains the intended backing source before this view may claim live truth.",
-			},
-			{
-				Label:  "Runtime control",
-				State:  "withheld",
-				Detail: "No executor, deploy, protected-setting, Hive-write, or Work-mutation path is exposed.",
+				Subject:  "Civilization Assembly projection",
+				State:    opsCivilizationProjectionStatusUnavailable,
+				Why:      "Site has no projection input to consume for this render.",
+				Evidence: "EventGraph projection-shaped input missing",
 			},
 		},
+		Findings: []string{
+			reason,
+			"Missing projection data does not imply authority, readiness, Gate T closeout, runtime execution, deployment, autonomy increase, or value allocation.",
+			"This route is display-only and carries no authority to execute, deploy, mutate protected settings, or allocate value.",
+		},
 	}
+}
+
+func opsCivilizationProjectionOrgLevels(hasRoster bool) []ObsOrgLevel {
+	state := "not projected"
+	detail := "tier evidence is unavailable in the current Civilization Assembly projection input"
+	if hasRoster {
+		state = "role bindings projected"
+		detail = "role bindings are projected; explicit tier evidence remains unavailable unless supplied by a later projection field"
+	}
+	return []ObsOrgLevel{
+		{Tier: "A", Label: "Bootstrap / foundation", Used: state, Detail: detail},
+		{Tier: "B", Label: "Organic emergence", Used: "not projected", Detail: detail},
+		{Tier: "C", Label: "Business operations", Used: "not projected", Detail: detail},
+		{Tier: "D", Label: "Self-governance", Used: "not projected", Detail: detail},
+	}
+}
+
+func opsCivilizationRoster(projection *OpsCivilizationAssemblyProjection) []ObsCivilizationRole {
+	actors := map[string]OpsCivilizationAssemblyActorSummary{}
+	for _, actor := range projection.ActorRoster {
+		actorID := strings.TrimSpace(actor.ActorID)
+		if actorID != "" {
+			actors[actorID] = actor
+		}
+	}
+
+	rows := make([]ObsCivilizationRole, 0, len(projection.RoleBindings)+len(projection.ActorRoster))
+	seenActors := map[string]bool{}
+	seenRows := map[string]bool{}
+	for _, binding := range projection.RoleBindings {
+		actorID := strings.TrimSpace(binding.ActorID)
+		role := strings.TrimSpace(binding.Role)
+		if actorID == "" && role == "" {
+			continue
+		}
+		key := actorID + "\x00" + role + "\x00" + binding.SourceRef
+		if seenRows[key] {
+			continue
+		}
+		seenRows[key] = true
+		seenActors[actorID] = true
+		actor := actors[actorID]
+		rows = append(rows, ObsCivilizationRole{
+			Role:                opsCivilizationValue(role, "role not projected"),
+			Agent:               opsCivilizationValue(actorID, "actor not projected"),
+			Tier:                "not projected",
+			Category:            opsCivilizationValue(actor.ActorType, "EventGraph role binding"),
+			Origin:              opsCivilizationValue(binding.SourceType, "EventGraph role binding"),
+			Status:              opsCivilizationValue(actor.Status, "projected"),
+			CanOperate:          "not projected",
+			Model:               "not projected",
+			ModelMode:           "unknown",
+			ModelModeProvenance: "not projected",
+			ReportsTo:           "not projected",
+			EscalationPath:      "not projected",
+			Why:                 "role binding supplied by the EventGraph Civilization Assembly projection",
+			Evidence:            opsCivilizationValue(binding.SourceRef, "source ref unavailable"),
+		})
+	}
+	for _, actor := range projection.ActorRoster {
+		actorID := strings.TrimSpace(actor.ActorID)
+		if actorID == "" || seenActors[actorID] {
+			continue
+		}
+		rows = append(rows, ObsCivilizationRole{
+			Role:                "role not projected",
+			Agent:               actorID,
+			Tier:                "not projected",
+			Category:            opsCivilizationValue(actor.ActorType, "actor"),
+			Origin:              "EventGraph actor roster",
+			Status:              opsCivilizationValue(actor.Status, "projected"),
+			CanOperate:          "not projected",
+			Model:               "not projected",
+			ModelMode:           "unknown",
+			ModelModeProvenance: "not projected",
+			ReportsTo:           "not projected",
+			EscalationPath:      "not projected",
+			Why:                 "actor was present in the projection without an accompanying role binding",
+			Evidence:            opsCivilizationValue(actor.ID, "source ref unavailable"),
+		})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].Role == rows[j].Role {
+			return rows[i].Agent < rows[j].Agent
+		}
+		return rows[i].Role < rows[j].Role
+	})
+	return rows
+}
+
+func opsCivilizationEmergence(projection *OpsCivilizationAssemblyProjection) []ObsEmergenceStep {
+	steps := make([]ObsEmergenceStep, 0, len(projection.AgentLifecycleSummary)+len(projection.OpenGateSummary)+len(projection.ResidualRiskSummary))
+	for _, item := range projection.AgentLifecycleSummary {
+		stateParts := []string{}
+		if item.FromState != "" || item.ToState != "" {
+			stateParts = append(stateParts, opsCivilizationValue(item.FromState, "unknown")+" -> "+opsCivilizationValue(item.ToState, "unknown"))
+		}
+		if item.TrustLevel != "" {
+			stateParts = append(stateParts, "trust "+item.TrustLevel)
+		}
+		steps = append(steps, ObsEmergenceStep{
+			Subject:  opsCivilizationValue(item.ActorID, item.ID),
+			State:    opsCivilizationValue(strings.Join(stateParts, "; "), opsCivilizationValue(item.Status, "projected")),
+			Why:      "agent lifecycle state supplied by the EventGraph Civilization Assembly projection",
+			Evidence: opsCivilizationValue(item.ID, "source ref unavailable"),
+		})
+	}
+	for _, gate := range projection.OpenGateSummary {
+		steps = append(steps, ObsEmergenceStep{
+			Subject:  opsCivilizationValue(gate.GateName, gate.ID),
+			State:    opsCivilizationValue(gate.Status, "open gate projected"),
+			Why:      "open gate is projected and is not closed by Site rendering",
+			Evidence: opsCivilizationValue(gate.ID, "gate ref unavailable"),
+		})
+	}
+	for _, risk := range projection.ResidualRiskSummary {
+		steps = append(steps, ObsEmergenceStep{
+			Subject:  opsCivilizationValue(risk.ID, risk.Kind),
+			State:    opsCivilizationValue(risk.Status, "residual risk projected"),
+			Why:      opsCivilizationValue(risk.Summary, "residual risk remains projected"),
+			Evidence: opsCivilizationValue(risk.Severity, "severity not projected"),
+		})
+	}
+	sort.Slice(steps, func(i, j int) bool {
+		if steps[i].State == steps[j].State {
+			return steps[i].Subject < steps[j].Subject
+		}
+		return steps[i].State < steps[j].State
+	})
+	return steps
+}
+
+func opsCivilizationFindings(projection *OpsCivilizationAssemblyProjection, status string, freshness string) []string {
+	findings := []string{
+		"EventGraph Civilization Assembly projection derivation status: " + status + ".",
+		"Projection freshness: " + freshness + ".",
+		"Even a complete projection derivation does not close Gate T, approve production readiness, execute runtime work, deploy, mutate protected settings, increase autonomy, or allocate value.",
+		"This route is display-only and carries no authority to execute, deploy, mutate protected settings, or allocate value.",
+	}
+	if projection.AuthorityState.Summary != "" {
+		findings = append(findings, "Authority state: "+projection.AuthorityState.Summary)
+	}
+	if projection.ExternalCommitteeState.Summary != "" {
+		findings = append(findings, "External Committee state: "+projection.ExternalCommitteeState.Summary)
+	}
+	if projection.WorkEvidenceSummary.Summary != "" {
+		findings = append(findings, "Work evidence: "+projection.WorkEvidenceSummary.Summary)
+	}
+	if projection.SiteConsumerStatus.Summary != "" {
+		findings = append(findings, "Site consumer: "+projection.SiteConsumerStatus.Summary)
+	}
+	for _, field := range projection.WithheldOrUnavailableFields {
+		findings = append(findings, fmt.Sprintf("Unavailable projection field %s: %s", opsCivilizationValue(field.Field, "unknown"), opsCivilizationValue(field.Reason, "reason not projected")))
+	}
+	for _, reason := range projection.FailureReasons {
+		if reason != "" {
+			findings = append(findings, "Projection failure reason: "+reason)
+		}
+	}
+	if len(projection.OpenGateSummary) > 0 {
+		findings = append(findings, fmt.Sprintf("%d open gate(s) remain projected; Site rendering does not close them.", len(projection.OpenGateSummary)))
+	}
+	if len(projection.ResidualRiskSummary) > 0 {
+		findings = append(findings, fmt.Sprintf("%d residual risk item(s) remain projected; Site rendering does not dispose them.", len(projection.ResidualRiskSummary)))
+	}
+	return findings
+}
+
+func opsCivilizationBoundary(projection *OpsCivilizationAssemblyProjection, status string, freshness string) []OpsCivilizationBoundary {
+	boundary := []OpsCivilizationBoundary{
+		{
+			Label:  "Route authority",
+			State:  "bounded",
+			Detail: "One read-only Site consumer surface authorized by the merged v4.0 Event 10 packet.",
+		},
+		{
+			Label:  "Registered method",
+			State:  "GET only",
+			Detail: "No mutation handler is registered for this page.",
+		},
+		{
+			Label:  "Projection derivation",
+			State:  status,
+			Detail: "Site renders the projection status as supplied; it does not infer missing approval or readiness.",
+		},
+		{
+			Label:  "Projection freshness",
+			State:  freshness,
+			Detail: "Stale or absent projection input remains advisory display data, not authority.",
+		},
+		{
+			Label:  "Runtime control",
+			State:  "withheld",
+			Detail: "No executor, deploy, protected-setting, Hive-write, Work-mutation, autonomy, or value path is exposed.",
+		},
+	}
+	if projection != nil {
+		boundary = append(boundary,
+			OpsCivilizationBoundary{
+				Label:  "Authority state",
+				State:  opsCivilizationStatusValue(projection.AuthorityState.Status),
+				Detail: opsCivilizationValue(projection.AuthorityState.Summary, "authority summary unavailable"),
+			},
+			OpsCivilizationBoundary{
+				Label:  "External Committee",
+				State:  opsCivilizationStatusValue(projection.ExternalCommitteeState.Status),
+				Detail: opsCivilizationValue(projection.ExternalCommitteeState.Summary, "committee summary unavailable"),
+			},
+			OpsCivilizationBoundary{
+				Label:  "Site consumer",
+				State:  opsCivilizationStatusValue(projection.SiteConsumerStatus.Status),
+				Detail: opsCivilizationValue(projection.SiteConsumerStatus.Summary, "site consumer evidence unavailable"),
+			},
+		)
+	}
+	return boundary
+}
+
+func opsCivilizationStatusRows(projection *OpsCivilizationAssemblyProjection, status string, freshness string) []OpsCivilizationStatusRow {
+	rows := make([]OpsCivilizationStatusRow, 0, 12)
+	add := func(label string, value string) {
+		rows = append(rows, OpsCivilizationStatusRow{Label: label, Value: value})
+	}
+	if projection == nil {
+		add("projection id", "not projected")
+		add("schema version", "not projected")
+		add("subject", "civilization_assembly")
+		add("source state", "not projected")
+		add("source events/window", "not projected")
+		add("projection generated", "not projected")
+		add("freshness", freshness)
+		add("derivation status", status)
+		add("authority state", "unavailable")
+		add("external committee", "unavailable")
+		add("work evidence", "unavailable")
+		add("site consumer", "unavailable")
+		return rows
+	}
+	add("projection id", opsCivilizationValue(projection.ProjectionID, "not projected"))
+	add("schema version", opsCivilizationValue(projection.ProjectionSchemaVersion, "not projected"))
+	add("subject", opsCivilizationValue(projection.ProjectionSubject, "not projected"))
+	add("source state", opsCivilizationValue(projection.SourceEventGraphHeadOrStateVersion, "not projected"))
+	add("source events/window", opsCivilizationJoin(projection.SourceEventIDsOrQueryWindow, "not projected"))
+	add("projection generated", opsCivilizationTime(projection.GeneratedAt))
+	add("freshness", freshness)
+	add("derivation status", status)
+	add("authority state", opsCivilizationStatusSummary(projection.AuthorityState.Status, projection.AuthorityState.Summary))
+	add("external committee", opsCivilizationStatusSummary(projection.ExternalCommitteeState.Status, projection.ExternalCommitteeState.Summary))
+	add("work evidence", opsCivilizationStatusSummary(projection.WorkEvidenceSummary.Status, projection.WorkEvidenceSummary.Summary))
+	add("site consumer", opsCivilizationStatusSummary(projection.SiteConsumerStatus.Status, projection.SiteConsumerStatus.Summary))
+	return rows
+}
+
+func opsCivilizationReferenceGroups(projection *OpsCivilizationAssemblyProjection) []OpsCivilizationReferenceGroup {
+	if projection == nil {
+		return nil
+	}
+	groups := []OpsCivilizationReferenceGroup{
+		{Label: "source events/window", Refs: append([]string(nil), projection.SourceEventIDsOrQueryWindow...)},
+		{Label: "provenance refs", Refs: append([]string(nil), projection.ProvenanceRefs...)},
+		{Label: "validation refs", Refs: append([]string(nil), projection.ValidationRefs...)},
+		{Label: "boundary flags", Refs: append([]string(nil), projection.BoundaryFlags...)},
+		{Label: "failure reasons", Refs: append([]string(nil), projection.FailureReasons...)},
+	}
+	withheld := make([]string, 0, len(projection.WithheldOrUnavailableFields))
+	for _, field := range projection.WithheldOrUnavailableFields {
+		withheld = append(withheld, fmt.Sprintf("%s: %s", opsCivilizationValue(field.Field, "unknown field"), opsCivilizationValue(field.Reason, "reason not projected")))
+	}
+	groups = append(groups, OpsCivilizationReferenceGroup{Label: "withheld/unavailable fields", Refs: withheld})
+	out := groups[:0]
+	for _, group := range groups {
+		refs := opsCivilizationNonEmpty(group.Refs)
+		if len(refs) == 0 {
+			continue
+		}
+		sort.Strings(refs)
+		group.Refs = refs
+		out = append(out, group)
+	}
+	return out
+}
+
+func opsCivilizationStatusSummary(status string, summary string) string {
+	status = opsCivilizationStatusValue(status)
+	if summary == "" {
+		return status
+	}
+	return status + " - " + summary
+}
+
+func opsCivilizationStatusValue(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case opsCivilizationFieldAvailable:
+		return opsCivilizationFieldAvailable
+	case opsCivilizationFieldUnavailable, "":
+		return opsCivilizationFieldUnavailable
+	default:
+		return strings.TrimSpace(status)
+	}
+}
+
+func opsCivilizationTime(t time.Time) string {
+	if t.IsZero() {
+		return "not projected"
+	}
+	return t.UTC().Format("2006-01-02 15:04:05 UTC")
+}
+
+func opsCivilizationJoin(items []string, fallback string) string {
+	items = opsCivilizationNonEmpty(items)
+	if len(items) == 0 {
+		return fallback
+	}
+	return strings.Join(items, ", ")
+}
+
+func opsCivilizationNonEmpty(items []string) []string {
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+func opsCivilizationValue(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
 }
