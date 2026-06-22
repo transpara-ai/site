@@ -23,7 +23,7 @@ vet:
 verify-canonical-paths:
 	test -f graph/review_console.go
 	grep -Fq 'https://github.com/transpara-ai/operation/issues/26' graph/review_console.go
-	grep -Fq 'SourceRepo:     "transpara-ai/operation"' graph/review_console.go
+	grep -Eq 'SourceRepo:[[:space:]]+"transpara-ai/operation"' graph/review_console.go
 	@# Keep scanning narrow so historical docs and submodule history remain preserved.
 	@output=$$(grep -RnF "$(LEGACY_OPERATION_REPO)" graph/review_console.go); status=$$?; \
 	if [ $$status -eq 0 ]; then \
