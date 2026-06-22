@@ -42,7 +42,7 @@ func (h *Handlers) handleOpsReviewConsole(w http.ResponseWriter, r *http.Request
 func buildOpsReviewConsoleData() OpsReviewConsoleData {
 	return OpsReviewConsoleData{
 		Title:               "External Committee Review Console",
-		GeneratedAt:         "static Event 13 fixture",
+		GeneratedAt:         "static Event 13 fixture; not a live recency or revocation check",
 		AuthorizationSource: "docs v4.0 Event 13 AuthorityDecision, merged by docs#185",
 		Boundary: []string{
 			"display_only=true for every review item",
@@ -64,7 +64,22 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 				EvidenceState:  "passed",
 				ResidualState:  "none",
 				GateScope:      "Event 13 / Gate W authority packet",
-				Limitation:     "Approval plus merge grants only one future bounded Site PR lifecycle; it does not close Gate W.",
+				Limitation:     "Passed reflects a verified point-in-time docs#185 approval for this pinned head; this static console is not a live revocation or staleness checker and does not close Gate W.",
+				DisplayOnly:    true,
+			},
+			{
+				ID:             "event-13-authority-decision",
+				Title:          "Event 13 AuthorityDecision",
+				DecisionKind:   "authority_decision",
+				SourceURL:      "https://github.com/transpara-ai/docs/blob/main/dark-factory/v4.0/implementation/epics/epic-13-external-committee-review-console/03-external-committee-review-console-authority-decision-v4.0.md",
+				SourceType:     "docs_packet",
+				SourceRepo:     "transpara-ai/docs",
+				RequiredActor:  "operator and External Committee",
+				RequiredAction: "respect one bounded Site PR lifecycle and stop conditions",
+				EvidenceState:  "passed",
+				ResidualState:  "none",
+				GateScope:      "DF-V4.0-EPIC-013-AUTHORITY-DECISION",
+				Limitation:     "The AuthorityDecision authorizes only this Level 0 display implementation lifecycle; it grants no protected action, runtime, deploy, or closure authority.",
 				DisplayOnly:    true,
 			},
 			{

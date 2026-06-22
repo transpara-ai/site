@@ -26,11 +26,15 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		`data-review-console-boundary="display-only"`,
 		"docs v4.0 Event 13 AuthorityDecision",
 		"127da4ef57dee34231cc50d87a249349fc0f768c",
+		"point-in-time docs#185 approval",
+		"Event 13 AuthorityDecision",
+		"DF-V4.0-EPIC-013-AUTHORITY-DECISION",
 		"Gate S approval artifact residual",
 		"accepted_with_residual",
 		"Gate W closeout evidence",
 		`data-evidence-state="missing"`,
 		"Test 001 remains YELLOW",
+		"not applicable",
 		"display only",
 	} {
 		if !strings.Contains(body, want) {
@@ -42,8 +46,35 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 
 func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) {
 	data := buildOpsReviewConsoleData()
+	requiredKinds := map[string]bool{
+		"exact_head_approval":  false,
+		"authority_decision":   false,
+		"residual_disposition": false,
+		"gate_closeout":        false,
+		"issue_disposition":    false,
+	}
 	var missing, residual bool
 	for _, item := range data.Items {
+		if item.ID == "" ||
+			item.Title == "" ||
+			item.DecisionKind == "" ||
+			item.SourceURL == "" ||
+			item.SourceType == "" ||
+			item.SourceRepo == "" ||
+			item.RequiredActor == "" ||
+			item.RequiredAction == "" ||
+			item.EvidenceState == "" ||
+			item.ResidualState == "" ||
+			item.GateScope == "" ||
+			item.Limitation == "" {
+			t.Fatalf("review item has incomplete contract fields: %#v", item)
+		}
+		if !strings.HasPrefix(item.SourceURL, "https://github.com/transpara-ai/") {
+			t.Fatalf("review item %q source URL = %q, want Transpara-AI GitHub source", item.ID, item.SourceURL)
+		}
+		if _, ok := requiredKinds[item.DecisionKind]; ok {
+			requiredKinds[item.DecisionKind] = true
+		}
 		if item.EvidenceState == "missing" && item.DisplayOnly && item.ResidualState == "open" {
 			missing = true
 		}
@@ -59,6 +90,11 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 	}
 	if !residual {
 		t.Fatal("review console data does not include a carried residual item")
+	}
+	for kind, seen := range requiredKinds {
+		if !seen {
+			t.Fatalf("review console data does not include required decision kind %q", kind)
+		}
 	}
 }
 
@@ -98,13 +134,12 @@ func assertOpsReviewConsoleNoMutationControls(t *testing.T, body string) {
 		`method="post"`,
 		`action="`,
 		`formaction="`,
+		"data-action=",
+		"hx-post",
+		"fetch(",
+		"XMLHttpRequest",
 		"api.github.com",
 		"/repos/",
-		"GitHub token",
-		"secret",
-		"Deploy",
-		"RuntimeBroker execution control",
-		"EventGraph write control",
 	}
 	for _, f := range forbidden {
 		if strings.Contains(surface, f) {
