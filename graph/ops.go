@@ -1429,6 +1429,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "v4.0 bounded",
 		},
 		{
+			ID:          "review-console",
+			Label:       "Review Console",
+			Description: "External Committee decision evidence: exact-head approvals, residuals, authority packets, and gate closeout state.",
+			Href:        "/ops/review-console",
+			Target:      "docs v4.0 Event 13 review item records",
+			Owner:       "site read-only projection",
+			Status:      "display only",
+		},
+		{
 			ID:          "hive",
 			Label:       "Hive",
 			Description: "Runtime iteration, phase timeline, diagnostics, and recent build signal.",
