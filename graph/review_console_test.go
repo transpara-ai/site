@@ -91,11 +91,28 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 	if !residual {
 		t.Fatal("review console data does not include a carried residual item")
 	}
+	if gateW := findOpsReviewItem(t, data, "gate-w-closeout"); gateW.EvidenceState != "missing" || gateW.ResidualState != "open" {
+		t.Fatalf("gate-w-closeout state = %s/%s, want missing/open", gateW.EvidenceState, gateW.ResidualState)
+	}
+	if test001 := findOpsReviewItem(t, data, "test-001-yellow"); test001.EvidenceState != "pending" || test001.ResidualState != "open" {
+		t.Fatalf("test-001-yellow state = %s/%s, want pending/open", test001.EvidenceState, test001.ResidualState)
+	}
 	for kind, seen := range requiredKinds {
 		if !seen {
 			t.Fatalf("review console data does not include required decision kind %q", kind)
 		}
 	}
+}
+
+func findOpsReviewItem(t *testing.T, data OpsReviewConsoleData, id string) OpsReviewItem {
+	t.Helper()
+	for _, item := range data.Items {
+		if item.ID == id {
+			return item
+		}
+	}
+	t.Fatalf("review item %q not found", id)
+	return OpsReviewItem{}
 }
 
 func TestOperatorReviewConsoleRouteRequiresWriteAuth(t *testing.T) {
@@ -123,11 +140,6 @@ func TestOperatorReviewConsoleRouteRequiresWriteAuth(t *testing.T) {
 
 func assertOpsReviewConsoleNoMutationControls(t *testing.T, body string) {
 	t.Helper()
-	start := strings.Index(body, `data-review-console="read-only"`)
-	if start < 0 {
-		t.Fatal("review console marker missing")
-	}
-	surface := body[start:]
 	forbidden := []string{
 		"<form",
 		"<button",
@@ -142,7 +154,7 @@ func assertOpsReviewConsoleNoMutationControls(t *testing.T, body string) {
 		"/repos/",
 	}
 	for _, f := range forbidden {
-		if strings.Contains(surface, f) {
+		if strings.Contains(body, f) {
 			t.Fatalf("review console contains mutation/control marker %q", f)
 		}
 	}
