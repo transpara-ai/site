@@ -732,11 +732,10 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
 	}
-	if strings.Contains(html, "<img") {
-		t.Fatalf("rendered HTML contains unescaped queued lifecycle image payload: %s", html)
-	}
-	if strings.Contains(html, "<script>alert") {
-		t.Fatalf("rendered HTML contains unescaped script payload: %s", html)
+	for _, raw := range []string{"<script", "<button", "<form", "<input", "<select", "<textarea", "<img", "<a "} {
+		if strings.Contains(html, raw) {
+			t.Fatalf("rendered HTML contains unescaped hostile tag %q: %s", raw, html)
+		}
 	}
 }
 
