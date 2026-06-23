@@ -152,6 +152,9 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"gate_result_001",
 		"audit_report_001",
 		"Queued issue-scan lifecycle",
+		"not runtime completion proof",
+		"expected evidence, not runtime progress",
+		"expected_not_observed",
 		"Resolve transpara-ai/hive#321",
 		"research_issue_and_repo_context",
 		"debate_with_correct_civic_roles",
@@ -672,6 +675,41 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			Status:  opsCivilizationFieldAvailable,
 			Summary: `<script>alert("work")</script>`,
 		},
+		QueuedRunRequest: &OpsHiveQueuedRunRequest{
+			RunID:                 `run_<script>alert("run")</script>`,
+			Title:                 `<button onclick="x">queued issue</button>`,
+			Status:                `<form method="post">queued</form>`,
+			TargetRepos:           []string{`transpara-ai/<script>site</script>`},
+			AuthorityInitialLevel: `<input name="authority">`,
+			AuthorityScope:        `<a hx-post="/approve">scope</a>`,
+			EvidenceKind:          `<select><option>queued</option></select>`,
+			BriefKind:             `<script>brief</script>`,
+			LifecycleVersion:      `v<script>3</script>`,
+			LifecycleEvidenceKind: `<button onclick="x">expected</button>`,
+			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+				{
+					ID:                `<script>stage</script>`,
+					Name:              `<button onclick="x">Stage</button>`,
+					RequiredRoles:     []string{`<input name="role">`},
+					AuthorityBoundary: `<form action="/merge">boundary</form>`,
+					CompletionGate:    `<a hx-post="/gate">gate</a>`,
+					EvidenceStatus:    `<script>expected</script>`,
+				},
+			},
+			AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
+				{
+					ID:                `<script>step</script>`,
+					StageID:           `<script>stage</script>`,
+					Role:              `<button onclick="x">implementer</button>`,
+					CanOperate:        true,
+					Objective:         `<img src=x onerror=alert(1)>`,
+					RequiredOutputs:   []string{`<textarea>output</textarea>`},
+					AuthorityBoundary: `<form action="/merge">boundary</form>`,
+					CompletionGate:    `<a hx-post="/gate">gate</a>`,
+					EvidenceStatus:    `<script>expected</script>`,
+				},
+			},
+		},
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
@@ -687,6 +725,11 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 	for _, escaped := range []string{"&lt;button", "&lt;form", "&lt;select", "&lt;a", "&lt;script", "&lt;input"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
+		}
+	}
+	for _, escaped := range []string{"run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;"} {
+		if !strings.Contains(html, escaped) {
+			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
 	}
 	if strings.Contains(html, "<script>alert") {
