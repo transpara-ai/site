@@ -173,9 +173,10 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
 
-// Raw Hive-shaped fixture for the Civilization Assembly projection endpoint and
-// this Site consumer. Keep this as literal JSON so the test exercises wire keys
-// and enum strings rather than re-encoding Site's own Go struct.
+// Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
+// Civilization Assembly projection endpoint and this Site consumer. Keep this as
+// literal JSON so the test exercises wire keys and enum strings rather than
+// re-encoding Site's own Go struct.
 const hiveCivilizationAssemblyProjectionFixture = `{
   "projection_id": "civ-runtime-001",
   "projection_schema_version": "1.0.0",

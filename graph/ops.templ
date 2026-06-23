@@ -1121,6 +1121,8 @@ templ opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) {
 								<dl class="grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 mt-2 text-[10px]">
 									<dt class="text-warm-faint">Outputs</dt>
 									<dd class="text-warm-muted break-words">{ opsEvidenceJoin(step.RequiredOutputs) }</dd>
+									<dt class="text-warm-faint">Boundary</dt>
+									<dd class="text-warm-muted break-words">{ opsValueOr(step.AuthorityBoundary, "boundary not projected") }</dd>
 									<dt class="text-warm-faint">Gate</dt>
 									<dd class="text-warm-muted break-words">{ opsValueOr(step.CompletionGate, "not projected") }</dd>
 									<dt class="text-warm-faint">Status</dt>
