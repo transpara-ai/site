@@ -190,21 +190,24 @@ type OpsCivilizationAssemblyWorkEvidence struct {
 }
 
 type OpsCivilizationAssemblyTaskEvidence struct {
-	ID                      string   `json:"id"`
-	CanonicalTaskID         string   `json:"canonical_task_id,omitempty"`
-	FactoryOrderID          string   `json:"factory_order_id,omitempty"`
-	LifecycleStageID        string   `json:"lifecycle_stage_id,omitempty"`
-	Title                   string   `json:"title"`
-	Cell                    string   `json:"cell,omitempty"`
-	RiskClass               string   `json:"risk_class,omitempty"`
-	Status                  string   `json:"status"`
-	Ready                   bool     `json:"ready"`
-	Blocked                 bool     `json:"blocked"`
-	RequirementRefs         []string `json:"requirement_refs,omitempty"`
-	AcceptanceCriterionRefs []string `json:"acceptance_criterion_refs,omitempty"`
-	ExpectedOutputs         []string `json:"expected_outputs,omitempty"`
-	DependsOnRefs           []string `json:"depends_on_refs,omitempty"`
-	SourceRefs              []string `json:"source_refs,omitempty"`
+	ID                      string                          `json:"id"`
+	CanonicalTaskID         string                          `json:"canonical_task_id,omitempty"`
+	FactoryOrderID          string                          `json:"factory_order_id,omitempty"`
+	LifecycleStageID        string                          `json:"lifecycle_stage_id,omitempty"`
+	Title                   string                          `json:"title"`
+	Cell                    string                          `json:"cell,omitempty"`
+	RiskClass               string                          `json:"risk_class,omitempty"`
+	Status                  string                          `json:"status"`
+	Ready                   bool                            `json:"ready"`
+	Blocked                 bool                            `json:"blocked"`
+	RequirementRefs         []string                        `json:"requirement_refs,omitempty"`
+	AcceptanceCriterionRefs []string                        `json:"acceptance_criterion_refs,omitempty"`
+	ExpectedOutputs         []string                        `json:"expected_outputs,omitempty"`
+	DependsOnRefs           []string                        `json:"depends_on_refs,omitempty"`
+	SourceRefs              []string                        `json:"source_refs,omitempty"`
+	RequiredRoles           []string                        `json:"required_roles,omitempty"`
+	RoleContractRefs        []string                        `json:"role_contract_refs,omitempty"`
+	AgentExecutionPlan      []OpsHiveQueuedRunAgentPlanStep `json:"agent_execution_plan,omitempty"`
 }
 
 type OpsCivilizationAssemblyArtifactEvidence struct {
