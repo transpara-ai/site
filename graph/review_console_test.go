@@ -97,6 +97,9 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 	if test001 := findOpsReviewItem(t, data, "test-001-yellow"); test001.EvidenceState != "pending" || test001.ResidualState != "open" {
 		t.Fatalf("test-001-yellow state = %s/%s, want pending/open", test001.EvidenceState, test001.ResidualState)
 	}
+	if test001 := findOpsReviewItem(t, data, "test-001-yellow"); test001.SourceURL != "https://github.com/transpara-ai/operation/issues/26" || test001.SourceRepo != "transpara-ai/operation" {
+		t.Fatalf("test-001-yellow source = %s / %s, want operation issue source", test001.SourceURL, test001.SourceRepo)
+	}
 	for kind, seen := range requiredKinds {
 		if !seen {
 			t.Fatalf("review console data does not include required decision kind %q", kind)
