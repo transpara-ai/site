@@ -169,6 +169,35 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<div class="px-4 pb-4">
 					@opsHiveQueuedRunLifecycle(data.QueuedRunRequest)
 				</div>
+				if len(data.IssueScanStageEvidence) > 0 {
+					<div class="border-t border-edge overflow-x-auto">
+						<table class="min-w-full text-left text-xs">
+							<thead class="text-warm-faint border-b border-edge">
+								<tr>
+									<th class="py-2 px-3 font-medium">Stage</th>
+									<th class="py-2 px-3 font-medium">Status</th>
+									<th class="py-2 px-3 font-medium">Artifact</th>
+									<th class="py-2 px-3 font-medium">Media type</th>
+									<th class="py-2 px-3 font-medium">Task</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, evidence := range data.IssueScanStageEvidence {
+									<tr class="border-b border-edge/50 align-top">
+										<td class="py-2 px-3 text-warm">
+											<p class="break-words">{ opsCivilizationValue(evidence.StageName, evidence.StageID) }</p>
+											<p class="text-[10px] text-warm-faint break-all">{ evidence.StageID }</p>
+										</td>
+										<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(evidence.EvidenceStatus, "not projected") }</td>
+										<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(evidence.ArtifactID, "not projected") }</td>
+										<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(evidence.MediaType, "not projected") }</td>
+										<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(evidence.TaskRef, "not projected") }</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
 			</section>
 		}
 		<section class="border border-edge bg-surface rounded-lg p-4">
