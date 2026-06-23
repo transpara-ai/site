@@ -174,14 +174,23 @@ type OpsCivilizationAssemblyFactoryOrder struct {
 }
 
 type OpsCivilizationAssemblyWorkEvidence struct {
-	Status          string   `json:"status"`
-	Summary         string   `json:"summary"`
-	TaskRefs        []string `json:"task_refs,omitempty"`
-	ArtifactRefs    []string `json:"artifact_refs,omitempty"`
-	TestRunRefs     []string `json:"test_run_refs,omitempty"`
-	GateResultRefs  []string `json:"gate_result_refs,omitempty"`
-	AuditReportRefs []string `json:"audit_report_refs,omitempty"`
-	SourceRefs      []string `json:"source_refs,omitempty"`
+	Status          string                                    `json:"status"`
+	Summary         string                                    `json:"summary"`
+	TaskRefs        []string                                  `json:"task_refs,omitempty"`
+	ArtifactRefs    []string                                  `json:"artifact_refs,omitempty"`
+	Artifacts       []OpsCivilizationAssemblyArtifactEvidence `json:"artifacts,omitempty"`
+	TestRunRefs     []string                                  `json:"test_run_refs,omitempty"`
+	GateResultRefs  []string                                  `json:"gate_result_refs,omitempty"`
+	AuditReportRefs []string                                  `json:"audit_report_refs,omitempty"`
+	SourceRefs      []string                                  `json:"source_refs,omitempty"`
+}
+
+type OpsCivilizationAssemblyArtifactEvidence struct {
+	ID         string   `json:"id"`
+	TaskRef    string   `json:"task_ref"`
+	Label      string   `json:"label"`
+	MediaType  string   `json:"media_type,omitempty"`
+	SourceRefs []string `json:"source_refs,omitempty"`
 }
 
 type OpsCivilizationAssemblyGateSummary struct {
