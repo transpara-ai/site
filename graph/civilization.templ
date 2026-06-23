@@ -124,6 +124,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 								<th class="py-2 px-3 font-medium">Lifecycle stage</th>
 								<th class="py-2 px-3 font-medium">Status</th>
 								<th class="py-2 px-3 font-medium">Roles</th>
+								<th class="py-2 px-3 font-medium">Evidence</th>
 								<th class="py-2 px-3 font-medium">Cell</th>
 								<th class="py-2 px-3 font-medium">Depends on</th>
 								<th class="py-2 px-3 font-medium">Role outputs</th>
@@ -152,13 +153,26 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 											<p class="text-[10px] text-warm-faint break-all mt-1">{ opsCivilizationJoin(task.RoleContractRefs, "none projected") }</p>
 										}
 									</td>
+									<td class="py-2 px-3 text-warm-faint break-words">
+										<p>{ opsCivilizationJoin(task.RequiredEvidence, "none projected") }</p>
+										if len(task.OutputContractRefs) > 0 {
+											<p class="text-[10px] text-warm-faint break-all mt-1">{ opsCivilizationJoin(task.OutputContractRefs, "none projected") }</p>
+										}
+									</td>
 									<td class="py-2 px-3 text-warm-muted break-words">
 										<p>{ opsCivilizationValue(task.Cell, "not projected") }</p>
 										<p class="text-[10px] text-warm-faint">{ opsCivilizationValue(task.RiskClass, "risk not projected") }</p>
 									</td>
 									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(task.DependsOnRefs, "none") }</td>
 									<td class="py-2 px-3 text-warm-faint break-words">
-										if len(task.AgentExecutionPlan) == 0 {
+										if len(task.RoleOutputContracts) > 0 {
+											for _, contract := range task.RoleOutputContracts {
+												<p><span class="text-warm-muted">{ opsCivilizationValue(contract.Role, "role") }</span>: { opsCivilizationJoin(contract.RequiredOutputs, "no outputs projected") }</p>
+												if contract.AuthorityBoundary != "" || contract.CompletionGate != "" || contract.EvidenceStatus != "" {
+													<p class="text-[10px] text-warm-faint">{ opsCivilizationValue(contract.AuthorityBoundary, "boundary not projected") } · { opsCivilizationValue(contract.CompletionGate, "gate not projected") } · { opsCivilizationEvidenceStatusValue(contract.EvidenceStatus, "status not projected") }</p>
+												}
+											}
+										} else if len(task.AgentExecutionPlan) == 0 {
 											<span>none projected</span>
 										} else {
 											for _, step := range task.AgentExecutionPlan {

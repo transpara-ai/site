@@ -190,24 +190,36 @@ type OpsCivilizationAssemblyWorkEvidence struct {
 }
 
 type OpsCivilizationAssemblyTaskEvidence struct {
-	ID                      string                          `json:"id"`
-	CanonicalTaskID         string                          `json:"canonical_task_id,omitempty"`
-	FactoryOrderID          string                          `json:"factory_order_id,omitempty"`
-	LifecycleStageID        string                          `json:"lifecycle_stage_id,omitempty"`
-	Title                   string                          `json:"title"`
-	Cell                    string                          `json:"cell,omitempty"`
-	RiskClass               string                          `json:"risk_class,omitempty"`
-	Status                  string                          `json:"status"`
-	Ready                   bool                            `json:"ready"`
-	Blocked                 bool                            `json:"blocked"`
-	RequirementRefs         []string                        `json:"requirement_refs,omitempty"`
-	AcceptanceCriterionRefs []string                        `json:"acceptance_criterion_refs,omitempty"`
-	ExpectedOutputs         []string                        `json:"expected_outputs,omitempty"`
-	DependsOnRefs           []string                        `json:"depends_on_refs,omitempty"`
-	SourceRefs              []string                        `json:"source_refs,omitempty"`
-	RequiredRoles           []string                        `json:"required_roles,omitempty"`
-	RoleContractRefs        []string                        `json:"role_contract_refs,omitempty"`
-	AgentExecutionPlan      []OpsHiveQueuedRunAgentPlanStep `json:"agent_execution_plan,omitempty"`
+	ID                      string                              `json:"id"`
+	CanonicalTaskID         string                              `json:"canonical_task_id,omitempty"`
+	FactoryOrderID          string                              `json:"factory_order_id,omitempty"`
+	LifecycleStageID        string                              `json:"lifecycle_stage_id,omitempty"`
+	Title                   string                              `json:"title"`
+	Cell                    string                              `json:"cell,omitempty"`
+	RiskClass               string                              `json:"risk_class,omitempty"`
+	Status                  string                              `json:"status"`
+	Ready                   bool                                `json:"ready"`
+	Blocked                 bool                                `json:"blocked"`
+	RequirementRefs         []string                            `json:"requirement_refs,omitempty"`
+	AcceptanceCriterionRefs []string                            `json:"acceptance_criterion_refs,omitempty"`
+	ExpectedOutputs         []string                            `json:"expected_outputs,omitempty"`
+	DependsOnRefs           []string                            `json:"depends_on_refs,omitempty"`
+	SourceRefs              []string                            `json:"source_refs,omitempty"`
+	RequiredRoles           []string                            `json:"required_roles,omitempty"`
+	RoleContractRefs        []string                            `json:"role_contract_refs,omitempty"`
+	AgentExecutionPlan      []OpsHiveQueuedRunAgentPlanStep     `json:"agent_execution_plan,omitempty"`
+	RequiredEvidence        []string                            `json:"required_evidence,omitempty"`
+	OutputContractRefs      []string                            `json:"output_contract_refs,omitempty"`
+	RoleOutputContracts     []OpsCivilizationRoleOutputContract `json:"role_output_contracts,omitempty"`
+}
+
+type OpsCivilizationRoleOutputContract struct {
+	Role              string   `json:"role"`
+	CanOperate        bool     `json:"can_operate"`
+	RequiredOutputs   []string `json:"required_outputs,omitempty"`
+	AuthorityBoundary string   `json:"authority_boundary,omitempty"`
+	CompletionGate    string   `json:"completion_gate,omitempty"`
+	EvidenceStatus    string   `json:"evidence_status,omitempty"`
 }
 
 type OpsCivilizationAssemblyArtifactEvidence struct {
