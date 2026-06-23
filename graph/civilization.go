@@ -31,6 +31,8 @@ type OpsCivilizationAssemblyData struct {
 	Boundary            []OpsCivilizationBoundary
 	StatusRows          []OpsCivilizationStatusRow
 	ReferenceGroups     []OpsCivilizationReferenceGroup
+	FactoryOrders       []OpsCivilizationAssemblyFactoryOrder
+	WorkEvidence        OpsCivilizationAssemblyWorkEvidence
 }
 
 type OpsCivilizationBoundary struct {
@@ -220,6 +222,8 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 		Boundary:            opsCivilizationBoundary(projection, status, freshness),
 		StatusRows:          opsCivilizationStatusRows(projection, status, freshness),
 		ReferenceGroups:     opsCivilizationReferenceGroups(projection),
+		FactoryOrders:       opsCivilizationFactoryOrders(projection),
+		WorkEvidence:        opsCivilizationWorkEvidence(projection),
 	}
 }
 
@@ -585,6 +589,27 @@ func opsCivilizationReferenceGroups(projection *OpsCivilizationAssemblyProjectio
 		out = append(out, group)
 	}
 	return out
+}
+
+func opsCivilizationFactoryOrders(projection *OpsCivilizationAssemblyProjection) []OpsCivilizationAssemblyFactoryOrder {
+	if projection == nil {
+		return nil
+	}
+	out := append([]OpsCivilizationAssemblyFactoryOrder(nil), projection.FactoryOrderSummary...)
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].ID < out[j].ID
+	})
+	return out
+}
+
+func opsCivilizationWorkEvidence(projection *OpsCivilizationAssemblyProjection) OpsCivilizationAssemblyWorkEvidence {
+	if projection == nil {
+		return OpsCivilizationAssemblyWorkEvidence{
+			Status:  opsCivilizationFieldUnavailable,
+			Summary: "EventGraph Civilization Assembly projection unavailable to Site",
+		}
+	}
+	return projection.WorkEvidenceSummary
 }
 
 func opsCivilizationStatusSummary(status string, summary string) string {
