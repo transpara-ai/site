@@ -152,6 +152,10 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
 
+// Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
+// Civilization Assembly projection endpoint and this Site consumer. Keep this
+// as literal JSON so the test exercises wire keys and enum strings rather than
+// re-encoding Site's own Go struct.
 const hiveCivilizationAssemblyProjectionFixture = `{
   "projection_id": "civ-runtime-001",
   "projection_schema_version": "1.0.0",
@@ -264,6 +268,59 @@ func TestHandleOpsCivilizationFailsClosedWhenHiveProjectionFails(t *testing.T) {
 		}
 	}
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
+}
+
+func TestHandleOpsCivilizationFailsClosedForInvalidHiveProjectionPayloads(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "malformed json",
+			body: `{not-json`,
+			want: "invalid character",
+		},
+		{
+			name: "empty object",
+			body: `{}`,
+			want: "missing projection derivation status",
+		},
+		{
+			name: "unsupported schema",
+			body: strings.Replace(hiveCivilizationAssemblyProjectionFixture, `"projection_schema_version": "1.0.0"`, `"projection_schema_version": "2.0.0"`, 1),
+			want: `unsupported projection schema version &#34;2.0.0&#34;`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h, _, _ := testHandlers(t)
+			hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, tt.body)
+			}))
+			defer hiveSrv.Close()
+			t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+			mux := http.NewServeMux()
+			h.Register(mux)
+
+			req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET /ops/civilization: status = %d, want 200; body: %s", w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, want := range []string{"failed", "failed_closed", tt.want} {
+				if !strings.Contains(body, want) {
+					t.Fatalf("GET /ops/civilization: body does not contain %q", want)
+				}
+			}
+			assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
+		})
+	}
 }
 
 func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {

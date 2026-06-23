@@ -2608,7 +2608,32 @@ func fetchOpsCivilizationProjection(r *http.Request) *OpsCivilizationAssemblyPro
 	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
 		return failedOpsCivilizationProjection(err.Error())
 	}
+	if err := validateOpsCivilizationProjection(projection); err != nil {
+		return failedOpsCivilizationProjection(err.Error())
+	}
 	return &projection
+}
+
+func validateOpsCivilizationProjection(projection OpsCivilizationAssemblyProjection) error {
+	if !opsCivilizationProjectionSchemaSupported(projection.ProjectionSchemaVersion) {
+		return fmt.Errorf("unsupported projection schema version %q", projection.ProjectionSchemaVersion)
+	}
+	if subject := strings.TrimSpace(projection.ProjectionSubject); subject != "" && subject != "civilization_assembly" {
+		return fmt.Errorf("unsupported projection subject %q", projection.ProjectionSubject)
+	}
+	if strings.TrimSpace(projection.DerivationStatus) == "" {
+		return errors.New("missing projection derivation status")
+	}
+	return nil
+}
+
+func opsCivilizationProjectionSchemaSupported(version string) bool {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return false
+	}
+	major, _, _ := strings.Cut(version, ".")
+	return major == "1"
 }
 
 func failedOpsCivilizationProjection(reason string) *OpsCivilizationAssemblyProjection {
