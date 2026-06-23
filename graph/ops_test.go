@@ -1311,10 +1311,64 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "Issue-scan lifecycle", "expected_lifecycle_not_runtime_progress", "Research issue and repository context", "Surface ready-for-Human result PR", "human_approval_required_no_merge", "Agent execution plan", "implement_on_branch", "exact_head_review_artifact", "operate", "review", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
+	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "Issue-scan lifecycle", "expected_lifecycle_not_runtime_progress", "Research issue and repository context", "Surface ready-for-Human result PR", "human_approval_required_no_merge", "Agent execution plan", "implement_on_branch", "exact_head_review_artifact", "branch_only_no_merge", "review_only_no_merge", "operate", "review", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
+	}
+	if strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive exposes authority mutation controls")
+	}
+}
+
+func TestHandleOpsHiveSuppressesLifecycleSectionWhenQueuedRequestHasNoLifecycle(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"queued",
+				"last_queued_run_request":{
+					"event_id":"event-request",
+					"conversation_id":"conv_request",
+					"run_id":"run_123",
+					"title":"Queued run",
+					"status":"queued",
+					"target_repos":["transpara-ai/hive"],
+					"authority_initial_level":"Required",
+					"evidence_kind":"queued_request_not_runtime_start",
+					"created_at":"2026-05-09T05:59:00Z"
+				},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
+			}
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Queued launch intent") || !strings.Contains(body, "queued_request_not_runtime_start") {
+		t.Fatal("GET /ops/hive did not render queued request evidence")
+	}
+	if strings.Contains(body, "Issue-scan lifecycle") || strings.Contains(body, "Agent execution plan") {
+		t.Fatal("GET /ops/hive rendered lifecycle section for queued request without lifecycle fields")
 	}
 	if strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive exposes authority mutation controls")
