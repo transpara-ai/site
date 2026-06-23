@@ -152,6 +152,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"evt_work_task_stage_artifact_001",
 		"issue_scan_lifecycle_stage_research_issue_and_repo_context",
 		"declared pending runtime evidence",
+		"stage declared pending runtime evidence",
 		"application/json",
 		"test_run_001",
 		"gate_result_001",
@@ -159,7 +160,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"Queued issue-scan lifecycle",
 		"not runtime completion proof",
 		"expected evidence, not runtime progress",
-		"expected_not_observed",
+		"expected not observed",
 		"Resolve transpara-ai/hive#321",
 		"research_issue_and_repo_context",
 		"debate_with_correct_civic_roles",
@@ -179,6 +180,52 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		t.Fatal("GET /ops/civilization rendered unavailable fallback despite Hive projection")
 	}
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
+}
+
+func TestOpsCivilizationEvidenceStatusValue(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   string
+		fallback string
+		want     string
+	}{
+		{
+			name:     "fallback for empty",
+			status:   "",
+			fallback: "expected",
+			want:     "expected",
+		},
+		{
+			name:     "fallback for whitespace",
+			status:   " \t\n ",
+			fallback: "not projected",
+			want:     "not projected",
+		},
+		{
+			name:     "trims and replaces underscores",
+			status:   "  declared_pending_runtime_evidence  ",
+			fallback: "expected",
+			want:     "declared pending runtime evidence",
+		},
+		{
+			name:     "replaces every underscore",
+			status:   "stage_declared_pending_runtime_evidence",
+			fallback: "expected",
+			want:     "stage declared pending runtime evidence",
+		},
+		{
+			name:     "keeps spaced value",
+			status:   "expected not observed",
+			fallback: "expected",
+			want:     "expected not observed",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := opsCivilizationEvidenceStatusValue(tc.status, tc.fallback); got != tc.want {
+				t.Fatalf("opsCivilizationEvidenceStatusValue(%q, %q) = %q, want %q", tc.status, tc.fallback, got, tc.want)
+			}
+		})
+	}
 }
 
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
@@ -303,7 +350,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "required_evidence": ["issue_snapshot", "repo_context", "risk_and_scope_notes"],
         "authority_boundary": "read_only",
         "completion_gate": "context_packet_recorded",
-        "evidence_status": "expected_not_observed"
+        "evidence_status": "declared_pending_runtime_evidence"
       },
       {
         "id": "debate_with_correct_civic_roles",
@@ -370,7 +417,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "required_outputs": ["issue_priority_rationale", "risk_and_scope_notes"],
         "authority_boundary": "read_only",
         "completion_gate": "context_packet_recorded",
-        "evidence_status": "expected_not_observed"
+        "evidence_status": "stage_declared_pending_runtime_evidence"
       },
       {
         "id": "10_implement_on_branch_implementer",
@@ -584,7 +631,7 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					RequiredRoles:     []string{"strategist", "planner"},
 					AuthorityBoundary: "read_only",
 					CompletionGate:    "context_packet_recorded",
-					EvidenceStatus:    "expected_not_observed",
+					EvidenceStatus:    "declared_pending_runtime_evidence",
 				},
 				{
 					ID:                "surface_ready_for_Human_result_PR",

@@ -1091,7 +1091,7 @@ templ opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) {
 										<p class="break-words">{ opsValueOr(stage.CompletionGate, "not projected") }</p>
 										<p class="text-[10px] text-warm-faint mt-1 break-words">{ opsValueOr(stage.AuthorityBoundary, "boundary not projected") }</p>
 									</td>
-									<td class="py-2 px-2 text-warm-muted">{ opsValueOr(stage.EvidenceStatus, "expected") }</td>
+									<td class="py-2 px-2 text-warm-muted">{ opsCivilizationEvidenceStatusValue(stage.EvidenceStatus, "expected") }</td>
 								</tr>
 							}
 						</tbody>
@@ -1126,7 +1126,7 @@ templ opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) {
 									<dt class="text-warm-faint">Gate</dt>
 									<dd class="text-warm-muted break-words">{ opsValueOr(step.CompletionGate, "not projected") }</dd>
 									<dt class="text-warm-faint">Status</dt>
-									<dd class="text-warm-muted">{ opsValueOr(step.EvidenceStatus, "expected") }</dd>
+									<dd class="text-warm-muted">{ opsCivilizationEvidenceStatusValue(step.EvidenceStatus, "expected") }</dd>
 								</dl>
 							</article>
 						}
