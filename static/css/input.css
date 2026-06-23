@@ -18,10 +18,9 @@
   /* --color-brand resolves through --accent at runtime so profile-aware
      pages can override the brand color without a CSS rebuild. The hex
      is the default-profile fallback for any surface that forgets to set
-     --accent (e.g. pre-profile email templates, or a future page that
-     renders outside the shells). Phase 4. */
-  --color-brand: var(--accent, #e8a0b8);
-  --color-brand-dark: #d4899f;
+     --accent. */
+  --color-brand: var(--accent, #38bdf8);
+  --color-brand-dark: #0284c7;
   --color-void: #09090b;
   --color-surface: #111113;
   --color-elevated: #18181b;
@@ -43,14 +42,10 @@
 
 /* ─── Typography ─────────────────────────────────────────────────── */
 .font-display {
-  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* ─── Animations ─────────────────────────────────────────────────── */
-@keyframes breathe {
-  0%, 100% { opacity: 0.8; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.03); }
-}
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -63,8 +58,6 @@
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.7; }
 }
-
-.brand-breathe { animation: breathe 4s ease-in-out infinite; }
 
 .skeleton {
   animation: skeleton-pulse 1.5s ease-in-out infinite;
@@ -110,7 +103,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-breathe { animation: none; }
   .skeleton { animation: none; }
   .reveal { animation: none; opacity: 1; transform: none; }
   .reveal-scroll { transition: none; opacity: 1; transform: none; }

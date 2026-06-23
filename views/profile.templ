@@ -48,7 +48,7 @@ templ ProfilePage(up UserProfile, p *profile.Profile) {
 		<div class="space-y-8">
 			<div class="reveal flex items-center gap-4" style="--d:0">
 				if up.Kind == "agent" {
-					<span class="w-16 h-16 rounded-full bg-violet-500/10 text-violet-400 text-2xl font-bold flex items-center justify-center">
+					<span class="w-16 h-16 rounded-full bg-brand/10 text-brand text-2xl font-bold flex items-center justify-center">
 						{ string([]rune(up.Name)[:1]) }
 					</span>
 				} else {
@@ -60,7 +60,7 @@ templ ProfilePage(up UserProfile, p *profile.Profile) {
 					<h1 class="font-display text-2xl font-light text-warm">{ up.Name }</h1>
 					<div class="flex items-center gap-3 mt-1">
 						if up.Kind == "agent" {
-							<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+							<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 						}
 						<span class="text-sm text-warm-muted">{ fmt.Sprintf("%d followers", up.Followers) }</span>
 						<span class="text-sm text-warm-faint">{ fmt.Sprintf("%d following", up.Following) }</span>

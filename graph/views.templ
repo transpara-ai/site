@@ -61,7 +61,7 @@ templ appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p
 			<header class="border-b border-edge bg-surface flex-shrink-0">
 				<nav class="px-4 md:px-6 py-3 flex items-center justify-between">
 					<div class="flex items-center gap-2 md:gap-3 min-w-0">
-						<a href="/" class="font-display text-xl font-normal text-brand brand-breathe flex-shrink-0 italic flex items-center gap-2">
+						<a href="/" class="font-display text-xl font-semibold text-brand flex-shrink-0 flex items-center gap-2">
 							<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
 							{ p.GetBrandName() }
 						</a>
@@ -561,7 +561,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
-			@metaTags("Welcome", p.GetCopy("welcome.description", "Set up your first shared space and start working with an AI colleague."), p)
+			@metaTags("Welcome", p.GetCopy("welcome.description", "Set up your first shared space and start working with an agent teammate."), p)
 			@themeBlock()
 		</head>
 		<body class="bg-void text-warm min-h-screen">
@@ -573,7 +573,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 						Welcome, { user.Name }.
 					</h1>
 					<p class="text-warm-muted leading-relaxed">
-						{ p.GetCopy("welcome.subtitle", "You're in. Let's set up your first space — a place where you and an AI agent work together. Takes 30 seconds.") }
+						{ p.GetCopy("welcome.subtitle", "You're in. Let's set up your first space — a place where you can coordinate governed agent work. Takes 30 seconds.") }
 					</p>
 				</div>
 
@@ -602,7 +602,7 @@ templ Welcome(user ViewUser, p *profile.Profile) {
 					<div class="grid grid-cols-3 gap-4 text-center">
 						<div>
 							<div class="text-brand text-lg mb-1">✎</div>
-							<p>Create tasks and assign them to an AI agent</p>
+							<p>Create tasks and assign them to an agent</p>
 						</div>
 						<div>
 							<div class="text-brand text-lg mb-1">💬</div>
@@ -840,7 +840,7 @@ templ dashboardConvoCard(c DashboardConversation) {
 		if c.LastBody != "" {
 			<div class="flex items-center gap-2 text-xs text-warm-muted">
 				if c.LastAuthorKind == "agent" {
-					<span class="w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center flex-shrink-0">
+					<span class="w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center flex-shrink-0">
 						{ initial(c.LastAuthor) }
 					</span>
 				}
@@ -858,7 +858,7 @@ templ dashboardConvoCard(c DashboardConversation) {
 
 templ dashboardAgentRow(item DashboardOp) {
 	<div class="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-surface transition-colors text-xs">
-		<span class="w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+		<span class="w-5 h-5 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center flex-shrink-0">
 			{ initial(item.Actor) }
 		</span>
 		<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", opBadgeClass(item.Op.Op) }>{ item.Op.Op }</span>
@@ -983,13 +983,13 @@ templ SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, 
 						for _, m := range members {
 							<a href={ templ.SafeURL("/user/" + m.UserName) } class="flex items-center gap-1.5 px-2.5 py-1.5 bg-surface rounded-lg border border-edge hover:border-brand/40 transition-all text-xs">
 								if m.Kind == "agent" {
-									<span class="w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[9px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
+									<span class="w-5 h-5 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
 								} else {
 									<span class="w-5 h-5 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
 								}
 								<span class="text-warm">{ m.UserName }</span>
 								if m.Kind == "agent" {
-									<span class="text-[8px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400">agent</span>
+									<span class="text-[8px] px-1 py-0.5 rounded bg-brand/10 text-brand">agent</span>
 								}
 							</a>
 						}
@@ -1143,12 +1143,12 @@ templ gettingStartedChecklist(spaceSlug string, hasTask bool, hasAgentTask bool,
 					<svg class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
 					</svg>
-					<span class="text-xs text-warm-muted line-through">Assign it to your AI colleague</span>
+					<span class="text-xs text-warm-muted line-through">Assign it to your agent teammate</span>
 				} else {
 					<svg class="w-4 h-4 text-warm-faint flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<circle cx="12" cy="12" r="9" stroke-width="2"></circle>
 					</svg>
-					<span class="text-xs text-warm">Assign it to your AI colleague</span>
+					<span class="text-xs text-warm">Assign it to your agent teammate</span>
 				}
 			</li>
 			<li class="flex items-start gap-2.5">
@@ -1258,7 +1258,7 @@ templ inviteTeammatesCard(spaceSlug string, inviteToken string) {
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2"></path>
 						</svg>
 					</div>
-					<p class="text-xs text-warm">Your AI colleague, ready to help them</p>
+					<p class="text-xs text-warm">Your agent teammate, ready to help them</p>
 				</div>
 				<div class="flex items-center gap-2.5">
 					<div class="flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center">
@@ -1488,7 +1488,7 @@ templ spaceWelcomeModal(space Space, members []SpaceMember) {
 							</svg>
 						</div>
 						<div>
-							<p class="text-xs font-medium text-warm">{ m.UserName } · AI colleague</p>
+							<p class="text-xs font-medium text-warm">{ m.UserName } · agent teammate</p>
 							<p class="text-xs text-warm-muted mt-0.5">I can help with tasks, answer questions, and collaborate with your team.</p>
 						</div>
 					</div>
@@ -1646,14 +1646,14 @@ templ BoardView(space Space, spaces []Space, columns []BoardColumn, user ViewUse
 templ ahaAgentToast() {
 	<div id="aha-agent-toast" class="hidden fixed bottom-4 right-4 z-50 bg-elevated border border-brand/30 rounded-xl shadow-lg p-4 max-w-xs">
 		<div class="flex items-start gap-3">
-			<div class="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-				<svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
+				<svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a7.8 7.8 0 01-1.4 1.4l-.346.346a5 5 0 01-7.072 0z"></path>
 				</svg>
 			</div>
 			<div>
 				<p class="text-sm font-medium text-warm">Agent notified</p>
-				<p class="text-xs text-warm-muted mt-0.5">Your AI colleague is on it. <a href="#" id="aha-chat-link" class="text-brand hover:underline">Check Chat</a> to see their response.</p>
+				<p class="text-xs text-warm-muted mt-0.5">Your agent teammate is on it. <a href="#" id="aha-chat-link" class="text-brand hover:underline">Check Chat</a> to see their response.</p>
 			</div>
 		</div>
 	</div>
@@ -1695,11 +1695,11 @@ templ boardOnboarding(spaceSlug string, agents []AgentPersona) {
 						<input type="checkbox" id="assign-to-agent" checked
 							class="w-3.5 h-3.5 accent-brand cursor-pointer flex-shrink-0"
 							onchange={ toggleAgentAssign(agents[0].Name) }/>
-						<label for="assign-to-agent" class="text-xs text-warm-secondary cursor-pointer flex-1 select-none">💡 Assign to our AI colleague?</label>
+						<label for="assign-to-agent" class="text-xs text-warm-secondary cursor-pointer flex-1 select-none">💡 Assign to our agent teammate?</label>
 						if len(agents) == 1 {
-							<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">{ agents[0].Display }</span>
+							<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">{ agents[0].Display }</span>
 						} else {
-							<select id="agent-select" class="text-[10px] px-1.5 py-0.5 bg-elevated border border-violet-500/20 rounded-full text-violet-400 focus:outline-none" onchange={ pickAgent() }>
+							<select id="agent-select" class="text-[10px] px-1.5 py-0.5 bg-elevated border border-brand/20 rounded-full text-brand focus:outline-none" onchange={ pickAgent() }>
 								for _, agent := range agents {
 									<option value={ agent.Name }>{ agent.Display }</option>
 								}
@@ -1769,7 +1769,7 @@ templ newTaskInline(spaceSlug string, agents []AgentPersona) {
 			if len(agents) > 0 {
 				<div class="flex items-center gap-2 px-2 py-1.5 bg-brand/5 border border-brand/20 rounded-md">
 					<label class="text-xs text-warm-secondary flex-shrink-0">Assign to:</label>
-					<select id="agent-select" name="assignee" class="text-xs px-2 py-1 bg-elevated border border-violet-500/20 rounded-md text-violet-400 focus:outline-none flex-1">
+					<select id="agent-select" name="assignee" class="text-xs px-2 py-1 bg-elevated border border-brand/20 rounded-md text-brand focus:outline-none flex-1">
 						<option value="">None</option>
 						for _, agent := range agents {
 							<option value={ agent.Name } selected?={ len(agents) > 0 && agent.Name == agents[0].Name }>{ agent.Display }</option>
@@ -1948,7 +1948,7 @@ templ TaskCard(node Node, spaceSlug string) {
 		<div class="flex items-center justify-between mt-2 ml-4">
 			<div class="flex items-center gap-2">
 				if node.AuthorKind == "agent" {
-					<span class="w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center" title={ node.Author }>
+					<span class="w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center" title={ node.Author }>
 						{ initial(node.Author) }
 					</span>
 				} else if node.Assignee == "" || node.Author != node.Assignee {
@@ -1979,11 +1979,11 @@ templ TaskCard(node Node, spaceSlug string) {
 						Agent done
 					</span>
 				} else {
-					<span class="flex items-center gap-1 text-[9px] text-violet-400/80 font-medium">
+					<span class="flex items-center gap-1 text-[9px] text-brand/80 font-medium">
 						Thinking
-						<span class="w-1 h-1 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0s"></span>
-						<span class="w-1 h-1 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.15s"></span>
-						<span class="w-1 h-1 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.3s"></span>
+						<span class="w-1 h-1 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0s"></span>
+						<span class="w-1 h-1 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0.15s"></span>
+						<span class="w-1 h-1 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0.3s"></span>
 					</span>
 				}
 			}
@@ -2790,9 +2790,9 @@ templ QuestionDetailView(space Space, spaces []Space, question Node, answers []N
 				<h2 class="text-sm font-semibold text-warm-muted">Answers ({ fmt.Sprintf("%d", len(answers)) })</h2>
 				for _, a := range answers {
 					if a.AuthorKind == "agent" {
-						<div class="bg-violet-950/20 rounded-lg border border-violet-500/20 p-4 space-y-2">
+						<div class="bg-brand/5 rounded-lg border border-brand/20 p-4 space-y-2">
 							<div class="flex items-center gap-2 mb-1">
-								<span class="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5">
+								<span class="inline-flex items-center gap-1 text-xs font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5">
 									<svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
 									{ a.Author }
 								</span>
@@ -2926,9 +2926,9 @@ templ CouncilDetailView(space Space, spaces []Space, session Node, responses []N
 			<div class="space-y-4">
 				<h2 class="text-sm font-semibold text-warm-muted">Responses ({ fmt.Sprintf("%d", len(responses)) })</h2>
 				for _, r := range responses {
-					<div class="bg-violet-950/20 rounded-lg border border-violet-500/20 p-4 space-y-2">
+					<div class="bg-brand/5 rounded-lg border border-brand/20 p-4 space-y-2">
 						<div class="flex items-center gap-2 mb-1">
-							<span class="inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5">
+							<span class="inline-flex items-center gap-1 text-xs font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5">
 								<svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
 								{ r.Author }
 							</span>
@@ -3100,13 +3100,13 @@ templ FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner
 			</form>
 			if hasAgent && user.Name != "" && user.Name != "Anonymous" {
 				<a href={ templ.SafeURL("/app/" + space.Slug + "/conversations") }
-					class="block p-4 bg-violet-500/5 border border-violet-500/20 rounded-lg hover:bg-violet-500/10 transition-colors">
+					class="block p-4 bg-brand/5 border border-brand/20 rounded-lg hover:bg-brand/10 transition-colors">
 					<div class="flex items-center gap-3">
-						<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center flex-shrink-0">
+						<span class="w-8 h-8 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center flex-shrink-0">
 							<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle></svg>
 						</span>
 						<div>
-							<p class="text-sm font-medium text-violet-300">Chat with an AI agent</p>
+							<p class="text-sm font-medium text-brand">Chat with an AI agent</p>
 							<p class="text-xs text-warm-faint">Start a conversation — the Mind responds in real time</p>
 						</div>
 					</div>
@@ -3185,7 +3185,7 @@ templ FeedCard(node Node, spaceSlug string, endorseCount int, endorsed bool, rep
 		}
 		<div class="flex items-center gap-2 mb-3">
 			if node.AuthorKind == "agent" {
-				<span class="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center" title="Agent">
+				<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center" title="Agent">
 					{ initial(node.Author) }
 				</span>
 			} else {
@@ -3196,7 +3196,7 @@ templ FeedCard(node Node, spaceSlug string, endorseCount int, endorsed bool, rep
 			<div class="flex items-center gap-1.5">
 				<span class="text-sm font-medium text-warm">{ node.Author }</span>
 				if node.AuthorKind == "agent" {
-					<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+					<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 				}
 				<span class="text-xs text-warm-faint ml-1">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 			</div>
@@ -3322,8 +3322,8 @@ templ ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, is
 						}
 						<div class="flex items-center gap-2 mt-2 text-xs text-warm-faint">
 							if thread.AuthorKind == "agent" {
-								<span class="text-violet-400">{ thread.Author }</span>
-								<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+								<span class="text-brand">{ thread.Author }</span>
+								<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 							} else {
 								<span>{ thread.Author }</span>
 							}
@@ -3397,7 +3397,7 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 								for _, agent := range agents {
 									<button
 										type="button"
-										class="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
+										class="text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 transition-colors"
 										onclick={ addParticipant(agent) }
 									>
 										{ agent }
@@ -3419,9 +3419,9 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 							<h3 class={ "font-medium", templ.KV("text-warm", convo.UnreadCount > 0), templ.KV("text-warm-muted", convo.UnreadCount == 0) }>{ convo.Title }</h3>
 							<div class="flex items-center gap-2">
 								if p := personaMap[convo.ID]; p != nil {
-									<span class="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
+									<span class="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20">
 										<span class="relative inline-flex">
-											<span class="w-3 h-3 rounded-full bg-violet-500/20 flex items-center justify-center font-bold text-[8px]">{ initial(p.Display) }</span>
+											<span class="w-3 h-3 rounded-full bg-brand/20 flex items-center justify-center font-bold text-[8px]">{ initial(p.Display) }</span>
 											if p.LastSeen != nil && time.Since(*p.LastSeen) < 5*time.Minute {
 												<span class="absolute -bottom-px -right-px w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
 											}
@@ -3441,7 +3441,7 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 						if convo.LastBody != "" {
 							<p class="text-sm text-warm-muted mt-1 line-clamp-1">
 								if convo.LastAuthorKind == "agent" {
-									<span class="text-violet-400">{ convo.LastAuthor }:</span>
+									<span class="text-brand">{ convo.LastAuthor }:</span>
 								} else {
 									<span class="text-warm-faint">{ convo.LastAuthor }:</span>
 								}
@@ -3485,7 +3485,7 @@ templ ConversationsView(space Space, spaces []Space, convos []ConversationSummar
 						<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/conversation/%s", space.Slug, msg.ConvoID)) }
 							class="block bg-surface rounded-lg border border-edge p-3 hover:border-brand/40 transition-colors">
 							<div class="flex items-center gap-2 mb-1">
-								<span class={ "text-xs font-medium", templ.KV("text-violet-400", msg.AuthorKind == "agent"), templ.KV("text-warm", msg.AuthorKind != "agent") }>{ msg.Author }</span>
+								<span class={ "text-xs font-medium", templ.KV("text-brand", msg.AuthorKind == "agent"), templ.KV("text-warm", msg.AuthorKind != "agent") }>{ msg.Author }</span>
 								<span class="text-[10px] text-warm-faint">in { msg.ConvoTitle }</span>
 								<span class="text-[10px] text-warm-faint ml-auto">{ msg.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 							</div>
@@ -3526,13 +3526,13 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 					</div>
 					if agentPersona != nil {
 						<!-- Agent identity badge -->
-						<a href={ templ.SafeURL("/agents/" + agentPersona.Name) } class="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 transition-colors flex-shrink-0 group">
-							<div class="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-								<span class="text-[10px] font-bold text-violet-400">{ initial(agentPersona.Display) }</span>
+						<a href={ templ.SafeURL("/agents/" + agentPersona.Name) } class="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-lg bg-brand/10 hover:bg-brand/20 transition-colors flex-shrink-0 group">
+							<div class="w-6 h-6 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0">
+								<span class="text-[10px] font-bold text-brand">{ initial(agentPersona.Display) }</span>
 							</div>
 							<div class="text-right leading-tight">
-								<div class="text-xs font-medium text-violet-400">{ agentPersona.Display }</div>
-								<div class="text-[10px] text-violet-400/60">agent · { agentPersona.Category }</div>
+								<div class="text-xs font-medium text-brand">{ agentPersona.Display }</div>
+								<div class="text-[10px] text-brand/60">agent · { agentPersona.Category }</div>
 							</div>
 						</a>
 					}
@@ -3569,17 +3569,17 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 				if hasAgent {
 					<div id="thinking" class="max-w-2xl mx-auto mt-3 hidden">
 						<div class="flex gap-3">
-							<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0">
+							<span class="w-8 h-8 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0">
 								<svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="18" cy="12" r="2"></circle></svg>
 							</span>
-							<div class="bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-2.5">
+							<div class="bg-brand/5 border border-brand/20 rounded-lg px-4 py-2.5">
 								<div class="flex items-center gap-1.5 mb-1">
-									<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">thinking</span>
+									<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">thinking</span>
 								</div>
 								<div class="flex gap-1 items-center h-5">
-									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0s"></span>
-									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.15s"></span>
-									<span class="w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce" style="animation-delay: 0.3s"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0s"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0.15s"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style="animation-delay: 0.3s"></span>
 								</div>
 							</div>
 						</div>
@@ -3647,7 +3647,7 @@ templ ConversationDetailView(space Space, convo Node, messages []Node, user View
 templ chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []Reaction) {
 	<div class={ "group flex gap-3", templ.KV("flex-row-reverse", msg.AuthorID == currentUserID) } data-ts={ msg.CreatedAt.Format(time.RFC3339Nano) }>
 		if msg.AuthorKind == "agent" {
-			<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0" title="Agent">
+			<span class="w-8 h-8 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0" title="Agent">
 				{ initial(msg.Author) }
 			</span>
 		} else {
@@ -3661,11 +3661,11 @@ templ chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []
 			<div class={ "rounded-lg px-4 py-2.5 relative",
 				templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
 				templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-				templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
+				templ.KV("bg-brand/5 border border-brand/20", msg.AuthorKind == "agent") }>
 				<div class="flex items-center gap-1.5 mb-1">
 					<span class="text-xs font-medium text-warm">{ msg.Author }</span>
 					if msg.AuthorKind == "agent" {
-						<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+						<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 					}
 					<span class="text-[10px] text-warm-faint ml-auto">{ msg.CreatedAt.Format("3:04 PM") }</span>
 					<!-- Hover actions: reply + react + edit/delete -->
@@ -3698,7 +3698,7 @@ templ chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []
 								</div>
 				}
 				if label := groundedLabel(msg.Tags); label != "" {
-					<div class="text-[9px] text-violet-400/50 mt-1">{ label }</div>
+					<div class="text-[9px] text-brand/50 mt-1">{ label }</div>
 				}
 			</div>
 			if len(reactions) > 0 {
@@ -3719,7 +3719,7 @@ templ chatMessageCompact(msg Node, currentUserID string, spaceSlug string, react
 			<div class={ "rounded-lg px-4 py-1 relative",
 				templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
 				templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-				templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent") }>
+				templ.KV("bg-brand/5 border border-brand/20", msg.AuthorKind == "agent") }>
 				<!-- Hover actions -->
 				<div class="absolute -top-2.5 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-elevated border border-edge rounded px-1 py-0.5 shadow-sm">
 					<button type="button" class="text-[10px] text-warm-faint hover:text-brand cursor-pointer"
@@ -3730,7 +3730,7 @@ templ chatMessageCompact(msg Node, currentUserID string, spaceSlug string, react
 								@renderMarkdown(msg.Body)
 							</div>
 				if label := groundedLabel(msg.Tags); label != "" {
-					<div class="text-[9px] text-violet-400/50 mt-1">{ label }</div>
+					<div class="text-[9px] text-brand/50 mt-1">{ label }</div>
 				}
 			</div>
 			if len(reactions) > 0 {
@@ -3815,7 +3815,7 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, s
 					<div class="grid grid-cols-[1fr_5rem_5rem] gap-3 px-4 py-3 border-b border-edge last:border-b-0 items-center">
 						<div class="flex items-center gap-2">
 							if m.Kind == "agent" {
-								<span class="w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center" title="Agent">
+								<span class="w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center" title="Agent">
 									{ initial(m.Name) }
 								</span>
 							} else {
@@ -3825,7 +3825,7 @@ templ PeopleView(space Space, spaces []Space, members []Member, user ViewUser, s
 							}
 							<a href={ templ.SafeURL("/user/" + m.Name) } class="text-sm font-medium text-warm hover:text-brand transition-colors">{ m.Name }</a>
 							if m.Kind == "agent" {
-								<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+								<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 							}
 						</div>
 						<div class="text-sm text-warm-muted">{ fmt.Sprintf("%d", m.OpCount) }</div>
@@ -3889,15 +3889,15 @@ templ AgentsView(space Space, spaces []Space, categories []AppAgentCategoryGroup
 }
 
 templ appAgentCard(slug string, p AppAgentPersona, user ViewUser) {
-	<div class="bg-surface rounded-lg border border-edge p-4 flex flex-col gap-3 hover:border-violet-500/30 transition-colors">
+	<div class="bg-surface rounded-lg border border-edge p-4 flex flex-col gap-3 hover:border-brand/30 transition-colors">
 		<div class="flex items-center gap-3 min-w-0">
-			<span class="w-9 h-9 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center flex-shrink-0">
+			<span class="w-9 h-9 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center flex-shrink-0">
 				{ initial(p.Display) }
 			</span>
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-1.5 flex-wrap">
 					<p class="text-sm font-medium text-warm truncate">{ p.Display }</p>
-					<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0">agent</span>
+					<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand flex-shrink-0">agent</span>
 					<span class={ "text-[9px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0", appAgentCategoryClass(p.Category) }>{ p.Category }</span>
 				</div>
 			</div>
@@ -3928,7 +3928,7 @@ func appAgentCategoryClass(cat string) string {
 	case "knowledge":
 		return "bg-indigo-500/15 text-indigo-400"
 	case "product":
-		return "bg-violet-500/15 text-violet-400"
+		return "bg-brand/15 text-brand"
 	case "outward":
 		return "bg-emerald-500/15 text-emerald-400"
 	case "resource":
@@ -3988,7 +3988,7 @@ templ activityOpTab(spaceSlug, value, label, active string) {
 templ opItem(o Op, spaceSlug string) {
 	<div class="flex items-start gap-3 bg-surface rounded-lg border border-edge px-4 py-3">
 		if o.ActorKind == "agent" {
-			<span class="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center mt-0.5 flex-shrink-0" title="Agent">
+			<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center mt-0.5 flex-shrink-0" title="Agent">
 				{ initial(o.Actor) }
 			</span>
 		} else {
@@ -4000,7 +4000,7 @@ templ opItem(o Op, spaceSlug string) {
 			<div class="text-sm">
 				<span class="font-medium text-warm">{ o.Actor }</span>
 				if o.ActorKind == "agent" {
-					<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+					<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 				}
 				if o.NodeID != "" {
 					<a href={ templ.SafeURL(fmt.Sprintf("/app/%s/node/%s", spaceSlug, o.NodeID)) } class="text-warm-muted hover:text-brand transition-colors ml-1">{ o.Op }</a>
@@ -4177,13 +4177,13 @@ templ SettingsView(space Space, spaces []Space, reports []Report, user ViewUser,
 							<div class="flex items-center justify-between py-2 px-2 rounded hover:bg-elevated transition-colors">
 								<div class="flex items-center gap-2">
 									if m.Kind == "agent" {
-										<span class="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
+										<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
 									} else {
 										<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center">{ initial(m.UserName) }</span>
 									}
 									<a href={ templ.SafeURL("/user/" + m.UserName) } class="text-sm text-warm hover:text-brand transition-colors">{ m.UserName }</a>
 									if m.Kind == "agent" {
-										<span class="text-[9px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400">agent</span>
+										<span class="text-[9px] px-1 py-0.5 rounded bg-brand/10 text-brand">agent</span>
 									}
 								</div>
 								if m.UserID != space.OwnerID {
@@ -4269,7 +4269,7 @@ templ ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user 
 							}
 							<div class="flex items-center gap-3 mt-2 ml-4 text-xs text-warm-faint">
 								if e.CompletedByKind == "agent" {
-									<span class="w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center">{ initial(e.CompletedBy) }</span>
+									<span class="w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center">{ initial(e.CompletedBy) }</span>
 								}
 								<span>{ e.CompletedBy }</span>
 								<span>{ e.CompletedAt.Format("Jan 2, 3:04 PM") }</span>
@@ -4436,7 +4436,7 @@ templ proposalCard(p ProposalWithVotes, spaceSlug string, isOwner bool) {
 				}
 				<div class="flex items-center gap-3 mt-2 text-xs text-warm-faint">
 					if p.AuthorKind == "agent" {
-						<span class="w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center">{ initial(p.Author) }</span>
+						<span class="w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center">{ initial(p.Author) }</span>
 					}
 					<span>{ p.Author }</span>
 					<span>{ p.CreatedAt.Format("Jan 2") }</span>
@@ -4651,7 +4651,7 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 										<input type="hidden" name="op" value="assign"/>
 										<input type="hidden" name="node_id" value={ node.ID }/>
 										<input type="hidden" name="assignee" value="hive"/>
-										<button type="submit" class="px-3 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md hover:bg-violet-500/20 transition-colors text-sm font-medium">Assign to agent</button>
+										<button type="submit" class="px-3 py-1 bg-brand/10 text-brand border border-brand/20 rounded-md hover:bg-brand/20 transition-colors text-sm font-medium">Assign to agent</button>
 									</form>
 								</div>
 							} else {
@@ -5068,7 +5068,7 @@ templ CommentItem(node Node) {
 	<div class="bg-surface rounded-lg border border-edge p-4">
 		<div class="flex items-center gap-2 mb-2">
 			if node.AuthorKind == "agent" {
-				<span class="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center" title="Agent">
+				<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center" title="Agent">
 					{ initial(node.Author) }
 				</span>
 			} else {
@@ -5078,7 +5078,7 @@ templ CommentItem(node Node) {
 			}
 			<span class="text-sm font-medium text-warm">{ node.Author }</span>
 			if node.AuthorKind == "agent" {
-				<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+				<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 			}
 			<span class="text-xs text-warm-faint">{ node.CreatedAt.Format("Jan 2, 3:04 PM") }</span>
 		</div>
@@ -5184,7 +5184,7 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 templ simpleHeader(user ViewUser, p *profile.Profile) {
 	<header class="border-b border-edge bg-surface">
 		<nav class="max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
-			<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic flex items-center gap-2">
+			<a href="/" class="font-display text-xl font-semibold text-brand flex items-center gap-2">
 				<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
 				{ p.GetBrandName() }
 			</a>
@@ -5220,8 +5220,8 @@ templ simpleFooter(p *profile.Profile) {
 	<footer class="border-t border-edge bg-surface">
 		<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 			<div>
-				<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
-				<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Humans and agents, building together.") }</p>
+				<span class="font-display text-sm text-warm-faint">{ p.GetBrandName() }</span>
+				<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Governed autonomous operations.") }</p>
 			</div>
 			<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
 				for _, item := range p.GetFooterNav() {
@@ -5733,7 +5733,7 @@ templ KnowledgeCard(node Node, spaceSlug string, challenges int) {
 		}
 		<div class="flex items-center gap-3 mt-2 text-xs text-warm-faint">
 			if node.AuthorKind == "agent" {
-				<span class="text-violet-400">{ node.Author }</span>
+				<span class="text-brand">{ node.Author }</span>
 			} else {
 				<span>{ node.Author }</span>
 			}

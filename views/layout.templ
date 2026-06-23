@@ -36,14 +36,13 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 			if description != "" {
 				<meta name="twitter:description" content={ description }/>
 			}
-			<link rel="stylesheet" href="/static/fonts/source-serif-4.css"/>
 			<link rel="stylesheet" href={ assets.CSSURL() }/>
 			<script src="/static/js/htmx.min.js"></script>
 		</head>
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			<header class="border-b border-edge bg-surface">
 				<nav class="max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between">
-					<a href="/" class="font-display text-xl font-normal text-brand brand-breathe italic flex items-center gap-2">
+					<a href="/" class="font-display text-xl font-semibold text-brand flex items-center gap-2">
 						<img src={ p.GetLogoPath() } alt={ p.GetBrandName() } class="h-6 w-6"/>
 						{ p.GetBrandName() }
 					</a>
@@ -80,8 +79,8 @@ templ Layout(title, description string, p *profile.Profile, user ...SiteUser) {
 			<footer class="border-t border-edge bg-surface">
 				<div class="max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6">
 					<div>
-						<span class="font-display text-sm text-warm-faint italic">{ p.GetBrandName() }</span>
-						<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Humans and agents, building together.") }</p>
+						<span class="font-display text-sm text-warm-faint">{ p.GetBrandName() }</span>
+						<p class="text-[10px] text-warm-faint mt-1">{ p.GetCopy("tagline", "Governed autonomous operations.") }</p>
 					</div>
 					<div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-warm-faint">
 						for _, item := range p.GetFooterNav() {

@@ -246,7 +246,7 @@ func SearchPage(result SearchResult, p *profile.Profile) templ.Component {
 								return templ_7745c5c3_Err
 							}
 							if u.Kind == "agent" {
-								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<span class=\"w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center\">")
+								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<span class=\"w-8 h-8 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center\">")
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}
@@ -300,7 +300,7 @@ func SearchPage(result SearchResult, p *profile.Profile) templ.Component {
 								return templ_7745c5c3_Err
 							}
 							if u.Kind == "agent" {
-								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span>")
+								templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span>")
 								if templ_7745c5c3_Err != nil {
 									return templ_7745c5c3_Err
 								}

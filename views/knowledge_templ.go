@@ -144,7 +144,7 @@ func QuestionList(questions []QuestionItem) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if q.Answer != "" {
-				var templ_7745c5c3_Var7 = []any{"ml-7 rounded-lg border p-3", templ.KV("bg-violet-950/20 border-violet-500/20", q.AnswerAuthorKind == "agent"), templ.KV("bg-elevated border-edge", q.AnswerAuthorKind != "agent")}
+				var templ_7745c5c3_Var7 = []any{"ml-7 rounded-lg border p-3", templ.KV("bg-brand/5 border-brand/20", q.AnswerAuthorKind == "agent"), templ.KV("bg-elevated border-edge", q.AnswerAuthorKind != "agent")}
 				templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -167,7 +167,7 @@ func QuestionList(questions []QuestionItem) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				if q.AnswerAuthorKind == "agent" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<span class=\"inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5 mb-2\"><svg class=\"w-2 h-2\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> agent</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<span class=\"inline-flex items-center gap-1 text-[10px] font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5 mb-2\"><svg class=\"w-2 h-2\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> agent</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -610,14 +610,14 @@ func knowledgeClaimCard(c KnowledgeClaim) templ.Component {
 			}
 		}
 		if c.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<span class=\"text-violet-400\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "<span class=\"text-brand\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(c.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/knowledge.templ`, Line: 155, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/knowledge.templ`, Line: 155, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {

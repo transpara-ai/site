@@ -283,7 +283,7 @@ func appLayout(space Space, spaces []Space, activeLens string, user ViewUser, p 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</head><body class=\"bg-void text-warm-secondary h-screen flex flex-col overflow-hidden\"><header class=\"border-b border-edge bg-surface flex-shrink-0\"><nav class=\"px-4 md:px-6 py-3 flex items-center justify-between\"><div class=\"flex items-center gap-2 md:gap-3 min-w-0\"><a href=\"/\" class=\"font-display text-xl font-normal text-brand brand-breathe flex-shrink-0 italic flex items-center gap-2\"><img src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</head><body class=\"bg-void text-warm-secondary h-screen flex flex-col overflow-hidden\"><header class=\"border-b border-edge bg-surface flex-shrink-0\"><nav class=\"px-4 md:px-6 py-3 flex items-center justify-between\"><div class=\"flex items-center gap-2 md:gap-3 min-w-0\"><a href=\"/\" class=\"font-display text-xl font-semibold text-brand flex-shrink-0 flex items-center gap-2\"><img src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1575,7 +1575,7 @@ func Welcome(user ViewUser, p *profile.Profile) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = metaTags("Welcome", p.GetCopy("welcome.description", "Set up your first shared space and start working with an AI colleague."), p).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = metaTags("Welcome", p.GetCopy("welcome.description", "Set up your first shared space and start working with an agent teammate."), p).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1601,15 +1601,15 @@ func Welcome(user ViewUser, p *profile.Profile) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var71 string
-		templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(p.GetCopy("welcome.subtitle", "You're in. Let's set up your first space — a place where you and an AI agent work together. Takes 30 seconds."))
+		templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(p.GetCopy("welcome.subtitle", "You're in. Let's set up your first space — a place where you can coordinate governed agent work. Takes 30 seconds."))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 576, Col: 152}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 576, Col: 157}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "</p></div><!-- Create space form — simple, prominent --><form method=\"POST\" action=\"/app/new\" class=\"bg-surface rounded-lg border border-edge p-6 space-y-4\"><div><label for=\"name\" class=\"block text-sm font-medium text-warm mb-1.5\">Name your space</label> <input type=\"text\" id=\"name\" name=\"name\" placeholder=\"My Project\" required autofocus class=\"w-full text-lg px-4 py-3 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint\"><p class=\"text-xs text-warm-faint mt-1.5\">A project, a team, a community — whatever you're working on.</p></div><div><label for=\"description\" class=\"block text-sm font-medium text-warm mb-1.5\">What's it for? <span class=\"text-warm-faint font-normal\">(optional)</span></label> <input type=\"text\" id=\"description\" name=\"description\" placeholder=\"Building a REST API for our app\" class=\"w-full px-4 py-2.5 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint text-sm\"></div><input type=\"hidden\" name=\"visibility\" value=\"public\"> <button type=\"submit\" class=\"w-full py-3 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium text-lg hover:shadow-lg hover:shadow-brand/20\">Create space</button></form><!-- What happens next --><div class=\"text-center space-y-3 text-sm text-warm-muted\"><p>After you create a space, you can:</p><div class=\"grid grid-cols-3 gap-4 text-center\"><div><div class=\"text-brand text-lg mb-1\">✎</div><p>Create tasks and assign them to an AI agent</p></div><div><div class=\"text-brand text-lg mb-1\">💬</div><p>Chat with the agent directly</p></div><div><div class=\"text-brand text-lg mb-1\">◉</div><p>See everything on one board</p></div></div></div><!-- Or explore --><div class=\"text-center\"><a href=\"/discover\" class=\"text-sm text-warm-faint hover:text-brand transition-colors\">or browse what others have built &rarr;</a></div></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "</p></div><!-- Create space form — simple, prominent --><form method=\"POST\" action=\"/app/new\" class=\"bg-surface rounded-lg border border-edge p-6 space-y-4\"><div><label for=\"name\" class=\"block text-sm font-medium text-warm mb-1.5\">Name your space</label> <input type=\"text\" id=\"name\" name=\"name\" placeholder=\"My Project\" required autofocus class=\"w-full text-lg px-4 py-3 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint\"><p class=\"text-xs text-warm-faint mt-1.5\">A project, a team, a community — whatever you're working on.</p></div><div><label for=\"description\" class=\"block text-sm font-medium text-warm mb-1.5\">What's it for? <span class=\"text-warm-faint font-normal\">(optional)</span></label> <input type=\"text\" id=\"description\" name=\"description\" placeholder=\"Building a REST API for our app\" class=\"w-full px-4 py-2.5 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint text-sm\"></div><input type=\"hidden\" name=\"visibility\" value=\"public\"> <button type=\"submit\" class=\"w-full py-3 bg-brand text-void rounded-lg hover:bg-brand-dark transition-all font-medium text-lg hover:shadow-lg hover:shadow-brand/20\">Create space</button></form><!-- What happens next --><div class=\"text-center space-y-3 text-sm text-warm-muted\"><p>After you create a space, you can:</p><div class=\"grid grid-cols-3 gap-4 text-center\"><div><div class=\"text-brand text-lg mb-1\">✎</div><p>Create tasks and assign them to an agent</p></div><div><div class=\"text-brand text-lg mb-1\">💬</div><p>Chat with the agent directly</p></div><div><div class=\"text-brand text-lg mb-1\">◉</div><p>See everything on one board</p></div></div></div><!-- Or explore --><div class=\"text-center\"><a href=\"/discover\" class=\"text-sm text-warm-faint hover:text-brand transition-colors\">or browse what others have built &rarr;</a></div></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2322,7 +2322,7 @@ func dashboardConvoCard(c DashboardConversation) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if c.LastAuthorKind == "agent" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 154, "<span class=\"w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center flex-shrink-0\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 154, "<span class=\"w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center flex-shrink-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -2423,7 +2423,7 @@ func dashboardAgentRow(item DashboardOp) templ.Component {
 			templ_7745c5c3_Var110 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 163, "<div class=\"flex items-center gap-2 py-1.5 px-2 rounded hover:bg-surface transition-colors text-xs\"><span class=\"w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[9px] font-bold flex items-center justify-center flex-shrink-0\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 163, "<div class=\"flex items-center gap-2 py-1.5 px-2 rounded hover:bg-surface transition-colors text-xs\"><span class=\"w-5 h-5 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center flex-shrink-0\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -2838,14 +2838,14 @@ func SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, u
 						return templ_7745c5c3_Err
 					}
 					if m.Kind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 199, "<span class=\"w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[9px] font-bold flex items-center justify-center\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 199, "<span class=\"w-5 h-5 rounded-full bg-brand/10 text-brand text-[9px] font-bold flex items-center justify-center\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var133 string
 						templ_7745c5c3_Var133, templ_7745c5c3_Err = templ.JoinStringErrs(initial(m.UserName))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 986, Col: 152}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 986, Col: 142}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var133))
 						if templ_7745c5c3_Err != nil {
@@ -2892,7 +2892,7 @@ func SpaceOverview(space Space, spaces []Space, pinned []Node, recentOps []Op, u
 						return templ_7745c5c3_Err
 					}
 					if m.Kind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 205, "<span class=\"text-[8px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400\">agent</span>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 205, "<span class=\"text-[8px] px-1 py-0.5 rounded bg-brand/10 text-brand\">agent</span>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -3524,12 +3524,12 @@ func gettingStartedChecklist(spaceSlug string, hasTask bool, hasAgentTask bool, 
 			return templ_7745c5c3_Err
 		}
 		if hasAgentTask {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 267, "<svg class=\"w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> <span class=\"text-xs text-warm-muted line-through\">Assign it to your AI colleague</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 267, "<svg class=\"w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z\"></path></svg> <span class=\"text-xs text-warm-muted line-through\">Assign it to your agent teammate</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 268, "<svg class=\"w-4 h-4 text-warm-faint flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"9\" stroke-width=\"2\"></circle></svg> <span class=\"text-xs text-warm\">Assign it to your AI colleague</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 268, "<svg class=\"w-4 h-4 text-warm-faint flex-shrink-0 mt-0.5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"9\" stroke-width=\"2\"></circle></svg> <span class=\"text-xs text-warm\">Assign it to your agent teammate</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -3604,7 +3604,7 @@ func inviteTeammatesCard(spaceSlug string, inviteToken string) templ.Component {
 			templ_7745c5c3_Var170 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 275, "<div id=\"invite-teammates-card\" class=\"mx-4 md:mx-6 mt-4 bg-elevated border border-brand/20 rounded-xl overflow-hidden\"><!-- Header row --><div class=\"flex items-start gap-3 px-4 pt-4 pb-3\"><div class=\"flex-shrink-0 flex items-center justify-center w-9 h-9 bg-brand/10 border border-brand/20 rounded-full mt-0.5\"><svg class=\"w-4.5 h-4.5 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4-4a4 4 0 110-8 4 4 0 010 8zm6 4a2 2 0 100-4 2 2 0 000 4zM3 12a2 2 0 100-4 2 2 0 000 4z\"></path></svg></div><div class=\"flex-1 min-w-0\"><h3 class=\"text-sm font-semibold text-warm\">Invite teammates</h3><p class=\"text-xs text-warm-muted mt-0.5\">Build together — your agent is already waiting for them.</p></div><button onclick=\"dismissInviteCard()\" class=\"flex-shrink-0 text-warm-faint hover:text-warm transition-colors mt-0.5\" aria-label=\"Dismiss\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- What your team will see --><div class=\"mx-4 mb-3 bg-surface border border-edge rounded-lg px-3 py-2.5\"><p class=\"text-[11px] font-medium text-warm-muted uppercase tracking-wide mb-2\">What your team will see</p><div class=\"flex flex-col gap-2\"><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2\"></path></svg></div><p class=\"text-xs text-warm\">Shared tasks and projects on this board</p></div><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2\"></path></svg></div><p class=\"text-xs text-warm\">Your AI colleague, ready to help them</p></div><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg></div><p class=\"text-xs text-warm\">Chat, conversation threads, and real-time context</p></div></div></div><!-- Invite link --><div class=\"px-4 pb-4\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 275, "<div id=\"invite-teammates-card\" class=\"mx-4 md:mx-6 mt-4 bg-elevated border border-brand/20 rounded-xl overflow-hidden\"><!-- Header row --><div class=\"flex items-start gap-3 px-4 pt-4 pb-3\"><div class=\"flex-shrink-0 flex items-center justify-center w-9 h-9 bg-brand/10 border border-brand/20 rounded-full mt-0.5\"><svg class=\"w-4.5 h-4.5 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4-4a4 4 0 110-8 4 4 0 010 8zm6 4a2 2 0 100-4 2 2 0 000 4zM3 12a2 2 0 100-4 2 2 0 000 4z\"></path></svg></div><div class=\"flex-1 min-w-0\"><h3 class=\"text-sm font-semibold text-warm\">Invite teammates</h3><p class=\"text-xs text-warm-muted mt-0.5\">Build together — your agent is already waiting for them.</p></div><button onclick=\"dismissInviteCard()\" class=\"flex-shrink-0 text-warm-faint hover:text-warm transition-colors mt-0.5\" aria-label=\"Dismiss\"><svg class=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div><!-- What your team will see --><div class=\"mx-4 mb-3 bg-surface border border-edge rounded-lg px-3 py-2.5\"><p class=\"text-[11px] font-medium text-warm-muted uppercase tracking-wide mb-2\">What your team will see</p><div class=\"flex flex-col gap-2\"><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2\"></path></svg></div><p class=\"text-xs text-warm\">Shared tasks and projects on this board</p></div><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2h-2\"></path></svg></div><p class=\"text-xs text-warm\">Your agent teammate, ready to help them</p></div><div class=\"flex items-center gap-2.5\"><div class=\"flex-shrink-0 w-6 h-6 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center\"><svg class=\"w-3 h-3 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z\"></path></svg></div><p class=\"text-xs text-warm\">Chat, conversation threads, and real-time context</p></div></div></div><!-- Invite link --><div class=\"px-4 pb-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -3826,7 +3826,7 @@ func spaceWelcomeModal(space Space, members []SpaceMember) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 292, " · AI colleague</p><p class=\"text-xs text-warm-muted mt-0.5\">I can help with tasks, answer questions, and collaborate with your team.</p></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 292, " · agent teammate</p><p class=\"text-xs text-warm-muted mt-0.5\">I can help with tasks, answer questions, and collaborate with your team.</p></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -4261,7 +4261,7 @@ func ahaAgentToast() templ.Component {
 			templ_7745c5c3_Var198 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 335, "<div id=\"aha-agent-toast\" class=\"hidden fixed bottom-4 right-4 z-50 bg-elevated border border-brand/30 rounded-xl shadow-lg p-4 max-w-xs\"><div class=\"flex items-start gap-3\"><div class=\"w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4 text-violet-400\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a7.8 7.8 0 01-1.4 1.4l-.346.346a5 5 0 01-7.072 0z\"></path></svg></div><div><p class=\"text-sm font-medium text-warm\">Agent notified</p><p class=\"text-xs text-warm-muted mt-0.5\">Your AI colleague is on it. <a href=\"#\" id=\"aha-chat-link\" class=\"text-brand hover:underline\">Check Chat</a> to see their response.</p></div></div></div><script>\n\t(function(){\n\t\tif(new URLSearchParams(window.location.search).get('aha_agent')==='1'){\n\t\t\tvar toast=document.getElementById('aha-agent-toast');\n\t\t\tvar chatLink=document.getElementById('aha-chat-link');\n\t\t\tif(chatLink){var m=location.pathname.match(/\\/app\\/([^/]+)/);if(m)chatLink.href='/app/'+m[1]+'/conversations';}\n\t\t\tif(toast){toast.classList.remove('hidden');setTimeout(function(){toast.classList.add('hidden');},6000);}\n\t\t\tvar url=new URL(window.location.href);url.searchParams.delete('aha_agent');history.replaceState(null,'',url.toString());\n\t\t}\n\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 335, "<div id=\"aha-agent-toast\" class=\"hidden fixed bottom-4 right-4 z-50 bg-elevated border border-brand/30 rounded-xl shadow-lg p-4 max-w-xs\"><div class=\"flex items-start gap-3\"><div class=\"w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4 text-brand\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.5\" d=\"M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.346.346a7.8 7.8 0 01-1.4 1.4l-.346.346a5 5 0 01-7.072 0z\"></path></svg></div><div><p class=\"text-sm font-medium text-warm\">Agent notified</p><p class=\"text-xs text-warm-muted mt-0.5\">Your agent teammate is on it. <a href=\"#\" id=\"aha-chat-link\" class=\"text-brand hover:underline\">Check Chat</a> to see their response.</p></div></div></div><script>\n\t(function(){\n\t\tif(new URLSearchParams(window.location.search).get('aha_agent')==='1'){\n\t\t\tvar toast=document.getElementById('aha-agent-toast');\n\t\t\tvar chatLink=document.getElementById('aha-chat-link');\n\t\t\tif(chatLink){var m=location.pathname.match(/\\/app\\/([^/]+)/);if(m)chatLink.href='/app/'+m[1]+'/conversations';}\n\t\t\tif(toast){toast.classList.remove('hidden');setTimeout(function(){toast.classList.add('hidden');},6000);}\n\t\t\tvar url=new URL(window.location.href);url.searchParams.delete('aha_agent');history.replaceState(null,'',url.toString());\n\t\t}\n\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -4353,19 +4353,19 @@ func boardOnboarding(spaceSlug string, agents []AgentPersona) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 344, "\"> <label for=\"assign-to-agent\" class=\"text-xs text-warm-secondary cursor-pointer flex-1 select-none\">💡 Assign to our AI colleague?</label> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 344, "\"> <label for=\"assign-to-agent\" class=\"text-xs text-warm-secondary cursor-pointer flex-1 select-none\">💡 Assign to our agent teammate?</label> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(agents) == 1 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 345, "<span class=\"text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 345, "<span class=\"text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var203 string
 				templ_7745c5c3_Var203, templ_7745c5c3_Err = templ.JoinStringErrs(agents[0].Display)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1700, Col: 140}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1700, Col: 125}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var203))
 				if templ_7745c5c3_Err != nil {
@@ -4380,7 +4380,7 @@ func boardOnboarding(spaceSlug string, agents []AgentPersona) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 347, "<select id=\"agent-select\" class=\"text-[10px] px-1.5 py-0.5 bg-elevated border border-violet-500/20 rounded-full text-violet-400 focus:outline-none\" onchange=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 347, "<select id=\"agent-select\" class=\"text-[10px] px-1.5 py-0.5 bg-elevated border border-brand/20 rounded-full text-brand focus:outline-none\" onchange=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -4667,7 +4667,7 @@ func newTaskInline(spaceSlug string, agents []AgentPersona) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if len(agents) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 371, "<div class=\"flex items-center gap-2 px-2 py-1.5 bg-brand/5 border border-brand/20 rounded-md\"><label class=\"text-xs text-warm-secondary flex-shrink-0\">Assign to:</label> <select id=\"agent-select\" name=\"assignee\" class=\"text-xs px-2 py-1 bg-elevated border border-violet-500/20 rounded-md text-violet-400 focus:outline-none flex-1\"><option value=\"\">None</option> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 371, "<div class=\"flex items-center gap-2 px-2 py-1.5 bg-brand/5 border border-brand/20 rounded-md\"><label class=\"text-xs text-warm-secondary flex-shrink-0\">Assign to:</label> <select id=\"agent-select\" name=\"assignee\" class=\"text-xs px-2 py-1 bg-elevated border border-brand/20 rounded-md text-brand focus:outline-none flex-1\"><option value=\"\">None</option> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -5167,14 +5167,14 @@ func TaskCard(node Node, spaceSlug string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 409, "<span class=\"w-5 h-5 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center\" title=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 409, "<span class=\"w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center\" title=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var242 string
 			templ_7745c5c3_Var242, templ_7745c5c3_Err = templ.ResolveAttributeValue(node.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1951, Col: 147}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 1951, Col: 137}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var242)
 			if templ_7745c5c3_Err != nil {
@@ -5317,7 +5317,7 @@ func TaskCard(node Node, spaceSlug string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 425, "<span class=\"flex items-center gap-1 text-[9px] text-violet-400/80 font-medium\">Thinking <span class=\"w-1 h-1 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0s\"></span> <span class=\"w-1 h-1 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0.15s\"></span> <span class=\"w-1 h-1 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0.3s\"></span></span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 425, "<span class=\"flex items-center gap-1 text-[9px] text-brand/80 font-medium\">Thinking <span class=\"w-1 h-1 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0s\"></span> <span class=\"w-1 h-1 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0.15s\"></span> <span class=\"w-1 h-1 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0.3s\"></span></span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -8164,7 +8164,7 @@ func QuestionDetailView(space Space, spaces []Space, question Node, answers []No
 			}
 			for _, a := range answers {
 				if a.AuthorKind == "agent" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 694, "<div class=\"bg-violet-950/20 rounded-lg border border-violet-500/20 p-4 space-y-2\"><div class=\"flex items-center gap-2 mb-1\"><span class=\"inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5\"><svg class=\"w-2.5 h-2.5\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 694, "<div class=\"bg-brand/5 rounded-lg border border-brand/20 p-4 space-y-2\"><div class=\"flex items-center gap-2 mb-1\"><span class=\"inline-flex items-center gap-1 text-xs font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5\"><svg class=\"w-2.5 h-2.5\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -8609,7 +8609,7 @@ func CouncilDetailView(space Space, spaces []Space, session Node, responses []No
 				return templ_7745c5c3_Err
 			}
 			for _, r := range responses {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 730, "<div class=\"bg-violet-950/20 rounded-lg border border-violet-500/20 p-4 space-y-2\"><div class=\"flex items-center gap-2 mb-1\"><span class=\"inline-flex items-center gap-1 text-xs font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5\"><svg class=\"w-2.5 h-2.5\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 730, "<div class=\"bg-brand/5 rounded-lg border border-brand/20 p-4 space-y-2\"><div class=\"flex items-center gap-2 mb-1\"><span class=\"inline-flex items-center gap-1 text-xs font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5\"><svg class=\"w-2.5 h-2.5\" fill=\"currentColor\" viewBox=\"0 0 8 8\"><circle cx=\"4\" cy=\"4\" r=\"4\"></circle></svg> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -9437,7 +9437,7 @@ func FeedView(space Space, spaces []Space, posts []Node, user ViewUser, isOwner 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 806, "\" class=\"block p-4 bg-violet-500/5 border border-violet-500/20 rounded-lg hover:bg-violet-500/10 transition-colors\"><div class=\"flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg></span><div><p class=\"text-sm font-medium text-violet-300\">Chat with an AI agent</p><p class=\"text-xs text-warm-faint\">Start a conversation — the Mind responds in real time</p></div></div></a> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 806, "\" class=\"block p-4 bg-brand/5 border border-brand/20 rounded-lg hover:bg-brand/10 transition-colors\"><div class=\"flex items-center gap-3\"><span class=\"w-8 h-8 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg></span><div><p class=\"text-sm font-medium text-brand\">Chat with an AI agent</p><p class=\"text-xs text-warm-faint\">Start a conversation — the Mind responds in real time</p></div></div></a> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -9669,7 +9669,7 @@ func FeedCard(node Node, spaceSlug string, endorseCount int, endorsed bool, repo
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 831, "<span class=\"w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 831, "<span class=\"w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -9723,7 +9723,7 @@ func FeedCard(node Node, spaceSlug string, endorseCount int, endorsed bool, repo
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 837, "<span class=\"text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 837, "<span class=\"text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -10324,20 +10324,20 @@ func ThreadsView(space Space, spaces []Space, threads []Node, user ViewUser, isO
 					return templ_7745c5c3_Err
 				}
 				if thread.AuthorKind == "agent" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 888, "<span class=\"text-violet-400\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 888, "<span class=\"text-brand\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var527 string
 					templ_7745c5c3_Var527, templ_7745c5c3_Err = templ.JoinStringErrs(thread.Author)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3325, Col: 53}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3325, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var527))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 889, "</span> <span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 889, "</span> <span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -10657,7 +10657,7 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 917, "<button type=\"button\" class=\"text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 hover:bg-violet-500/20 transition-colors\" onclick=\"")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 917, "<button type=\"button\" class=\"text-xs px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20 hover:bg-brand/20 transition-colors\" onclick=\"")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -10752,14 +10752,14 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 					return templ_7745c5c3_Err
 				}
 				if p := personaMap[convo.ID]; p != nil {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 928, "<span class=\"flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20\"><span class=\"relative inline-flex\"><span class=\"w-3 h-3 rounded-full bg-violet-500/20 flex items-center justify-center font-bold text-[8px]\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 928, "<span class=\"flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/20\"><span class=\"relative inline-flex\"><span class=\"w-3 h-3 rounded-full bg-brand/20 flex items-center justify-center font-bold text-[8px]\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var552 string
 					templ_7745c5c3_Var552, templ_7745c5c3_Err = templ.JoinStringErrs(initial(p.Display))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3424, Col: 137}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3424, Col: 132}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var552))
 					if templ_7745c5c3_Err != nil {
@@ -10876,14 +10876,14 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 						return templ_7745c5c3_Err
 					}
 					if convo.LastAuthorKind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 942, "<span class=\"text-violet-400\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 942, "<span class=\"text-brand\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var559 string
 						templ_7745c5c3_Var559, templ_7745c5c3_Err = templ.JoinStringErrs(convo.LastAuthor)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3444, Col: 57}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3444, Col: 52}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var559))
 						if templ_7745c5c3_Err != nil {
@@ -11088,7 +11088,7 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var570 = []any{"text-xs font-medium", templ.KV("text-violet-400", msg.AuthorKind == "agent"), templ.KV("text-warm", msg.AuthorKind != "agent")}
+					var templ_7745c5c3_Var570 = []any{"text-xs font-medium", templ.KV("text-brand", msg.AuthorKind == "agent"), templ.KV("text-warm", msg.AuthorKind != "agent")}
 					templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var570...)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
@@ -11113,7 +11113,7 @@ func ConversationsView(space Space, spaces []Space, convos []ConversationSummary
 					var templ_7745c5c3_Var572 string
 					templ_7745c5c3_Var572, templ_7745c5c3_Err = templ.JoinStringErrs(msg.Author)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3488, Col: 164}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3488, Col: 159}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var572))
 					if templ_7745c5c3_Err != nil {
@@ -11289,40 +11289,40 @@ func ConversationDetailView(space Space, convo Node, messages []Node, user ViewU
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 983, "\" class=\"flex items-center gap-2 ml-4 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 transition-colors flex-shrink-0 group\"><div class=\"w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center flex-shrink-0\"><span class=\"text-[10px] font-bold text-violet-400\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 983, "\" class=\"flex items-center gap-2 ml-4 px-3 py-1.5 rounded-lg bg-brand/10 hover:bg-brand/20 transition-colors flex-shrink-0 group\"><div class=\"w-6 h-6 rounded-full bg-brand/20 flex items-center justify-center flex-shrink-0\"><span class=\"text-[10px] font-bold text-brand\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var582 string
 				templ_7745c5c3_Var582, templ_7745c5c3_Err = templ.JoinStringErrs(initial(agentPersona.Display))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3531, Col: 91}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3531, Col: 86}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var582))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 984, "</span></div><div class=\"text-right leading-tight\"><div class=\"text-xs font-medium text-violet-400\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 984, "</span></div><div class=\"text-right leading-tight\"><div class=\"text-xs font-medium text-brand\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var583 string
 				templ_7745c5c3_Var583, templ_7745c5c3_Err = templ.JoinStringErrs(agentPersona.Display)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3534, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3534, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var583))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 985, "</div><div class=\"text-[10px] text-violet-400/60\">agent · ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 985, "</div><div class=\"text-[10px] text-brand/60\">agent · ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var584 string
 				templ_7745c5c3_Var584, templ_7745c5c3_Err = templ.JoinStringErrs(agentPersona.Category)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3535, Col: 84}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3535, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var584))
 				if templ_7745c5c3_Err != nil {
@@ -11407,7 +11407,7 @@ func ConversationDetailView(space Space, convo Node, messages []Node, user ViewU
 				return templ_7745c5c3_Err
 			}
 			if hasAgent {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 996, "<div id=\"thinking\" class=\"max-w-2xl mx-auto mt-3 hidden\"><div class=\"flex gap-3\"><span class=\"w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4 animate-pulse\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"6\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"18\" cy=\"12\" r=\"2\"></circle></svg></span><div class=\"bg-violet-500/5 border border-violet-500/20 rounded-lg px-4 py-2.5\"><div class=\"flex items-center gap-1.5 mb-1\"><span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">thinking</span></div><div class=\"flex gap-1 items-center h-5\"><span class=\"w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0s\"></span> <span class=\"w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0.15s\"></span> <span class=\"w-1.5 h-1.5 rounded-full bg-violet-400/60 animate-bounce\" style=\"animation-delay: 0.3s\"></span></div></div></div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 996, "<div id=\"thinking\" class=\"max-w-2xl mx-auto mt-3 hidden\"><div class=\"flex gap-3\"><span class=\"w-8 h-8 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0\"><svg class=\"w-4 h-4 animate-pulse\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"6\" cy=\"12\" r=\"2\"></circle><circle cx=\"12\" cy=\"12\" r=\"2\"></circle><circle cx=\"18\" cy=\"12\" r=\"2\"></circle></svg></span><div class=\"bg-brand/5 border border-brand/20 rounded-lg px-4 py-2.5\"><div class=\"flex items-center gap-1.5 mb-1\"><span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">thinking</span></div><div class=\"flex gap-1 items-center h-5\"><span class=\"w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0s\"></span> <span class=\"w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0.15s\"></span> <span class=\"w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce\" style=\"animation-delay: 0.3s\"></span></div></div></div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -11545,7 +11545,7 @@ func chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []R
 			return templ_7745c5c3_Err
 		}
 		if msg.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1007, "<span class=\"w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center flex-shrink-0\" title=\"Agent\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1007, "<span class=\"w-8 h-8 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center flex-shrink-0\" title=\"Agent\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -11608,7 +11608,7 @@ func chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []R
 		var templ_7745c5c3_Var599 = []any{"rounded-lg px-4 py-2.5 relative",
 			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
 			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent")}
+			templ.KV("bg-brand/5 border border-brand/20", msg.AuthorKind == "agent")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var599...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -11644,7 +11644,7 @@ func chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []R
 			return templ_7745c5c3_Err
 		}
 		if msg.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1016, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1016, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -11801,14 +11801,14 @@ func chatMessage(msg Node, currentUserID string, spaceSlug string, reactions []R
 			}
 		}
 		if label := groundedLabel(msg.Tags); label != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1033, "<div class=\"text-[9px] text-violet-400/50 mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1033, "<div class=\"text-[9px] text-brand/50 mt-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var610 string
 			templ_7745c5c3_Var610, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3701, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3701, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var610))
 			if templ_7745c5c3_Err != nil {
@@ -11935,7 +11935,7 @@ func chatMessageCompact(msg Node, currentUserID string, spaceSlug string, reacti
 		var templ_7745c5c3_Var617 = []any{"rounded-lg px-4 py-1 relative",
 			templ.KV("bg-brand/10 border border-brand/20", msg.AuthorID == currentUserID),
 			templ.KV("bg-surface border border-edge", msg.AuthorID != currentUserID && msg.AuthorKind != "agent"),
-			templ.KV("bg-violet-500/5 border border-violet-500/20", msg.AuthorKind == "agent")}
+			templ.KV("bg-brand/5 border border-brand/20", msg.AuthorKind == "agent")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var617...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -11991,14 +11991,14 @@ func chatMessageCompact(msg Node, currentUserID string, spaceSlug string, reacti
 			return templ_7745c5c3_Err
 		}
 		if label := groundedLabel(msg.Tags); label != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1051, "<div class=\"text-[9px] text-violet-400/50 mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1051, "<div class=\"text-[9px] text-brand/50 mt-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var620 string
 			templ_7745c5c3_Var620, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3733, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 3733, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var620))
 			if templ_7745c5c3_Err != nil {
@@ -12376,7 +12376,7 @@ func PeopleView(space Space, spaces []Space, members []Member, user ViewUser, se
 					return templ_7745c5c3_Err
 				}
 				if m.Kind == "agent" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1082, "<span class=\"w-7 h-7 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1082, "<span class=\"w-7 h-7 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -12443,7 +12443,7 @@ func PeopleView(space Space, spaces []Space, members []Member, user ViewUser, se
 					return templ_7745c5c3_Err
 				}
 				if m.Kind == "agent" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1089, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1089, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -12618,7 +12618,7 @@ func appAgentCard(slug string, p AppAgentPersona, user ViewUser) templ.Component
 			templ_7745c5c3_Var650 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1100, "<div class=\"bg-surface rounded-lg border border-edge p-4 flex flex-col gap-3 hover:border-violet-500/30 transition-colors\"><div class=\"flex items-center gap-3 min-w-0\"><span class=\"w-9 h-9 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center flex-shrink-0\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1100, "<div class=\"bg-surface rounded-lg border border-edge p-4 flex flex-col gap-3 hover:border-brand/30 transition-colors\"><div class=\"flex items-center gap-3 min-w-0\"><span class=\"w-9 h-9 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center flex-shrink-0\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -12644,7 +12644,7 @@ func appAgentCard(slug string, p AppAgentPersona, user ViewUser) templ.Component
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1102, "</p><span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0\">agent</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1102, "</p><span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand flex-shrink-0\">agent</span> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -12743,7 +12743,7 @@ func appAgentCategoryClass(cat string) string {
 	case "knowledge":
 		return "bg-indigo-500/15 text-indigo-400"
 	case "product":
-		return "bg-violet-500/15 text-violet-400"
+		return "bg-brand/15 text-brand"
 	case "outward":
 		return "bg-emerald-500/15 text-emerald-400"
 	case "resource":
@@ -12953,7 +12953,7 @@ func opItem(o Op, spaceSlug string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if o.ActorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1122, "<span class=\"w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center mt-0.5 flex-shrink-0\" title=\"Agent\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1122, "<span class=\"w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center mt-0.5 flex-shrink-0\" title=\"Agent\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -13007,7 +13007,7 @@ func opItem(o Op, spaceSlug string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if o.ActorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1128, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1128, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -13655,14 +13655,14 @@ func SettingsView(space Space, spaces []Space, reports []Report, user ViewUser, 
 						return templ_7745c5c3_Err
 					}
 					if m.Kind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1187, "<span class=\"w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1187, "<span class=\"w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var708 string
 						templ_7745c5c3_Var708, templ_7745c5c3_Err = templ.JoinStringErrs(initial(m.UserName))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4180, Col: 154}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4180, Col: 144}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var708))
 						if templ_7745c5c3_Err != nil {
@@ -13722,7 +13722,7 @@ func SettingsView(space Space, spaces []Space, reports []Report, user ViewUser, 
 						return templ_7745c5c3_Err
 					}
 					if m.Kind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1194, "<span class=\"text-[9px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400\">agent</span>")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1194, "<span class=\"text-[9px] px-1 py-0.5 rounded bg-brand/10 text-brand\">agent</span>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
@@ -13983,14 +13983,14 @@ func ChangelogView(space Space, spaces []Space, entries []ChangelogEntry, user V
 						return templ_7745c5c3_Err
 					}
 					if e.CompletedByKind == "agent" {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1220, "<span class=\"w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1220, "<span class=\"w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						var templ_7745c5c3_Var725 string
 						templ_7745c5c3_Var725, templ_7745c5c3_Err = templ.JoinStringErrs(initial(e.CompletedBy))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4272, Col: 155}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4272, Col: 145}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var725))
 						if templ_7745c5c3_Err != nil {
@@ -14450,14 +14450,14 @@ func proposalCard(p ProposalWithVotes, spaceSlug string, isOwner bool) templ.Com
 			return templ_7745c5c3_Err
 		}
 		if p.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1265, "<span class=\"w-4 h-4 rounded-full bg-violet-500/10 text-violet-400 text-[8px] font-bold flex items-center justify-center\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1265, "<span class=\"w-4 h-4 rounded-full bg-brand/10 text-brand text-[8px] font-bold flex items-center justify-center\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var746 string
 			templ_7745c5c3_Var746, templ_7745c5c3_Err = templ.JoinStringErrs(initial(p.Author))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4439, Col: 147}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 4439, Col: 137}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var746))
 			if templ_7745c5c3_Err != nil {
@@ -15431,7 +15431,7 @@ func NodeDetailView(space Space, node Node, children []Node, ops []Op, user View
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1353, "\"> <input type=\"hidden\" name=\"assignee\" value=\"hive\"> <button type=\"submit\" class=\"px-3 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-md hover:bg-violet-500/20 transition-colors text-sm font-medium\">Assign to agent</button></form></div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1353, "\"> <input type=\"hidden\" name=\"assignee\" value=\"hive\"> <button type=\"submit\" class=\"px-3 py-1 bg-brand/10 text-brand border border-brand/20 rounded-md hover:bg-brand/20 transition-colors text-sm font-medium\">Assign to agent</button></form></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -16906,7 +16906,7 @@ func CommentItem(node Node) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1513, "<span class=\"w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1513, "<span class=\"w-6 h-6 rounded-full bg-brand/10 text-brand text-xs font-bold flex items-center justify-center\" title=\"Agent\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -16960,7 +16960,7 @@ func CommentItem(node Node) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1519, "<span class=\"text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1519, "<span class=\"text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -17221,7 +17221,7 @@ func simpleHeader(user ViewUser, p *profile.Profile) templ.Component {
 			templ_7745c5c3_Var894 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1542, "<header class=\"border-b border-edge bg-surface\"><nav class=\"max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between\"><a href=\"/\" class=\"font-display text-xl font-normal text-brand brand-breathe italic flex items-center gap-2\"><img src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1542, "<header class=\"border-b border-edge bg-surface\"><nav class=\"max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between\"><a href=\"/\" class=\"font-display text-xl font-semibold text-brand flex items-center gap-2\"><img src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -17416,14 +17416,14 @@ func simpleFooter(p *profile.Profile) templ.Component {
 			templ_7745c5c3_Var905 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1560, "<footer class=\"border-t border-edge bg-surface\"><div class=\"max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6\"><div><span class=\"font-display text-sm text-warm-faint italic\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1560, "<footer class=\"border-t border-edge bg-surface\"><div class=\"max-w-4xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-start justify-between gap-6\"><div><span class=\"font-display text-sm text-warm-faint\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var906 string
 		templ_7745c5c3_Var906, templ_7745c5c3_Err = templ.JoinStringErrs(p.GetBrandName())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5223, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5223, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var906))
 		if templ_7745c5c3_Err != nil {
@@ -17434,9 +17434,9 @@ func simpleFooter(p *profile.Profile) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var907 string
-		templ_7745c5c3_Var907, templ_7745c5c3_Err = templ.JoinStringErrs(p.GetCopy("tagline", "Humans and agents, building together."))
+		templ_7745c5c3_Var907, templ_7745c5c3_Err = templ.JoinStringErrs(p.GetCopy("tagline", "Governed autonomous operations."))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5224, Col: 111}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5224, Col: 105}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var907))
 		if templ_7745c5c3_Err != nil {
@@ -18567,14 +18567,14 @@ func KnowledgeCard(node Node, spaceSlug string, challenges int) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		if node.AuthorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1636, "<span class=\"text-violet-400\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1636, "<span class=\"text-brand\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var948 string
 			templ_7745c5c3_Var948, templ_7745c5c3_Err = templ.JoinStringErrs(node.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5736, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/views.templ`, Line: 5736, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var948))
 			if templ_7745c5c3_Err != nil {
