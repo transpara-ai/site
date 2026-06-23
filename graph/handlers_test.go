@@ -110,7 +110,6 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 
 func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	h, _, _ := testHandlers(t)
-	generatedAt := time.Date(2026, 6, 23, 9, 30, 0, 0, time.UTC)
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/hive/civilization/assembly-projection" {
 			t.Fatalf("path = %q, want civilization assembly projection", r.URL.Path)
@@ -118,39 +117,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer secret" {
 			t.Fatalf("authorization header = %q, want bearer secret", r.Header.Get("Authorization"))
 		}
-		_ = json.NewEncoder(w).Encode(OpsCivilizationAssemblyProjection{
-			ProjectionID:                       "civ-runtime-001",
-			ProjectionSchemaVersion:            "1.0.0",
-			ProjectionSubject:                  "civilization_assembly",
-			GeneratedAt:                        generatedAt,
-			SourceEventGraphHeadOrStateVersion: "evt_head_runtime_001",
-			SourceEventIDsOrQueryWindow:        []string{"evt_runtime_001"},
-			DerivationStatus:                   opsCivilizationProjectionStatusComplete,
-			AuthorityState: OpsCivilizationAssemblyAuthorityState{
-				Status:     opsCivilizationFieldAvailable,
-				Summary:    "authority state projected by Hive",
-				SourceRefs: []string{"evt_authority_001"},
-			},
-			ActorRoster: []OpsCivilizationAssemblyActorSummary{
-				{ID: "actor_summary_001", ActorID: "actor_builder", ActorType: "agent", IdentityMode: "runtime", Status: "active"},
-			},
-			RoleBindings: []OpsCivilizationAssemblyRoleBinding{
-				{ActorID: "actor_builder", Role: "implementer", SourceRef: "evt_runtime_001", SourceType: "hive.agent.spawned"},
-			},
-			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
-				Status:     opsCivilizationFieldAvailable,
-				Summary:    "runtime projection from Hive",
-				SourceRefs: []string{"evt_runtime_001"},
-			},
-			SiteConsumerStatus: OpsCivilizationAssemblyFieldStatus{
-				Status:     opsCivilizationFieldAvailable,
-				Summary:    "Site consumed Hive read-only endpoint",
-				SourceRefs: []string{"GET /api/hive/civilization/assembly-projection"},
-			},
-			BoundaryFlags:  []string{"read_only_site_consumer", "no_runtime_execution"},
-			ProvenanceRefs: []string{"evt_runtime_001"},
-			ValidationRefs: []string{"GET /api/hive/civilization/assembly-projection"},
-		})
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
@@ -183,6 +151,88 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	}
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
+
+const hiveCivilizationAssemblyProjectionFixture = `{
+  "projection_id": "civ-runtime-001",
+  "projection_schema_version": "1.0.0",
+  "projection_subject": "civilization_assembly",
+  "generated_at": "2026-06-23T09:30:00Z",
+  "source_eventgraph_head_or_state_version": "evt_head_runtime_001",
+  "source_event_ids_or_query_window": ["evt_runtime_001"],
+  "derivation_status": "complete",
+  "authority_state": {
+    "status": "available",
+    "summary": "authority state projected by Hive",
+    "authority_requests": [
+      {
+        "id": "req_pr_001",
+        "actor_id": "actor_builder",
+        "actor_role": "implementer",
+        "action": "pull_request.create",
+        "target_type": "pr",
+        "target_id": "pr://transpara-ai/site/94",
+        "risk_class": "medium",
+        "status": "pending"
+      }
+    ],
+    "authority_decisions": [],
+    "source_refs": ["evt_authority_001"]
+  },
+  "external_committee_state": {
+    "status": "unavailable",
+    "summary": "External Committee approval records are not independently projected by Hive operator state.",
+    "committee_roles": ["External Committee"]
+  },
+  "actor_roster": [
+    {
+      "id": "actor_summary_001",
+      "actor_id": "actor_builder",
+      "actor_type": "agent",
+      "identity_mode": "runtime",
+      "status": "active"
+    }
+  ],
+  "role_bindings": [
+    {
+      "actor_id": "actor_builder",
+      "role": "implementer",
+      "source_ref": "evt_runtime_001",
+      "source_type": "hive.agent.spawned"
+    }
+  ],
+  "agent_lifecycle_summary": [
+    {
+      "id": "evt_runtime_001",
+      "actor_id": "actor_builder",
+      "to_state": "active",
+      "status": "active"
+    }
+  ],
+  "factory_order_summary": [],
+  "work_evidence_summary": {
+    "status": "available",
+    "summary": "runtime projection from Hive",
+    "artifact_refs": [],
+    "source_refs": ["evt_runtime_001"]
+  },
+  "site_consumer_status": {
+    "status": "available",
+    "summary": "Site consumed Hive read-only endpoint",
+    "source_refs": ["GET /api/hive/civilization/assembly-projection"]
+  },
+  "open_gate_summary": [],
+  "residual_risk_summary": [],
+  "withheld_or_unavailable_fields": [
+    {
+      "field": "external_committee_state",
+      "status": "unavailable",
+      "reason": "Hive operator projection does not independently certify External Committee approval."
+    }
+  ],
+  "boundary_flags": ["read_only_site_consumer", "no_runtime_execution"],
+  "provenance_refs": ["evt_runtime_001"],
+  "validation_refs": ["GET /api/hive/civilization/assembly-projection"]
+}`
 
 func TestHandleOpsCivilizationFailsClosedWhenHiveProjectionFails(t *testing.T) {
 	h, _, _ := testHandlers(t)
