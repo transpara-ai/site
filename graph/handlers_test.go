@@ -284,7 +284,7 @@ func TestHandleOpsCivilizationFailsClosedForInvalidHiveProjectionPayloads(t *tes
 		{
 			name: "empty object",
 			body: `{}`,
-			want: "missing projection derivation status",
+			want: "unsupported projection schema version",
 		},
 		{
 			name: "unsupported schema",
