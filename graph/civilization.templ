@@ -107,6 +107,8 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.TaskRefs, "none projected") }</dd>
 					<dt class="text-warm-faint">Artifact refs</dt>
 					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.ArtifactRefs, "none projected") }</dd>
+					<dt class="text-warm-faint">Test refs</dt>
+					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.TestRunRefs, "none projected") }</dd>
 					<dt class="text-warm-faint">Gate refs</dt>
 					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.GateResultRefs, "none projected") }</dd>
 					<dt class="text-warm-faint">Audit refs</dt>
