@@ -1,4 +1,4 @@
-.PHONY: css generate-personas generate build test vet verify verify-canonical-paths run dev deploy
+.PHONY: css generate-personas generate build test vet verify verify-canonical-paths verify-public-shell-clean run dev deploy
 
 LEGACY_OPERATION_REPO := transpara-ai/civilization-operation
 
@@ -36,7 +36,10 @@ verify-canonical-paths:
 		exit $$status; \
 	fi
 
-verify: verify-canonical-paths build test vet
+verify-public-shell-clean:
+	bash scripts/verify-public-shell-clean.sh
+
+verify: verify-canonical-paths build verify-public-shell-clean test vet
 
 run: build
 	./site
