@@ -856,7 +856,7 @@ func (h *Handlers) handleOpsCivilization(w http.ResponseWriter, r *http.Request)
 		Title:        "Civilization Assembly",
 		Description:  "Read-only v4.0 assembly projection for roles, tiers, model-selection posture, and authority boundaries. Site displays unavailable truth sources as unavailable; it does not execute work.",
 		Active:       "civilization",
-		Civilization: buildOpsCivilizationAssemblyData(),
+		Civilization: buildOpsCivilizationAssemblyDataFromProjection(fetchOpsCivilizationProjection(r), time.Now().UTC()),
 	})
 }
 
@@ -2581,6 +2581,71 @@ func applyHiveOperatorProjection(r *http.Request, data *OpsHiveData) {
 	data.KeyAuditTraces = projection.KeyAuditTraces
 	data.RuntimeEvidence = projection.RuntimeEvidence
 	data.ModelSelection = projection.ModelSelection
+}
+
+func fetchOpsCivilizationProjection(r *http.Request) *OpsCivilizationAssemblyProjection {
+	base := strings.TrimSpace(os.Getenv("HIVE_OPS_API_BASE_URL"))
+	if base == "" {
+		return nil
+	}
+	endpoint := strings.TrimRight(base, "/") + "/api/hive/civilization/assembly-projection"
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, endpoint, nil)
+	if err != nil {
+		return failedOpsCivilizationProjection(err.Error())
+	}
+	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
+	resp, err := hiveOpsProjectionClient.Do(req)
+	if err != nil {
+		return failedOpsCivilizationProjection(err.Error())
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return failedOpsCivilizationProjection(fmt.Sprintf("hive civilization projection returned %s", resp.Status))
+	}
+	var projection OpsCivilizationAssemblyProjection
+	if err := json.NewDecoder(resp.Body).Decode(&projection); err != nil {
+		return failedOpsCivilizationProjection(err.Error())
+	}
+	if err := validateOpsCivilizationProjection(projection); err != nil {
+		return failedOpsCivilizationProjection(err.Error())
+	}
+	return &projection
+}
+
+func validateOpsCivilizationProjection(projection OpsCivilizationAssemblyProjection) error {
+	if !opsCivilizationProjectionSchemaSupported(projection.ProjectionSchemaVersion) {
+		return fmt.Errorf("unsupported projection schema version %q", projection.ProjectionSchemaVersion)
+	}
+	if subject := strings.TrimSpace(projection.ProjectionSubject); subject != "" && subject != "civilization_assembly" {
+		return fmt.Errorf("unsupported projection subject %q", projection.ProjectionSubject)
+	}
+	if strings.TrimSpace(projection.DerivationStatus) == "" {
+		return errors.New("missing projection derivation status")
+	}
+	return nil
+}
+
+func opsCivilizationProjectionSchemaSupported(version string) bool {
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return false
+	}
+	major, _, _ := strings.Cut(version, ".")
+	return major == "1"
+}
+
+func failedOpsCivilizationProjection(reason string) *OpsCivilizationAssemblyProjection {
+	return &OpsCivilizationAssemblyProjection{
+		ProjectionSchemaVersion:     "1.0.0",
+		ProjectionSubject:           "civilization_assembly",
+		GeneratedAt:                 time.Now().UTC(),
+		DerivationStatus:            opsCivilizationProjectionStatusFailed,
+		FailureReasons:              []string{reason},
+		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{{Field: "hive_civilization_projection", Status: opsCivilizationFieldUnavailable, Reason: reason}},
+		BoundaryFlags:               []string{"read_only_site_consumer", "failed_closed"},
+	}
 }
 
 // fetchHiveOperatorProjection fetches and decodes the hive operator projection.
