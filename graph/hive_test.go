@@ -382,13 +382,14 @@ func TestGetHiveAgentID_IntegrationPath(t *testing.T) {
 
 	nonce := time.Now().UnixNano()
 	agentUserID := fmt.Sprintf("hive-get-agent-id-test-actor-%d", nonce)
+	agentGoogleID := fmt.Sprintf("hive-get-agent-id-test-google-%d", nonce)
 	apiKeyID := fmt.Sprintf("hive-get-agent-id-apikey-test-%d", nonce)
 	agentEmail := fmt.Sprintf("hive-agent-id-test-%d@test.local", nonce)
 
 	// Insert a test agent user.
 	_, err := db.ExecContext(ctx,
-		`INSERT INTO users (id, email, name, kind) VALUES ($1, $2, $3, 'agent')`,
-		agentUserID, agentEmail, "test-hive-agent-id-func")
+		`INSERT INTO users (id, google_id, email, name, kind) VALUES ($1, $2, $3, $4, 'agent')`,
+		agentUserID, agentGoogleID, agentEmail, "test-hive-agent-id-func")
 	if err != nil {
 		t.Fatalf("insert agent user: %v", err)
 	}

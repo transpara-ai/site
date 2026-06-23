@@ -1,10 +1,18 @@
 package profile
 
-import "net/http"
+import (
+	"net/http"
+	"os"
+	"strings"
+)
 
 // CookieName is the browser cookie that remembers the active profile after a
 // user explicitly selects one with ?profile=<slug>.
 const CookieName = "site_profile"
+
+// DefaultProfileEnvVar lets deployments choose the profile used when no
+// explicit query/cookie resolver matches. Unknown values are ignored.
+const DefaultProfileEnvVar = "SITE_DEFAULT_PROFILE"
 
 // Resolver maps an incoming request to a Profile, or returns nil to
 // defer to the next resolver in a chain. The interface is deliberately
@@ -52,8 +60,14 @@ func (CookieResolver) Resolve(r *http.Request) *Profile {
 // resolver recognised.
 type DefaultResolver struct{}
 
-// Resolve always returns the registry's default profile.
+// Resolve returns SITE_DEFAULT_PROFILE when set to a registered slug, otherwise
+// the registry default.
 func (DefaultResolver) Resolve(*http.Request) *Profile {
+	if slug := strings.TrimSpace(os.Getenv(DefaultProfileEnvVar)); slug != "" {
+		if p := Lookup(slug); p != nil {
+			return p
+		}
+	}
 	return Default()
 }
 
@@ -76,5 +90,5 @@ func (c Chain) Resolve(r *http.Request) *Profile {
 			return p
 		}
 	}
-	return Default()
+	return DefaultResolver{}.Resolve(r)
 }

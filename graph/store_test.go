@@ -34,6 +34,31 @@ func testDB(t *testing.T) (*sql.DB, *Store) {
 	return db, store
 }
 
+func spaceBySlug(t *testing.T, store *Store, slug string) *Space {
+	t.Helper()
+	ctx := context.Background()
+	space, err := store.GetSpaceBySlug(ctx, slug)
+	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		t.Fatalf("get space %q: %v", slug, err)
+	}
+	return space
+}
+
+func cleanupSpaceBySlug(t *testing.T, store *Store, slug string) {
+	t.Helper()
+	ctx := context.Background()
+	space := spaceBySlug(t, store, slug)
+	if space == nil {
+		return
+	}
+	if err := store.DeleteSpace(ctx, space.ID); err != nil {
+		t.Fatalf("cleanup space %q: %v", slug, err)
+	}
+}
+
 func TestCreateAndGetSpace(t *testing.T) {
 	_, store := testDB(t)
 	ctx := context.Background()
@@ -57,6 +82,92 @@ func TestCreateAndGetSpace(t *testing.T) {
 	}
 	if got.ID != space.ID {
 		t.Errorf("ID = %q, want %q", got.ID, space.ID)
+	}
+}
+
+func TestDemoNormalizationRenamesExistingDemoWithoutChangingVisibility(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+
+	if existing := spaceBySlug(t, store, DemoSpaceSlug); existing != nil {
+		t.Skip("demo space already exists; skipping fixed-slug test to avoid mutating shared data")
+	}
+
+	space, err := store.CreateSpace(ctx, DemoSpaceSlug, demoLegacyName, "legacy demo", "owner-1", SpaceProject, VisibilityPrivate)
+	if err != nil {
+		t.Fatalf("create legacy demo space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	if err := store.migrate(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	if gotSlug := store.SeedDemoSpace(ctx); gotSlug != DemoSpaceSlug {
+		t.Fatalf("seed slug = %q, want %q", gotSlug, DemoSpaceSlug)
+	}
+	if gotSlug := store.SeedDemoSpace(ctx); gotSlug != DemoSpaceSlug {
+		t.Fatalf("second seed slug = %q, want %q", gotSlug, DemoSpaceSlug)
+	}
+
+	got, err := store.GetSpaceBySlug(ctx, DemoSpaceSlug)
+	if err != nil {
+		t.Fatalf("get demo space: %v", err)
+	}
+	if got.Name != demoSpaceName {
+		t.Errorf("name = %q, want %q", got.Name, demoSpaceName)
+	}
+	if got.Description != demoSpaceDescription {
+		t.Errorf("description = %q, want %q", got.Description, demoSpaceDescription)
+	}
+	if got.Visibility != VisibilityPrivate {
+		t.Errorf("visibility = %q, want %q", got.Visibility, VisibilityPrivate)
+	}
+
+	if _, err := store.db.ExecContext(ctx, `UPDATE spaces SET name = 'Custom Demo', description = 'edited' WHERE id = $1`, got.ID); err != nil {
+		t.Fatalf("customize demo space: %v", err)
+	}
+	store.SeedDemoSpace(ctx)
+	got, err = store.GetSpaceBySlug(ctx, DemoSpaceSlug)
+	if err != nil {
+		t.Fatalf("get customized demo space: %v", err)
+	}
+	if got.Name != "Custom Demo" || got.Description != "edited" {
+		t.Errorf("customized demo was overwritten: name=%q description=%q", got.Name, got.Description)
+	}
+}
+
+func TestDemoSpaceMigrationDoesNotRewriteUnrelatedLegacyNamedSpace(t *testing.T) {
+	_, store := testDB(t)
+	ctx := context.Background()
+	const slug = "legacy-demo-migration-test"
+
+	cleanupSpaceBySlug(t, store, slug)
+
+	space, err := store.CreateSpace(ctx, slug, demoLegacyName, "legacy demo", "owner-1", SpaceProject, VisibilityPrivate)
+	if err != nil {
+		t.Fatalf("create legacy named space: %v", err)
+	}
+	t.Cleanup(func() { store.DeleteSpace(ctx, space.ID) })
+
+	if err := store.migrate(); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	if err := store.migrate(); err != nil {
+		t.Fatalf("second migrate: %v", err)
+	}
+
+	got, err := store.GetSpaceBySlug(ctx, slug)
+	if err != nil {
+		t.Fatalf("get legacy named space: %v", err)
+	}
+	if got.Name != demoLegacyName {
+		t.Errorf("name = %q, want %q", got.Name, demoLegacyName)
+	}
+	if got.Description != "legacy demo" {
+		t.Errorf("description = %q, want %q", got.Description, "legacy demo")
+	}
+	if got.Visibility != VisibilityPrivate {
+		t.Errorf("visibility = %q, want %q", got.Visibility, VisibilityPrivate)
 	}
 }
 

@@ -4473,6 +4473,9 @@ func joinStrings(ss []string, sep string) string {
 // ────────────────────────────────────────────────────────────────────
 
 const DemoSpaceSlug = "demo"
+const demoSpaceName = "Transpara-AI Operations Demo"
+const demoSpaceDescription = "Bounded demonstration workspace for Transpara-AI operations flows."
+const demoLegacyName = "lovyou.ai Demo"
 
 // SeedDemoSpace creates a public demo space with example content if it doesn't
 // already exist. Idempotent — safe to call on every startup.
@@ -4482,6 +4485,15 @@ func (s *Store) SeedDemoSpace(ctx context.Context) string {
 
 	// Already exists — nothing to do.
 	if existing, _ := s.GetSpaceBySlug(ctx, DemoSpaceSlug); existing != nil {
+		if _, err := s.db.ExecContext(ctx, `
+			UPDATE spaces
+			SET name = $1,
+			    description = $2
+			WHERE slug = $3
+			  AND (name = '' OR description = '' OR lower(name) = lower($4))`,
+			demoSpaceName, demoSpaceDescription, DemoSpaceSlug, demoLegacyName); err != nil {
+			log.Printf("seed demo: update existing demo space: %v", err)
+		}
 		return DemoSpaceSlug
 	}
 
@@ -4502,8 +4514,8 @@ func (s *Store) SeedDemoSpace(ctx context.Context) string {
 	// Create the demo space.
 	space, err := s.CreateSpace(ctx,
 		DemoSpaceSlug,
-		"transpara.ai Demo",
-		"A live preview — tasks, posts, and agent conversations you can explore without signing in.",
+		demoSpaceName,
+		demoSpaceDescription,
 		agentUserID,
 		SpaceProject,
 		VisibilityPublic,
