@@ -5,7 +5,7 @@
 This packet records local, deterministic Site render evidence for selected
 user-facing and operator-facing surfaces associated with the Test 001
 cross-repo runtime-doctrine drift tabletop tracked by
-`transpara-ai/civilization-operation`.
+`transpara-ai/operation`.
 
 It narrows the earlier missing-render posture. It is not deployment evidence,
 live feeder evidence, runtime observation, correction evidence, public
@@ -83,7 +83,7 @@ This packet does not prove:
 - that a public correction was required or completed
 - that an external feeder response was live or production-backed
 - that Site grants policy, runtime, production, or human authorization
-- that `civilization-wiki`, OpenBrain/`OB1`, active roster, Hive runtime, or
+- that `wiki`, OpenBrain/`OB1`, active roster, Hive runtime, or
   EventGraph-record gaps are resolved
 - that Test 001 is `GREEN`
 
@@ -107,6 +107,6 @@ The owning repo validation for this evidence packet is:
 make verify
 ```
 
-The packet should be cited by `civilization-operation` only after the PR that
+The packet should be cited by `operation` only after the PR that
 adds it has passed local validation, GitHub CI, exact-head adversarial review,
 and has been merged to `origin/main`.
