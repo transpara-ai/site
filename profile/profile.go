@@ -8,8 +8,6 @@
 // default branding rather than panicking.
 package profile
 
-import "log/slog"
-
 // NavItem is a single link in a profile-driven navigation bar. Path is
 // the href value (starting with "/" for internal routes); Label is the
 // visible link text. Each profile's HeaderNav / FooterNav is an ordered
@@ -46,14 +44,10 @@ type Profile struct {
 // DefaultSlug is the slug that resolves when no other resolver matches.
 const DefaultSlug = "transpara-ai"
 
-// legacyAliases maps deprecated profile slugs to their canonical post-rename
-// form. Exists to catch external state (DB rows, Host headers, static config,
-// bookmarked URLs) that still references the pre-2026-04-22 slug after the
-// Prompt 2 sweep renamed the registry. Every resolution of a legacy slug
-// emits a structured deprecation warning so operators can grep logs for the
-// request source and migrate it. Drop this map once the warnings stop firing
-// for a sustained window.
-var legacyAliases = map[string]string{
+// quarantinedLegacySlugs records deprecated public identity slugs that must not
+// render branded UI. Resolvers may fall through to the current default profile,
+// but these slugs intentionally do not resolve through Lookup.
+var quarantinedLegacySlugs = map[string]string{
 	"lovyou-ai": "transpara-ai",
 }
 
@@ -64,8 +58,8 @@ var legacyAliases = map[string]string{
 var registry = map[string]*Profile{
 	"transpara-ai": {
 		Slug:        "transpara-ai",
-		Name:        "transpara.ai",
-		BrandName:   "transpara.ai",
+		Name:        "Transpara-AI",
+		BrandName:   "Transpara-AI",
 		LogoPath:    "/static/logo-transpara.svg",
 		AccentColor: "#e8a0b8",
 		HeaderNav: []NavItem{
@@ -116,19 +110,19 @@ var registry = map[string]*Profile{
 		// system absorbs it; this is a pattern proof, not a
 		// translation infrastructure.
 		Copy: map[string]string{
-			"tagline":                 "Operations intelligence for the people on the floor.",
-			"home.description":        "Autonomous agents read your plant data and surface what matters — before it costs you a shift.",
-			"home.hero.title.lead":    "See what the plant",
-			"home.hero.title.accent":  "is telling you.",
-			"home.hero.subtitle":      "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
-			"home.subhero.body":       "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
-			"app.description":         "Your team's work on the plant — tasks, conversations, and agent activity in one place.",
-			"hive.description":        "Live view of the agents working on the plant — real-time activity and coordination across the floor.",
-			"welcome.description":     "Set up your first workspace and start asking questions of the plant data.",
+			"tagline":                   "Operations intelligence for the people on the floor.",
+			"home.description":          "Autonomous agents read your plant data and surface what matters — before it costs you a shift.",
+			"home.hero.title.lead":      "See what the plant",
+			"home.hero.title.accent":    "is telling you.",
+			"home.hero.subtitle":        "Surface what the plant is telling you, before it costs you a shift. The data was always there — now your team can act on it.",
+			"home.subhero.body":         "Autonomous agents reason about your operation in real time. Watch how they connect signals across the plant.",
+			"app.description":           "Your team's work on the plant — tasks, conversations, and agent activity in one place.",
+			"hive.description":          "Live view of the agents working on the plant — real-time activity and coordination across the floor.",
+			"welcome.description":       "Set up your first workspace and start asking questions of the plant data.",
 			"notifications.description": "Recent activity across your plant workspaces.",
-			"discover.empty":          "No shared workspaces yet.",
-			"welcome.subtitle":        "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
-			"apikeys.desc":            "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
+			"discover.empty":            "No shared workspaces yet.",
+			"welcome.subtitle":          "You're in. Let's set up your first workspace — somewhere your team can ask questions of the plant data. Takes 30 seconds.",
+			"apikeys.desc":              "Authenticate scripts and agents to query Transpara programmatically — the same data your team sees, accessible from your tooling.",
 		},
 	},
 }
@@ -139,27 +133,15 @@ func Default() *Profile {
 }
 
 // Lookup returns the profile for the given slug, or nil if unknown.
-// Callers use nil as the signal to continue resolver-chain traversal.
-//
-// Resolution order:
-//  1. Exact match in the registry (the fast, canonical path)
-//  2. Legacy alias (emits a deprecation warning, returns the canonical profile)
-//  3. nil (unchanged — caller's resolver chain falls through to DefaultResolver)
-//
-// Legacy-alias resolution returns the *canonical* Profile, so callers rendering
-// Profile.Slug (e.g. data-profile HTML attribute via GetSlug) render the
-// post-migration identifier — the requested slug string is not leaked into the
-// returned Profile.
+// Callers use nil as the signal to continue resolver-chain traversal. Legacy
+// pre-Transpara slugs intentionally do not resolve; they may fall through to a
+// default profile, but never render deprecated brand UI.
 func Lookup(slug string) *Profile {
+	if _, quarantined := quarantinedLegacySlugs[slug]; quarantined {
+		return nil
+	}
 	if p, ok := registry[slug]; ok {
 		return p
-	}
-	if canonical, ok := legacyAliases[slug]; ok {
-		slog.Warn("deprecated profile slug resolved via legacy alias",
-			"requested", slug,
-			"canonical", canonical,
-			"action", "migrate external references to canonical slug")
-		return registry[canonical]
 	}
 	return nil
 }

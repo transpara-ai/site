@@ -323,6 +323,24 @@ func TestDefaultResolver_alwaysDefault(t *testing.T) {
 	}
 }
 
+func TestDefaultResolver_usesEnvDefaultProfile(t *testing.T) {
+	t.Setenv(DefaultProfileEnvVar, "transpara")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	p := DefaultResolver{}.Resolve(req)
+	if p == nil || p.Slug != "transpara" {
+		t.Fatalf("DefaultResolver with env attached = %+v, want transpara", p)
+	}
+}
+
+func TestDefaultResolver_ignoresUnknownEnvDefaultProfile(t *testing.T) {
+	t.Setenv(DefaultProfileEnvVar, "nonsense")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	p := DefaultResolver{}.Resolve(req)
+	if p == nil || p.Slug != DefaultSlug {
+		t.Fatalf("DefaultResolver with unknown env attached = %+v, want %q", p, DefaultSlug)
+	}
+}
+
 func TestCookieResolver(t *testing.T) {
 	cases := []struct {
 		name     string
