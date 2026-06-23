@@ -33,6 +33,7 @@ type OpsCivilizationAssemblyData struct {
 	ReferenceGroups     []OpsCivilizationReferenceGroup
 	FactoryOrders       []OpsCivilizationAssemblyFactoryOrder
 	WorkEvidence        OpsCivilizationAssemblyWorkEvidence
+	QueuedRunRequest    *OpsHiveQueuedRunRequest
 }
 
 type OpsCivilizationBoundary struct {
@@ -66,6 +67,7 @@ type OpsCivilizationAssemblyProjection struct {
 	AgentLifecycleSummary              []OpsCivilizationAssemblyLifecycleSummary `json:"agent_lifecycle_summary"`
 	FactoryOrderSummary                []OpsCivilizationAssemblyFactoryOrder     `json:"factory_order_summary"`
 	WorkEvidenceSummary                OpsCivilizationAssemblyWorkEvidence       `json:"work_evidence_summary"`
+	QueuedRunRequest                   *OpsHiveQueuedRunRequest                  `json:"queued_run_request,omitempty"`
 	SiteConsumerStatus                 OpsCivilizationAssemblyFieldStatus        `json:"site_consumer_status"`
 	OpenGateSummary                    []OpsCivilizationAssemblyGateSummary      `json:"open_gate_summary"`
 	ResidualRiskSummary                []OpsCivilizationAssemblyResidualRisk     `json:"residual_risk_summary"`
@@ -224,6 +226,7 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 		ReferenceGroups:     opsCivilizationReferenceGroups(projection),
 		FactoryOrders:       opsCivilizationFactoryOrders(projection),
 		WorkEvidence:        opsCivilizationWorkEvidence(projection),
+		QueuedRunRequest:    opsCivilizationQueuedRunRequest(projection),
 	}
 }
 
@@ -610,6 +613,13 @@ func opsCivilizationWorkEvidence(projection *OpsCivilizationAssemblyProjection) 
 		}
 	}
 	return projection.WorkEvidenceSummary
+}
+
+func opsCivilizationQueuedRunRequest(projection *OpsCivilizationAssemblyProjection) *OpsHiveQueuedRunRequest {
+	if projection == nil {
+		return nil
+	}
+	return projection.QueuedRunRequest
 }
 
 func opsCivilizationStatusSummary(status string, summary string) string {

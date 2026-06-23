@@ -116,6 +116,35 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</dl>
 			</div>
 		</section>
+		if data.QueuedRunRequest != nil {
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+					<div>
+						<h2 class="text-sm font-medium text-warm">Queued issue-scan lifecycle</h2>
+						<p class="text-xs text-warm-faint mt-1">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p>
+						<p class="text-sm text-warm-muted mt-2 break-words">{ opsValueOr(data.QueuedRunRequest.Title, data.QueuedRunRequest.RunID) }</p>
+					</div>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsValueOr(data.QueuedRunRequest.Status, "queued") }</span>
+				</header>
+				<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
+					<dt class="text-warm-faint">Run ID</dt>
+					<dd class="text-warm-muted break-all">{ data.QueuedRunRequest.RunID }</dd>
+					<dt class="text-warm-faint">Target repos</dt>
+					<dd class="text-warm-muted break-all">{ opsEvidenceJoin(data.QueuedRunRequest.TargetRepos) }</dd>
+					<dt class="text-warm-faint">Authority</dt>
+					<dd class="text-warm-muted">{ opsValueOr(data.QueuedRunRequest.AuthorityInitialLevel, "unknown") }</dd>
+					<dt class="text-warm-faint">Authority scope</dt>
+					<dd class="text-warm-muted break-words">{ opsValueOr(data.QueuedRunRequest.AuthorityScope, "not projected") }</dd>
+					<dt class="text-warm-faint">Budget</dt>
+					<dd class="text-warm-muted">{ opsHiveOptionalInt(data.QueuedRunRequest.BudgetMaxIterations, "?") } iter / { opsHiveOptionalFloatUSD(data.QueuedRunRequest.BudgetMaxCostUSD, "?") }</dd>
+					<dt class="text-warm-faint">Evidence kind</dt>
+					<dd class="text-warm-muted break-all">{ opsValueOr(data.QueuedRunRequest.EvidenceKind, "queued request") }</dd>
+				</dl>
+				<div class="px-4 pb-4">
+					@opsHiveQueuedRunLifecycle(data.QueuedRunRequest)
+				</div>
+			</section>
+		}
 		<section class="border border-edge bg-surface rounded-lg p-4">
 			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
 				<div>
