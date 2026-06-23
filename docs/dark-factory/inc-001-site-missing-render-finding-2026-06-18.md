@@ -4,7 +4,7 @@
 
 This packet records the Site-side user-facing evidence posture for the
 Test 001 cross-repo runtime-doctrine drift tabletop tracked by
-`transpara-ai/civilization-operation`.
+`transpara-ai/operation`.
 
 It is a missing-render finding, not a correction, deployment record, runtime
 observation, or authority artifact.
@@ -58,7 +58,7 @@ This packet does not prove:
 - that a public correction was required or completed
 - that Site grants policy, runtime, production, or human authorization
 - that Test 001 is `GREEN`
-- that `civilization-wiki`, OpenBrain/`OB1`, active roster, Hive runtime, or
+- that `wiki`, OpenBrain/`OB1`, active roster, Hive runtime, or
   EventGraph-record gaps are resolved
 
 `docs` remains the canonical doctrine source when doctrine conflicts with Site.
@@ -74,6 +74,6 @@ The owning repo validation for this documentation packet is:
 make verify
 ```
 
-The packet should be cited by `civilization-operation` only after the PR that
+The packet should be cited by `operation` only after the PR that
 adds it has passed local validation, GitHub CI, exact-head adversarial review,
 and has been merged to `origin/main`.
