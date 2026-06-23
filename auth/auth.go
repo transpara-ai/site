@@ -350,9 +350,9 @@ func (a *Auth) handleAuthError(w http.ResponseWriter, r *http.Request) {
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
-    h1{margin:0 0 1rem;font-size:1.25rem;color:#e8a0b8}
+    h1{margin:0 0 1rem;font-size:1.25rem;color:#38bdf8}
     p{margin:0 0 1.5rem;line-height:1.6;color:#c4a882}
-    a{display:inline-block;padding:.6rem 1.2rem;background:#e8a0b8;color:#0d0d0d;border-radius:6px;text-decoration:none;font-weight:600}
+    a{display:inline-block;padding:.6rem 1.2rem;background:#38bdf8;color:#0d0d0d;border-radius:6px;text-decoration:none;font-weight:600}
     a:hover{background:#d48aa0}
     .code{margin-top:1rem;font-size:.75rem;color:#666}
   </style>
@@ -639,11 +639,11 @@ func (a *Auth) handleMagicLinkRequestForm(w http.ResponseWriter, r *http.Request
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;width:100%;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
-    h1{margin:0 0 .5rem;font-size:1.25rem;color:#e8a0b8}
+    h1{margin:0 0 .5rem;font-size:1.25rem;color:#38bdf8}
     p{margin:0 0 1.5rem;line-height:1.6;color:#c4a882;font-size:.9rem}
     label{display:block;margin-bottom:.4rem;font-size:.85rem;color:#c4a882}
     input{width:100%;box-sizing:border-box;padding:.6rem .8rem;background:#0d0d0d;border:1px solid #444;border-radius:6px;color:#e8d5c4;font-size:1rem;margin-bottom:1rem}
-    button{width:100%;padding:.65rem;background:#e8a0b8;color:#0d0d0d;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer}
+    button{width:100%;padding:.65rem;background:#38bdf8;color:#0d0d0d;border:none;border-radius:6px;font-size:1rem;font-weight:600;cursor:pointer}
     button:hover{background:#d48aa0}
     .back{display:block;text-align:center;margin-top:1rem;color:#666;font-size:.85rem;text-decoration:none}
     .back:hover{color:#c4a882}
@@ -699,10 +699,10 @@ func (a *Auth) handleMagicLinkRequest(w http.ResponseWriter, r *http.Request) {
   <style>
     body{font-family:system-ui,sans-serif;background:#0d0d0d;color:#e8d5c4;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
     .card{max-width:420px;padding:2rem;background:#1a1a1a;border-radius:12px;border:1px solid #333}
-    h1{margin:0 0 1rem;font-size:1.25rem;color:#e8a0b8}
+    h1{margin:0 0 1rem;font-size:1.25rem;color:#38bdf8}
     p{margin:0 0 1rem;line-height:1.6;color:#c4a882}
     .note{font-size:.85rem;color:#666}
-    a{color:#e8a0b8;text-decoration:none}a:hover{text-decoration:underline}
+    a{color:#38bdf8;text-decoration:none}a:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -885,8 +885,8 @@ func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
     .email-body{padding:1rem;border-top:1px solid #2a2a2e}
     label{display:block;margin-bottom:.4rem;font-size:.8rem;color:#78756e}
     input[type=email]{width:100%;padding:.65rem .8rem;background:#0d0d0d;border:1px solid #3a3a3f;border-radius:6px;color:#f0ede8;font-size:.95rem;outline:none;transition:border-color .15s}
-    input[type=email]:focus{border-color:#e8a0b8}
-    .btn-email{margin-top:.75rem;width:100%;padding:.65rem;background:#e8a0b8;color:#0d0d0d;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
+    input[type=email]:focus{border-color:#38bdf8}
+    .btn-email{margin-top:.75rem;width:100%;padding:.65rem;background:#38bdf8;color:#0d0d0d;border:none;border-radius:6px;font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
     .btn-email:hover{background:#d48aa0}
     .sent-msg{display:none;padding:.75rem 1rem;font-size:.85rem;color:#a0c4a0;background:#0a1a0a;border-radius:6px;margin-top:.75rem}
     details[open] .email-body{display:block}

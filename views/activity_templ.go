@@ -125,7 +125,7 @@ func activityRow(item ActivityItem) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if item.ActorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span class=\"w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<span class=\"w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center flex-shrink-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -179,7 +179,7 @@ func activityRow(item ActivityItem) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if item.ActorKind == "agent" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<span class=\"text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

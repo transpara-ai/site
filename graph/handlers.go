@@ -735,7 +735,7 @@ func (h *Handlers) handleCreateSpace(w http.ResponseWriter, r *http.Request) {
 			SpaceID:    space.ID,
 			Kind:       KindConversation,
 			Title:      "Welcome",
-			Body:       "Hey, I'm your AI colleague. I can help with tasks, answer questions, and collaborate with your team.",
+			Body:       "Hey, I'm your agent teammate. I can help with tasks, answer questions, and collaborate with your team.",
 			Author:     agentName,
 			AuthorID:   agentID,
 			AuthorKind: "agent",

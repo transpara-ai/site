@@ -152,14 +152,14 @@ func agentCard(p AgentPersonaItem) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-violet-500/30 transition-colors\"><div class=\"flex items-center gap-3\"><div class=\"relative w-9 h-9 flex-shrink-0\"><div class=\"w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center\"><span class=\"text-sm font-bold text-violet-400\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-brand/30 transition-colors\"><div class=\"flex items-center gap-3\"><div class=\"relative w-9 h-9 flex-shrink-0\"><div class=\"w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center\"><span class=\"text-sm font-bold text-brand\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(agentInitial(p.Display))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 64, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agents.templ`, Line: 64, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -188,7 +188,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span> <span class=\"text-[9px] px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0\">agent</span></div><div class=\"flex items-center gap-1.5 mt-0.5\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span> <span class=\"text-[9px] px-1 py-0.5 rounded-full bg-brand/10 text-brand flex-shrink-0\">agent</span></div><div class=\"flex items-center gap-1.5 mt-0.5\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -307,7 +307,7 @@ func agentCard(p AgentPersonaItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"flex-1\"><button type=\"submit\" class=\"w-full text-xs px-3 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors rounded-md font-medium\">Chat</button></form></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"flex-1\"><button type=\"submit\" class=\"w-full text-xs px-3 py-2 bg-brand/10 text-brand hover:bg-brand/20 transition-colors rounded-md font-medium\">Chat</button></form></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -359,7 +359,7 @@ func agentCategoryClass(cat string) string {
 	case "knowledge":
 		return "bg-indigo-500/15 text-indigo-400"
 	case "product":
-		return "bg-violet-500/15 text-violet-400"
+		return "bg-brand/15 text-brand"
 	case "outward":
 		return "bg-emerald-500/15 text-emerald-400"
 	case "resource":

@@ -57,11 +57,11 @@ templ AgentsPage(categories []AgentCategoryGroup, p *profile.Profile) {
 }
 
 templ agentCard(p AgentPersonaItem) {
-	<div class="p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-violet-500/30 transition-colors">
+	<div class="p-5 bg-surface border border-edge rounded-lg flex flex-col gap-3 hover:border-brand/30 transition-colors">
 		<div class="flex items-center gap-3">
 			<div class="relative w-9 h-9 flex-shrink-0">
-				<div class="w-9 h-9 rounded-full bg-violet-500/10 flex items-center justify-center">
-					<span class="text-sm font-bold text-violet-400">{ agentInitial(p.Display) }</span>
+				<div class="w-9 h-9 rounded-full bg-brand/10 flex items-center justify-center">
+					<span class="text-sm font-bold text-brand">{ agentInitial(p.Display) }</span>
 				</div>
 				if p.LastSeen != nil && time.Since(*p.LastSeen) < 5*time.Minute {
 					<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface"></span>
@@ -70,7 +70,7 @@ templ agentCard(p AgentPersonaItem) {
 			<div class="min-w-0 flex-1">
 				<div class="flex items-center gap-1.5">
 					<span class="text-sm font-medium text-warm truncate">{ p.Display }</span>
-					<span class="text-[9px] px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400 flex-shrink-0">agent</span>
+					<span class="text-[9px] px-1 py-0.5 rounded-full bg-brand/10 text-brand flex-shrink-0">agent</span>
 				</div>
 				<div class="flex items-center gap-1.5 mt-0.5">
 					<span class={ "text-[10px] px-1.5 py-0.5 rounded-full inline-block", agentCategoryClass(p.Category) }>
@@ -88,7 +88,7 @@ templ agentCard(p AgentPersonaItem) {
 				Profile
 			</a>
 			<form method="POST" action={ templ.SafeURL("/agents/" + p.Name + "/chat") } class="flex-1">
-				<button type="submit" class="w-full text-xs px-3 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors rounded-md font-medium">
+				<button type="submit" class="w-full text-xs px-3 py-2 bg-brand/10 text-brand hover:bg-brand/20 transition-colors rounded-md font-medium">
 					Chat
 				</button>
 			</form>
@@ -140,7 +140,7 @@ func agentCategoryClass(cat string) string {
 	case "knowledge":
 		return "bg-indigo-500/15 text-indigo-400"
 	case "product":
-		return "bg-violet-500/15 text-violet-400"
+		return "bg-brand/15 text-brand"
 	case "outward":
 		return "bg-emerald-500/15 text-emerald-400"
 	case "resource":

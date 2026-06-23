@@ -35,7 +35,7 @@ var navLinkRunRE = regexp.MustCompile(
 // from the registry at test time. Both sides get rewritten to the
 // same {{COPY_<key>}} placeholder so they normalise identically.
 var copyKeysInLayout = map[string]string{
-	"tagline": "Humans and agents, building together.",
+	"tagline": "Governed autonomous operations.",
 }
 
 // TestBoundedDiff_LayoutAcrossProfiles is the Phase 4/5 leakage alarm.

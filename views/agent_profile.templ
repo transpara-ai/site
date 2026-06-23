@@ -16,13 +16,13 @@ templ AgentProfilePage(ap AgentProfileData, p *profile.Profile) {
 		<div class="space-y-8">
 			<!-- Agent header -->
 			<div class="reveal flex items-start gap-5" style="--d:0">
-				<div class="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-					<span class="text-2xl font-bold text-violet-400">{ agentInitial(ap.Display) }</span>
+				<div class="w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0">
+					<span class="text-2xl font-bold text-brand">{ agentInitial(ap.Display) }</span>
 				</div>
 				<div class="flex-1 min-w-0 pt-1">
 					<div class="flex items-center gap-2 flex-wrap">
 						<h1 class="font-display text-2xl font-light text-warm">{ ap.Display }</h1>
-						<span class="text-xs px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+						<span class="text-xs px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 						<span class={ "text-[10px] px-1.5 py-0.5 rounded-full", agentCategoryClass(ap.Category) }>
 							{ ap.Category }
 						</span>
@@ -35,7 +35,7 @@ templ AgentProfilePage(ap AgentProfileData, p *profile.Profile) {
 			<!-- Chat action -->
 			<div class="reveal" style="--d:1">
 				<form method="POST" action={ templ.SafeURL("/agents/" + ap.Name + "/chat") }>
-					<button type="submit" class="px-5 py-2.5 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors rounded-lg text-sm font-medium">
+					<button type="submit" class="px-5 py-2.5 bg-brand/10 text-brand hover:bg-brand/20 transition-colors rounded-lg text-sm font-medium">
 						Chat with { ap.Display }
 					</button>
 				</form>

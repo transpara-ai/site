@@ -43,9 +43,9 @@ templ QuestionList(questions []QuestionItem) {
 					</div>
 				</div>
 				if q.Answer != "" {
-					<div class={ "ml-7 rounded-lg border p-3", templ.KV("bg-violet-950/20 border-violet-500/20", q.AnswerAuthorKind == "agent"), templ.KV("bg-elevated border-edge", q.AnswerAuthorKind != "agent") }>
+					<div class={ "ml-7 rounded-lg border p-3", templ.KV("bg-brand/5 border-brand/20", q.AnswerAuthorKind == "agent"), templ.KV("bg-elevated border-edge", q.AnswerAuthorKind != "agent") }>
 						if q.AnswerAuthorKind == "agent" {
-							<span class="inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-full px-2 py-0.5 mb-2">
+							<span class="inline-flex items-center gap-1 text-[10px] font-medium text-brand bg-brand/10 border border-brand/20 rounded-full px-2 py-0.5 mb-2">
 								<svg class="w-2 h-2" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>
 								agent
 							</span>
@@ -152,7 +152,7 @@ templ knowledgeClaimCard(c KnowledgeClaim) {
 						<span class="px-1.5 py-0.5 rounded bg-elevated text-warm-muted">{ c.SpaceName }</span>
 					}
 					if c.AuthorKind == "agent" {
-						<span class="text-violet-400">{ c.Author }</span>
+						<span class="text-brand">{ c.Author }</span>
 					} else {
 						<span>by { c.Author }</span>
 					}

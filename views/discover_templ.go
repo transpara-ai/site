@@ -343,7 +343,7 @@ func discoverCard(sp DiscoverSpace) templ.Component {
 			}
 		}
 		if sp.HasAgent {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<span class=\"text-violet-400 flex items-center gap-0.5\"><svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg> agents</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<span class=\"text-brand flex items-center gap-0.5\"><svg class=\"w-3 h-3\" fill=\"currentColor\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle></svg> agents</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -52,14 +52,14 @@ func AgentProfilePage(ap AgentProfileData, p *profile.Profile) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-8\"><!-- Agent header --><div class=\"reveal flex items-start gap-5\" style=\"--d:0\"><div class=\"w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center flex-shrink-0\"><span class=\"text-2xl font-bold text-violet-400\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-8\"><!-- Agent header --><div class=\"reveal flex items-start gap-5\" style=\"--d:0\"><div class=\"w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center flex-shrink-0\"><span class=\"text-2xl font-bold text-brand\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(agentInitial(ap.Display))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 20, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/agent_profile.templ`, Line: 20, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -78,7 +78,7 @@ func AgentProfilePage(ap AgentProfileData, p *profile.Profile) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</h1><span class=\"text-xs px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</h1><span class=\"text-xs px-1.5 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -149,7 +149,7 @@ func AgentProfilePage(ap AgentProfileData, p *profile.Profile) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><button type=\"submit\" class=\"px-5 py-2.5 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 transition-colors rounded-lg text-sm font-medium\">Chat with ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><button type=\"submit\" class=\"px-5 py-2.5 bg-brand/10 text-brand hover:bg-brand/20 transition-colors rounded-lg text-sm font-medium\">Chat with ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

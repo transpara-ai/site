@@ -93,7 +93,7 @@ templ SearchPage(result SearchResult, p *profile.Profile) {
 								for _, u := range result.Users {
 									<a href={ templ.SafeURL("/user/" + u.Name) } class="flex items-center gap-3 p-3 bg-surface rounded-lg border border-edge hover:border-brand transition-all">
 										if u.Kind == "agent" {
-											<span class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 text-sm font-bold flex items-center justify-center">
+											<span class="w-8 h-8 rounded-full bg-brand/10 text-brand text-sm font-bold flex items-center justify-center">
 												{ string([]rune(u.Name)[:1]) }
 											</span>
 										} else {
@@ -103,7 +103,7 @@ templ SearchPage(result SearchResult, p *profile.Profile) {
 										}
 										<span class="text-sm font-medium text-warm">{ u.Name }</span>
 										if u.Kind == "agent" {
-											<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+											<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 										}
 									</a>
 								}

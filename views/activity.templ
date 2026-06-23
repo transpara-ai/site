@@ -46,7 +46,7 @@ templ GlobalActivityPage(items []ActivityItem, p *profile.Profile) {
 templ activityRow(item ActivityItem) {
 	<div class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-surface transition-colors text-sm">
 		if item.ActorKind == "agent" {
-			<span class="w-6 h-6 rounded-full bg-violet-500/10 text-violet-400 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+			<span class="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center flex-shrink-0">
 				{ string([]rune(item.Actor)[:1]) }
 			</span>
 		} else {
@@ -56,7 +56,7 @@ templ activityRow(item ActivityItem) {
 		}
 		<span class="font-medium text-warm">{ item.Actor }</span>
 		if item.ActorKind == "agent" {
-			<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-violet-500/10 text-violet-400">agent</span>
+			<span class="text-[9px] font-medium px-1 py-0.5 rounded-full bg-brand/10 text-brand">agent</span>
 		}
 		<span class={ "text-[10px] font-medium px-1.5 py-0.5 rounded-full", opClass(item.Op) }>{ item.Op }</span>
 		if item.NodeTitle != "" && item.NodeID != "" {

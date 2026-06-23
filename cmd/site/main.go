@@ -428,22 +428,10 @@ func main() {
 				return
 			}
 			ps := graphStore.GetPlatformStats(r.Context())
-			pubSpaces, _ := graphStore.ListPublicSpaces(r.Context())
-			var featured []views.FeaturedSpace
-			for i, sp := range pubSpaces {
-				if i >= 4 {
-					break
-				}
-				featured = append(featured, views.FeaturedSpace{
-					Slug: sp.Slug, Name: sp.Name, Description: sp.Description,
-					Kind: sp.Kind, NodeCount: sp.NodeCount, HasAgent: sp.HasAgent,
-				})
-			}
 			views.Home(views.HomeStats{
 				Spaces: ps.Spaces, Tasks: ps.Tasks,
 				Users: ps.Users, AgentOps: ps.AgentOps,
-				FeaturedSpaces: featured,
-				DemoSlug:       demoSlug,
+				DemoSlug: demoSlug,
 			}, profile.FromContext(r.Context())).Render(r.Context(), w)
 		}))
 
@@ -513,7 +501,7 @@ func main() {
 			for _, u := range sr.Users {
 				badge := ""
 				if u.Kind == "agent" {
-					badge = ` <span class="text-[9px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400">agent</span>`
+					badge = ` <span class="text-[9px] px-1 py-0.5 rounded bg-brand/10 text-brand">agent</span>`
 				}
 				buf.WriteString(fmt.Sprintf(`<a href="/user/%s" class="flex items-center gap-2 px-3 py-2 hover:bg-elevated transition-colors rounded-md mx-1 text-sm text-warm">%s%s</a>`, u.Name, u.Name, badge))
 			}
@@ -536,7 +524,7 @@ func main() {
 		for _, u := range users {
 			badge := ""
 			if u.Kind == "agent" {
-				badge = `<span class="text-[9px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 ml-1">agent</span>`
+				badge = `<span class="text-[9px] px-1 py-0.5 rounded bg-brand/10 text-brand ml-1">agent</span>`
 			}
 			buf.WriteString(fmt.Sprintf(`<div class="px-3 py-1.5 hover:bg-elevated cursor-pointer text-sm text-warm transition-colors" onmousedown="insertMention('%s')">@%s%s</div>`, u.Name, u.Name, badge))
 		}

@@ -89,7 +89,7 @@ func ProfilePage(up UserProfile, p *profile.Profile) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if up.Kind == "agent" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"w-16 h-16 rounded-full bg-violet-500/10 text-violet-400 text-2xl font-bold flex items-center justify-center\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span class=\"w-16 h-16 rounded-full bg-brand/10 text-brand text-2xl font-bold flex items-center justify-center\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -143,7 +143,7 @@ func ProfilePage(up UserProfile, p *profile.Profile) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if up.Kind == "agent" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400\">agent</span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<span class=\"text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand\">agent</span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
