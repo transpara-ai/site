@@ -105,15 +105,7 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
 		}
 	}
-	start := strings.Index(body, `data-civilization-assembly="read-only"`)
-	if start < 0 {
-		t.Fatal("GET /ops/civilization: missing read-only assembly marker")
-	}
-	surface := body[start:]
-	if end := strings.Index(surface, "</main>"); end >= 0 {
-		surface = surface[:end]
-	}
-	assertNoCivilizationMutationControls(t, surface)
+	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
 
 func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
@@ -189,7 +181,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	if strings.Contains(body, "EventGraph projection-shaped input was not available") {
 		t.Fatal("GET /ops/civilization rendered unavailable fallback despite Hive projection")
 	}
-	assertNoCivilizationMutationControls(t, body)
+	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
 
 func TestHandleOpsCivilizationFailsClosedWhenHiveProjectionFails(t *testing.T) {
@@ -221,7 +213,7 @@ func TestHandleOpsCivilizationFailsClosedWhenHiveProjectionFails(t *testing.T) {
 			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
 		}
 	}
-	assertNoCivilizationMutationControls(t, body)
+	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
 }
 
 func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
@@ -511,6 +503,19 @@ func assertNoCivilizationMutationControls(t *testing.T, surface string) {
 			t.Fatalf("civilization assembly body contains mutation control marker %q", re)
 		}
 	}
+}
+
+func civilizationAssemblySurface(t *testing.T, body string) string {
+	t.Helper()
+	start := strings.Index(body, `data-civilization-assembly="read-only"`)
+	if start < 0 {
+		t.Fatal("GET /ops/civilization: missing read-only assembly marker")
+	}
+	surface := body[start:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	return surface
 }
 
 func TestHandlerCreateSpace(t *testing.T) {
