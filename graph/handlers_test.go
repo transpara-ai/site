@@ -75,6 +75,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 
 func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	h, _, _ := testHandlers(t)
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
 
 	mux := http.NewServeMux()
 	h.Register(mux)
@@ -113,6 +114,114 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		surface = surface[:end]
 	}
 	assertNoCivilizationMutationControls(t, surface)
+}
+
+func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	generatedAt := time.Date(2026, 6, 23, 9, 30, 0, 0, time.UTC)
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/civilization/assembly-projection" {
+			t.Fatalf("path = %q, want civilization assembly projection", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer secret" {
+			t.Fatalf("authorization header = %q, want bearer secret", r.Header.Get("Authorization"))
+		}
+		_ = json.NewEncoder(w).Encode(OpsCivilizationAssemblyProjection{
+			ProjectionID:                       "civ-runtime-001",
+			ProjectionSchemaVersion:            "1.0.0",
+			ProjectionSubject:                  "civilization_assembly",
+			GeneratedAt:                        generatedAt,
+			SourceEventGraphHeadOrStateVersion: "evt_head_runtime_001",
+			SourceEventIDsOrQueryWindow:        []string{"evt_runtime_001"},
+			DerivationStatus:                   opsCivilizationProjectionStatusComplete,
+			AuthorityState: OpsCivilizationAssemblyAuthorityState{
+				Status:     opsCivilizationFieldAvailable,
+				Summary:    "authority state projected by Hive",
+				SourceRefs: []string{"evt_authority_001"},
+			},
+			ActorRoster: []OpsCivilizationAssemblyActorSummary{
+				{ID: "actor_summary_001", ActorID: "actor_builder", ActorType: "agent", IdentityMode: "runtime", Status: "active"},
+			},
+			RoleBindings: []OpsCivilizationAssemblyRoleBinding{
+				{ActorID: "actor_builder", Role: "implementer", SourceRef: "evt_runtime_001", SourceType: "hive.agent.spawned"},
+			},
+			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+				Status:     opsCivilizationFieldAvailable,
+				Summary:    "runtime projection from Hive",
+				SourceRefs: []string{"evt_runtime_001"},
+			},
+			SiteConsumerStatus: OpsCivilizationAssemblyFieldStatus{
+				Status:     opsCivilizationFieldAvailable,
+				Summary:    "Site consumed Hive read-only endpoint",
+				SourceRefs: []string{"GET /api/hive/civilization/assembly-projection"},
+			},
+			BoundaryFlags:  []string{"read_only_site_consumer", "no_runtime_execution"},
+			ProvenanceRefs: []string{"evt_runtime_001"},
+			ValidationRefs: []string{"GET /api/hive/civilization/assembly-projection"},
+		})
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/civilization: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"civ-runtime-001",
+		"actor_builder",
+		"implementer",
+		"runtime projection from Hive",
+		"EventGraph Civilization Assembly projection civ-runtime-001",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "EventGraph projection-shaped input was not available") {
+		t.Fatal("GET /ops/civilization rendered unavailable fallback despite Hive projection")
+	}
+	assertNoCivilizationMutationControls(t, body)
+}
+
+func TestHandleOpsCivilizationFailsClosedWhenHiveProjectionFails(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "projection unavailable", http.StatusBadGateway)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "")
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/civilization: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"failed",
+		"hive civilization projection returned 502 Bad Gateway",
+		"failed_closed",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/civilization: body does not contain %q", want)
+		}
+	}
+	assertNoCivilizationMutationControls(t, body)
 }
 
 func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
