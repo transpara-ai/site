@@ -48,7 +48,7 @@ const DefaultSlug = "transpara-ai"
 // render branded UI. Resolvers may fall through to the current default profile,
 // but these slugs intentionally do not resolve through Lookup.
 var quarantinedLegacySlugs = map[string]string{
-	"lovyou-ai": "transpara-ai",
+	"lovyou-ai": "transpara-ai", // public-shell-clean: allow quarantined legacy slug metadata
 }
 
 // registry is the authoritative set of known profiles. Keyed by Slug.
