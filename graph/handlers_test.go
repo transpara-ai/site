@@ -175,6 +175,9 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"not runtime completion proof",
 		"expected evidence, not runtime progress",
 		"expected not observed",
+		"Issue selection",
+		"scanner_order_first_candidate_v0.1",
+		"scanner_return_order",
 		"Resolve transpara-ai/hive#321",
 		"research_issue_and_repo_context",
 		"debate_with_correct_civic_roles",
@@ -461,8 +464,15 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     "source_event_id": "evt_source_issue_001",
     "brief_event_id": "evt_brief_issue_001",
     "brief_kind": "transpara_ai_github_issue_scan",
-    "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.3",
+    "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.4",
     "lifecycle_evidence_kind": "expected_lifecycle_not_runtime_progress",
+    "selection_policy": {
+      "policy_id": "scanner_order_first_candidate_v0.1",
+      "selected_rank": 1,
+      "candidate_count": 3,
+      "ranking_inputs": ["validated_transpara_ai_repo_scope", "scanner_return_order", "label_filters", "repo_scan_order"],
+      "rationale": "Select the first validated candidate after the scanner has applied repo, label, state, and limit filters; preserve all candidates and ranks for later civic debate."
+    },
     "development_lifecycle": [
       {
         "id": "research_issue_and_repo_context",
@@ -805,9 +815,16 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			TargetRepos:           []string{"transpara-ai/hive"},
 			AuthorityInitialLevel: "Required",
 			AuthorityScope:        "transpara-ai issue scan to ready-for-Human PR; no merge or deploy",
-			LifecycleVersion:      "civilization_issue_to_human_ready_pr_v0.3",
+			LifecycleVersion:      "civilization_issue_to_human_ready_pr_v0.4",
 			LifecycleEvidenceKind: "expected_lifecycle_not_runtime_progress",
 			EvidenceKind:          "queued_request_not_runtime_start",
+			SelectionPolicy: &OpsHiveQueuedRunSelectionPolicy{
+				PolicyID:       "scanner_order_first_candidate_v0.1",
+				SelectedRank:   1,
+				CandidateCount: 3,
+				RankingInputs:  []string{"validated_transpara_ai_repo_scope", "scanner_return_order", "label_filters", "repo_scan_order"},
+				Rationale:      "Select the first validated candidate after the scanner has applied repo, label, state, and limit filters; preserve all candidates and ranks for later civic debate.",
+			},
 			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
 				{
 					ID:                "research_issue_and_repo_context",
@@ -956,6 +973,9 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if len(data.QueuedRunRequest.AgentExecutionPlan) != 1 || data.QueuedRunRequest.AgentExecutionPlan[0].RequiredOutputs[0] != "human_approval_boundary_check" {
 		t.Fatalf("queued run agent plan = %+v", data.QueuedRunRequest.AgentExecutionPlan)
 	}
+	if data.QueuedRunRequest.SelectionPolicy == nil || data.QueuedRunRequest.SelectionPolicy.PolicyID != "scanner_order_first_candidate_v0.1" || !sliceContains(data.QueuedRunRequest.SelectionPolicy.RankingInputs, "scanner_return_order") {
+		t.Fatalf("queued run selection policy = %+v", data.QueuedRunRequest.SelectionPolicy)
+	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
 	}
@@ -1070,6 +1090,13 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			BriefKind:             `<script>brief</script>`,
 			LifecycleVersion:      `v<script>3</script>`,
 			LifecycleEvidenceKind: `<button onclick="x">expected</button>`,
+			SelectionPolicy: &OpsHiveQueuedRunSelectionPolicy{
+				PolicyID:       `policy_<script>alert(12)</script>`,
+				SelectedRank:   1,
+				CandidateCount: 2,
+				RankingInputs:  []string{`<a hx-post="/select">ranking</a>`, `<input name="rank">`},
+				Rationale:      `<form action="/select">rationale</form>`,
+			},
 			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
 				{
 					ID:                `<script>stage</script>`,
@@ -1111,7 +1138,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}

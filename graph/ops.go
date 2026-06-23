@@ -417,10 +417,19 @@ type OpsHiveQueuedRunRequest struct {
 	BriefKind             string                           `json:"brief_kind"`
 	LifecycleVersion      string                           `json:"lifecycle_version"`
 	LifecycleEvidenceKind string                           `json:"lifecycle_evidence_kind"`
+	SelectionPolicy       *OpsHiveQueuedRunSelectionPolicy `json:"selection_policy,omitempty"`
 	DevelopmentLifecycle  []OpsHiveQueuedRunLifecycleStage `json:"development_lifecycle"`
 	AgentExecutionPlan    []OpsHiveQueuedRunAgentPlanStep  `json:"agent_execution_plan"`
 	EvidenceKind          string                           `json:"evidence_kind"`
 	CreatedAt             string                           `json:"created_at"`
+}
+
+type OpsHiveQueuedRunSelectionPolicy struct {
+	PolicyID       string   `json:"policy_id"`
+	SelectedRank   int      `json:"selected_rank"`
+	CandidateCount int      `json:"candidate_count"`
+	RankingInputs  []string `json:"ranking_inputs,omitempty"`
+	Rationale      string   `json:"rationale,omitempty"`
 }
 
 type OpsHiveQueuedRunLifecycleStage struct {
@@ -1020,6 +1029,13 @@ func opsHiveOptionalInt(value *int, fallback string) string {
 		return fallback
 	}
 	return strconv.Itoa(*value)
+}
+
+func opsHiveIntValue(value int, fallback string) string {
+	if value <= 0 {
+		return fallback
+	}
+	return strconv.Itoa(value)
 }
 
 func opsHiveOptionalFloatUSD(value *float64, fallback string) string {
