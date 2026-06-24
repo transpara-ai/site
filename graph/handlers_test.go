@@ -149,6 +149,9 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"evt_work_task_001",
 		"evt_work_task_artifact_001",
 		"issue_scan_execution_plan",
+		"evt_work_task_stage_artifact_001",
+		"issue_scan_lifecycle_stage_research_issue_and_repo_context",
+		"declared pending runtime evidence",
 		"application/json",
 		"test_run_001",
 		"gate_result_001",
@@ -261,6 +264,13 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "label": "issue_scan_execution_plan",
         "media_type": "application/json",
         "source_refs": ["evt_work_task_artifact_001"]
+      },
+      {
+        "id": "evt_work_task_stage_artifact_001",
+        "task_ref": "evt_work_task_001",
+        "label": "issue_scan_lifecycle_stage_research_issue_and_repo_context",
+        "media_type": "application/json",
+        "source_refs": ["evt_work_task_stage_artifact_001"]
       }
     ],
     "test_run_refs": ["test_run_001"],
@@ -547,6 +557,13 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					MediaType:  "application/json",
 					SourceRefs: []string{"evt_work_task_artifact_001"},
 				},
+				{
+					ID:         "evt_work_task_stage_artifact_001",
+					TaskRef:    "evt_work_task_001",
+					Label:      "issue_scan_lifecycle_stage_research_issue_and_repo_context",
+					MediaType:  "application/json",
+					SourceRefs: []string{"evt_work_task_stage_artifact_001"},
+				},
 			},
 			TestRunRefs: []string{"test_run_001"},
 		},
@@ -561,6 +578,14 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			LifecycleEvidenceKind: "expected_lifecycle_not_runtime_progress",
 			EvidenceKind:          "queued_request_not_runtime_start",
 			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+				{
+					ID:                "research_issue_and_repo_context",
+					Name:              "Research issue and repo context",
+					RequiredRoles:     []string{"strategist", "planner"},
+					AuthorityBoundary: "read_only",
+					CompletionGate:    "context_packet_recorded",
+					EvidenceStatus:    "expected_not_observed",
+				},
 				{
 					ID:                "surface_ready_for_Human_result_PR",
 					Name:              "Surface ready-for-Human result PR",
@@ -646,11 +671,25 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !sliceContains(data.WorkEvidence.ArtifactRefs, "evt_work_task_artifact_001") {
 		t.Fatalf("work evidence artifact refs = %+v, want evt_work_task_artifact_001", data.WorkEvidence.ArtifactRefs)
 	}
-	if len(data.WorkEvidence.Artifacts) != 1 || data.WorkEvidence.Artifacts[0].Label != "issue_scan_execution_plan" || data.WorkEvidence.Artifacts[0].MediaType != "application/json" {
-		t.Fatalf("work evidence artifacts = %+v, want issue_scan_execution_plan application/json", data.WorkEvidence.Artifacts)
+	if civilizationArtifactByLabel(data.WorkEvidence.Artifacts, "issue_scan_execution_plan") == nil {
+		t.Fatalf("work evidence artifacts = %+v, want issue_scan_execution_plan", data.WorkEvidence.Artifacts)
+	}
+	stageArtifact := civilizationArtifactByLabel(data.WorkEvidence.Artifacts, "issue_scan_lifecycle_stage_research_issue_and_repo_context")
+	if stageArtifact == nil || stageArtifact.MediaType != "application/json" {
+		t.Fatalf("work evidence stage artifact = %+v, all artifacts = %+v", stageArtifact, data.WorkEvidence.Artifacts)
 	}
 	if !sliceContains(data.WorkEvidence.TestRunRefs, "test_run_001") {
 		t.Fatalf("work evidence test refs = %+v, want test_run_001", data.WorkEvidence.TestRunRefs)
+	}
+	if len(data.IssueScanStageEvidence) != 1 {
+		t.Fatalf("stage evidence = %+v, want one projected issue-scan stage artifact", data.IssueScanStageEvidence)
+	}
+	stageEvidence := data.IssueScanStageEvidence[0]
+	if stageEvidence.StageID != "research_issue_and_repo_context" || stageEvidence.ArtifactID != "evt_work_task_stage_artifact_001" {
+		t.Fatalf("stage evidence = %+v, want research stage artifact", stageEvidence)
+	}
+	if stageEvidence.StageName != "Research issue and repo context" || stageEvidence.EvidenceStatus != "declared pending runtime evidence" {
+		t.Fatalf("stage evidence status = %+v", stageEvidence)
 	}
 	if data.QueuedRunRequest == nil || data.QueuedRunRequest.RunID != "run_issue_scan_001" {
 		t.Fatalf("queued run request = %+v, want run_issue_scan_001", data.QueuedRunRequest)
@@ -704,6 +743,13 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 					Label:      `<button onclick="x">artifact</button>`,
 					MediaType:  `"><img src=x onerror=alert(1)>`,
 					SourceRefs: []string{`<a hx-post="/mutate">artifact ref</a>`},
+				},
+				{
+					ID:         `stage_artifact_<script>alert(2)</script>`,
+					TaskRef:    `stage_task_<form action="/mutate">task</form>`,
+					Label:      `issue_scan_lifecycle_stage_stage_<script>alert(3)</script>`,
+					MediaType:  `application/<img src=x onerror=alert(4)>`,
+					SourceRefs: []string{`<a hx-post="/mutate">stage artifact ref</a>`},
 				},
 			},
 		},
@@ -759,7 +805,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"artifact_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
@@ -917,6 +963,15 @@ func sliceContains(items []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+func civilizationArtifactByLabel(items []OpsCivilizationAssemblyArtifactEvidence, label string) *OpsCivilizationAssemblyArtifactEvidence {
+	for i := range items {
+		if items[i].Label == label {
+			return &items[i]
+		}
+	}
+	return nil
 }
 
 func findingContains(data *OpsCivilizationAssemblyData, needle string) bool {

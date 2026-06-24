@@ -18,22 +18,25 @@ const (
 
 	opsCivilizationProjectionStaleAfter = 24 * time.Hour
 	opsCivilizationProjectionFutureSkew = 5 * time.Minute
+
+	opsCivilizationIssueScanStageArtifactPrefix = "issue_scan_lifecycle_stage_"
 )
 
 type OpsCivilizationAssemblyData struct {
-	GeneratedAt         string
-	AuthoritySource     string
-	ProjectionSource    string
-	ProjectionTarget    string
-	ProjectionStatus    string
-	ProjectionFreshness string
-	Civilization        ObsCivilization
-	Boundary            []OpsCivilizationBoundary
-	StatusRows          []OpsCivilizationStatusRow
-	ReferenceGroups     []OpsCivilizationReferenceGroup
-	FactoryOrders       []OpsCivilizationAssemblyFactoryOrder
-	WorkEvidence        OpsCivilizationAssemblyWorkEvidence
-	QueuedRunRequest    *OpsHiveQueuedRunRequest
+	GeneratedAt            string
+	AuthoritySource        string
+	ProjectionSource       string
+	ProjectionTarget       string
+	ProjectionStatus       string
+	ProjectionFreshness    string
+	Civilization           ObsCivilization
+	Boundary               []OpsCivilizationBoundary
+	StatusRows             []OpsCivilizationStatusRow
+	ReferenceGroups        []OpsCivilizationReferenceGroup
+	FactoryOrders          []OpsCivilizationAssemblyFactoryOrder
+	WorkEvidence           OpsCivilizationAssemblyWorkEvidence
+	QueuedRunRequest       *OpsHiveQueuedRunRequest
+	IssueScanStageEvidence []OpsCivilizationIssueScanStageEvidence
 }
 
 type OpsCivilizationBoundary struct {
@@ -193,6 +196,17 @@ type OpsCivilizationAssemblyArtifactEvidence struct {
 	SourceRefs []string `json:"source_refs,omitempty"`
 }
 
+type OpsCivilizationIssueScanStageEvidence struct {
+	StageID        string
+	StageName      string
+	ArtifactID     string
+	Label          string
+	MediaType      string
+	TaskRef        string
+	SourceRefs     []string
+	EvidenceStatus string
+}
+
 type OpsCivilizationAssemblyGateSummary struct {
 	ID                 string   `json:"id"`
 	GateName           string   `json:"gate_name"`
@@ -223,19 +237,20 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 	civ := opsCivilizationFromProjection(projection, status, freshness)
 
 	return &OpsCivilizationAssemblyData{
-		GeneratedAt:         now.UTC().Format("2006-01-02 15:04:05 UTC"),
-		AuthoritySource:     "docs v4.0 Event 10 Site Civilization projection-consumer AuthorityDecision",
-		ProjectionSource:    opsCivilizationProjectionSource(projection),
-		ProjectionTarget:    "EventGraph Civilization Assembly projection",
-		ProjectionStatus:    status,
-		ProjectionFreshness: freshness,
-		Civilization:        civ,
-		Boundary:            opsCivilizationBoundary(projection, status, freshness),
-		StatusRows:          opsCivilizationStatusRows(projection, status, freshness),
-		ReferenceGroups:     opsCivilizationReferenceGroups(projection),
-		FactoryOrders:       opsCivilizationFactoryOrders(projection),
-		WorkEvidence:        opsCivilizationWorkEvidence(projection),
-		QueuedRunRequest:    opsCivilizationQueuedRunRequest(projection),
+		GeneratedAt:            now.UTC().Format("2006-01-02 15:04:05 UTC"),
+		AuthoritySource:        "docs v4.0 Event 10 Site Civilization projection-consumer AuthorityDecision",
+		ProjectionSource:       opsCivilizationProjectionSource(projection),
+		ProjectionTarget:       "EventGraph Civilization Assembly projection",
+		ProjectionStatus:       status,
+		ProjectionFreshness:    freshness,
+		Civilization:           civ,
+		Boundary:               opsCivilizationBoundary(projection, status, freshness),
+		StatusRows:             opsCivilizationStatusRows(projection, status, freshness),
+		ReferenceGroups:        opsCivilizationReferenceGroups(projection),
+		FactoryOrders:          opsCivilizationFactoryOrders(projection),
+		WorkEvidence:           opsCivilizationWorkEvidence(projection),
+		QueuedRunRequest:       opsCivilizationQueuedRunRequest(projection),
+		IssueScanStageEvidence: opsCivilizationIssueScanStageEvidence(projection),
 	}
 }
 
@@ -629,6 +644,62 @@ func opsCivilizationQueuedRunRequest(projection *OpsCivilizationAssemblyProjecti
 		return nil
 	}
 	return projection.QueuedRunRequest
+}
+
+func opsCivilizationIssueScanStageEvidence(projection *OpsCivilizationAssemblyProjection) []OpsCivilizationIssueScanStageEvidence {
+	if projection == nil {
+		return nil
+	}
+	stageNames := map[string]string{}
+	stageOrder := map[string]int{}
+	if projection.QueuedRunRequest != nil {
+		for i, stage := range projection.QueuedRunRequest.DevelopmentLifecycle {
+			stageID := strings.TrimSpace(stage.ID)
+			if stageID == "" {
+				continue
+			}
+			stageNames[stageID] = strings.TrimSpace(stage.Name)
+			stageOrder[stageID] = i
+		}
+	}
+	out := make([]OpsCivilizationIssueScanStageEvidence, 0)
+	for _, artifact := range projection.WorkEvidenceSummary.Artifacts {
+		label := strings.TrimSpace(artifact.Label)
+		if !strings.HasPrefix(label, opsCivilizationIssueScanStageArtifactPrefix) {
+			continue
+		}
+		stageID := strings.TrimSpace(strings.TrimPrefix(label, opsCivilizationIssueScanStageArtifactPrefix))
+		if stageID == "" {
+			continue
+		}
+		sourceRefs := opsCivilizationNonEmpty(artifact.SourceRefs)
+		sort.Strings(sourceRefs)
+		out = append(out, OpsCivilizationIssueScanStageEvidence{
+			StageID:        stageID,
+			StageName:      stageNames[stageID],
+			ArtifactID:     strings.TrimSpace(artifact.ID),
+			Label:          label,
+			MediaType:      strings.TrimSpace(artifact.MediaType),
+			TaskRef:        strings.TrimSpace(artifact.TaskRef),
+			SourceRefs:     sourceRefs,
+			EvidenceStatus: "declared pending runtime evidence",
+		})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		oi, iKnown := stageOrder[out[i].StageID]
+		oj, jKnown := stageOrder[out[j].StageID]
+		if iKnown && jKnown && oi != oj {
+			return oi < oj
+		}
+		if iKnown != jKnown {
+			return iKnown
+		}
+		if out[i].StageID == out[j].StageID {
+			return out[i].ArtifactID < out[j].ArtifactID
+		}
+		return out[i].StageID < out[j].StageID
+	})
+	return out
 }
 
 func opsCivilizationStatusSummary(status string, summary string) string {
