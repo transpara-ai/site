@@ -171,6 +171,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"artifact_runtime_research_001",
 		"stage declared pending runtime evidence",
 		"application/json",
+		`data-civilization-wide-table="work-artifacts"`,
+		`data-civilization-wide-table="issue-scan-stage-evidence"`,
 		"test_run_001",
 		"gate_result_001",
 		"audit_report_001",
