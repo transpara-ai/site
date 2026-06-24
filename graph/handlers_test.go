@@ -147,6 +147,14 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"work_task_seeded",
 		"human_required_before_merge",
 		"evt_work_task_001",
+		"evt_work_task_stage_research_001",
+		"Issue-scan stage: Research issue and repo context",
+		"tsk_run_issue_scan_001_research_issue_and_repo_context",
+		"repo_context_packet",
+		"evt_work_task_stage_debate_001",
+		"Issue-scan stage: Debate with correct civic roles",
+		"evt_work_dependency_debate_after_research_001",
+		"work task seeded",
 		"evt_work_task_artifact_001",
 		"issue_scan_execution_plan",
 		"evt_work_task_stage_artifact_001",
@@ -296,13 +304,62 @@ const hiveCivilizationAssemblyProjectionFixture = `{
       "release_policy": "human_required_before_merge",
       "requirement_refs": ["req_run_issue_scan_001"],
       "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
-      "task_refs": ["evt_work_task_001"]
+      "task_refs": ["evt_work_task_001", "evt_work_task_stage_research_001", "evt_work_task_stage_debate_001"]
     }
   ],
   "work_evidence_summary": {
     "status": "available",
     "summary": "runtime projection from Hive",
-    "task_refs": ["evt_work_task_001"],
+    "task_refs": ["evt_work_task_001", "evt_work_task_stage_research_001", "evt_work_task_stage_debate_001"],
+    "tasks": [
+      {
+        "id": "evt_work_task_001",
+        "factory_order_id": "fo_run_issue_scan_001",
+        "title": "Resolve transpara-ai/hive#321",
+        "cell": "implementation",
+        "risk_class": "high",
+        "status": "work_task_seeded",
+        "ready": false,
+        "blocked": false,
+        "requirement_refs": ["req_run_issue_scan_001"],
+        "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
+        "expected_outputs": ["ready-for-Human result PR"],
+        "source_refs": ["evt_work_task_001"]
+      },
+      {
+        "id": "evt_work_task_stage_research_001",
+        "canonical_task_id": "tsk_run_issue_scan_001_research_issue_and_repo_context",
+        "factory_order_id": "fo_run_issue_scan_001",
+        "lifecycle_stage_id": "research_issue_and_repo_context",
+        "title": "Issue-scan stage: Research issue and repo context",
+        "cell": "planning",
+        "risk_class": "high",
+        "status": "work_task_seeded",
+        "ready": false,
+        "blocked": false,
+        "requirement_refs": ["req_run_issue_scan_001"],
+        "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
+        "expected_outputs": ["stage declaration artifact remains pending runtime evidence", "repo_context_packet"],
+        "source_refs": ["evt_work_task_stage_research_001"]
+      },
+      {
+        "id": "evt_work_task_stage_debate_001",
+        "canonical_task_id": "tsk_run_issue_scan_001_debate_with_correct_civic_roles",
+        "factory_order_id": "fo_run_issue_scan_001",
+        "lifecycle_stage_id": "debate_with_correct_civic_roles",
+        "title": "Issue-scan stage: Debate with correct civic roles",
+        "cell": "planning",
+        "risk_class": "high",
+        "status": "work_task_seeded",
+        "ready": false,
+        "blocked": false,
+        "requirement_refs": ["req_run_issue_scan_001"],
+        "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
+        "expected_outputs": ["stage declaration artifact remains pending runtime evidence", "decision_record"],
+        "depends_on_refs": ["evt_work_task_stage_research_001"],
+        "source_refs": ["evt_work_task_stage_debate_001", "evt_work_dependency_debate_after_research_001"]
+      }
+    ],
     "artifact_refs": ["evt_work_task_artifact_001"],
     "artifacts": [
       {
@@ -592,9 +649,36 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			{ID: "lifecycle_001", ActorID: "civilization-operator", FromState: "candidate", ToState: "active", Status: "verified"},
 		},
 		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
-			Status:       opsCivilizationFieldAvailable,
-			Summary:      "work evidence derived from task and gate records",
-			TaskRefs:     []string{"evt_work_task_001"},
+			Status:   opsCivilizationFieldAvailable,
+			Summary:  "work evidence derived from task and gate records",
+			TaskRefs: []string{"evt_work_task_001", "evt_work_task_stage_research_001"},
+			Tasks: []OpsCivilizationAssemblyTaskEvidence{
+				{
+					ID:              "evt_work_task_001",
+					FactoryOrderID:  "fo_run_issue_scan_001",
+					Title:           "Resolve transpara-ai/hive#321",
+					Cell:            "implementation",
+					RiskClass:       "high",
+					Status:          "work_task_seeded",
+					ExpectedOutputs: []string{"ready-for-Human result PR"},
+					RequirementRefs: []string{"req_run_issue_scan_001"},
+					SourceRefs:      []string{"evt_work_task_001"},
+				},
+				{
+					ID:                      "evt_work_task_stage_research_001",
+					CanonicalTaskID:         "tsk_run_issue_scan_001_research_issue_and_repo_context",
+					FactoryOrderID:          "fo_run_issue_scan_001",
+					LifecycleStageID:        "research_issue_and_repo_context",
+					Title:                   "Issue-scan stage: Research issue and repo context",
+					Cell:                    "planning",
+					RiskClass:               "high",
+					Status:                  "work_task_seeded",
+					RequirementRefs:         []string{"req_run_issue_scan_001"},
+					AcceptanceCriterionRefs: []string{"ac_run_issue_scan_001"},
+					ExpectedOutputs:         []string{"stage declaration artifact remains pending runtime evidence", "repo_context_packet"},
+					SourceRefs:              []string{"evt_work_task_stage_research_001"},
+				},
+			},
 			ArtifactRefs: []string{"evt_work_task_artifact_001"},
 			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
 				{
@@ -715,6 +799,16 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !sliceContains(data.WorkEvidence.TaskRefs, "evt_work_task_001") {
 		t.Fatalf("work evidence task refs = %+v, want evt_work_task_001", data.WorkEvidence.TaskRefs)
 	}
+	stageTask := civilizationTaskByID(data.WorkEvidence.Tasks, "evt_work_task_stage_research_001")
+	if stageTask == nil || stageTask.LifecycleStageID != "research_issue_and_repo_context" {
+		t.Fatalf("work evidence stage task = %+v, all tasks = %+v", stageTask, data.WorkEvidence.Tasks)
+	}
+	if stageTask.CanonicalTaskID != "tsk_run_issue_scan_001_research_issue_and_repo_context" || !sliceContains(stageTask.ExpectedOutputs, "repo_context_packet") {
+		t.Fatalf("work evidence stage task metadata = %+v", stageTask)
+	}
+	if opsCivilizationEvidenceStatusValue(stageTask.Status, "missing") != "work task seeded" {
+		t.Fatalf("work evidence stage task status = %q", stageTask.Status)
+	}
 	if !sliceContains(data.WorkEvidence.ArtifactRefs, "evt_work_task_artifact_001") {
 		t.Fatalf("work evidence artifact refs = %+v, want evt_work_task_artifact_001", data.WorkEvidence.ArtifactRefs)
 	}
@@ -783,6 +877,20 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
 			Status:  opsCivilizationFieldAvailable,
 			Summary: `<script>alert("work")</script>`,
+			Tasks: []OpsCivilizationAssemblyTaskEvidence{
+				{
+					ID:               `task_<script>alert(5)</script>`,
+					CanonicalTaskID:  `canonical_<input name="task">`,
+					LifecycleStageID: `stage_<script>alert(6)</script>`,
+					Title:            `<button onclick="x">task</button>`,
+					Cell:             `<form action="/mutate">cell</form>`,
+					RiskClass:        `"><img src=x onerror=alert(7)>`,
+					Status:           `work_task_<script>seeded</script>`,
+					DependsOnRefs:    []string{`<a hx-post="/mutate">depends</a>`},
+					ExpectedOutputs:  []string{`<textarea>task output</textarea>`},
+					SourceRefs:       []string{`<a hx-post="/mutate">task source</a>`},
+				},
+			},
 			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
 				{
 					ID:         `artifact_<script>alert(1)</script>`,
@@ -852,7 +960,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
@@ -1015,6 +1123,15 @@ func sliceContains(items []string, needle string) bool {
 func civilizationArtifactByLabel(items []OpsCivilizationAssemblyArtifactEvidence, label string) *OpsCivilizationAssemblyArtifactEvidence {
 	for i := range items {
 		if items[i].Label == label {
+			return &items[i]
+		}
+	}
+	return nil
+}
+
+func civilizationTaskByID(items []OpsCivilizationAssemblyTaskEvidence, id string) *OpsCivilizationAssemblyTaskEvidence {
+	for i := range items {
+		if items[i].ID == id {
 			return &items[i]
 		}
 	}
