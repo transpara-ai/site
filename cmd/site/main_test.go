@@ -1,8 +1,12 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/transpara-ai/site/auth"
 )
 
 func TestValidateProductionAuthConfigFailsClosedWithoutOAuth(t *testing.T) {
@@ -47,6 +51,133 @@ func TestValidateProductionAuthConfigAllowsLocalAnonymousMode(t *testing.T) {
 
 	if err := validateProductionAuthConfig(mapGetter(env)); err != nil {
 		t.Fatalf("validateProductionAuthConfig: %v", err)
+	}
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyCivilization(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/civilization without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		`data-civilization-assembly="read-only"`,
+		"Civilization Assembly",
+		"projection unavailable",
+		"this page has no execution authority",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/civilization without DATABASE_URL body missing %q", want)
+		}
+	}
+	assertNoMutationControls(t, "/ops/civilization", body)
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Operations",
+		"site shell",
+		"Operator surfaces",
+		"Civilization",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops without DATABASE_URL body missing %q", want)
+		}
+	}
+	assertNoMutationControls(t, "/ops", body)
+}
+
+func TestNoDatabaseCivilizationRejectsMutationMethod(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/civilization", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /ops/civilization without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /ops without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	for _, path := range []string{"/ops", "/ops/civilization"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
+			req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{
+				ID:      "user_test",
+				Name:    "Test Operator",
+				Picture: "https://example.invalid/avatar.png",
+			}))
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s with user context and no store status = %d, want 200; body: %s", path, w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), "Test Operator") {
+				t.Fatalf("GET %s with user context body missing operator name", path)
+			}
+		})
+	}
+}
+
+func assertNoMutationControls(t *testing.T, path string, body string) {
+	t.Helper()
+	lower := strings.ToLower(body)
+	for _, forbidden := range []string{
+		`method="post"`,
+		`hx-post=`,
+		`hx-put=`,
+		`hx-patch=`,
+		`hx-delete=`,
+		`formaction=`,
+		`data-action="approve"`,
+		`data-action="merge"`,
+	} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("GET %s without DATABASE_URL exposed mutation marker %q", path, forbidden)
+		}
 	}
 }
 

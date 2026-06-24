@@ -441,13 +441,7 @@ func main() {
 		})
 	} else {
 		log.Println("app disabled (no DATABASE_URL)")
-		mux.HandleFunc("GET /{$}", handleHome)
-		mux.HandleFunc("GET /app", func(w http.ResponseWriter, r *http.Request) {
-			http.Error(w, "App requires DATABASE_URL", http.StatusServiceUnavailable)
-		})
-		mux.HandleFunc("GET /work", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/app", http.StatusMovedPermanently)
-		})
+		registerNoDatabaseRoutes(mux, handleHome)
 	}
 
 	// Search page — unified search across spaces, content, and users.
@@ -930,6 +924,17 @@ func main() {
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func registerNoDatabaseRoutes(mux *http.ServeMux, handleHome http.HandlerFunc) {
+	graph.NewHandlers(nil, nil, nil).RegisterReadOnlyOps(mux)
+	mux.HandleFunc("GET /{$}", handleHome)
+	mux.HandleFunc("GET /app", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "App requires DATABASE_URL", http.StatusServiceUnavailable)
+	})
+	mux.HandleFunc("GET /work", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/app", http.StatusMovedPermanently)
+	})
 }
 
 // ────────────────────────────────────────────────────────────────────
