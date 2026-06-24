@@ -73,7 +73,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<p class="px-4 py-5 text-sm text-warm-faint">No Work FactoryOrder seed tasks are projected.</p>
 			} else {
 				<div class="overflow-x-auto" data-civilization-wide-table="factory-orders">
-					<table class="min-w-[72rem] text-xs">
+					<table class="w-full min-w-[72rem] text-xs">
 						<thead>
 							<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
 								<th class="py-2 px-3 font-medium min-w-[12rem]">FactoryOrder</th>
@@ -117,7 +117,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 			</div>
 			if len(data.WorkEvidence.Tasks) > 0 {
 				<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="work-tasks">
-					<table class="min-w-[96rem] text-left text-xs">
+					<table class="w-full min-w-[96rem] text-left text-xs">
 						<thead class="text-warm-faint border-b border-edge">
 							<tr>
 								<th class="py-2 px-3 font-medium min-w-[16rem]">Task</th>
@@ -199,7 +199,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 			}
 			if len(data.WorkEvidence.Artifacts) > 0 {
 				<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="work-artifacts">
-					<table class="min-w-[64rem] text-left text-xs">
+					<table class="w-full min-w-[64rem] text-left text-xs">
 						<thead class="text-warm-faint border-b border-edge">
 							<tr>
 								<th class="py-2 px-3 font-medium min-w-[12rem]">Artifact</th>
@@ -253,7 +253,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 				if len(data.IssueScanStageEvidence) > 0 {
 					<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="issue-scan-stage-evidence">
-						<table class="min-w-[64rem] text-left text-xs">
+						<table class="w-full min-w-[64rem] text-left text-xs">
 							<thead class="text-warm-faint border-b border-edge">
 								<tr>
 									<th class="py-2 px-3 font-medium min-w-[14rem]">Stage</th>
@@ -308,7 +308,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				}
 			</div>
 			<div class="overflow-x-auto border border-edge rounded-md" data-civilization-wide-table="role-topology">
-				<table class="min-w-[84rem] text-xs">
+				<table class="w-full min-w-[84rem] text-xs">
 					<thead>
 						<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
 							<th class="py-2 px-3 font-medium min-w-[10rem]">Role</th>

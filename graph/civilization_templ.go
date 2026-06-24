@@ -297,7 +297,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"overflow-x-auto\" data-civilization-wide-table=\"factory-orders\"><table class=\"min-w-[72rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[12rem]\">FactoryOrder</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Risk</th><th class=\"py-2 px-3 font-medium\">Release policy</th><th class=\"py-2 px-3 font-medium\">Requirements</th><th class=\"py-2 px-3 font-medium\">Acceptance</th><th class=\"py-2 px-3 font-medium\">Work tasks</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"overflow-x-auto\" data-civilization-wide-table=\"factory-orders\"><table class=\"w-full min-w-[72rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[12rem]\">FactoryOrder</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Risk</th><th class=\"py-2 px-3 font-medium\">Release policy</th><th class=\"py-2 px-3 font-medium\">Requirements</th><th class=\"py-2 px-3 font-medium\">Acceptance</th><th class=\"py-2 px-3 font-medium\">Work tasks</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -473,7 +473,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		if len(data.WorkEvidence.Tasks) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-tasks\"><table class=\"min-w-[96rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[16rem]\">Task</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Lifecycle stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Roles</th><th class=\"py-2 px-3 font-medium\">Evidence</th><th class=\"py-2 px-3 font-medium\">Cell</th><th class=\"py-2 px-3 font-medium\">Depends on</th><th class=\"py-2 px-3 font-medium\">Role outputs</th><th class=\"py-2 px-3 font-medium\">Expected outputs</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-tasks\"><table class=\"w-full min-w-[96rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[16rem]\">Task</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Lifecycle stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Roles</th><th class=\"py-2 px-3 font-medium\">Evidence</th><th class=\"py-2 px-3 font-medium\">Cell</th><th class=\"py-2 px-3 font-medium\">Depends on</th><th class=\"py-2 px-3 font-medium\">Role outputs</th><th class=\"py-2 px-3 font-medium\">Expected outputs</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -909,7 +909,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			}
 		}
 		if len(data.WorkEvidence.Artifacts) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-artifacts\"><table class=\"min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Artifact</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-artifacts\"><table class=\"w-full min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Artifact</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1124,7 +1124,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 			if len(data.IssueScanStageEvidence) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"issue-scan-stage-evidence\"><table class=\"min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[14rem]\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"issue-scan-stage-evidence\"><table class=\"w-full min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[14rem]\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1318,7 +1318,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</div><div class=\"overflow-x-auto border border-edge rounded-md\" data-civilization-wide-table=\"role-topology\"><table class=\"min-w-[84rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Role</th><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</div><div class=\"overflow-x-auto border border-edge rounded-md\" data-civilization-wide-table=\"role-topology\"><table class=\"w-full min-w-[84rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Role</th><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
