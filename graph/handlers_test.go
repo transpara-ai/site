@@ -148,6 +148,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"human_required_before_merge",
 		"evt_work_task_001",
 		"evt_work_task_artifact_001",
+		"issue_scan_execution_plan",
+		"application/json",
 		"test_run_001",
 		"gate_result_001",
 		"audit_report_001",
@@ -252,6 +254,15 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     "summary": "runtime projection from Hive",
     "task_refs": ["evt_work_task_001"],
     "artifact_refs": ["evt_work_task_artifact_001"],
+    "artifacts": [
+      {
+        "id": "evt_work_task_artifact_001",
+        "task_ref": "evt_work_task_001",
+        "label": "issue_scan_execution_plan",
+        "media_type": "application/json",
+        "source_refs": ["evt_work_task_artifact_001"]
+      }
+    ],
     "test_run_refs": ["test_run_001"],
     "gate_result_refs": ["gate_result_001"],
     "audit_report_refs": ["audit_report_001"],
@@ -528,7 +539,16 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			Summary:      "work evidence derived from task and gate records",
 			TaskRefs:     []string{"evt_work_task_001"},
 			ArtifactRefs: []string{"evt_work_task_artifact_001"},
-			TestRunRefs:  []string{"test_run_001"},
+			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
+				{
+					ID:         "evt_work_task_artifact_001",
+					TaskRef:    "evt_work_task_001",
+					Label:      "issue_scan_execution_plan",
+					MediaType:  "application/json",
+					SourceRefs: []string{"evt_work_task_artifact_001"},
+				},
+			},
+			TestRunRefs: []string{"test_run_001"},
 		},
 		QueuedRunRequest: &OpsHiveQueuedRunRequest{
 			RunID:                 "run_issue_scan_001",
@@ -626,6 +646,9 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !sliceContains(data.WorkEvidence.ArtifactRefs, "evt_work_task_artifact_001") {
 		t.Fatalf("work evidence artifact refs = %+v, want evt_work_task_artifact_001", data.WorkEvidence.ArtifactRefs)
 	}
+	if len(data.WorkEvidence.Artifacts) != 1 || data.WorkEvidence.Artifacts[0].Label != "issue_scan_execution_plan" || data.WorkEvidence.Artifacts[0].MediaType != "application/json" {
+		t.Fatalf("work evidence artifacts = %+v, want issue_scan_execution_plan application/json", data.WorkEvidence.Artifacts)
+	}
 	if !sliceContains(data.WorkEvidence.TestRunRefs, "test_run_001") {
 		t.Fatalf("work evidence test refs = %+v, want test_run_001", data.WorkEvidence.TestRunRefs)
 	}
@@ -674,6 +697,15 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
 			Status:  opsCivilizationFieldAvailable,
 			Summary: `<script>alert("work")</script>`,
+			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
+				{
+					ID:         `artifact_<script>alert(1)</script>`,
+					TaskRef:    `<form action="/mutate">task</form>`,
+					Label:      `<button onclick="x">artifact</button>`,
+					MediaType:  `"><img src=x onerror=alert(1)>`,
+					SourceRefs: []string{`<a hx-post="/mutate">artifact ref</a>`},
+				},
+			},
 		},
 		QueuedRunRequest: &OpsHiveQueuedRunRequest{
 			RunID:                 `run_<script>alert("run")</script>`,
@@ -727,7 +759,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"artifact_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}

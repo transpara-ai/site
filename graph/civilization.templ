@@ -115,6 +115,32 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.AuditReportRefs, "none projected") }</dd>
 				</dl>
 			</div>
+			if len(data.WorkEvidence.Artifacts) > 0 {
+				<div class="border-t border-edge overflow-x-auto">
+					<table class="min-w-full text-left text-xs">
+						<thead class="text-warm-faint border-b border-edge">
+							<tr>
+								<th class="py-2 px-3 font-medium">Artifact</th>
+								<th class="py-2 px-3 font-medium">Label</th>
+								<th class="py-2 px-3 font-medium">Media type</th>
+								<th class="py-2 px-3 font-medium">Task</th>
+								<th class="py-2 px-3 font-medium">Source refs</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, artifact := range data.WorkEvidence.Artifacts {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-all">{ artifact.ID }</td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(artifact.Label, "not labeled") }</td>
+									<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(artifact.MediaType, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(artifact.TaskRef, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(artifact.SourceRefs, "none projected") }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
 		</section>
 		if data.QueuedRunRequest != nil {
 			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
