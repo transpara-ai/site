@@ -261,7 +261,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">FactoryOrder evidence</h2><p class=\"text-xs text-warm-faint mt-1\">Work seed tasks projected from EventGraph; display evidence, not execution proof.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">FactoryOrder evidence</h2><p class=\"text-xs text-warm-faint mt-1\">Work seed tasks projected from EventGraph; task rows can include runtime-evidence and completed-stage signals without merge or deployment authority.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -994,7 +994,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		if data.QueuedRunRequest != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Queued issue-scan lifecycle</h2><p class=\"text-xs text-warm-faint mt-1\">Projection statuses include declared, runtime-evidence, and completed-stage signals without merge or deployment authority.</p><p class=\"text-sm text-warm-muted mt-2 break-words\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Queued issue-scan lifecycle</h2><p class=\"text-xs text-warm-faint mt-1\">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p><p class=\"text-sm text-warm-muted mt-2 break-words\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

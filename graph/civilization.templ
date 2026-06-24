@@ -64,7 +64,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 				<div>
 					<h2 class="text-sm font-medium text-warm">FactoryOrder evidence</h2>
-					<p class="text-xs text-warm-faint mt-1">Work seed tasks projected from EventGraph; display evidence, not execution proof.</p>
+					<p class="text-xs text-warm-faint mt-1">Work seed tasks projected from EventGraph; task rows can include runtime-evidence and completed-stage signals without merge or deployment authority.</p>
 					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ opsCivilizationValue(data.WorkEvidence.Summary, "work evidence summary unavailable") }</p>
 				</div>
 				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsCivilizationStatusValue(data.WorkEvidence.Status) }</span>
@@ -229,7 +229,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 					<div>
 						<h2 class="text-sm font-medium text-warm">Queued issue-scan lifecycle</h2>
-						<p class="text-xs text-warm-faint mt-1">Projection statuses include declared, runtime-evidence, and completed-stage signals without merge or deployment authority.</p>
+						<p class="text-xs text-warm-faint mt-1">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p>
 						<p class="text-sm text-warm-muted mt-2 break-words">{ opsValueOr(data.QueuedRunRequest.Title, data.QueuedRunRequest.RunID) }</p>
 					</div>
 					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsValueOr(data.QueuedRunRequest.Status, "queued") }</span>
