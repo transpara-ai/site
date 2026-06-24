@@ -146,14 +146,14 @@ func OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) templ.Componen
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><div class=\"flex items-start justify-between gap-3\"><h2 class=\"text-base font-medium text-warm group-hover:text-brand transition-colors\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"><div class=\"flex min-w-0 flex-wrap items-start justify-between gap-2\"><h2 class=\"min-w-0 text-base font-medium text-warm break-words group-hover:text-brand transition-colors\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(surface.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 39, Col: 108}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 39, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -163,7 +163,7 @@ func OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) templ.Componen
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var10 = []any{"text-[10px] px-2 py-1 rounded-full border whitespace-nowrap",
+			var templ_7745c5c3_Var10 = []any{"shrink-0 text-[10px] px-2 py-1 rounded-full border whitespace-nowrap",
 				templ.KV("border-brand/30 text-brand bg-brand/10", surface.ID == data.Active),
 				templ.KV("border-edge text-warm-faint bg-void/30", surface.ID != data.Active)}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
@@ -4488,40 +4488,40 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if q != nil && (q.BriefKind != "" || q.LifecycleVersion != "" || q.LifecycleEvidenceKind != "" || q.SelectionPolicy != nil || len(q.DevelopmentLifecycle) > 0 || len(q.AgentExecutionPlan) > 0) {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 411, "<div class=\"mt-3 border-t border-edge pt-3 space-y-3\"><div><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Issue-scan lifecycle</h5><p class=\"text-[11px] text-warm-faint mt-1\">Projected plan from the Hive brief. These stages are expected evidence, not runtime progress.</p><dl class=\"grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 mt-2 text-[11px]\"><dt class=\"text-warm-faint\">Brief</dt><dd class=\"text-warm-muted truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 411, "<div class=\"min-w-0 mt-3 border-t border-edge pt-3 space-y-3\"><div><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Issue-scan lifecycle</h5><p class=\"text-[11px] text-warm-faint mt-1\">Projected plan from the Hive brief. These stages are expected evidence, not runtime progress.</p><dl class=\"grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-2 gap-y-1 mt-2 text-[11px]\"><dt class=\"text-warm-faint\">Brief</dt><dd class=\"min-w-0 text-warm-muted truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var241 string
 			templ_7745c5c3_Var241, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(q.BriefKind, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1064, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1064, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var241))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 412, "</dd><dt class=\"text-warm-faint\">Version</dt><dd class=\"text-warm-muted truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 412, "</dd><dt class=\"text-warm-faint\">Version</dt><dd class=\"min-w-0 text-warm-muted truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var242 string
 			templ_7745c5c3_Var242, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(q.LifecycleVersion, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1066, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1066, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var242))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 413, "</dd><dt class=\"text-warm-faint\">Evidence</dt><dd class=\"text-warm-muted truncate\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 413, "</dd><dt class=\"text-warm-faint\">Evidence</dt><dd class=\"min-w-0 text-warm-muted truncate\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var243 string
 			templ_7745c5c3_Var243, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(q.LifecycleEvidenceKind, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1068, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1068, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var243))
 			if templ_7745c5c3_Err != nil {
@@ -4532,27 +4532,27 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			if q.SelectionPolicy != nil {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 415, "<div class=\"border border-edge bg-void/20 rounded-md p-3\"><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Issue selection</h5><dl class=\"grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 mt-2 text-[11px]\"><dt class=\"text-warm-faint\">Policy</dt><dd class=\"text-warm-muted break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 415, "<div class=\"min-w-0 border border-edge bg-void/20 rounded-md p-3\"><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Issue selection</h5><dl class=\"grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-2 gap-y-1 mt-2 text-[11px]\"><dt class=\"text-warm-faint\">Policy</dt><dd class=\"min-w-0 text-warm-muted break-all\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var244 string
 				templ_7745c5c3_Var244, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(q.SelectionPolicy.PolicyID, "not projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1076, Col: 101}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1076, Col: 109}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var244))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 416, "</dd><dt class=\"text-warm-faint\">Rank</dt><dd class=\"text-warm-muted\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 416, "</dd><dt class=\"text-warm-faint\">Rank</dt><dd class=\"min-w-0 text-warm-muted\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var245 string
 				templ_7745c5c3_Var245, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveIntValue(q.SelectionPolicy.SelectedRank, "?"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1078, Col: 88}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1078, Col: 96}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var245))
 				if templ_7745c5c3_Err != nil {
@@ -4565,33 +4565,33 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 				var templ_7745c5c3_Var246 string
 				templ_7745c5c3_Var246, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveIntValue(q.SelectionPolicy.CandidateCount, "?"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1078, Col: 149}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1078, Col: 157}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var246))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 418, "</dd><dt class=\"text-warm-faint\">Inputs</dt><dd class=\"text-warm-muted break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 418, "</dd><dt class=\"text-warm-faint\">Inputs</dt><dd class=\"min-w-0 text-warm-muted break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var247 string
 				templ_7745c5c3_Var247, templ_7745c5c3_Err = templ.JoinStringErrs(opsEvidenceJoin(q.SelectionPolicy.RankingInputs))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1080, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1080, Col: 104}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var247))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 419, "</dd><dt class=\"text-warm-faint\">Rationale</dt><dd class=\"text-warm-muted break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 419, "</dd><dt class=\"text-warm-faint\">Rationale</dt><dd class=\"min-w-0 text-warm-muted break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var248 string
 				templ_7745c5c3_Var248, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(q.SelectionPolicy.Rationale, "not projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1082, Col: 104}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1082, Col: 112}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var248))
 				if templ_7745c5c3_Err != nil {
@@ -4603,7 +4603,7 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 				}
 			}
 			if len(q.DevelopmentLifecycle) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 421, "<div class=\"border border-edge bg-void/20 rounded-md overflow-hidden\"><table class=\"w-full text-[11px]\"><thead><tr class=\"text-left text-warm-faint border-b border-edge\"><th class=\"py-2 px-2 font-medium\">Stage</th><th class=\"py-2 px-2 font-medium\">Roles</th><th class=\"py-2 px-2 font-medium\">Gate</th><th class=\"py-2 px-2 font-medium\">Status</th></tr></thead> <tbody>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 421, "<div class=\"border border-edge bg-void/20 rounded-md overflow-x-auto\"><table class=\"min-w-[34rem] w-full text-[11px]\"><thead><tr class=\"text-left text-warm-faint border-b border-edge\"><th class=\"py-2 px-2 font-medium\">Stage</th><th class=\"py-2 px-2 font-medium\">Roles</th><th class=\"py-2 px-2 font-medium\">Gate</th><th class=\"py-2 px-2 font-medium\">Status</th></tr></thead> <tbody>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -4702,7 +4702,7 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 				}
 			}
 			if len(q.AgentExecutionPlan) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 431, "<div><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Agent execution plan</h5><div class=\"grid gap-2 mt-2 md:grid-cols-2\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 431, "<div class=\"min-w-0\"><h5 class=\"text-[11px] font-medium text-warm-muted uppercase tracking-widest\">Agent execution plan</h5><div class=\"grid gap-2 mt-2 md:grid-cols-2\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -4748,66 +4748,66 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 							return templ_7745c5c3_Err
 						}
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 437, "</div><p class=\"text-[11px] text-warm-muted mt-2 leading-relaxed\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 437, "</div><p class=\"text-[11px] text-warm-muted mt-2 leading-relaxed break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var257 string
 					templ_7745c5c3_Var257, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(step.Objective, "objective not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1135, Col: 123}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1135, Col: 135}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var257))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 438, "</p><dl class=\"grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 mt-2 text-[10px]\"><dt class=\"text-warm-faint\">Outputs</dt><dd class=\"text-warm-muted break-words\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 438, "</p><dl class=\"grid grid-cols-[minmax(0,4.5rem)_minmax(0,1fr)] gap-x-2 gap-y-1 mt-2 text-[10px]\"><dt class=\"text-warm-faint\">Outputs</dt><dd class=\"min-w-0 text-warm-muted break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var258 string
 					templ_7745c5c3_Var258, templ_7745c5c3_Err = templ.JoinStringErrs(opsEvidenceJoin(step.RequiredOutputs))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1138, Col: 88}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1138, Col: 96}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var258))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 439, "</dd><dt class=\"text-warm-faint\">Boundary</dt><dd class=\"text-warm-muted break-words\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 439, "</dd><dt class=\"text-warm-faint\">Boundary</dt><dd class=\"min-w-0 text-warm-muted break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var259 string
 					templ_7745c5c3_Var259, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(step.AuthorityBoundary, "boundary not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1140, Col: 111}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1140, Col: 119}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var259))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 440, "</dd><dt class=\"text-warm-faint\">Gate</dt><dd class=\"text-warm-muted break-words\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 440, "</dd><dt class=\"text-warm-faint\">Gate</dt><dd class=\"min-w-0 text-warm-muted break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var260 string
 					templ_7745c5c3_Var260, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(step.CompletionGate, "not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1142, Col: 99}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1142, Col: 107}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var260))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 441, "</dd><dt class=\"text-warm-faint\">Status</dt><dd class=\"text-warm-muted\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 441, "</dd><dt class=\"text-warm-faint\">Status</dt><dd class=\"min-w-0 text-warm-muted\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var261 string
 					templ_7745c5c3_Var261, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(step.EvidenceStatus, "expected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1144, Col: 106}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1144, Col: 114}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var261))
 					if templ_7745c5c3_Err != nil {
