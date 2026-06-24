@@ -76,16 +76,34 @@ func TestNoDatabaseRoutesExposeReadOnlyCivilization(t *testing.T) {
 			t.Fatalf("GET /ops/civilization without DATABASE_URL body missing %q", want)
 		}
 	}
-	for _, forbidden := range []string{
-		`method="post"`,
-		`hx-post=`,
-		`data-action="approve"`,
-		`data-action="merge"`,
+	assertNoMutationControls(t, "/ops/civilization", body)
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Operations",
+		"site shell",
+		"Operator surfaces",
+		"Civilization",
 	} {
-		if strings.Contains(strings.ToLower(body), forbidden) {
-			t.Fatalf("GET /ops/civilization without DATABASE_URL exposed mutation marker %q", forbidden)
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops without DATABASE_URL body missing %q", want)
 		}
 	}
+	assertNoMutationControls(t, "/ops", body)
 }
 
 func TestNoDatabaseCivilizationRejectsMutationMethod(t *testing.T) {
@@ -99,6 +117,39 @@ func TestNoDatabaseCivilizationRejectsMutationMethod(t *testing.T) {
 	mux.ServeHTTP(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /ops/civilization without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /ops without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func assertNoMutationControls(t *testing.T, path string, body string) {
+	t.Helper()
+	lower := strings.ToLower(body)
+	for _, forbidden := range []string{
+		`method="post"`,
+		`hx-post=`,
+		`hx-put=`,
+		`hx-patch=`,
+		`hx-delete=`,
+		`formaction=`,
+		`data-action="approve"`,
+		`data-action="merge"`,
+	} {
+		if strings.Contains(lower, forbidden) {
+			t.Fatalf("GET %s without DATABASE_URL exposed mutation marker %q", path, forbidden)
+		}
 	}
 }
 
