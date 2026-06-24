@@ -1016,6 +1016,49 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 					"authority_initial_level":"Required",
 					"budget_max_iterations":0,
 					"budget_max_cost_usd":0,
+					"brief_kind":"transpara_ai_github_issue_scan",
+					"lifecycle_version":"civilization_issue_to_human_ready_pr_v0.3",
+					"lifecycle_evidence_kind":"expected_lifecycle_not_runtime_progress",
+					"development_lifecycle":[{
+						"id":"research_issue_and_repo_context",
+						"name":"Research issue and repository context",
+						"required_roles":["strategist","planner"],
+						"required_evidence":["selected_issue","repo_context"],
+						"authority_boundary":"read_only_repo_research",
+						"completion_gate":"issue_context_ready_for_debate",
+						"evidence_status":"expected_not_observed"
+					},{
+						"id":"surface_ready_for_Human_result_PR",
+						"name":"Surface ready-for-Human result PR",
+						"required_roles":["strategist","reviewer","guardian"],
+						"required_evidence":["ready_pr_url","ready_state_review","human_ready_summary"],
+						"authority_boundary":"human_approval_required_no_merge",
+						"completion_gate":"ready_pr_waiting_for_human_approval",
+						"evidence_status":"expected_not_observed"
+					}],
+					"agent_execution_plan":[{
+						"id":"10_implement_on_branch_implementer",
+						"stage_id":"implement_on_branch",
+						"role":"implementer",
+						"can_operate":true,
+						"objective":"Implement the selected approach on a branch.",
+						"required_inputs":["selected_approach"],
+						"required_outputs":["branch_commit","validation_output"],
+						"authority_boundary":"branch_only_no_merge",
+						"completion_gate":"implementation_ready_for_review",
+						"evidence_status":"expected_not_observed"
+					},{
+						"id":"11_run_adversarial_review_reviewer",
+						"stage_id":"run_adversarial_review",
+						"role":"reviewer",
+						"can_operate":false,
+						"objective":"Run exact-head adversarial review.",
+						"required_inputs":["draft_pr_url"],
+						"required_outputs":["exact_head_review_artifact"],
+						"authority_boundary":"review_only_no_merge",
+						"completion_gate":"review_findings_disposed",
+						"evidence_status":"expected_not_observed"
+					}],
 					"evidence_kind":"queued_request_not_runtime_start",
 					"created_at":"2026-05-09T05:59:00Z"
 				},
@@ -1108,6 +1151,16 @@ func TestFetchOpsHiveOperatorProjection(t *testing.T) {
 	if got.RuntimeEvidence.LastQueuedRunRequest == nil || got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD == nil || *got.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD != 0 {
 		t.Fatalf("RuntimeEvidence queued request = %#v", got.RuntimeEvidence.LastQueuedRunRequest)
 	}
+	queued := got.RuntimeEvidence.LastQueuedRunRequest
+	if queued.BriefKind != "transpara_ai_github_issue_scan" || queued.LifecycleVersion != "civilization_issue_to_human_ready_pr_v0.3" || queued.LifecycleEvidenceKind != "expected_lifecycle_not_runtime_progress" {
+		t.Fatalf("RuntimeEvidence queued lifecycle metadata = %#v", queued)
+	}
+	if len(queued.DevelopmentLifecycle) != 2 || queued.DevelopmentLifecycle[1].AuthorityBoundary != "human_approval_required_no_merge" {
+		t.Fatalf("RuntimeEvidence queued lifecycle stages = %#v", queued.DevelopmentLifecycle)
+	}
+	if len(queued.AgentExecutionPlan) != 2 || !queued.AgentExecutionPlan[0].CanOperate || queued.AgentExecutionPlan[1].CanOperate {
+		t.Fatalf("RuntimeEvidence queued agent execution plan = %#v", queued.AgentExecutionPlan)
+	}
 	if len(got.RuntimeEvidence.Artifacts) != 1 || got.RuntimeEvidence.Artifacts[0].ArtifactID != "artifact_factory_brief" || got.RuntimeEvidence.Artifacts[0].CauseStatus != "caused" {
 		t.Fatalf("RuntimeEvidence artifacts = %#v", got.RuntimeEvidence.Artifacts)
 	}
@@ -1174,7 +1227,62 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 					"observed_active":1,
 					"active_agents":[{"name":"builder","role":"implementer","model":"claude-sonnet-4-6","actor_id":"actor-runtime-evidence-only","spawned_event_id":"event-spawn","spawned_at":"2026-05-09T06:01:00Z"}]
 				},
-				"last_queued_run_request":{"event_id":"event-request","conversation_id":"conv_request","run_id":"run_123","title":"Queued run","status":"queued","target_repos":["transpara-ai/hive"],"authority_initial_level":"Required","budget_max_iterations":0,"budget_max_cost_usd":0,"evidence_kind":"queued_request_not_runtime_start","created_at":"2026-05-09T05:59:00Z"},
+				"last_queued_run_request":{
+					"event_id":"event-request",
+					"conversation_id":"conv_request",
+					"run_id":"run_123",
+					"title":"Queued run",
+					"status":"queued",
+					"target_repos":["transpara-ai/hive"],
+					"authority_initial_level":"Required",
+					"budget_max_iterations":0,
+					"budget_max_cost_usd":0,
+					"brief_kind":"transpara_ai_github_issue_scan",
+					"lifecycle_version":"civilization_issue_to_human_ready_pr_v0.3",
+					"lifecycle_evidence_kind":"expected_lifecycle_not_runtime_progress",
+					"development_lifecycle":[{
+						"id":"research_issue_and_repo_context",
+						"name":"Research issue and repository context",
+						"required_roles":["strategist","planner"],
+						"required_evidence":["selected_issue","repo_context"],
+						"authority_boundary":"read_only_repo_research",
+						"completion_gate":"issue_context_ready_for_debate",
+						"evidence_status":"expected_not_observed"
+					},{
+						"id":"surface_ready_for_Human_result_PR",
+						"name":"Surface ready-for-Human result PR",
+						"required_roles":["strategist","reviewer","guardian"],
+						"required_evidence":["ready_pr_url","ready_state_review","human_ready_summary"],
+						"authority_boundary":"human_approval_required_no_merge",
+						"completion_gate":"ready_pr_waiting_for_human_approval",
+						"evidence_status":"expected_not_observed"
+					}],
+					"agent_execution_plan":[{
+						"id":"10_implement_on_branch_implementer",
+						"stage_id":"implement_on_branch",
+						"role":"implementer",
+						"can_operate":true,
+						"objective":"Implement the selected approach on a branch.",
+						"required_inputs":["selected_approach"],
+						"required_outputs":["branch_commit","validation_output"],
+						"authority_boundary":"branch_only_no_merge",
+						"completion_gate":"implementation_ready_for_review",
+						"evidence_status":"expected_not_observed"
+					},{
+						"id":"11_run_adversarial_review_reviewer",
+						"stage_id":"run_adversarial_review",
+						"role":"reviewer",
+						"can_operate":false,
+						"objective":"Run exact-head adversarial review.",
+						"required_inputs":["draft_pr_url"],
+						"required_outputs":["exact_head_review_artifact"],
+						"authority_boundary":"review_only_no_merge",
+						"completion_gate":"review_findings_disposed",
+						"evidence_status":"expected_not_observed"
+					}],
+					"evidence_kind":"queued_request_not_runtime_start",
+					"created_at":"2026-05-09T05:59:00Z"
+				},
 				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof","hive.run.started and hive.run.completed prove Hive runtime event emission, not production deployment"]
 			},
 			"model_selection":{
@@ -1203,10 +1311,64 @@ func TestHandleOpsHiveRendersReadOnlyAuthorityProjection(t *testing.T) {
 		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 	body := w.Body.String()
-	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
+	for _, want := range []string{"Authority projection", "Runtime evidence", "Queued launch intent", "queued_request_not_runtime_start", "runtime-start proof", "Issue-scan lifecycle", "expected_lifecycle_not_runtime_progress", "Research issue and repository context", "Surface ready-for-Human result PR", "human_approval_required_no_merge", "Agent execution plan", "implement_on_branch", "exact_head_review_artifact", "branch_only_no_merge", "review_only_no_merge", "operate", "review", "completed", "2026-05-09 06:03:00", "2.0m", "$0.00", "0 iter / $0.00", "actor-runtime-evidence-only", "Pending approvals", "Authority decisions", "Lifecycle state", "Key provenance", "Model selection", "startup-static", "guardian", "subscription", "agent.spawn.persistent", "builder", `action="/ops/hive/model-policy"`} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/hive: body does not contain %q", want)
 		}
+	}
+	if strings.Contains(body, `data-authority-action`) {
+		t.Fatal("GET /ops/hive exposes authority mutation controls")
+	}
+}
+
+func TestHandleOpsHiveSuppressesLifecycleSectionWhenQueuedRequestHasNoLifecycle(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"generated_at":"2026-05-09T12:00:00Z",
+			"source":"eventgraph",
+			"pending_approvals":[],
+			"authority_decisions":[],
+			"lifecycle":[],
+			"key_audit_traces":[],
+			"runtime_evidence":{
+				"source":"eventgraph",
+				"status":"queued",
+				"last_queued_run_request":{
+					"event_id":"event-request",
+					"conversation_id":"conv_request",
+					"run_id":"run_123",
+					"title":"Queued run",
+					"status":"queued",
+					"target_repos":["transpara-ai/hive"],
+					"authority_initial_level":"Required",
+					"evidence_kind":"queued_request_not_runtime_start",
+					"created_at":"2026-05-09T05:59:00Z"
+				},
+				"limitations":["factory.run.requested is queued launch intent, not runtime-start proof"]
+			}
+		}`))
+	}))
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/hive: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Queued launch intent") || !strings.Contains(body, "queued_request_not_runtime_start") {
+		t.Fatal("GET /ops/hive did not render queued request evidence")
+	}
+	if strings.Contains(body, "Issue-scan lifecycle") || strings.Contains(body, "Agent execution plan") {
+		t.Fatal("GET /ops/hive rendered lifecycle section for queued request without lifecycle fields")
 	}
 	if strings.Contains(body, `data-authority-action`) {
 		t.Fatal("GET /ops/hive exposes authority mutation controls")

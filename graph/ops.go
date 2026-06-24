@@ -401,21 +401,49 @@ type OpsHiveRuntimeAgent struct {
 }
 
 type OpsHiveQueuedRunRequest struct {
-	EventID               string   `json:"event_id"`
-	ConversationID        string   `json:"conversation_id"`
-	RunID                 string   `json:"run_id"`
-	Title                 string   `json:"title"`
-	OperatorID            string   `json:"operator_id"`
-	Status                string   `json:"status"`
-	TargetRepos           []string `json:"target_repos"`
-	AuthorityInitialLevel string   `json:"authority_initial_level"`
-	AuthorityScope        string   `json:"authority_scope"`
-	BudgetMaxIterations   *int     `json:"budget_max_iterations"`
-	BudgetMaxCostUSD      *float64 `json:"budget_max_cost_usd"`
-	SourceEventID         string   `json:"source_event_id"`
-	BriefEventID          string   `json:"brief_event_id"`
-	EvidenceKind          string   `json:"evidence_kind"`
-	CreatedAt             string   `json:"created_at"`
+	EventID               string                           `json:"event_id"`
+	ConversationID        string                           `json:"conversation_id"`
+	RunID                 string                           `json:"run_id"`
+	Title                 string                           `json:"title"`
+	OperatorID            string                           `json:"operator_id"`
+	Status                string                           `json:"status"`
+	TargetRepos           []string                         `json:"target_repos"`
+	AuthorityInitialLevel string                           `json:"authority_initial_level"`
+	AuthorityScope        string                           `json:"authority_scope"`
+	BudgetMaxIterations   *int                             `json:"budget_max_iterations"`
+	BudgetMaxCostUSD      *float64                         `json:"budget_max_cost_usd"`
+	SourceEventID         string                           `json:"source_event_id"`
+	BriefEventID          string                           `json:"brief_event_id"`
+	BriefKind             string                           `json:"brief_kind"`
+	LifecycleVersion      string                           `json:"lifecycle_version"`
+	LifecycleEvidenceKind string                           `json:"lifecycle_evidence_kind"`
+	DevelopmentLifecycle  []OpsHiveQueuedRunLifecycleStage `json:"development_lifecycle"`
+	AgentExecutionPlan    []OpsHiveQueuedRunAgentPlanStep  `json:"agent_execution_plan"`
+	EvidenceKind          string                           `json:"evidence_kind"`
+	CreatedAt             string                           `json:"created_at"`
+}
+
+type OpsHiveQueuedRunLifecycleStage struct {
+	ID                string   `json:"id"`
+	Name              string   `json:"name"`
+	RequiredRoles     []string `json:"required_roles"`
+	RequiredEvidence  []string `json:"required_evidence"`
+	AuthorityBoundary string   `json:"authority_boundary"`
+	CompletionGate    string   `json:"completion_gate"`
+	EvidenceStatus    string   `json:"evidence_status"`
+}
+
+type OpsHiveQueuedRunAgentPlanStep struct {
+	ID                string   `json:"id"`
+	StageID           string   `json:"stage_id"`
+	Role              string   `json:"role"`
+	CanOperate        bool     `json:"can_operate"`
+	Objective         string   `json:"objective"`
+	RequiredInputs    []string `json:"required_inputs"`
+	RequiredOutputs   []string `json:"required_outputs"`
+	AuthorityBoundary string   `json:"authority_boundary"`
+	CompletionGate    string   `json:"completion_gate"`
+	EvidenceStatus    string   `json:"evidence_status"`
 }
 
 type OpsHiveRuntimeArtifact struct {
