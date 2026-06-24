@@ -397,6 +397,9 @@ func (h *Handlers) viewUser(r *http.Request) ViewUser {
 	if u == nil {
 		return ViewUser{Name: "Anonymous"}
 	}
+	if h == nil || h.store == nil {
+		return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture}
+	}
 	uid := h.userID(r)
 	unread := h.store.UnreadCount(r.Context(), uid)
 	return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture, UnreadCount: unread}

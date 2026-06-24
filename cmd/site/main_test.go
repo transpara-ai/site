@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/transpara-ai/site/auth"
 )
 
 func TestValidateProductionAuthConfigFailsClosedWithoutOAuth(t *testing.T) {
@@ -131,6 +133,32 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 	mux.ServeHTTP(w, req)
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /ops without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	for _, path := range []string{"/ops", "/ops/civilization"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
+			req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{
+				ID:      "user_test",
+				Name:    "Test Operator",
+				Picture: "https://example.invalid/avatar.png",
+			}))
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s with user context and no store status = %d, want 200; body: %s", path, w.Code, w.Body.String())
+			}
+			if !strings.Contains(w.Body.String(), "Test Operator") {
+				t.Fatalf("GET %s with user context body missing operator name", path)
+			}
+		})
 	}
 }
 
