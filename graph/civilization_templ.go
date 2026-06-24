@@ -297,19 +297,19 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"overflow-x-auto\"><table class=\"w-full text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium\">FactoryOrder</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Risk</th><th class=\"py-2 px-3 font-medium\">Release policy</th><th class=\"py-2 px-3 font-medium\">Requirements</th><th class=\"py-2 px-3 font-medium\">Acceptance</th><th class=\"py-2 px-3 font-medium\">Work tasks</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "<div class=\"overflow-x-auto\" data-civilization-wide-table=\"factory-orders\"><table class=\"w-full min-w-[72rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[12rem]\">FactoryOrder</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Risk</th><th class=\"py-2 px-3 font-medium\">Release policy</th><th class=\"py-2 px-3 font-medium\">Requirements</th><th class=\"py-2 px-3 font-medium\">Acceptance</th><th class=\"py-2 px-3 font-medium\">Work tasks</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, order := range data.FactoryOrders {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all min-w-[12rem]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(order.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 91, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 91, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -473,12 +473,12 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		if len(data.WorkEvidence.Tasks) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Lifecycle stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Roles</th><th class=\"py-2 px-3 font-medium\">Evidence</th><th class=\"py-2 px-3 font-medium\">Cell</th><th class=\"py-2 px-3 font-medium\">Depends on</th><th class=\"py-2 px-3 font-medium\">Role outputs</th><th class=\"py-2 px-3 font-medium\">Expected outputs</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-tasks\"><table class=\"w-full min-w-[96rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[16rem]\">Task</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Lifecycle stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Roles</th><th class=\"py-2 px-3 font-medium\">Evidence</th><th class=\"py-2 px-3 font-medium\">Cell</th><th class=\"py-2 px-3 font-medium\">Depends on</th><th class=\"py-2 px-3 font-medium\">Role outputs</th><th class=\"py-2 px-3 font-medium\">Expected outputs</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, task := range data.WorkEvidence.Tasks {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p class=\"break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm min-w-[16rem]\"><p class=\"break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -527,14 +527,14 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</td><td class=\"py-2 px-3 text-warm-muted break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</td><td class=\"py-2 px-3 text-warm-muted break-all min-w-[12rem]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(task.LifecycleStageID, "FactoryOrder seed"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 145, Col: 123}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 145, Col: 137}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 				if templ_7745c5c3_Err != nil {
@@ -909,32 +909,32 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			}
 		}
 		if len(data.WorkEvidence.Artifacts) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"work-artifacts\"><table class=\"w-full min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Artifact</th><th class=\"py-2 px-3 font-medium min-w-[12rem]\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, artifact := range data.WorkEvidence.Artifacts {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all min-w-[12rem]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var56 string
 				templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 215, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 215, Col: 78}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "</td><td class=\"py-2 px-3 text-warm-muted break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "</td><td class=\"py-2 px-3 text-warm-muted break-words min-w-[12rem]\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var57 string
 				templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.Label, "not labeled"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 216, Col: 112}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 216, Col: 126}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 				if templ_7745c5c3_Err != nil {
@@ -1124,12 +1124,12 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 			if len(data.IssueScanStageEvidence) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<div class=\"border-t border-edge overflow-x-auto\" data-civilization-wide-table=\"issue-scan-stage-evidence\"><table class=\"w-full min-w-[64rem] text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium min-w-[14rem]\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, evidence := range data.IssueScanStageEvidence {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p class=\"break-words\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm min-w-[14rem]\"><p class=\"break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -1318,12 +1318,12 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</div><div class=\"overflow-x-auto border border-edge rounded-md\"><table class=\"w-full text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium\">Role</th><th class=\"py-2 px-3 font-medium\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</div><div class=\"overflow-x-auto border border-edge rounded-md\" data-civilization-wide-table=\"role-topology\"><table class=\"w-full min-w-[84rem] text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Role</th><th class=\"py-2 px-3 font-medium min-w-[10rem]\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, row := range data.Civilization.Roster {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm min-w-[10rem]\"><p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

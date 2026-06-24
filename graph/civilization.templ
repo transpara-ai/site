@@ -72,11 +72,11 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 			if len(data.FactoryOrders) == 0 {
 				<p class="px-4 py-5 text-sm text-warm-faint">No Work FactoryOrder seed tasks are projected.</p>
 			} else {
-				<div class="overflow-x-auto">
-					<table class="w-full text-xs">
+				<div class="overflow-x-auto" data-civilization-wide-table="factory-orders">
+					<table class="w-full min-w-[72rem] text-xs">
 						<thead>
 							<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
-								<th class="py-2 px-3 font-medium">FactoryOrder</th>
+								<th class="py-2 px-3 font-medium min-w-[12rem]">FactoryOrder</th>
 								<th class="py-2 px-3 font-medium">Status</th>
 								<th class="py-2 px-3 font-medium">Risk</th>
 								<th class="py-2 px-3 font-medium">Release policy</th>
@@ -88,7 +88,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 						<tbody>
 							for _, order := range data.FactoryOrders {
 								<tr class="border-b border-edge/50 align-top">
-									<td class="py-2 px-3 text-warm break-all">{ order.ID }</td>
+									<td class="py-2 px-3 text-warm break-all min-w-[12rem]">{ order.ID }</td>
 									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.Status, "not projected") }</td>
 									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.RiskClass, "not projected") }</td>
 									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.ReleasePolicy, "not projected") }</td>
@@ -116,12 +116,12 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</dl>
 			</div>
 			if len(data.WorkEvidence.Tasks) > 0 {
-				<div class="border-t border-edge overflow-x-auto">
-					<table class="min-w-full text-left text-xs">
+				<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="work-tasks">
+					<table class="w-full min-w-[96rem] text-left text-xs">
 						<thead class="text-warm-faint border-b border-edge">
 							<tr>
-								<th class="py-2 px-3 font-medium">Task</th>
-								<th class="py-2 px-3 font-medium">Lifecycle stage</th>
+								<th class="py-2 px-3 font-medium min-w-[16rem]">Task</th>
+								<th class="py-2 px-3 font-medium min-w-[12rem]">Lifecycle stage</th>
 								<th class="py-2 px-3 font-medium">Status</th>
 								<th class="py-2 px-3 font-medium">Roles</th>
 								<th class="py-2 px-3 font-medium">Evidence</th>
@@ -135,14 +135,14 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 						<tbody>
 							for _, task := range data.WorkEvidence.Tasks {
 								<tr class="border-b border-edge/50 align-top">
-									<td class="py-2 px-3 text-warm">
+									<td class="py-2 px-3 text-warm min-w-[16rem]">
 										<p class="break-words">{ opsCivilizationValue(task.Title, task.ID) }</p>
 										<p class="text-[10px] text-warm-faint break-all">{ task.ID }</p>
 										if task.CanonicalTaskID != "" {
 											<p class="text-[10px] text-warm-faint break-all">{ task.CanonicalTaskID }</p>
 										}
 									</td>
-									<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(task.LifecycleStageID, "FactoryOrder seed") }</td>
+									<td class="py-2 px-3 text-warm-muted break-all min-w-[12rem]">{ opsCivilizationValue(task.LifecycleStageID, "FactoryOrder seed") }</td>
 									<td class="py-2 px-3 text-warm-muted break-words">
 										<p>{ opsCivilizationEvidenceStatusValue(task.Status, "not projected") }</p>
 										<p class="text-[10px] text-warm-faint mt-1">ready={ opsCivilizationBoolValue(task.Ready) } blocked={ opsCivilizationBoolValue(task.Blocked) }</p>
@@ -198,12 +198,12 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 			}
 			if len(data.WorkEvidence.Artifacts) > 0 {
-				<div class="border-t border-edge overflow-x-auto">
-					<table class="min-w-full text-left text-xs">
+				<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="work-artifacts">
+					<table class="w-full min-w-[64rem] text-left text-xs">
 						<thead class="text-warm-faint border-b border-edge">
 							<tr>
-								<th class="py-2 px-3 font-medium">Artifact</th>
-								<th class="py-2 px-3 font-medium">Label</th>
+								<th class="py-2 px-3 font-medium min-w-[12rem]">Artifact</th>
+								<th class="py-2 px-3 font-medium min-w-[12rem]">Label</th>
 								<th class="py-2 px-3 font-medium">Media type</th>
 								<th class="py-2 px-3 font-medium">Task</th>
 								<th class="py-2 px-3 font-medium">Source refs</th>
@@ -212,8 +212,8 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 						<tbody>
 							for _, artifact := range data.WorkEvidence.Artifacts {
 								<tr class="border-b border-edge/50 align-top">
-									<td class="py-2 px-3 text-warm break-all">{ artifact.ID }</td>
-									<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(artifact.Label, "not labeled") }</td>
+									<td class="py-2 px-3 text-warm break-all min-w-[12rem]">{ artifact.ID }</td>
+									<td class="py-2 px-3 text-warm-muted break-words min-w-[12rem]">{ opsCivilizationValue(artifact.Label, "not labeled") }</td>
 									<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(artifact.MediaType, "not projected") }</td>
 									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(artifact.TaskRef, "not projected") }</td>
 									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(artifact.SourceRefs, "none projected") }</td>
@@ -252,11 +252,11 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					@opsHiveQueuedRunLifecycle(data.QueuedRunRequest)
 				</div>
 				if len(data.IssueScanStageEvidence) > 0 {
-					<div class="border-t border-edge overflow-x-auto">
-						<table class="min-w-full text-left text-xs">
+					<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="issue-scan-stage-evidence">
+						<table class="w-full min-w-[64rem] text-left text-xs">
 							<thead class="text-warm-faint border-b border-edge">
 								<tr>
-									<th class="py-2 px-3 font-medium">Stage</th>
+									<th class="py-2 px-3 font-medium min-w-[14rem]">Stage</th>
 									<th class="py-2 px-3 font-medium">Status</th>
 									<th class="py-2 px-3 font-medium">Artifact</th>
 									<th class="py-2 px-3 font-medium">Media type</th>
@@ -266,7 +266,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 							<tbody>
 								for _, evidence := range data.IssueScanStageEvidence {
 									<tr class="border-b border-edge/50 align-top">
-										<td class="py-2 px-3 text-warm">
+										<td class="py-2 px-3 text-warm min-w-[14rem]">
 											<p class="break-words">{ opsCivilizationValue(evidence.StageName, evidence.StageID) }</p>
 											<p class="text-[10px] text-warm-faint break-all">{ evidence.StageID }</p>
 										</td>
@@ -307,12 +307,12 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					</div>
 				}
 			</div>
-			<div class="overflow-x-auto border border-edge rounded-md">
-				<table class="w-full text-xs">
+			<div class="overflow-x-auto border border-edge rounded-md" data-civilization-wide-table="role-topology">
+				<table class="w-full min-w-[84rem] text-xs">
 					<thead>
 						<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
-							<th class="py-2 px-3 font-medium">Role</th>
-							<th class="py-2 px-3 font-medium">Agent</th>
+							<th class="py-2 px-3 font-medium min-w-[10rem]">Role</th>
+							<th class="py-2 px-3 font-medium min-w-[10rem]">Agent</th>
 							<th class="py-2 px-3 font-medium">Level</th>
 							<th class="py-2 px-3 font-medium">Category</th>
 							<th class="py-2 px-3 font-medium">Status</th>
@@ -326,7 +326,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					<tbody>
 						for _, row := range data.Civilization.Roster {
 							<tr class="border-b border-edge/50 align-top">
-								<td class="py-2 px-3 text-warm">
+								<td class="py-2 px-3 text-warm min-w-[10rem]">
 									<p>{ row.Role }</p>
 									<p class="text-[10px] text-warm-faint">{ row.Origin }</p>
 								</td>
