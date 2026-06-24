@@ -151,6 +151,19 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"test_run_001",
 		"gate_result_001",
 		"audit_report_001",
+		"Queued issue-scan lifecycle",
+		"not runtime completion proof",
+		"expected evidence, not runtime progress",
+		"expected_not_observed",
+		"Resolve transpara-ai/hive#321",
+		"research_issue_and_repo_context",
+		"debate_with_correct_civic_roles",
+		"select_and_design_approach",
+		"implement_on_branch",
+		"run_adversarial_review",
+		"drive_blockers_to_zero",
+		"surface_ready_for_Human_result_PR",
+		"human_approval_boundary_check",
 		"EventGraph Civilization Assembly projection civ-runtime-001",
 	} {
 		if !strings.Contains(body, want) {
@@ -243,6 +256,137 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     "gate_result_refs": ["gate_result_001"],
     "audit_report_refs": ["audit_report_001"],
     "source_refs": ["evt_runtime_001"]
+  },
+  "queued_run_request": {
+    "event_id": "evt_factory_run_requested_001",
+    "conversation_id": "conv_issue_scan_001",
+    "run_id": "run_issue_scan_001",
+    "title": "Resolve transpara-ai/hive#321",
+    "operator_id": "operator_michael",
+    "status": "queued",
+    "target_repos": ["transpara-ai/hive"],
+    "authority_initial_level": "Required",
+    "authority_scope": "transpara-ai issue scan to ready-for-Human PR; no merge or deploy",
+    "budget_max_iterations": 12,
+    "budget_max_cost_usd": 25,
+    "source_event_id": "evt_source_issue_001",
+    "brief_event_id": "evt_brief_issue_001",
+    "brief_kind": "transpara_ai_github_issue_scan",
+    "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.3",
+    "lifecycle_evidence_kind": "expected_lifecycle_not_runtime_progress",
+    "development_lifecycle": [
+      {
+        "id": "research_issue_and_repo_context",
+        "name": "Research issue and repo context",
+        "required_roles": ["strategist", "planner"],
+        "required_evidence": ["issue_snapshot", "repo_context", "risk_and_scope_notes"],
+        "authority_boundary": "read_only",
+        "completion_gate": "context_packet_recorded",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "debate_with_correct_civic_roles",
+        "name": "Debate with correct civic roles",
+        "required_roles": ["strategist", "planner", "reviewer", "guardian"],
+        "required_evidence": ["role_positions", "decision_record", "dissent_or_no_dissent_record"],
+        "authority_boundary": "proposal_only_no_mutation",
+        "completion_gate": "decision_record_has_reviewer_and_guardian_disposition",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "select_and_design_approach",
+        "name": "Select and design approach",
+        "required_roles": ["planner", "reviewer", "guardian"],
+        "required_evidence": ["selected_approach", "definition_of_done", "acceptance_criteria", "test_plan"],
+        "authority_boundary": "implementation_waits_for_authorized_task",
+        "completion_gate": "implementation_task_has_readiness_artifacts",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "implement_on_branch",
+        "name": "Implement on branch",
+        "required_roles": ["implementer"],
+        "required_evidence": ["branch_name", "commit_sha", "changed_files", "validation_output"],
+        "authority_boundary": "no_merge_no_deploy",
+        "completion_gate": "implementation_changes_validated_on_branch",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "run_adversarial_review",
+        "name": "Run adversarial review",
+        "required_roles": ["reviewer", "guardian"],
+        "required_evidence": ["exact_head_review_artifact", "finding_disposition"],
+        "authority_boundary": "review_is_blocking",
+        "completion_gate": "review_artifact_returned_and_findings_classified",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "drive_blockers_to_zero",
+        "name": "Drive blockers to zero",
+        "required_roles": ["implementer", "reviewer", "guardian"],
+        "required_evidence": ["blocker_fixes", "rerun_validation", "rerun_review"],
+        "authority_boundary": "accepted_findings_resolved_or_rejected_with_evidence",
+        "completion_gate": "exact_head_review_has_zero_blockers",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "surface_ready_for_Human_result_PR",
+        "name": "Surface ready-for-Human result PR",
+        "required_roles": ["strategist", "reviewer", "guardian"],
+        "required_evidence": ["ready_pr_url", "ready_state_review", "human_ready_summary"],
+        "authority_boundary": "human_approval_required_no_merge",
+        "completion_gate": "ready_pr_has_exact_head_evidence_and_waits_for_human",
+        "evidence_status": "expected_not_observed"
+      }
+    ],
+    "agent_execution_plan": [
+      {
+        "id": "01_research_issue_and_repo_context_strategist",
+        "stage_id": "research_issue_and_repo_context",
+        "role": "strategist",
+        "can_operate": false,
+        "objective": "Decide why this issue should enter the Civilization factory loop now.",
+        "required_outputs": ["issue_priority_rationale", "risk_and_scope_notes"],
+        "authority_boundary": "read_only",
+        "completion_gate": "context_packet_recorded",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "10_implement_on_branch_implementer",
+        "stage_id": "implement_on_branch",
+        "role": "implementer",
+        "can_operate": true,
+        "objective": "Implement the selected approach on a branch and record exact validation evidence.",
+        "required_outputs": ["branch_name", "commit_sha", "validation_output"],
+        "authority_boundary": "no_merge_no_deploy",
+        "completion_gate": "implementation_changes_validated_on_branch",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "11_run_adversarial_review_reviewer",
+        "stage_id": "run_adversarial_review",
+        "role": "reviewer",
+        "can_operate": false,
+        "objective": "Run an exact-head adversarial review and produce a durable review artifact.",
+        "required_outputs": ["exact_head_review_artifact"],
+        "authority_boundary": "review_is_blocking",
+        "completion_gate": "review_artifact_returned_and_findings_classified",
+        "evidence_status": "expected_not_observed"
+      },
+      {
+        "id": "18_surface_ready_for_Human_result_PR_guardian",
+        "stage_id": "surface_ready_for_Human_result_PR",
+        "role": "guardian",
+        "can_operate": false,
+        "objective": "Confirm the result PR waits for Human approval and does not merge itself.",
+        "required_outputs": ["human_approval_boundary_check"],
+        "authority_boundary": "human_approval_required_no_merge",
+        "completion_gate": "ready_pr_has_exact_head_evidence_and_waits_for_human",
+        "evidence_status": "expected_not_observed"
+      }
+    ],
+    "evidence_kind": "queued_request_not_runtime_start",
+    "created_at": "2026-06-23T09:35:00Z"
   },
   "site_consumer_status": {
     "status": "available",
@@ -386,6 +530,39 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			ArtifactRefs: []string{"evt_work_task_artifact_001"},
 			TestRunRefs:  []string{"test_run_001"},
 		},
+		QueuedRunRequest: &OpsHiveQueuedRunRequest{
+			RunID:                 "run_issue_scan_001",
+			Title:                 "Resolve transpara-ai/hive#321",
+			Status:                "queued",
+			TargetRepos:           []string{"transpara-ai/hive"},
+			AuthorityInitialLevel: "Required",
+			AuthorityScope:        "transpara-ai issue scan to ready-for-Human PR; no merge or deploy",
+			LifecycleVersion:      "civilization_issue_to_human_ready_pr_v0.3",
+			LifecycleEvidenceKind: "expected_lifecycle_not_runtime_progress",
+			EvidenceKind:          "queued_request_not_runtime_start",
+			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+				{
+					ID:                "surface_ready_for_Human_result_PR",
+					Name:              "Surface ready-for-Human result PR",
+					RequiredRoles:     []string{"strategist", "reviewer", "guardian"},
+					AuthorityBoundary: "human_approval_required_no_merge",
+					CompletionGate:    "ready_pr_has_exact_head_evidence_and_waits_for_human",
+					EvidenceStatus:    "expected_not_observed",
+				},
+			},
+			AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
+				{
+					ID:                "18_surface_ready_for_Human_result_PR_guardian",
+					StageID:           "surface_ready_for_Human_result_PR",
+					Role:              "guardian",
+					CanOperate:        false,
+					RequiredOutputs:   []string{"human_approval_boundary_check"},
+					AuthorityBoundary: "human_approval_required_no_merge",
+					CompletionGate:    "ready_pr_has_exact_head_evidence_and_waits_for_human",
+					EvidenceStatus:    "expected_not_observed",
+				},
+			},
+		},
 		FactoryOrderSummary: []OpsCivilizationAssemblyFactoryOrder{
 			{
 				ID:                      "fo_run_issue_scan_001",
@@ -452,6 +629,12 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !sliceContains(data.WorkEvidence.TestRunRefs, "test_run_001") {
 		t.Fatalf("work evidence test refs = %+v, want test_run_001", data.WorkEvidence.TestRunRefs)
 	}
+	if data.QueuedRunRequest == nil || data.QueuedRunRequest.RunID != "run_issue_scan_001" {
+		t.Fatalf("queued run request = %+v, want run_issue_scan_001", data.QueuedRunRequest)
+	}
+	if len(data.QueuedRunRequest.AgentExecutionPlan) != 1 || data.QueuedRunRequest.AgentExecutionPlan[0].RequiredOutputs[0] != "human_approval_boundary_check" {
+		t.Fatalf("queued run agent plan = %+v", data.QueuedRunRequest.AgentExecutionPlan)
+	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
 	}
@@ -492,6 +675,41 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			Status:  opsCivilizationFieldAvailable,
 			Summary: `<script>alert("work")</script>`,
 		},
+		QueuedRunRequest: &OpsHiveQueuedRunRequest{
+			RunID:                 `run_<script>alert("run")</script>`,
+			Title:                 `<button onclick="x">queued issue</button>`,
+			Status:                `<form method="post">queued</form>`,
+			TargetRepos:           []string{`transpara-ai/<script>site</script>`},
+			AuthorityInitialLevel: `<input name="authority">`,
+			AuthorityScope:        `<a hx-post="/approve">scope</a>`,
+			EvidenceKind:          `<select><option>queued</option></select>`,
+			BriefKind:             `<script>brief</script>`,
+			LifecycleVersion:      `v<script>3</script>`,
+			LifecycleEvidenceKind: `<button onclick="x">expected</button>`,
+			DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+				{
+					ID:                `<script>stage</script>`,
+					Name:              `<button onclick="x">Stage</button>`,
+					RequiredRoles:     []string{`<input name="role">`},
+					AuthorityBoundary: `<form action="/merge">boundary</form>`,
+					CompletionGate:    `<a hx-post="/gate">gate</a>`,
+					EvidenceStatus:    `<script>expected</script>`,
+				},
+			},
+			AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
+				{
+					ID:                `<script>step</script>`,
+					StageID:           `<script>stage</script>`,
+					Role:              `<button onclick="x">implementer</button>`,
+					CanOperate:        true,
+					Objective:         `<img src=x onerror=alert(1)>`,
+					RequiredOutputs:   []string{`<textarea>output</textarea>`},
+					AuthorityBoundary: `<form action="/merge">boundary</form>`,
+					CompletionGate:    `<a hx-post="/gate">gate</a>`,
+					EvidenceStatus:    `<script>expected</script>`,
+				},
+			},
+		},
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
@@ -509,8 +727,15 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	if strings.Contains(html, "<script>alert") {
-		t.Fatalf("rendered HTML contains unescaped script payload: %s", html)
+	for _, escaped := range []string{"run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+		if !strings.Contains(html, escaped) {
+			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
+		}
+	}
+	for _, raw := range []string{"<script", "<button", "<form", "<input", "<select", "<textarea", "<img", "<a "} {
+		if strings.Contains(html, raw) {
+			t.Fatalf("rendered HTML contains unescaped hostile tag %q: %s", raw, html)
+		}
 	}
 }
 
