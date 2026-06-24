@@ -147,6 +147,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"work_task_seeded",
 		"human_required_before_merge",
 		"evt_work_task_001",
+		"evt_work_task_artifact_001",
+		"test_run_001",
 		"gate_result_001",
 		"audit_report_001",
 		"EventGraph Civilization Assembly projection civ-runtime-001",
@@ -162,8 +164,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 }
 
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
-// Civilization Assembly projection endpoint and this Site consumer. Keep this
-// as literal JSON so the test exercises wire keys and enum strings rather than
+// Civilization Assembly projection endpoint and this Site consumer. Keep this as
+// literal JSON so the test exercises wire keys and enum strings rather than
 // re-encoding Site's own Go struct.
 const hiveCivilizationAssemblyProjectionFixture = `{
   "projection_id": "civ-runtime-001",
@@ -236,7 +238,8 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     "status": "available",
     "summary": "runtime projection from Hive",
     "task_refs": ["evt_work_task_001"],
-    "artifact_refs": [],
+    "artifact_refs": ["evt_work_task_artifact_001"],
+    "test_run_refs": ["test_run_001"],
     "gate_result_refs": ["gate_result_001"],
     "audit_report_refs": ["audit_report_001"],
     "source_refs": ["evt_runtime_001"]
@@ -377,10 +380,11 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 			{ID: "lifecycle_001", ActorID: "civilization-operator", FromState: "candidate", ToState: "active", Status: "verified"},
 		},
 		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
-			Status:      opsCivilizationFieldAvailable,
-			Summary:     "work evidence derived from task and gate records",
-			TaskRefs:    []string{"evt_work_task_001"},
-			TestRunRefs: []string{"test_run_001"},
+			Status:       opsCivilizationFieldAvailable,
+			Summary:      "work evidence derived from task and gate records",
+			TaskRefs:     []string{"evt_work_task_001"},
+			ArtifactRefs: []string{"evt_work_task_artifact_001"},
+			TestRunRefs:  []string{"test_run_001"},
 		},
 		FactoryOrderSummary: []OpsCivilizationAssemblyFactoryOrder{
 			{
@@ -441,6 +445,12 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	}
 	if !sliceContains(data.WorkEvidence.TaskRefs, "evt_work_task_001") {
 		t.Fatalf("work evidence task refs = %+v, want evt_work_task_001", data.WorkEvidence.TaskRefs)
+	}
+	if !sliceContains(data.WorkEvidence.ArtifactRefs, "evt_work_task_artifact_001") {
+		t.Fatalf("work evidence artifact refs = %+v, want evt_work_task_artifact_001", data.WorkEvidence.ArtifactRefs)
+	}
+	if !sliceContains(data.WorkEvidence.TestRunRefs, "test_run_001") {
+		t.Fatalf("work evidence test refs = %+v, want test_run_001", data.WorkEvidence.TestRunRefs)
 	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
