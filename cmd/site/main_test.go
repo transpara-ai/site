@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -47,6 +49,56 @@ func TestValidateProductionAuthConfigAllowsLocalAnonymousMode(t *testing.T) {
 
 	if err := validateProductionAuthConfig(mapGetter(env)); err != nil {
 		t.Fatalf("validateProductionAuthConfig: %v", err)
+	}
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyCivilization(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/civilization without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		`data-civilization-assembly="read-only"`,
+		"Civilization Assembly",
+		"projection unavailable",
+		"this page has no execution authority",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/civilization without DATABASE_URL body missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		`method="post"`,
+		`hx-post=`,
+		`data-action="approve"`,
+		`data-action="merge"`,
+	} {
+		if strings.Contains(strings.ToLower(body), forbidden) {
+			t.Fatalf("GET /ops/civilization without DATABASE_URL exposed mutation marker %q", forbidden)
+		}
+	}
+}
+
+func TestNoDatabaseCivilizationRejectsMutationMethod(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/civilization", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST /ops/civilization without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
 	}
 }
 

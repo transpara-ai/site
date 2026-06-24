@@ -381,6 +381,13 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
 }
 
+// RegisterReadOnlyOps adds no-DB operator routes that render read-only
+// projection/fallback data and expose no mutation handlers.
+func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
+	mux.HandleFunc("GET /ops", h.handleOps)
+	mux.HandleFunc("GET /ops/civilization", h.handleOpsCivilization)
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────
