@@ -95,6 +95,8 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		"EventGraph Civilization Assembly projection unavailable to Site",
 		"EventGraph Civilization Assembly projection",
 		"Projection facts",
+		"FactoryOrder evidence",
+		"No Work FactoryOrder seed tasks are projected.",
 		"derivation status",
 		"Registered method",
 		"GET only",
@@ -140,6 +142,13 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"actor_builder",
 		"implementer",
 		"runtime projection from Hive",
+		"FactoryOrder evidence",
+		"fo_run_issue_scan_001",
+		"work_task_seeded",
+		"human_required_before_merge",
+		"evt_work_task_001",
+		"gate_result_001",
+		"audit_report_001",
 		"EventGraph Civilization Assembly projection civ-runtime-001",
 	} {
 		if !strings.Contains(body, want) {
@@ -212,11 +221,24 @@ const hiveCivilizationAssemblyProjectionFixture = `{
       "status": "active"
     }
   ],
-  "factory_order_summary": [],
+  "factory_order_summary": [
+    {
+      "id": "fo_run_issue_scan_001",
+      "status": "work_task_seeded",
+      "risk_class": "high",
+      "release_policy": "human_required_before_merge",
+      "requirement_refs": ["req_run_issue_scan_001"],
+      "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
+      "task_refs": ["evt_work_task_001"]
+    }
+  ],
   "work_evidence_summary": {
     "status": "available",
     "summary": "runtime projection from Hive",
+    "task_refs": ["evt_work_task_001"],
     "artifact_refs": [],
+    "gate_result_refs": ["gate_result_001"],
+    "audit_report_refs": ["audit_report_001"],
     "source_refs": ["evt_runtime_001"]
   },
   "site_consumer_status": {
@@ -357,7 +379,19 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
 			Status:      opsCivilizationFieldAvailable,
 			Summary:     "work evidence derived from task and gate records",
+			TaskRefs:    []string{"evt_work_task_001"},
 			TestRunRefs: []string{"test_run_001"},
+		},
+		FactoryOrderSummary: []OpsCivilizationAssemblyFactoryOrder{
+			{
+				ID:                      "fo_run_issue_scan_001",
+				Status:                  "work_task_seeded",
+				RiskClass:               "high",
+				ReleasePolicy:           "human_required_before_merge",
+				RequirementRefs:         []string{"req_run_issue_scan_001"},
+				AcceptanceCriterionRefs: []string{"ac_run_issue_scan_001"},
+				TaskRefs:                []string{"evt_work_task_001"},
+			},
 		},
 		SiteConsumerStatus: OpsCivilizationAssemblyFieldStatus{
 			Status:     opsCivilizationFieldAvailable,
@@ -402,6 +436,12 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !referenceGroupContains(data, "validation refs", "test_run_001") {
 		t.Fatalf("validation refs missing test_run_001: %+v", data.ReferenceGroups)
 	}
+	if len(data.FactoryOrders) != 1 || data.FactoryOrders[0].ID != "fo_run_issue_scan_001" {
+		t.Fatalf("factory orders = %+v, want projected FactoryOrder", data.FactoryOrders)
+	}
+	if !sliceContains(data.WorkEvidence.TaskRefs, "evt_work_task_001") {
+		t.Fatalf("work evidence task refs = %+v, want evt_work_task_001", data.WorkEvidence.TaskRefs)
+	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
 	}
@@ -427,6 +467,21 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 		RoleBindings: []OpsCivilizationAssemblyRoleBinding{
 			{ActorID: `actor-<script>`, Role: `<button onclick="x">operator</button>`, SourceRef: `<a hx-post="/mutate">`, SourceType: "AuthorityDecision"},
 		},
+		FactoryOrderSummary: []OpsCivilizationAssemblyFactoryOrder{
+			{
+				ID:                      `<script>alert(1)</script>`,
+				Status:                  `<button onclick="x">seeded</button>`,
+				RiskClass:               `<form action="/mutate">`,
+				ReleasePolicy:           `<a href="/deploy">deploy</a>`,
+				RequirementRefs:         []string{`<select><option>req</option></select>`},
+				AcceptanceCriterionRefs: []string{`<script>accept()</script>`},
+				TaskRefs:                []string{`<input name="task">`},
+			},
+		},
+		WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+			Status:  opsCivilizationFieldAvailable,
+			Summary: `<script>alert("work")</script>`,
+		},
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
@@ -439,10 +494,13 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 	}
 	html := body.String()
 	assertNoCivilizationMutationControls(t, html)
-	for _, escaped := range []string{"&lt;button", "&lt;form", "&lt;select", "&lt;a"} {
+	for _, escaped := range []string{"&lt;button", "&lt;form", "&lt;select", "&lt;a", "&lt;script", "&lt;input"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
+	}
+	if strings.Contains(html, "<script>alert") {
+		t.Fatalf("rendered HTML contains unescaped script payload: %s", html)
 	}
 }
 
@@ -580,6 +638,15 @@ func referenceGroupContains(data *OpsCivilizationAssemblyData, label string, ref
 			if item == ref {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func sliceContains(items []string, needle string) bool {
+	for _, item := range items {
+		if item == needle {
+			return true
 		}
 	}
 	return false

@@ -60,6 +60,60 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				}
 			</section>
 		}
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">FactoryOrder evidence</h2>
+					<p class="text-xs text-warm-faint mt-1">Work seed tasks projected from EventGraph; display evidence, not execution proof.</p>
+					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ opsCivilizationValue(data.WorkEvidence.Summary, "work evidence summary unavailable") }</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsCivilizationStatusValue(data.WorkEvidence.Status) }</span>
+			</header>
+			if len(data.FactoryOrders) == 0 {
+				<p class="px-4 py-5 text-sm text-warm-faint">No Work FactoryOrder seed tasks are projected.</p>
+			} else {
+				<div class="overflow-x-auto">
+					<table class="w-full text-xs">
+						<thead>
+							<tr class="text-left text-warm-faint border-b border-edge bg-void/20">
+								<th class="py-2 px-3 font-medium">FactoryOrder</th>
+								<th class="py-2 px-3 font-medium">Status</th>
+								<th class="py-2 px-3 font-medium">Risk</th>
+								<th class="py-2 px-3 font-medium">Release policy</th>
+								<th class="py-2 px-3 font-medium">Requirements</th>
+								<th class="py-2 px-3 font-medium">Acceptance</th>
+								<th class="py-2 px-3 font-medium">Work tasks</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, order := range data.FactoryOrders {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-all">{ order.ID }</td>
+									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.Status, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.RiskClass, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-muted">{ opsCivilizationValue(order.ReleasePolicy, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(order.RequirementRefs, "none projected") }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(order.AcceptanceCriterionRefs, "none projected") }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(order.TaskRefs, "none projected") }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+			<div class="border-t border-edge px-4 py-3">
+				<dl class="grid gap-x-3 gap-y-2 text-xs md:grid-cols-[8rem_1fr]">
+					<dt class="text-warm-faint">Task refs</dt>
+					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.TaskRefs, "none projected") }</dd>
+					<dt class="text-warm-faint">Artifact refs</dt>
+					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.ArtifactRefs, "none projected") }</dd>
+					<dt class="text-warm-faint">Gate refs</dt>
+					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.GateResultRefs, "none projected") }</dd>
+					<dt class="text-warm-faint">Audit refs</dt>
+					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.WorkEvidence.AuditReportRefs, "none projected") }</dd>
+				</dl>
+			</div>
+		</section>
 		<section class="border border-edge bg-surface rounded-lg p-4">
 			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
 				<div>
