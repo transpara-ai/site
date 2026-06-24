@@ -210,6 +210,8 @@ type OpsCivilizationAssemblyTaskEvidence struct {
 	AgentExecutionPlan      []OpsHiveQueuedRunAgentPlanStep     `json:"agent_execution_plan,omitempty"`
 	RequiredEvidence        []string                            `json:"required_evidence,omitempty"`
 	OutputContractRefs      []string                            `json:"output_contract_refs,omitempty"`
+	RuntimeEvidenceRefs     []string                            `json:"runtime_evidence_refs,omitempty"`
+	RuntimeEvidenceStatus   string                              `json:"runtime_evidence_status,omitempty"`
 	RoleOutputContracts     []OpsCivilizationRoleOutputContract `json:"role_output_contracts,omitempty"`
 }
 

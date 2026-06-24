@@ -143,6 +143,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"implementer",
 		"runtime projection from Hive",
 		"FactoryOrder evidence",
+		"task rows can include runtime-evidence and completed-stage signals without merge or deployment authority",
 		"fo_run_issue_scan_001",
 		"work_task_seeded",
 		"human_required_before_merge",
@@ -155,7 +156,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"evt_work_task_stage_role_contract_research_001",
 		"evt_work_task_stage_output_contract_research_001",
 		"issue_snapshot, repo_context, risk_and_scope_notes",
-		"required not observed",
+		"stage step completed runtime evidence recorded",
 		"issue_priority_rationale",
 		"evt_work_task_stage_debate_001",
 		"Issue-scan stage: Debate with correct civic roles",
@@ -166,6 +167,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"evt_work_task_stage_artifact_001",
 		"issue_scan_lifecycle_stage_research_issue_and_repo_context",
 		"declared pending runtime evidence",
+		"runtime=stage completed runtime evidence recorded",
+		"artifact_runtime_research_001",
 		"stage declared pending runtime evidence",
 		"application/json",
 		"test_run_001",
@@ -226,9 +229,9 @@ func TestOpsCivilizationEvidenceStatusValue(t *testing.T) {
 		},
 		{
 			name:     "replaces every underscore",
-			status:   "stage_declared_pending_runtime_evidence",
+			status:   "stage_completed_runtime_evidence_recorded",
 			fallback: "expected",
-			want:     "stage declared pending runtime evidence",
+			want:     "stage completed runtime evidence recorded",
 		},
 		{
 			name:     "keeps spaced value",
@@ -251,7 +254,7 @@ func TestOpsCivilizationEvidenceStatusValue(t *testing.T) {
 // re-encoding Site's own Go struct.
 const hiveCivilizationAssemblyProjectionFixture = `{
   "projection_id": "civ-runtime-001",
-  "projection_schema_version": "1.0.0",
+  "projection_schema_version": "1.4.0",
   "projection_subject": "civilization_assembly",
   "generated_at": "2026-06-23T09:30:00Z",
   "source_eventgraph_head_or_state_version": "evt_head_runtime_001",
@@ -353,6 +356,8 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "required_roles": ["strategist", "planner"],
         "role_contract_refs": ["evt_work_task_stage_role_contract_research_001"],
         "output_contract_refs": ["evt_work_task_stage_output_contract_research_001"],
+        "runtime_evidence_refs": ["artifact_runtime_research_001"],
+        "runtime_evidence_status": "stage_completed_runtime_evidence_recorded",
         "role_output_contracts": [
           {
             "role": "strategist",
@@ -360,7 +365,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
             "required_outputs": ["issue_priority_rationale", "risk_and_scope_notes"],
             "authority_boundary": "read_only",
             "completion_gate": "context_packet_recorded",
-            "evidence_status": "required_not_observed"
+            "evidence_status": "stage_step_completed_runtime_evidence_recorded"
           },
           {
             "role": "planner",
@@ -368,7 +373,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
             "required_outputs": ["repo_context_packet", "candidate_validation_commands"],
             "authority_boundary": "read_only",
             "completion_gate": "context_packet_recorded",
-            "evidence_status": "required_not_observed"
+            "evidence_status": "stage_step_completed_runtime_evidence_recorded"
           }
         ],
         "agent_execution_plan": [
@@ -413,7 +418,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "source_refs": ["evt_work_task_stage_debate_001", "evt_work_dependency_debate_after_research_001"]
       }
     ],
-    "artifact_refs": ["evt_work_task_artifact_001", "evt_work_task_stage_role_contract_research_001", "evt_work_task_stage_output_contract_research_001"],
+    "artifact_refs": ["evt_work_task_artifact_001", "evt_work_task_stage_role_contract_research_001", "evt_work_task_stage_output_contract_research_001", "artifact_runtime_research_001"],
     "artifacts": [
       {
         "id": "evt_work_task_artifact_001",
@@ -442,6 +447,13 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "label": "issue_scan_stage_output_contract",
         "media_type": "application/json",
         "source_refs": ["evt_work_task_stage_output_contract_research_001"]
+      },
+      {
+        "id": "artifact_runtime_research_001",
+        "task_ref": "evt_work_task_stage_research_001",
+        "label": "issue_scan_stage_runtime_evidence",
+        "media_type": "application/json",
+        "source_refs": ["evt_work_task_stage_runtime_evidence_research_001"]
       }
     ],
     "test_run_refs": ["test_run_001"],
@@ -656,7 +668,7 @@ func TestHandleOpsCivilizationFailsClosedForInvalidHiveProjectionPayloads(t *tes
 		},
 		{
 			name: "unsupported schema",
-			body: strings.Replace(hiveCivilizationAssemblyProjectionFixture, `"projection_schema_version": "1.0.0"`, `"projection_schema_version": "2.0.0"`, 1),
+			body: strings.Replace(hiveCivilizationAssemblyProjectionFixture, `"projection_schema_version": "1.4.0"`, `"projection_schema_version": "2.0.0"`, 1),
 			want: `unsupported projection schema version &#34;2.0.0&#34;`,
 		},
 	}
@@ -754,20 +766,22 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					RoleContractRefs:        []string{"evt_work_task_stage_role_contract_research_001"},
 					RequiredEvidence:        []string{"issue_snapshot", "repo_context", "risk_and_scope_notes"},
 					OutputContractRefs:      []string{"evt_work_task_stage_output_contract_research_001"},
+					RuntimeEvidenceRefs:     []string{"artifact_runtime_research_001"},
+					RuntimeEvidenceStatus:   "stage_completed_runtime_evidence_recorded",
 					RoleOutputContracts: []OpsCivilizationRoleOutputContract{
 						{
 							Role:              "strategist",
 							RequiredOutputs:   []string{"issue_priority_rationale", "risk_and_scope_notes"},
 							AuthorityBoundary: "read_only",
 							CompletionGate:    "context_packet_recorded",
-							EvidenceStatus:    "required_not_observed",
+							EvidenceStatus:    "stage_step_completed_runtime_evidence_recorded",
 						},
 						{
 							Role:              "planner",
 							RequiredOutputs:   []string{"repo_context_packet", "candidate_validation_commands"},
 							AuthorityBoundary: "read_only",
 							CompletionGate:    "context_packet_recorded",
-							EvidenceStatus:    "required_not_observed",
+							EvidenceStatus:    "stage_step_completed_runtime_evidence_recorded",
 						},
 					},
 					AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
@@ -782,7 +796,7 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					SourceRefs: []string{"evt_work_task_stage_research_001"},
 				},
 			},
-			ArtifactRefs: []string{"evt_work_task_artifact_001", "evt_work_task_stage_output_contract_research_001"},
+			ArtifactRefs: []string{"evt_work_task_artifact_001", "evt_work_task_stage_output_contract_research_001", "artifact_runtime_research_001"},
 			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
 				{
 					ID:         "evt_work_task_artifact_001",
@@ -804,6 +818,13 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					Label:      "issue_scan_stage_output_contract",
 					MediaType:  "application/json",
 					SourceRefs: []string{"evt_work_task_stage_output_contract_research_001"},
+				},
+				{
+					ID:         "artifact_runtime_research_001",
+					TaskRef:    "evt_work_task_stage_research_001",
+					Label:      "issue_scan_stage_runtime_evidence",
+					MediaType:  "application/json",
+					SourceRefs: []string{"evt_work_task_stage_runtime_evidence_research_001"},
 				},
 			},
 			TestRunRefs: []string{"test_run_001"},
@@ -935,8 +956,14 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if !sliceContains(stageTask.RequiredEvidence, "repo_context") || !sliceContains(stageTask.OutputContractRefs, "evt_work_task_stage_output_contract_research_001") {
 		t.Fatalf("work evidence stage task output contract refs/evidence = %+v / %+v", stageTask.OutputContractRefs, stageTask.RequiredEvidence)
 	}
+	if stageTask.RuntimeEvidenceStatus != "stage_completed_runtime_evidence_recorded" || !sliceContains(stageTask.RuntimeEvidenceRefs, "artifact_runtime_research_001") {
+		t.Fatalf("work evidence stage task runtime evidence = %q / %+v", stageTask.RuntimeEvidenceStatus, stageTask.RuntimeEvidenceRefs)
+	}
 	if len(stageTask.RoleOutputContracts) != 2 || !roleOutputContractsContain(stageTask.RoleOutputContracts, "strategist", "risk_and_scope_notes") {
 		t.Fatalf("work evidence stage task role output contracts = %+v", stageTask.RoleOutputContracts)
+	}
+	if opsCivilizationEvidenceStatusValue(stageTask.RoleOutputContracts[0].EvidenceStatus, "missing") != "stage step completed runtime evidence recorded" {
+		t.Fatalf("work evidence stage task role output status = %+v", stageTask.RoleOutputContracts)
 	}
 	if len(stageTask.AgentExecutionPlan) != 1 || stageTask.AgentExecutionPlan[0].Role != "strategist" || !sliceContains(stageTask.AgentExecutionPlan[0].RequiredOutputs, "issue_priority_rationale") {
 		t.Fatalf("work evidence stage task agent plan = %+v", stageTask.AgentExecutionPlan)
@@ -953,6 +980,9 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	}
 	if civilizationArtifactByLabel(data.WorkEvidence.Artifacts, "issue_scan_stage_output_contract") == nil {
 		t.Fatalf("work evidence artifacts = %+v, want issue_scan_stage_output_contract", data.WorkEvidence.Artifacts)
+	}
+	if civilizationArtifactByLabel(data.WorkEvidence.Artifacts, "issue_scan_stage_runtime_evidence") == nil {
+		t.Fatalf("work evidence artifacts = %+v, want issue_scan_stage_runtime_evidence", data.WorkEvidence.Artifacts)
 	}
 	if !sliceContains(data.WorkEvidence.TestRunRefs, "test_run_001") {
 		t.Fatalf("work evidence test refs = %+v, want test_run_001", data.WorkEvidence.TestRunRefs)
@@ -1017,20 +1047,22 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			Summary: `<script>alert("work")</script>`,
 			Tasks: []OpsCivilizationAssemblyTaskEvidence{
 				{
-					ID:                 `task_<script>alert(5)</script>`,
-					CanonicalTaskID:    `canonical_<input name="task">`,
-					LifecycleStageID:   `stage_<script>alert(6)</script>`,
-					Title:              `<button onclick="x">task</button>`,
-					Cell:               `<form action="/mutate">cell</form>`,
-					RiskClass:          `"><img src=x onerror=alert(7)>`,
-					Status:             `work_task_<script>seeded</script>`,
-					DependsOnRefs:      []string{`<a hx-post="/mutate">depends</a>`},
-					ExpectedOutputs:    []string{`<textarea>task output</textarea>`},
-					SourceRefs:         []string{`<a hx-post="/mutate">task source</a>`},
-					RequiredRoles:      []string{`<input name="role">`},
-					RoleContractRefs:   []string{`role_contract_<script>alert(8)</script>`},
-					RequiredEvidence:   []string{`<select>required evidence</select>`},
-					OutputContractRefs: []string{`output_contract_<script>alert(9)</script>`},
+					ID:                    `task_<script>alert(5)</script>`,
+					CanonicalTaskID:       `canonical_<input name="task">`,
+					LifecycleStageID:      `stage_<script>alert(6)</script>`,
+					Title:                 `<button onclick="x">task</button>`,
+					Cell:                  `<form action="/mutate">cell</form>`,
+					RiskClass:             `"><img src=x onerror=alert(7)>`,
+					Status:                `work_task_<script>seeded</script>`,
+					DependsOnRefs:         []string{`<a hx-post="/mutate">depends</a>`},
+					ExpectedOutputs:       []string{`<textarea>task output</textarea>`},
+					SourceRefs:            []string{`<a hx-post="/mutate">task source</a>`},
+					RequiredRoles:         []string{`<input name="role">`},
+					RoleContractRefs:      []string{`role_contract_<script>alert(8)</script>`},
+					RequiredEvidence:      []string{`<select>required evidence</select>`},
+					OutputContractRefs:    []string{`output_contract_<script>alert(9)</script>`},
+					RuntimeEvidenceRefs:   []string{`runtime_ref_<script>alert(13)</script>`},
+					RuntimeEvidenceStatus: `runtime_<script>recorded</script>`,
 					RoleOutputContracts: []OpsCivilizationRoleOutputContract{
 						{
 							Role:              `<button onclick="x">output role</button>`,
@@ -1138,7 +1170,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}

@@ -261,7 +261,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">FactoryOrder evidence</h2><p class=\"text-xs text-warm-faint mt-1\">Work seed tasks projected from EventGraph; display evidence, not execution proof.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">FactoryOrder evidence</h2><p class=\"text-xs text-warm-faint mt-1\">Work seed tasks projected from EventGraph; task rows can include runtime-evidence and completed-stage signals without merge or deployment authority.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -579,497 +579,539 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</p></td><td class=\"py-2 px-3 text-warm-muted break-words\"><p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var37 string
-				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RequiredRoles, "none projected"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 151, Col: 72}
+				if task.RuntimeEvidenceStatus != "" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "<p class=\"text-[10px] text-warm-faint mt-1\">runtime=")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var37 string
+					templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(task.RuntimeEvidenceStatus, "not recorded"))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 150, Col: 143}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "</p>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "</td><td class=\"py-2 px-3 text-warm-muted break-words\"><p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</p>")
+				var templ_7745c5c3_Var38 string
+				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RequiredRoles, "none projected"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 154, Col: 72}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "</p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if len(task.RoleContractRefs) > 0 {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<p class=\"text-[10px] text-warm-faint break-all mt-1\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "<p class=\"text-[10px] text-warm-faint break-all mt-1\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var38 string
-					templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RoleContractRefs, "none projected"))
+					var templ_7745c5c3_Var39 string
+					templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RoleContractRefs, "none projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 153, Col: 127}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 156, Col: 127}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "</p>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "</p>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "</td><td class=\"py-2 px-3 text-warm-faint break-words\"><p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</td><td class=\"py-2 px-3 text-warm-faint break-words\"><p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var39 string
-				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RequiredEvidence, "none projected"))
+				var templ_7745c5c3_Var40 string
+				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RequiredEvidence, "none projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 157, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 160, Col: 75}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if len(task.OutputContractRefs) > 0 {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<p class=\"text-[10px] text-warm-faint break-all mt-1\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<p class=\"text-[10px] text-warm-faint break-all mt-1\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var40 string
-					templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.OutputContractRefs, "none projected"))
+					var templ_7745c5c3_Var41 string
+					templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.OutputContractRefs, "none projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 159, Col: 129}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 162, Col: 129}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</p>")
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</p>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</td><td class=\"py-2 px-3 text-warm-muted break-words\"><p>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
+				if len(task.RuntimeEvidenceRefs) > 0 {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<p class=\"text-[10px] text-warm-faint break-all mt-1\">runtime refs: ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var42 string
+					templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.RuntimeEvidenceRefs, "none projected"))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 165, Col: 144}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</p>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
 				}
-				var templ_7745c5c3_Var41 string
-				templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(task.Cell, "not projected"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 163, Col: 63}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "</p><p class=\"text-[10px] text-warm-faint\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var42 string
-				templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(task.RiskClass, "risk not projected"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 164, Col: 109}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</p></td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "</td><td class=\"py-2 px-3 text-warm-muted break-words\"><p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var43 string
-				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.DependsOnRefs, "none"))
+				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(task.Cell, "not projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 166, Col: 106}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 169, Col: 63}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "</td><td class=\"py-2 px-3 text-warm-faint break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "</p><p class=\"text-[10px] text-warm-faint\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var44 string
+				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(task.RiskClass, "risk not projected"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 170, Col: 109}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</p></td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var45 string
+				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.DependsOnRefs, "none"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 172, Col: 106}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "</td><td class=\"py-2 px-3 text-warm-faint break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if len(task.RoleOutputContracts) > 0 {
 					for _, contract := range task.RoleOutputContracts {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "<p><span class=\"text-warm-muted\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "<p><span class=\"text-warm-muted\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var44 string
-						templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.Role, "role"))
+						var templ_7745c5c3_Var46 string
+						templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.Role, "role"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 170, Col: 90}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 176, Col: 90}
 						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "</span>: ")
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var45 string
-						templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(contract.RequiredOutputs, "no outputs projected"))
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 170, Col: 172}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</span>: ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "</p>")
+						var templ_7745c5c3_Var47 string
+						templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(contract.RequiredOutputs, "no outputs projected"))
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 176, Col: 172}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "</p>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						if contract.AuthorityBoundary != "" || contract.CompletionGate != "" || contract.EvidenceStatus != "" {
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "<p class=\"text-[10px] text-warm-faint\">")
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-							var templ_7745c5c3_Var46 string
-							templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.AuthorityBoundary, "boundary not projected"))
-							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 172, Col: 128}
-							}
-							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " · ")
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-							var templ_7745c5c3_Var47 string
-							templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.CompletionGate, "gate not projected"))
-							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 172, Col: 203}
-							}
-							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
-							if templ_7745c5c3_Err != nil {
-								return templ_7745c5c3_Err
-							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, " · ")
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<p class=\"text-[10px] text-warm-faint\">")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
 							var templ_7745c5c3_Var48 string
-							templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(contract.EvidenceStatus, "status not projected"))
+							templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.AuthorityBoundary, "boundary not projected"))
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 172, Col: 294}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 178, Col: 128}
 							}
 							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</p>")
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, " · ")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							var templ_7745c5c3_Var49 string
+							templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(contract.CompletionGate, "gate not projected"))
+							if templ_7745c5c3_Err != nil {
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 178, Col: 203}
+							}
+							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, " · ")
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							var templ_7745c5c3_Var50 string
+							templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(contract.EvidenceStatus, "status not projected"))
+							if templ_7745c5c3_Err != nil {
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 178, Col: 294}
+							}
+							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
+							if templ_7745c5c3_Err != nil {
+								return templ_7745c5c3_Err
+							}
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</p>")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
 						}
 					}
 				} else if len(task.AgentExecutionPlan) == 0 {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "<span>none projected</span>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "<span>none projected</span>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				} else {
 					for _, step := range task.AgentExecutionPlan {
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<p><span class=\"text-warm-muted\">")
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "<p><span class=\"text-warm-muted\">")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var49 string
-						templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(step.Role, "role"))
+						var templ_7745c5c3_Var51 string
+						templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(step.Role, "role"))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 179, Col: 86}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 185, Col: 86}
 						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
-						if templ_7745c5c3_Err != nil {
-							return templ_7745c5c3_Err
-						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "</span>: ")
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						var templ_7745c5c3_Var50 string
-						templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(step.RequiredOutputs, "no outputs projected"))
-						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 179, Col: 164}
-						}
-						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</span>: ")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
-						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "</p>")
+						var templ_7745c5c3_Var52 string
+						templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(step.RequiredOutputs, "no outputs projected"))
+						if templ_7745c5c3_Err != nil {
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 185, Col: 164}
+						}
+						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
+						if templ_7745c5c3_Err != nil {
+							return templ_7745c5c3_Err
+						}
+						templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</p>")
 						if templ_7745c5c3_Err != nil {
 							return templ_7745c5c3_Err
 						}
 						if step.AuthorityBoundary != "" {
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "<p class=\"text-[10px] text-warm-faint\">")
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "<p class=\"text-[10px] text-warm-faint\">")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							var templ_7745c5c3_Var51 string
-							templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(step.AuthorityBoundary)
+							var templ_7745c5c3_Var53 string
+							templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(step.AuthorityBoundary)
 							if templ_7745c5c3_Err != nil {
-								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 181, Col: 76}
+								return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 187, Col: 76}
 							}
-							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
+							_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
-							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "</p>")
+							templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "</p>")
 							if templ_7745c5c3_Err != nil {
 								return templ_7745c5c3_Err
 							}
 						}
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</td><td class=\"py-2 px-3 text-warm-faint break-words\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var52 string
-				templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.ExpectedOutputs, "none projected"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 186, Col: 120}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var53 string
-				templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.SourceRefs, "none projected"))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 187, Col: 113}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</td></tr>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "</tbody></table></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		if len(data.WorkEvidence.Artifacts) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			for _, artifact := range data.WorkEvidence.Artifacts {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "</td><td class=\"py-2 px-3 text-warm-faint break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var54 string
-				templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.ID)
+				templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.ExpectedOutputs, "none projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 209, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 192, Col: 120}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</td><td class=\"py-2 px-3 text-warm-muted break-words\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var55 string
-				templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.Label, "not labeled"))
+				templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(task.SourceRefs, "none projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 210, Col: 112}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 193, Col: 113}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "</td><td class=\"py-2 px-3 text-warm-muted break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "</td></tr>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "</tbody></table></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if len(data.WorkEvidence.Artifacts) > 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Label</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th><th class=\"py-2 px-3 font-medium\">Source refs</th></tr></thead> <tbody>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			for _, artifact := range data.WorkEvidence.Artifacts {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm break-all\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var56 string
-				templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.MediaType, "not projected"))
+				templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 211, Col: 116}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 215, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "</td><td class=\"py-2 px-3 text-warm-muted break-words\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var57 string
-				templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.TaskRef, "not projected"))
+				templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.Label, "not labeled"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 212, Col: 114}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 216, Col: 112}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 92, "</td><td class=\"py-2 px-3 text-warm-muted break-all\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var58 string
-				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(artifact.SourceRefs, "none projected"))
+				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.MediaType, "not projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 213, Col: 117}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 217, Col: 116}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, "</td></tr>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 93, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var59 string
+				templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(artifact.TaskRef, "not projected"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 218, Col: 114}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 94, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var60 string
+				templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(artifact.SourceRefs, "none projected"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 219, Col: 117}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "</td></tr>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, "</tbody></table></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 96, "</tbody></table></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 92, "</section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 97, "</section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if data.QueuedRunRequest != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 93, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Queued issue-scan lifecycle</h2><p class=\"text-xs text-warm-faint mt-1\">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p><p class=\"text-sm text-warm-muted mt-2 break-words\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var59 string
-			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.Title, data.QueuedRunRequest.RunID))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 227, Col: 128}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 94, "</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var60 string
-			templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.Status, "queued"))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 229, Col: 181}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, "</span></header><dl class=\"grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]\"><dt class=\"text-warm-faint\">Run ID</dt><dd class=\"text-warm-muted break-all\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "<section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Queued issue-scan lifecycle</h2><p class=\"text-xs text-warm-faint mt-1\">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p><p class=\"text-sm text-warm-muted mt-2 break-words\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var61 string
-			templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(data.QueuedRunRequest.RunID)
+			templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.Title, data.QueuedRunRequest.RunID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 233, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 233, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 96, "</dd><dt class=\"text-warm-faint\">Target repos</dt><dd class=\"text-warm-muted break-all\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 99, "</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var62 string
-			templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(opsEvidenceJoin(data.QueuedRunRequest.TargetRepos))
+			templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.Status, "queued"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 235, Col: 95}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 235, Col: 181}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 97, "</dd><dt class=\"text-warm-faint\">Authority</dt><dd class=\"text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 100, "</span></header><dl class=\"grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]\"><dt class=\"text-warm-faint\">Run ID</dt><dd class=\"text-warm-muted break-all\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var63 string
-			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.AuthorityInitialLevel, "unknown"))
+			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(data.QueuedRunRequest.RunID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 237, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 239, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "</dd><dt class=\"text-warm-faint\">Authority scope</dt><dd class=\"text-warm-muted break-words\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 101, "</dd><dt class=\"text-warm-faint\">Target repos</dt><dd class=\"text-warm-muted break-all\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var64 string
-			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.AuthorityScope, "not projected"))
+			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(opsEvidenceJoin(data.QueuedRunRequest.TargetRepos))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 239, Col: 112}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 241, Col: 95}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 99, "</dd><dt class=\"text-warm-faint\">Budget</dt><dd class=\"text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 102, "</dd><dt class=\"text-warm-faint\">Authority</dt><dd class=\"text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var65 string
-			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveOptionalInt(data.QueuedRunRequest.BudgetMaxIterations, "?"))
+			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.AuthorityInitialLevel, "unknown"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 241, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 243, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 100, " iter / ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 103, "</dd><dt class=\"text-warm-faint\">Authority scope</dt><dd class=\"text-warm-muted break-words\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var66 string
-			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveOptionalFloatUSD(data.QueuedRunRequest.BudgetMaxCostUSD, "?"))
+			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.AuthorityScope, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 241, Col: 181}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 245, Col: 112}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 101, "</dd><dt class=\"text-warm-faint\">Evidence kind</dt><dd class=\"text-warm-muted break-all\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 104, "</dd><dt class=\"text-warm-faint\">Budget</dt><dd class=\"text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var67 string
-			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.EvidenceKind, "queued request"))
+			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveOptionalInt(data.QueuedRunRequest.BudgetMaxIterations, "?"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 243, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 247, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 102, "</dd></dl><div class=\"px-4 pb-4\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 105, " iter / ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var68 string
+			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(opsHiveOptionalFloatUSD(data.QueuedRunRequest.BudgetMaxCostUSD, "?"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 247, Col: 181}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "</dd><dt class=\"text-warm-faint\">Evidence kind</dt><dd class=\"text-warm-muted break-all\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var69 string
+			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(data.QueuedRunRequest.EvidenceKind, "queued request"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 249, Col: 109}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "</dd></dl><div class=\"px-4 pb-4\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1077,110 +1119,110 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 103, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 108, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(data.IssueScanStageEvidence) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 104, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<div class=\"border-t border-edge overflow-x-auto\"><table class=\"min-w-full text-left text-xs\"><thead class=\"text-warm-faint border-b border-edge\"><tr><th class=\"py-2 px-3 font-medium\">Stage</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Artifact</th><th class=\"py-2 px-3 font-medium\">Media type</th><th class=\"py-2 px-3 font-medium\">Task</th></tr></thead> <tbody>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, evidence := range data.IssueScanStageEvidence {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 105, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p class=\"break-words\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var68 string
-					templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.StageName, evidence.StageID))
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 264, Col: 94}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "</p><p class=\"text-[10px] text-warm-faint break-all\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var69 string
-					templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(evidence.StageID)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 265, Col: 78}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 107, "</p></td><td class=\"py-2 px-3 text-warm-muted break-words\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p class=\"break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var70 string
-					templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.EvidenceStatus, "not projected"))
+					templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.StageName, evidence.StageID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 267, Col: 124}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 270, Col: 94}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 108, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 111, "</p><p class=\"text-[10px] text-warm-faint break-all\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var71 string
-					templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.ArtifactID, "not projected"))
+					templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(evidence.StageID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 268, Col: 118}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 271, Col: 78}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "</td><td class=\"py-2 px-3 text-warm-muted break-all\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "</p></td><td class=\"py-2 px-3 text-warm-muted break-words\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var72 string
-					templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.MediaType, "not projected"))
+					templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.EvidenceStatus, "not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 269, Col: 117}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 273, Col: 124}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 110, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 113, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var73 string
-					templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.TaskRef, "not projected"))
+					templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.ArtifactID, "not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 270, Col: 115}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 274, Col: 118}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 111, "</td></tr>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "</td><td class=\"py-2 px-3 text-warm-muted break-all\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var74 string
+					templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.MediaType, "not projected"))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 275, Col: 117}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 115, "</td><td class=\"py-2 px-3 text-warm-faint break-all\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var75 string
+					templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(evidence.TaskRef, "not projected"))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 276, Col: 115}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 116, "</td></tr>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 112, "</tbody></table></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 117, "</tbody></table></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 113, "</section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 118, "</section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 114, "<section class=\"border border-edge bg-surface rounded-lg p-4\"><div class=\"flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4\"><div><h2 class=\"text-sm font-medium text-warm\">Role topology</h2><p class=\"text-[11px] text-warm-faint mt-1\">Role bindings are rendered from projection input only; missing tiers, runtime activity, authority, and emergence remain not projected.</p></div><div class=\"shrink-0 text-right\"><p class=\"text-[10px] text-warm-faint uppercase tracking-widest mb-1\">Global Model Selection Mode</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 119, "<section class=\"border border-edge bg-surface rounded-lg p-4\"><div class=\"flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4\"><div><h2 class=\"text-sm font-medium text-warm\">Role topology</h2><p class=\"text-[11px] text-warm-faint mt-1\">Role bindings are rendered from projection input only; missing tiers, runtime activity, authority, and emergence remain not projected.</p></div><div class=\"shrink-0 text-right\"><p class=\"text-[10px] text-warm-faint uppercase tracking-widest mb-1\">Global Model Selection Mode</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1188,204 +1230,204 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 115, "<p class=\"text-[10px] text-warm-faint mt-1 uppercase tracking-widest\">provenance: ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "<p class=\"text-[10px] text-warm-faint mt-1 uppercase tracking-widest\">provenance: ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var74 string
-		templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeProvenance)
+		var templ_7745c5c3_Var76 string
+		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeProvenance)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 288, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 294, Col: 127}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 116, "</p><p class=\"text-[11px] text-warm-faint mt-1 max-w-xs\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var75 string
-		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeReason)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 289, Col: 94}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 121, "</p><p class=\"text-[11px] text-warm-faint mt-1 max-w-xs\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 117, "</p></div></div><div class=\"grid gap-3 md:grid-cols-4 mb-4\">")
+		var templ_7745c5c3_Var77 string
+		templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeReason)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 295, Col: 94}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 122, "</p></div></div><div class=\"grid gap-3 md:grid-cols-4 mb-4\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, level := range data.Civilization.OrgLevels {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 118, "<div class=\"border border-edge bg-void/20 rounded-md p-3 min-h-[8rem]\"><div class=\"flex items-start justify-between gap-2\"><h3 class=\"text-sm font-medium text-warm\">Tier ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var76 string
-			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(level.Tier)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 296, Col: 66}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 119, "</h3><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var77 string
-			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(level.Used)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 297, Col: 132}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "</span></div><p class=\"text-xs text-warm-muted mt-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 123, "<div class=\"border border-edge bg-void/20 rounded-md p-3 min-h-[8rem]\"><div class=\"flex items-start justify-between gap-2\"><h3 class=\"text-sm font-medium text-warm\">Tier ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var78 string
-			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(level.Label)
+			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(level.Tier)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 299, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 302, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 121, "</p><p class=\"text-[11px] text-warm-faint mt-2 leading-relaxed\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 124, "</h3><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var79 string
-			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(level.Detail)
+			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(level.Used)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 300, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 303, Col: 132}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 122, "</p></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 123, "</div><div class=\"overflow-x-auto border border-edge rounded-md\"><table class=\"w-full text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium\">Role</th><th class=\"py-2 px-3 font-medium\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		for _, row := range data.Civilization.Roster {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 124, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, "</span></div><p class=\"text-xs text-warm-muted mt-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var80 string
-			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(row.Role)
+			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(level.Label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 324, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 305, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 125, "</p><p class=\"text-[10px] text-warm-faint\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 126, "</p><p class=\"text-[11px] text-warm-faint mt-2 leading-relaxed\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var81 string
-			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(row.Origin)
+			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(level.Detail)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 325, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 306, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 126, "</p></td><td class=\"py-2 px-3 text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 127, "</p></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</div><div class=\"overflow-x-auto border border-edge rounded-md\"><table class=\"w-full text-xs\"><thead><tr class=\"text-left text-warm-faint border-b border-edge bg-void/20\"><th class=\"py-2 px-3 font-medium\">Role</th><th class=\"py-2 px-3 font-medium\">Agent</th><th class=\"py-2 px-3 font-medium\">Level</th><th class=\"py-2 px-3 font-medium\">Category</th><th class=\"py-2 px-3 font-medium\">Status</th><th class=\"py-2 px-3 font-medium\">Operate</th><th class=\"py-2 px-3 font-medium\">Model</th><th class=\"py-2 px-3 font-medium\">Mode</th><th class=\"py-2 px-3 font-medium\">Line</th><th class=\"py-2 px-3 font-medium\">Why</th></tr></thead> <tbody>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for _, row := range data.Civilization.Roster {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, "<tr class=\"border-b border-edge/50 align-top\"><td class=\"py-2 px-3 text-warm\"><p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var82 string
-			templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(row.Agent)
+			templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(row.Role)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 327, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 330, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 127, "</td><td class=\"py-2 px-3 text-warm-muted\">Tier ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, "</p><p class=\"text-[10px] text-warm-faint\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var83 string
-			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(row.Tier)
+			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(row.Origin)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 328, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 331, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 128, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 131, "</p></td><td class=\"py-2 px-3 text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var84 string
-			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(row.Category)
+			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(row.Agent)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 329, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 333, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 129, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 132, "</td><td class=\"py-2 px-3 text-warm-muted\">Tier ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var85 string
-			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(row.Status)
+			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(row.Tier)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 330, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 334, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 130, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 133, "</td><td class=\"py-2 px-3 text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var86 string
-			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(row.CanOperate)
+			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(row.Category)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 331, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 335, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 131, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, "</td><td class=\"py-2 px-3 text-warm-muted\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var87 string
-			templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(row.Model)
+			templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(row.Status)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 332, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 336, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 132, "</td><td class=\"py-2 px-3\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var88 string
+			templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(row.CanOperate)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 337, Col: 62}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "</td><td class=\"py-2 px-3 text-warm-muted\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var89 string
+			templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(row.Model)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 338, Col: 57}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 137, "</td><td class=\"py-2 px-3\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1393,190 +1435,190 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 133, "<p class=\"text-[10px] text-warm-faint mt-1\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var88 string
-			templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(row.ModelModeProvenance)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 335, Col: 78}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 134, "</p></td><td class=\"py-2 px-3 text-warm-faint\"><p>reports: ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var89 string
-			templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(row.ReportsTo)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 338, Col: 36}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 135, "</p><p>escalates: ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 138, "<p class=\"text-[10px] text-warm-faint mt-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var90 string
-			templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(row.EscalationPath)
+			templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(row.ModelModeProvenance)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 339, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 341, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 136, "</p></td><td class=\"py-2 px-3 text-warm-faint max-w-[18rem]\"><p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 139, "</p></td><td class=\"py-2 px-3 text-warm-faint\"><p>reports: ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var91 string
-			templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinStringErrs(row.Why)
+			templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinStringErrs(row.ReportsTo)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 342, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 344, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var91))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 137, "</p><p class=\"mt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 140, "</p><p>escalates: ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var92 string
-			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(row.Evidence)
+			templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(row.EscalationPath)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 343, Col: 39}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 345, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 138, "</p></td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 141, "</p></td><td class=\"py-2 px-3 text-warm-faint max-w-[18rem]\"><p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var93 string
+			templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(row.Why)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 348, Col: 21}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 142, "</p><p class=\"mt-1\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var94 string
+			templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(row.Evidence)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 349, Col: 39}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 143, "</p></td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 139, "</tbody></table></div></section><section class=\"grid gap-4 lg:grid-cols-[1fr_1fr]\"><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge\"><h2 class=\"text-sm font-medium text-warm\">Emergence queue</h2></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 144, "</tbody></table></div></section><section class=\"grid gap-4 lg:grid-cols-[1fr_1fr]\"><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge\"><h2 class=\"text-sm font-medium text-warm\">Emergence queue</h2></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if len(data.Civilization.Emergence) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 140, "<p class=\"px-4 py-5 text-sm text-warm-faint\">No role emergence events or spawn approvals are projected.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "<p class=\"px-4 py-5 text-sm text-warm-faint\">No role emergence events or spawn approvals are projected.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 141, "<div class=\"divide-y divide-edge\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 146, "<div class=\"divide-y divide-edge\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, step := range data.Civilization.Emergence {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 142, "<div class=\"px-4 py-3\"><div class=\"flex items-start justify-between gap-3\"><h3 class=\"text-sm font-medium text-warm truncate\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var93 string
-				templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(step.Subject)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 363, Col: 74}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 143, "</h3><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var94 string
-				templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(step.State)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 364, Col: 134}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 144, "</span></div><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 147, "<div class=\"px-4 py-3\"><div class=\"flex items-start justify-between gap-3\"><h3 class=\"text-sm font-medium text-warm truncate\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var95 string
-				templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(step.Why)
+				templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(step.Subject)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 366, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 369, Col: 74}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 145, "</p><p class=\"text-[11px] text-warm-faint mt-1\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 148, "</h3><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var96 string
-				templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinStringErrs(step.Evidence)
+				templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinStringErrs(step.State)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 367, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 370, Col: 134}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var96))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 146, "</p></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 149, "</span></div><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var97 string
+				templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(step.Why)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 372, Col: 74}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 150, "</p><p class=\"text-[11px] text-warm-faint mt-1\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var98 string
+				templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(step.Evidence)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 373, Col: 67}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 151, "</p></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 147, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 152, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 148, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge\"><h2 class=\"text-sm font-medium text-warm\">Findings</h2></header><div class=\"divide-y divide-edge\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 153, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\"><header class=\"px-4 py-3 border-b border-edge\"><h2 class=\"text-sm font-medium text-warm\">Findings</h2></header><div class=\"divide-y divide-edge\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, finding := range data.Civilization.Findings {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 149, "<p class=\"px-4 py-3 text-xs text-warm-muted leading-relaxed\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 154, "<p class=\"px-4 py-3 text-xs text-warm-muted leading-relaxed\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var97 string
-			templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(finding)
+			var templ_7745c5c3_Var99 string
+			templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(finding)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 379, Col: 76}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 385, Col: 76}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 150, "</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 155, "</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 151, "</div></section></section><p class=\"text-[11px] text-warm-faint\">Rendered ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 156, "</div></section></section><p class=\"text-[11px] text-warm-faint\">Rendered ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var98 string
-		templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(data.GeneratedAt)
+		var templ_7745c5c3_Var100 string
+		templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(data.GeneratedAt)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 384, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 390, Col: 68}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 152, " · read-only projection consumer · EventGraph remains the target truth source · this page has no execution authority</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 157, " · read-only projection consumer · EventGraph remains the target truth source · this page has no execution authority</p></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

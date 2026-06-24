@@ -64,7 +64,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 				<div>
 					<h2 class="text-sm font-medium text-warm">FactoryOrder evidence</h2>
-					<p class="text-xs text-warm-faint mt-1">Work seed tasks projected from EventGraph; display evidence, not execution proof.</p>
+					<p class="text-xs text-warm-faint mt-1">Work seed tasks projected from EventGraph; task rows can include runtime-evidence and completed-stage signals without merge or deployment authority.</p>
 					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ opsCivilizationValue(data.WorkEvidence.Summary, "work evidence summary unavailable") }</p>
 				</div>
 				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsCivilizationStatusValue(data.WorkEvidence.Status) }</span>
@@ -146,6 +146,9 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 									<td class="py-2 px-3 text-warm-muted break-words">
 										<p>{ opsCivilizationEvidenceStatusValue(task.Status, "not projected") }</p>
 										<p class="text-[10px] text-warm-faint mt-1">ready={ opsCivilizationBoolValue(task.Ready) } blocked={ opsCivilizationBoolValue(task.Blocked) }</p>
+										if task.RuntimeEvidenceStatus != "" {
+											<p class="text-[10px] text-warm-faint mt-1">runtime={ opsCivilizationEvidenceStatusValue(task.RuntimeEvidenceStatus, "not recorded") }</p>
+										}
 									</td>
 									<td class="py-2 px-3 text-warm-muted break-words">
 										<p>{ opsCivilizationJoin(task.RequiredRoles, "none projected") }</p>
@@ -157,6 +160,9 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 										<p>{ opsCivilizationJoin(task.RequiredEvidence, "none projected") }</p>
 										if len(task.OutputContractRefs) > 0 {
 											<p class="text-[10px] text-warm-faint break-all mt-1">{ opsCivilizationJoin(task.OutputContractRefs, "none projected") }</p>
+										}
+										if len(task.RuntimeEvidenceRefs) > 0 {
+											<p class="text-[10px] text-warm-faint break-all mt-1">runtime refs: { opsCivilizationJoin(task.RuntimeEvidenceRefs, "none projected") }</p>
 										}
 									</td>
 									<td class="py-2 px-3 text-warm-muted break-words">
