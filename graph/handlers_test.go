@@ -151,6 +151,9 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"Issue-scan stage: Research issue and repo context",
 		"tsk_run_issue_scan_001_research_issue_and_repo_context",
 		"repo_context_packet",
+		"strategist, planner",
+		"evt_work_task_stage_role_contract_research_001",
+		"issue_priority_rationale",
 		"evt_work_task_stage_debate_001",
 		"Issue-scan stage: Debate with correct civic roles",
 		"evt_work_dependency_debate_after_research_001",
@@ -340,6 +343,30 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "requirement_refs": ["req_run_issue_scan_001"],
         "acceptance_criterion_refs": ["ac_run_issue_scan_001"],
         "expected_outputs": ["stage declaration artifact remains pending runtime evidence", "repo_context_packet"],
+        "required_roles": ["strategist", "planner"],
+        "role_contract_refs": ["evt_work_task_stage_role_contract_research_001"],
+        "agent_execution_plan": [
+          {
+            "id": "01_research_issue_and_repo_context_strategist",
+            "stage_id": "research_issue_and_repo_context",
+            "role": "strategist",
+            "can_operate": false,
+            "required_outputs": ["issue_priority_rationale", "risk_and_scope_notes"],
+            "authority_boundary": "read_only",
+            "completion_gate": "context_packet_recorded",
+            "evidence_status": "expected_not_observed"
+          },
+          {
+            "id": "02_research_issue_and_repo_context_planner",
+            "stage_id": "research_issue_and_repo_context",
+            "role": "planner",
+            "can_operate": false,
+            "required_outputs": ["repo_context_packet", "candidate_validation_commands"],
+            "authority_boundary": "read_only",
+            "completion_gate": "context_packet_recorded",
+            "evidence_status": "expected_not_observed"
+          }
+        ],
         "source_refs": ["evt_work_task_stage_research_001"]
       },
       {
@@ -360,7 +387,7 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "source_refs": ["evt_work_task_stage_debate_001", "evt_work_dependency_debate_after_research_001"]
       }
     ],
-    "artifact_refs": ["evt_work_task_artifact_001"],
+    "artifact_refs": ["evt_work_task_artifact_001", "evt_work_task_stage_role_contract_research_001"],
     "artifacts": [
       {
         "id": "evt_work_task_artifact_001",
@@ -375,6 +402,13 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "label": "issue_scan_lifecycle_stage_research_issue_and_repo_context",
         "media_type": "application/json",
         "source_refs": ["evt_work_task_stage_artifact_001"]
+      },
+      {
+        "id": "evt_work_task_stage_role_contract_research_001",
+        "task_ref": "evt_work_task_stage_research_001",
+        "label": "issue_scan_stage_role_contract",
+        "media_type": "application/json",
+        "source_refs": ["evt_work_task_stage_role_contract_research_001"]
       }
     ],
     "test_run_refs": ["test_run_001"],
@@ -676,7 +710,18 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 					RequirementRefs:         []string{"req_run_issue_scan_001"},
 					AcceptanceCriterionRefs: []string{"ac_run_issue_scan_001"},
 					ExpectedOutputs:         []string{"stage declaration artifact remains pending runtime evidence", "repo_context_packet"},
-					SourceRefs:              []string{"evt_work_task_stage_research_001"},
+					RequiredRoles:           []string{"strategist", "planner"},
+					RoleContractRefs:        []string{"evt_work_task_stage_role_contract_research_001"},
+					AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
+						{
+							ID:                "01_research_issue_and_repo_context_strategist",
+							StageID:           "research_issue_and_repo_context",
+							Role:              "strategist",
+							RequiredOutputs:   []string{"issue_priority_rationale"},
+							AuthorityBoundary: "read_only",
+						},
+					},
+					SourceRefs: []string{"evt_work_task_stage_research_001"},
 				},
 			},
 			ArtifactRefs: []string{"evt_work_task_artifact_001"},
@@ -809,6 +854,15 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if opsCivilizationEvidenceStatusValue(stageTask.Status, "missing") != "work task seeded" {
 		t.Fatalf("work evidence stage task status = %q", stageTask.Status)
 	}
+	if !sliceContains(stageTask.RequiredRoles, "strategist") || !sliceContains(stageTask.RequiredRoles, "planner") {
+		t.Fatalf("work evidence stage task roles = %+v", stageTask.RequiredRoles)
+	}
+	if !sliceContains(stageTask.RoleContractRefs, "evt_work_task_stage_role_contract_research_001") {
+		t.Fatalf("work evidence stage task role contract refs = %+v", stageTask.RoleContractRefs)
+	}
+	if len(stageTask.AgentExecutionPlan) != 1 || stageTask.AgentExecutionPlan[0].Role != "strategist" || !sliceContains(stageTask.AgentExecutionPlan[0].RequiredOutputs, "issue_priority_rationale") {
+		t.Fatalf("work evidence stage task agent plan = %+v", stageTask.AgentExecutionPlan)
+	}
 	if !sliceContains(data.WorkEvidence.ArtifactRefs, "evt_work_task_artifact_001") {
 		t.Fatalf("work evidence artifact refs = %+v, want evt_work_task_artifact_001", data.WorkEvidence.ArtifactRefs)
 	}
@@ -889,6 +943,15 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 					DependsOnRefs:    []string{`<a hx-post="/mutate">depends</a>`},
 					ExpectedOutputs:  []string{`<textarea>task output</textarea>`},
 					SourceRefs:       []string{`<a hx-post="/mutate">task source</a>`},
+					RequiredRoles:    []string{`<input name="role">`},
+					RoleContractRefs: []string{`role_contract_<script>alert(8)</script>`},
+					AgentExecutionPlan: []OpsHiveQueuedRunAgentPlanStep{
+						{
+							Role:              `<button onclick="x">role</button>`,
+							RequiredOutputs:   []string{`<textarea>role output</textarea>`},
+							AuthorityBoundary: `<form action="/merge">role boundary</form>`,
+						},
+					},
 				},
 			},
 			Artifacts: []OpsCivilizationAssemblyArtifactEvidence{
@@ -960,7 +1023,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
