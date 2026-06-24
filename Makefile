@@ -1,24 +1,37 @@
 .PHONY: css generate-personas generate build test vet verify verify-canonical-paths verify-public-shell-clean run dev deploy
 
+NODE_BIN ?= $(shell if [ -d "$(HOME)/.nvm/versions/node" ]; then latest=$$(find "$(HOME)/.nvm/versions/node" -mindepth 1 -maxdepth 1 -type d -name 'v*' | sort -V | tail -n 1); if [ -n "$$latest" ]; then printf '%s/bin' "$$latest"; fi; fi)
+TOOLS_PATH := $(HOME)/go/bin:$(HOME)/.local/bin$(if $(NODE_BIN),:$(NODE_BIN),):/snap/bin
+export PATH := $(TOOLS_PATH):$(PATH)
+
+GO ?= go
+NPM ?= npm
+TEMPL ?= templ
+TAILWIND ?= ./node_modules/.bin/tailwindcss
+
 LEGACY_OPERATION_REPO := transpara-ai/civilization-operation
 
-css:
-	npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/site.css --minify
+node_modules/.site-deps.stamp: package.json package-lock.json
+	$(NPM) ci
+	touch node_modules/.site-deps.stamp
+
+css: node_modules/.site-deps.stamp
+	$(TAILWIND) -i ./static/css/input.css -o ./static/css/site.css --minify
 
 generate-personas:
-	go generate ./graph/personas/...
+	$(GO) generate ./graph/personas/...
 
 generate: generate-personas
-	templ generate
+	$(TEMPL) generate
 
 build: css generate
-	go build -o site ./cmd/site/
+	$(GO) build -o site ./cmd/site/
 
 test:
-	go test -count=1 ./...
+	$(GO) test -count=1 ./...
 
 vet:
-	go vet ./...
+	$(GO) vet ./...
 
 verify-canonical-paths:
 	test -f graph/review_console.go
@@ -44,10 +57,10 @@ verify: verify-canonical-paths build verify-public-shell-clean test vet
 run: build
 	./site
 
-dev:
-	npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/site.css --watch &
-	templ generate --watch &
-	go run ./cmd/site/
+dev: node_modules/.site-deps.stamp
+	$(TAILWIND) -i ./static/css/input.css -o ./static/css/site.css --watch &
+	$(TEMPL) generate --watch &
+	$(GO) run ./cmd/site/
 
 # on-prem deploy — private to Transpara-AI; build + restart the systemd user service (see deploy.sh)
 deploy:

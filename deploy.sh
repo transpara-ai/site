@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="$HOME/transpara-ai/repos/site"
+default_repo="$HOME/transpara-ai/repos/site"
+if [ ! -d "$default_repo" ] && [ -d /Transpara/transpara-ai/repos/site ]; then
+  default_repo=/Transpara/transpara-ai/repos/site
+fi
+REPO="${SITE_REPO:-$default_repo}"
+
+node_bin=""
+if [ -d "$HOME/.nvm/versions/node" ]; then
+  node_root=$(find "$HOME/.nvm/versions/node" -mindepth 1 -maxdepth 1 -type d -name 'v*' | sort -V | tail -n 1)
+  if [ -n "$node_root" ]; then
+    node_bin="$node_root/bin"
+  fi
+fi
+export PATH="$HOME/go/bin:$HOME/.local/bin:${node_bin:+$node_bin:}/snap/bin:$PATH"
 
 step() { echo "==> $1"; }
 fail() { echo "FAIL: $1" >&2; exit 1; }
@@ -12,7 +25,6 @@ step "make css"
 make css || fail "make css"
 
 step "templ generate"
-export PATH="$HOME/go/bin:$PATH"
 templ generate || fail "templ generate"
 
 step "go build"
