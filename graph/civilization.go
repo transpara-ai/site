@@ -651,6 +651,7 @@ func opsCivilizationIssueScanStageEvidence(projection *OpsCivilizationAssemblyPr
 		return nil
 	}
 	stageNames := map[string]string{}
+	stageStatuses := map[string]string{}
 	stageOrder := map[string]int{}
 	if projection.QueuedRunRequest != nil {
 		for i, stage := range projection.QueuedRunRequest.DevelopmentLifecycle {
@@ -659,6 +660,7 @@ func opsCivilizationIssueScanStageEvidence(projection *OpsCivilizationAssemblyPr
 				continue
 			}
 			stageNames[stageID] = strings.TrimSpace(stage.Name)
+			stageStatuses[stageID] = strings.TrimSpace(stage.EvidenceStatus)
 			stageOrder[stageID] = i
 		}
 	}
@@ -682,7 +684,7 @@ func opsCivilizationIssueScanStageEvidence(projection *OpsCivilizationAssemblyPr
 			MediaType:      strings.TrimSpace(artifact.MediaType),
 			TaskRef:        strings.TrimSpace(artifact.TaskRef),
 			SourceRefs:     sourceRefs,
-			EvidenceStatus: "declared pending runtime evidence",
+			EvidenceStatus: opsCivilizationEvidenceStatusValue(stageStatuses[stageID], "declared pending runtime evidence"),
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -719,6 +721,14 @@ func opsCivilizationStatusValue(status string) string {
 	default:
 		return strings.TrimSpace(status)
 	}
+}
+
+func opsCivilizationEvidenceStatusValue(status string, fallback string) string {
+	status = strings.TrimSpace(status)
+	if status == "" {
+		return fallback
+	}
+	return strings.ReplaceAll(status, "_", " ")
 }
 
 func opsCivilizationTime(t time.Time) string {

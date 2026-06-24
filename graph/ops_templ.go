@@ -4607,9 +4607,9 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var249 string
-					templ_7745c5c3_Var249, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(stage.EvidenceStatus, "expected"))
+					templ_7745c5c3_Var249, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(stage.EvidenceStatus, "expected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1094, Col: 93}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1094, Col: 117}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var249))
 					if templ_7745c5c3_Err != nil {
@@ -4734,9 +4734,9 @@ func opsHiveQueuedRunLifecycle(q *OpsHiveQueuedRunRequest) templ.Component {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var256 string
-					templ_7745c5c3_Var256, templ_7745c5c3_Err = templ.JoinStringErrs(opsValueOr(step.EvidenceStatus, "expected"))
+					templ_7745c5c3_Var256, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(step.EvidenceStatus, "expected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1129, Col: 82}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 1129, Col: 106}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var256))
 					if templ_7745c5c3_Err != nil {
