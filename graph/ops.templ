@@ -188,6 +188,7 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 							<dt class="text-warm-faint">cfar_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.CFARRefs, "none") }</dd>
 							<dt class="text-warm-faint">authority_boundary_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.AuthorityBoundaryRefs, "none") }</dd>
 							<dt class="text-warm-faint">residual_risk_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.ResidualRiskRefs, "none") }</dd>
+							<dt class="text-warm-faint">provenance_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.ProvenanceRefs, "none") }</dd>
 							<dt class="text-warm-faint">trace_score_basis_points</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", record.TraceScoreBasisPoints) }</dd>
 						</dl>
 						<p class="text-[11px] text-warm-faint mt-3 leading-relaxed">{ record.ProjectionReadinessNote }</p>
