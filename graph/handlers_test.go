@@ -171,6 +171,34 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"cc:aggregate-candidate",
 		"cc:civilization-presence",
 		"cc:protected-action",
+		"Issue-scan Kanban",
+		`data-civilization-issue-scan-kanban="read-only"`,
+		"3 run(s), 3 stage(s), 4 blocker(s), 1 lineage record(s) projected.",
+		"run_docs_172",
+		"run_site_115",
+		"run_docs_172_scope",
+		"transpara-ai/docs#172",
+		"transpara-ai/site#115",
+		"Parked",
+		"Human Action",
+		"Blocked",
+		"run_adversarial_review",
+		"surface_ready_for_human_result_pr",
+		"research_issue_and_repo_context",
+		"tsk_docs_172_run_adversarial_review",
+		"agent_reviewer",
+		"agent_blocker_repair",
+		"agent_guardian",
+		"duplicate chain",
+		"needs human scope",
+		"protected action",
+		"stale target",
+		"collapse duplicate canonical stage chain",
+		"human must clarify issue scope before runtime continues",
+		"human must authorize protected repo action",
+		"confirm target issue is still live",
+		"lineage",
+		"duplicates",
 		"fo_run_issue_scan_001",
 		"work_task_seeded",
 		"human_required_before_merge",
@@ -202,6 +230,7 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		`data-civilization-wide-table="work-tasks"`,
 		`data-civilization-wide-table="work-artifacts"`,
 		`data-civilization-wide-table="issue-scan-stage-evidence"`,
+		`data-civilization-wide-table="issue-scan-kanban"`,
 		`data-civilization-wide-table="role-topology"`,
 		`w-full min-w-[72rem]`,
 		`w-full min-w-[96rem]`,
@@ -413,6 +442,189 @@ func TestOpsCivilizationIssueReadinessBranches(t *testing.T) {
 			t.Fatalf("issue readiness = %+v, want lifecycle not projected", data.IssueReadiness)
 		}
 	})
+}
+
+func TestOpsCivilizationIssueScanKanbanDocs172Site115TypedProjection(t *testing.T) {
+	projection := &OpsCivilizationAssemblyProjection{
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:            "run_docs_172",
+					FactoryOrderID:   "fo_docs_172",
+					LifecycleVersion: "civilization_issue_to_human_ready_pr_v0.4",
+					State:            "parked",
+					TargetIssue:      OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+					SelectedIssue:    OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+					CandidateIssues: []OpsCivilizationIssueRef{
+						{Repo: "transpara-ai/docs", Number: 172},
+						{Repo: "transpara-ai/site", Number: 115},
+					},
+				},
+				{
+					RunID:          "run_site_115",
+					FactoryOrderID: "fo_site_115",
+					State:          "human_action",
+					TargetIssue:    OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 115, State: "open"},
+					SelectedIssue:  OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 115, State: "open"},
+				},
+				{
+					RunID:          "run_docs_172_scope",
+					FactoryOrderID: "fo_docs_172_scope",
+					State:          "human_action",
+					TargetIssue:    OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open", Labels: []string{"cc:needs-human-scope"}},
+					SelectedIssue:  OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open", Labels: []string{"cc:needs-human-scope"}},
+				},
+			},
+			Stages: []OpsCivilizationIssueScanStageProjected{
+				{
+					RunID:             "run_docs_172",
+					FactoryOrderID:    "fo_docs_172",
+					StageID:           "run_adversarial_review",
+					StageNumber:       5,
+					StageCount:        7,
+					CanonicalTaskID:   "tsk_docs_172_run_adversarial_review",
+					TaskID:            "task-docs-review",
+					CurrentState:      "parked",
+					CompletionGate:    "exact-head adversarial review returns zero blockers",
+					AuthorityBoundary: "review only; no merge or deploy",
+					AssignedAgentIDs:  []string{"agent_reviewer"},
+					TouchingAgentIDs:  []string{"agent_blocker_repair", "agent_reviewer"},
+				},
+				{
+					RunID:             "run_site_115",
+					FactoryOrderID:    "fo_site_115",
+					StageID:           "surface_ready_for_human_result_pr",
+					StageNumber:       7,
+					StageCount:        7,
+					CanonicalTaskID:   "tsk_site_115_surface_ready_for_human_result_pr",
+					TaskID:            "task-site-surface",
+					CurrentState:      "human_action",
+					CompletionGate:    "ready PR waits for human approval",
+					AuthorityBoundary: "human approval required; no merge",
+					AssignedAgentIDs:  []string{"agent_guardian"},
+					TouchingAgentIDs:  []string{"agent_guardian"},
+				},
+				{
+					RunID:             "run_docs_172_scope",
+					FactoryOrderID:    "fo_docs_172_scope",
+					StageID:           "select_and_design_approach",
+					StageNumber:       3,
+					StageCount:        7,
+					CanonicalTaskID:   "tsk_docs_172_scope_select_and_design_approach",
+					TaskID:            "task-docs-scope",
+					CurrentState:      "human_action",
+					CompletionGate:    "human scope decision recorded",
+					AuthorityBoundary: "human scope clarification required",
+					AssignedAgentIDs:  []string{"agent_guardian"},
+					TouchingAgentIDs:  []string{"agent_guardian"},
+				},
+			},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{
+				{RunID: "run_docs_172", StageID: "run_adversarial_review", BlockerType: "duplicate_chain", RequiredAction: "collapse duplicate canonical stage chain"},
+				{RunID: "run_site_115", StageID: "surface_ready_for_human_result_pr", BlockerType: "protected_action", RequiredAction: "human must authorize protected repo action"},
+				{RunID: "run_site_115", StageID: "research_issue_and_repo_context", BlockerType: "stale_target", RequiredAction: "confirm target issue is still live"},
+				{RunID: "run_docs_172_scope", StageID: "select_and_design_approach", BlockerType: "needs_human_scope", RequiredAction: "human must clarify issue scope before runtime continues"},
+			},
+			Lineage: []OpsCivilizationIssueScanLineageProjected{
+				{
+					RunID:            "run_docs_172",
+					StageID:          "run_adversarial_review",
+					CanonicalTaskID:  "tsk_docs_172_run_adversarial_review",
+					PrimaryTaskID:    "task-docs-review",
+					TaskIDs:          []string{"task-docs-review", "task-docs-review-duplicate"},
+					DuplicateTaskIDs: []string{"task-docs-review-duplicate"},
+					DuplicateOf:      "task-docs-review",
+				},
+			},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+	if data.IssueScanKanban.Status != opsCivilizationFieldAvailable {
+		t.Fatalf("kanban status = %q, want available", data.IssueScanKanban.Status)
+	}
+	if len(data.IssueScanKanban.Columns) != 3 {
+		t.Fatalf("kanban columns = %+v, want blocked, parked, human_action", data.IssueScanKanban.Columns)
+	}
+	docsCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172", "run_adversarial_review")
+	if docsCard == nil {
+		t.Fatalf("missing docs#172 review card: %+v", data.IssueScanKanban)
+	}
+	if docsCard.CurrentState != "parked" || len(docsCard.Blockers) != 1 || docsCard.Blockers[0].BlockerType != "duplicate_chain" {
+		t.Fatalf("docs#172 card state/blockers = %+v", docsCard)
+	}
+	if !docsCard.HasLineage || !sliceContains(docsCard.Lineage.DuplicateTaskIDs, "task-docs-review-duplicate") {
+		t.Fatalf("docs#172 duplicate lineage missing: %+v", docsCard)
+	}
+	if !sliceContains(docsCard.AssignedAgentIDs, "agent_reviewer") || !sliceContains(docsCard.TouchingAgentIDs, "agent_blocker_repair") {
+		t.Fatalf("docs#172 agent touch state missing: %+v", docsCard)
+	}
+	if docsCard.SelectedIssue.Repo != "transpara-ai/docs" || docsCard.SelectedIssue.Number != 172 || len(docsCard.CandidateIssues) != 2 {
+		t.Fatalf("docs#172 issue refs not typed: %+v", docsCard)
+	}
+
+	siteCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_site_115", "surface_ready_for_human_result_pr")
+	if siteCard == nil || siteCard.CurrentState != "human_action" || len(siteCard.Blockers) != 1 || siteCard.Blockers[0].BlockerType != "protected_action" {
+		t.Fatalf("site#115 human-action card = %+v", siteCard)
+	}
+	staleCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_site_115", "research_issue_and_repo_context")
+	if staleCard == nil || staleCard.CurrentState != "blocked" || staleCard.Blockers[0].BlockerType != "stale_target" {
+		t.Fatalf("site#115 stale-target blocker card = %+v", staleCard)
+	}
+	scopeCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172_scope", "select_and_design_approach")
+	if scopeCard == nil || scopeCard.CurrentState != "human_action" || len(scopeCard.Blockers) != 1 || scopeCard.Blockers[0].BlockerType != "needs_human_scope" {
+		t.Fatalf("docs#172 needs-human-scope card = %+v", scopeCard)
+	}
+}
+
+func TestOpsCivilizationIssueScanKanbanRunLevelBlockerAttachesWithoutOrphan(t *testing.T) {
+	projection := &OpsCivilizationAssemblyProjection{
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:         "run_docs_172",
+					TargetIssue:   OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+					SelectedIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+				},
+			},
+			Stages: []OpsCivilizationIssueScanStageProjected{
+				{
+					RunID:           "run_docs_172",
+					StageID:         "run_adversarial_review",
+					StageNumber:     5,
+					CanonicalTaskID: "tsk_docs_172_run_adversarial_review",
+				},
+			},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{
+				{RunID: "run_docs_172", BlockerType: "needs_human_scope", RequiredAction: "human must clarify issue scope before runtime continues"},
+			},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 1 {
+		t.Fatalf("kanban card count = %d, want exactly one stage card: %+v", got, data.IssueScanKanban)
+	}
+	card := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172", "run_adversarial_review")
+	if card == nil || card.CurrentState != "blocked" || len(card.Blockers) != 1 || card.Blockers[0].BlockerType != "needs_human_scope" {
+		t.Fatalf("stage card did not absorb run-level blocker: %+v", card)
+	}
+	if orphan := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172", ""); orphan != nil {
+		t.Fatalf("run-level blocker rendered an orphan card: %+v", orphan)
+	}
+}
+
+func TestSortIssueScanCardsHasDeterministicTiebreakers(t *testing.T) {
+	cards := []OpsCivilizationIssueScanKanbanCard{
+		{RunID: "run", StageNumber: 1, StageID: "stage", CanonicalTaskID: "canonical", FactoryOrderID: "factory-b", TaskID: "task-b"},
+		{RunID: "run", StageNumber: 1, StageID: "stage", CanonicalTaskID: "canonical", FactoryOrderID: "factory-a", TaskID: "task-a"},
+	}
+
+	sortIssueScanCards(cards)
+
+	if cards[0].FactoryOrderID != "factory-a" || cards[1].FactoryOrderID != "factory-b" {
+		t.Fatalf("cards sorted by fallback identity = %+v, want factory-a before factory-b", cards)
+	}
 }
 
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
@@ -765,6 +977,198 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     ],
     "evidence_kind": "queued_request_not_runtime_start",
     "created_at": "2026-06-23T09:35:00Z"
+  },
+  "issue_scan_projection": {
+    "runs": [
+      {
+        "run_id": "run_docs_172",
+        "factory_order_id": "fo_docs_172",
+        "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.4",
+        "state": "parked",
+        "target_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open",
+          "labels": ["cc:pr-ready"]
+        },
+        "selected_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open"
+        },
+        "candidate_issues": [
+          {
+            "repo": "transpara-ai/docs",
+            "number": 172,
+            "labels": ["cc:pr-ready"]
+          },
+          {
+            "repo": "transpara-ai/site",
+            "number": 115,
+            "labels": ["cc:pr-ready", "cc:protected-action"]
+          }
+        ],
+        "source_refs": ["github:transpara-ai/docs#172"]
+      },
+      {
+        "run_id": "run_site_115",
+        "factory_order_id": "fo_site_115",
+        "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.4",
+        "state": "human_action",
+        "target_issue": {
+          "repo": "transpara-ai/site",
+          "number": 115,
+          "url": "https://github.com/transpara-ai/site/issues/115",
+          "state": "open",
+          "labels": ["cc:protected-action"]
+        },
+        "selected_issue": {
+          "repo": "transpara-ai/site",
+          "number": 115,
+          "url": "https://github.com/transpara-ai/site/issues/115",
+          "state": "open"
+        },
+        "candidate_issues": [
+          {
+            "repo": "transpara-ai/site",
+            "number": 115,
+            "labels": ["cc:protected-action"]
+          }
+        ],
+        "source_refs": ["github:transpara-ai/site#115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.4",
+        "state": "human_action",
+        "target_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open",
+          "labels": ["cc:needs-human-scope"]
+        },
+        "selected_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open",
+          "labels": ["cc:needs-human-scope"]
+        },
+        "candidate_issues": [
+          {
+            "repo": "transpara-ai/docs",
+            "number": 172,
+            "labels": ["cc:needs-human-scope"]
+          }
+        ],
+        "source_refs": ["github:transpara-ai/docs#172"]
+      }
+    ],
+    "stages": [
+      {
+        "run_id": "run_docs_172",
+        "factory_order_id": "fo_docs_172",
+        "stage_id": "run_adversarial_review",
+        "stage_number": 5,
+        "stage_count": 7,
+        "canonical_task_id": "tsk_docs_172_run_adversarial_review",
+        "task_id": "019c0000-0000-7000-8000-000000001172",
+        "current_state": "parked",
+        "completion_gate": "exact-head adversarial review returns zero blockers",
+        "authority_boundary": "review only; no merge or deploy",
+        "assigned_agent_ids": ["agent_reviewer"],
+        "touching_agent_ids": ["agent_blocker_repair", "agent_reviewer"],
+        "evidence_refs": ["code.review.submitted:docs-172"]
+      },
+      {
+        "run_id": "run_site_115",
+        "factory_order_id": "fo_site_115",
+        "stage_id": "surface_ready_for_human_result_pr",
+        "stage_number": 7,
+        "stage_count": 7,
+        "canonical_task_id": "tsk_site_115_surface_ready_for_human_result_pr",
+        "task_id": "019c0000-0000-7000-8000-000000001115",
+        "current_state": "human_action",
+        "completion_gate": "ready PR waits for human approval",
+        "authority_boundary": "human approval required; no merge",
+        "assigned_agent_ids": ["agent_guardian"],
+        "touching_agent_ids": ["agent_guardian"],
+        "evidence_refs": ["human_ready_summary:site-115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "stage_id": "select_and_design_approach",
+        "stage_number": 3,
+        "stage_count": 7,
+        "canonical_task_id": "tsk_docs_172_scope_select_and_design_approach",
+        "task_id": "019c0000-0000-7000-8000-000000001174",
+        "current_state": "human_action",
+        "completion_gate": "human scope decision recorded",
+        "authority_boundary": "human scope clarification required",
+        "assigned_agent_ids": ["agent_guardian"],
+        "touching_agent_ids": ["agent_guardian"],
+        "evidence_refs": ["github:transpara-ai/docs#172"]
+      }
+    ],
+    "blockers": [
+      {
+        "run_id": "run_docs_172",
+        "factory_order_id": "fo_docs_172",
+        "stage_id": "run_adversarial_review",
+        "blocker_type": "duplicate_chain",
+        "reason": "canonical task chain duplicated",
+        "required_action": "collapse duplicate canonical stage chain",
+        "evidence_refs": ["work:duplicate-stage-chain"]
+      },
+      {
+        "run_id": "run_site_115",
+        "factory_order_id": "fo_site_115",
+        "stage_id": "surface_ready_for_human_result_pr",
+        "blocker_type": "protected_action",
+        "reason": "ready result PR requires human approval",
+        "required_action": "human must authorize protected repo action",
+        "evidence_refs": ["github:transpara-ai/site#115"]
+      },
+      {
+        "run_id": "run_site_115",
+        "factory_order_id": "fo_site_115",
+        "stage_id": "research_issue_and_repo_context",
+        "blocker_type": "stale_target",
+        "reason": "target state must be refreshed before runtime continues",
+        "required_action": "confirm target issue is still live",
+        "evidence_refs": ["github:transpara-ai/site#115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "stage_id": "select_and_design_approach",
+        "blocker_type": "needs_human_scope",
+        "reason": "issue requires human scope clarification",
+        "required_action": "human must clarify issue scope before runtime continues",
+        "evidence_refs": ["github:transpara-ai/docs#172"]
+      }
+    ],
+    "lineage": [
+      {
+        "run_id": "run_docs_172",
+        "factory_order_id": "fo_docs_172",
+        "stage_id": "run_adversarial_review",
+        "canonical_task_id": "tsk_docs_172_run_adversarial_review",
+        "primary_task_id": "019c0000-0000-7000-8000-000000001172",
+        "task_ids": [
+          "019c0000-0000-7000-8000-000000001172",
+          "019c0000-0000-7000-8000-000000001173"
+        ],
+        "duplicate_task_ids": ["019c0000-0000-7000-8000-000000001173"],
+        "duplicate_of": "019c0000-0000-7000-8000-000000001172",
+        "source_refs": ["work:duplicate-stage-chain"]
+      }
+    ]
   },
   "site_consumer_status": {
     "status": "available",
@@ -1338,6 +1742,62 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 				},
 			},
 		},
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:            `kanban_run_<script>alert("kanban")</script>`,
+					FactoryOrderID:   `kanban_fo_<input name="fo">`,
+					LifecycleVersion: `v<script>4</script>`,
+					State:            `human_action`,
+					TargetIssue:      OpsCivilizationIssueRef{Repo: `transpara-ai/<script>docs</script>`, Number: 172},
+					SelectedIssue:    OpsCivilizationIssueRef{Repo: `transpara-ai/<script>docs</script>`, Number: 172},
+					CandidateIssues:  []OpsCivilizationIssueRef{{Repo: `transpara-ai/<script>site</script>`, Number: 115}},
+					SourceRefs:       []string{`kanban_source_<script>alert("source")</script>`},
+					EvidenceRefs:     []string{`kanban_evidence_<script>alert("evidence")</script>`},
+				},
+			},
+			Stages: []OpsCivilizationIssueScanStageProjected{
+				{
+					RunID:             `kanban_run_<script>alert("kanban")</script>`,
+					FactoryOrderID:    `kanban_fo_<input name="fo">`,
+					StageID:           `stage_<script>alert("stage")</script>`,
+					StageNumber:       1,
+					StageCount:        7,
+					CanonicalTaskID:   `kanban_task_<input name="stage">`,
+					TaskID:            `kanban_event_<script>alert("task")</script>`,
+					CurrentState:      `human_action`,
+					CompletionGate:    `<a hx-post="/wake">gate</a>`,
+					AuthorityBoundary: `<form action="/hive">boundary</form>`,
+					AssignedAgentIDs:  []string{`<button onclick="x">agent</button>`},
+					TouchingAgentIDs:  []string{`<script>touch()</script>`},
+					EvidenceRefs:      []string{`stage_evidence_<script>alert("stage-evidence")</script>`},
+					SourceRefs:        []string{`stage_source_<script>alert("stage-source")</script>`},
+				},
+			},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{
+				{
+					RunID:          `kanban_run_<script>alert("kanban")</script>`,
+					StageID:        `stage_<script>alert("stage")</script>`,
+					BlockerType:    `needs_human_scope`,
+					Reason:         `<script>reason()</script>`,
+					RequiredAction: `<button onclick="x">clarify</button>`,
+					EvidenceRefs:   []string{`blocker_evidence_<script>alert("blocker-evidence")</script>`},
+					SourceRefs:     []string{`blocker_source_<script>alert("blocker-source")</script>`},
+				},
+			},
+			Lineage: []OpsCivilizationIssueScanLineageProjected{
+				{
+					RunID:            `kanban_run_<script>alert("kanban")</script>`,
+					StageID:          `stage_<script>alert("stage")</script>`,
+					CanonicalTaskID:  `kanban_task_<input name="stage">`,
+					PrimaryTaskID:    `primary_<script>task</script>`,
+					TaskIDs:          []string{`primary_<script>task</script>`, `dup_<input name="dup">`},
+					DuplicateTaskIDs: []string{`dup_<input name="dup">`},
+					DuplicateOf:      `<form action="/canonical">canonical</form>`,
+					SourceRefs:       []string{`lineage_source_<script>alert("lineage")</script>`},
+				},
+			},
+		},
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
@@ -1356,7 +1816,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;", "kanban_run_&lt;script&gt;alert(&#34;kanban&#34;)&lt;/script&gt;", "kanban_task_&lt;input name=&#34;stage&#34;&gt;", "&lt;a hx-post=&#34;/wake&#34;&gt;gate&lt;/a&gt;", "&lt;form action=&#34;/hive&#34;&gt;boundary&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;agent&lt;/button&gt;", "&lt;script&gt;touch()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;clarify&lt;/button&gt;", "&lt;script&gt;reason()&lt;/script&gt;", "primary_&lt;script&gt;task&lt;/script&gt;", "dup_&lt;input name=&#34;dup&#34;&gt;", "&lt;form action=&#34;/canonical&#34;&gt;canonical&lt;/form&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
@@ -1559,6 +2019,26 @@ func findingContains(data *OpsCivilizationAssemblyData, needle string) bool {
 		}
 	}
 	return false
+}
+
+func issueScanKanbanCardByStage(kanban OpsCivilizationIssueScanKanban, runID string, stageID string) *OpsCivilizationIssueScanKanbanCard {
+	for ci := range kanban.Columns {
+		for i := range kanban.Columns[ci].Cards {
+			card := &kanban.Columns[ci].Cards[i]
+			if card.RunID == runID && card.StageID == stageID {
+				return card
+			}
+		}
+	}
+	return nil
+}
+
+func issueScanKanbanCardCount(kanban OpsCivilizationIssueScanKanban) int {
+	total := 0
+	for _, column := range kanban.Columns {
+		total += len(column.Cards)
+	}
+	return total
 }
 
 func assertNoCivilizationMutationControls(t *testing.T, surface string) {

@@ -38,6 +38,7 @@ type OpsCivilizationAssemblyData struct {
 	WorkEvidence           OpsCivilizationAssemblyWorkEvidence
 	QueuedRunRequest       *OpsHiveQueuedRunRequest
 	IssueScanStageEvidence []OpsCivilizationIssueScanStageEvidence
+	IssueScanKanban        OpsCivilizationIssueScanKanban
 }
 
 type OpsCivilizationBoundary struct {
@@ -89,6 +90,7 @@ type OpsCivilizationAssemblyProjection struct {
 	FactoryOrderSummary                []OpsCivilizationAssemblyFactoryOrder     `json:"factory_order_summary"`
 	WorkEvidenceSummary                OpsCivilizationAssemblyWorkEvidence       `json:"work_evidence_summary"`
 	QueuedRunRequest                   *OpsHiveQueuedRunRequest                  `json:"queued_run_request,omitempty"`
+	IssueScanProjection                OpsCivilizationIssueScanProjection        `json:"issue_scan_projection,omitempty"`
 	SiteConsumerStatus                 OpsCivilizationAssemblyFieldStatus        `json:"site_consumer_status"`
 	OpenGateSummary                    []OpsCivilizationAssemblyGateSummary      `json:"open_gate_summary"`
 	ResidualRiskSummary                []OpsCivilizationAssemblyResidualRisk     `json:"residual_risk_summary"`
@@ -306,6 +308,7 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 		WorkEvidence:           opsCivilizationWorkEvidence(projection),
 		QueuedRunRequest:       opsCivilizationQueuedRunRequest(projection),
 		IssueScanStageEvidence: opsCivilizationIssueScanStageEvidence(projection),
+		IssueScanKanban:        opsCivilizationIssueScanKanban(projection),
 	}
 }
 
