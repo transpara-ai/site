@@ -203,6 +203,9 @@ func opsCivilizationIssueScanKanban(projection *OpsCivilizationAssemblyProjectio
 			continue
 		}
 		runID, stageID := splitRunStageKey(key)
+		if stageID == "" && hasStageForRun(input.Stages, runID) {
+			continue
+		}
 		run := runsByID[runID]
 		card := issueScanCardFromRun(run, blockersByRunStage, lineageByRunStage)
 		card.RunID = opsCivilizationValue(runID, card.RunID)
@@ -364,7 +367,16 @@ func sortIssueScanCards(cards []OpsCivilizationIssueScanKanbanCard) {
 		if cards[i].StageID != cards[j].StageID {
 			return cards[i].StageID < cards[j].StageID
 		}
-		return cards[i].CanonicalTaskID < cards[j].CanonicalTaskID
+		if cards[i].CanonicalTaskID != cards[j].CanonicalTaskID {
+			return cards[i].CanonicalTaskID < cards[j].CanonicalTaskID
+		}
+		if cards[i].FactoryOrderID != cards[j].FactoryOrderID {
+			return cards[i].FactoryOrderID < cards[j].FactoryOrderID
+		}
+		if cards[i].TaskID != cards[j].TaskID {
+			return cards[i].TaskID < cards[j].TaskID
+		}
+		return cards[i].CompletionGate < cards[j].CompletionGate
 	})
 }
 

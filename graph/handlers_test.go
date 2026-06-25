@@ -577,6 +577,56 @@ func TestOpsCivilizationIssueScanKanbanDocs172Site115TypedProjection(t *testing.
 	}
 }
 
+func TestOpsCivilizationIssueScanKanbanRunLevelBlockerAttachesWithoutOrphan(t *testing.T) {
+	projection := &OpsCivilizationAssemblyProjection{
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:         "run_docs_172",
+					TargetIssue:   OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+					SelectedIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open"},
+				},
+			},
+			Stages: []OpsCivilizationIssueScanStageProjected{
+				{
+					RunID:           "run_docs_172",
+					StageID:         "run_adversarial_review",
+					StageNumber:     5,
+					CanonicalTaskID: "tsk_docs_172_run_adversarial_review",
+				},
+			},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{
+				{RunID: "run_docs_172", BlockerType: "needs_human_scope", RequiredAction: "human must clarify issue scope before runtime continues"},
+			},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 1 {
+		t.Fatalf("kanban card count = %d, want exactly one stage card: %+v", got, data.IssueScanKanban)
+	}
+	card := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172", "run_adversarial_review")
+	if card == nil || card.CurrentState != "blocked" || len(card.Blockers) != 1 || card.Blockers[0].BlockerType != "needs_human_scope" {
+		t.Fatalf("stage card did not absorb run-level blocker: %+v", card)
+	}
+	if orphan := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172", ""); orphan != nil {
+		t.Fatalf("run-level blocker rendered an orphan card: %+v", orphan)
+	}
+}
+
+func TestSortIssueScanCardsHasDeterministicTiebreakers(t *testing.T) {
+	cards := []OpsCivilizationIssueScanKanbanCard{
+		{RunID: "run", StageNumber: 1, StageID: "stage", CanonicalTaskID: "canonical", FactoryOrderID: "factory-b", TaskID: "task-b"},
+		{RunID: "run", StageNumber: 1, StageID: "stage", CanonicalTaskID: "canonical", FactoryOrderID: "factory-a", TaskID: "task-a"},
+	}
+
+	sortIssueScanCards(cards)
+
+	if cards[0].FactoryOrderID != "factory-a" || cards[1].FactoryOrderID != "factory-b" {
+		t.Fatalf("cards sorted by fallback identity = %+v, want factory-a before factory-b", cards)
+	}
+}
+
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
 // Civilization Assembly projection endpoint and this Site consumer. Keep this as
 // literal JSON so the test exercises wire keys and enum strings rather than
@@ -1981,6 +2031,14 @@ func issueScanKanbanCardByStage(kanban OpsCivilizationIssueScanKanban, runID str
 		}
 	}
 	return nil
+}
+
+func issueScanKanbanCardCount(kanban OpsCivilizationIssueScanKanban) int {
+	total := 0
+	for _, column := range kanban.Columns {
+		total += len(column.Cards)
+	}
+	return total
 }
 
 func assertNoCivilizationMutationControls(t *testing.T, surface string) {
