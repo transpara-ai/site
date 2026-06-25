@@ -7,9 +7,12 @@ import (
 )
 
 type OpsCivilizationIssueIntakeProjection struct {
-	Issues     []OpsCivilizationIssueIntakeProjected      `json:"issues,omitempty"`
-	Groups     []OpsCivilizationIssueIntakeGroupProjected `json:"groups,omitempty"`
-	SourceRefs []string                                   `json:"source_refs,omitempty"`
+	Status            string                                     `json:"status,omitempty"`
+	Summary           string                                     `json:"summary,omitempty"`
+	Issues            []OpsCivilizationIssueIntakeProjected      `json:"issues,omitempty"`
+	Groups            []OpsCivilizationIssueIntakeGroupProjected `json:"groups,omitempty"`
+	SourceRefs        []string                                   `json:"source_refs,omitempty"`
+	ScannerBoundaries []string                                   `json:"scanner_boundaries,omitempty"`
 }
 
 type OpsCivilizationIssueIntakeProjected struct {
@@ -22,8 +25,12 @@ type OpsCivilizationIssueIntakeProjected struct {
 	Labels            []string `json:"labels,omitempty"`
 	PrimaryRepo       string   `json:"primary_repo,omitempty"`
 	TouchedSubstrate  string   `json:"touched_substrate,omitempty"`
+	TouchedSubstrates []string `json:"touched_substrates,omitempty"`
 	RiskClass         string   `json:"risk_class,omitempty"`
+	RiskClasses       []string `json:"risk_classes,omitempty"`
+	UnrecognizedRisk  []string `json:"unrecognized_risk_terms,omitempty"`
 	Readiness         string   `json:"readiness,omitempty"`
+	ReadinessStates   []string `json:"readiness_states,omitempty"`
 	PRReadyWhen       string   `json:"pr_ready_when,omitempty"`
 	AuthorityBoundary string   `json:"authority_boundary,omitempty"`
 	UpdatedAt         string   `json:"updated_at,omitempty"`
@@ -47,6 +54,7 @@ type OpsCivilizationIssueIntake struct {
 	Status     string
 	Summary    string
 	SourceRefs []string
+	Boundaries []string
 	Issues     []OpsCivilizationIssueIntakeProjected
 	Groups     []OpsCivilizationIssueIntakeGroupProjected
 	Guardrails []OpsCivilizationIssueGuardrail
@@ -63,22 +71,41 @@ func opsCivilizationIssueIntake(projection *OpsCivilizationAssemblyProjection) O
 	}
 
 	input := projection.IssueIntakeProjection
+	intake.SourceRefs = sortedUniqueNonEmpty(input.SourceRefs)
+	intake.Boundaries = sortedUniqueNonEmpty(input.ScannerBoundaries)
 	if len(input.Issues) == 0 && len(input.Groups) == 0 {
-		intake.Status = "not projected"
-		intake.Summary = "No scanner-visible issue intake records are projected."
-		intake.SourceRefs = sortedNonEmpty(input.SourceRefs)
+		intake.Status = opsCivilizationIssueIntakeStatus(input.Status, false)
+		intake.Summary = opsCivilizationValue(strings.TrimSpace(input.Summary), "No scanner-visible issue intake records are projected.")
 		return intake
 	}
 
-	intake.Status = opsCivilizationFieldAvailable
-	intake.SourceRefs = sortedNonEmpty(input.SourceRefs)
 	intake.Issues = normalizedIssueIntakeIssues(input.Issues)
 	intake.Groups = normalizedIssueIntakeGroups(input.Groups)
-	if len(intake.Groups) == 0 {
+	if len(intake.Groups) == 0 && len(intake.Issues) > 0 {
 		intake.Groups = deriveIssueIntakeGroups(intake.Issues)
 	}
-	intake.Summary = fmt.Sprintf("%d issue(s), %d advisory group(s) projected.", len(intake.Issues), len(intake.Groups))
+	hasRecords := len(intake.Issues) > 0 || len(intake.Groups) > 0
+	intake.Status = opsCivilizationIssueIntakeStatus(input.Status, hasRecords)
+	if !hasRecords {
+		intake.Summary = opsCivilizationValue(strings.TrimSpace(input.Summary), "No scanner-visible issue intake records are projected.")
+		return intake
+	}
+	intake.Summary = opsCivilizationValue(strings.TrimSpace(input.Summary), fmt.Sprintf("%d issue(s), %d advisory group(s) projected.", len(intake.Issues), len(intake.Groups)))
 	return intake
+}
+
+func opsCivilizationIssueIntakeStatus(status string, hasRecords bool) string {
+	status = strings.TrimSpace(status)
+	if hasRecords {
+		if status == "" {
+			return opsCivilizationFieldAvailable
+		}
+		return opsCivilizationStatusValue(status)
+	}
+	if status == "" || strings.EqualFold(status, opsCivilizationFieldAvailable) {
+		return "not projected"
+	}
+	return opsCivilizationStatusValue(status)
 }
 
 func normalizedIssueIntakeIssues(items []OpsCivilizationIssueIntakeProjected) []OpsCivilizationIssueIntakeProjected {
@@ -96,8 +123,12 @@ func normalizedIssueIntakeIssues(items []OpsCivilizationIssueIntakeProjected) []
 		item.PRReadyWhen = strings.TrimSpace(item.PRReadyWhen)
 		item.AuthorityBoundary = strings.TrimSpace(item.AuthorityBoundary)
 		item.UpdatedAt = strings.TrimSpace(item.UpdatedAt)
-		item.Labels = sortedNonEmpty(item.Labels)
-		item.SourceRefs = sortedNonEmpty(item.SourceRefs)
+		item.Labels = sortedUniqueNonEmpty(item.Labels)
+		item.TouchedSubstrates = sortedUniqueNonEmpty(item.TouchedSubstrates)
+		item.RiskClasses = sortedUniqueNonEmpty(item.RiskClasses)
+		item.UnrecognizedRisk = sortedUniqueNonEmpty(item.UnrecognizedRisk)
+		item.ReadinessStates = sortedUniqueNonEmpty(item.ReadinessStates)
+		item.SourceRefs = sortedUniqueNonEmpty(item.SourceRefs)
 		if item.Repo == "" && item.Number == 0 && item.Title == "" {
 			continue
 		}
@@ -129,13 +160,13 @@ func normalizedIssueIntakeGroups(items []OpsCivilizationIssueIntakeGroupProjecte
 		item.Readiness = strings.TrimSpace(item.Readiness)
 		item.Recommendation = strings.TrimSpace(item.Recommendation)
 		item.IssueRefs = sortedIssueRefs(item.IssueRefs)
-		item.Blockers = sortedNonEmpty(item.Blockers)
-		item.SourceRefs = sortedNonEmpty(item.SourceRefs)
-		if item.GroupID == "" {
-			item.GroupID = issueIntakeGroupID(item.PrimaryRepo, item.TouchedSubstrate, item.RiskClass, item.Readiness)
-		}
-		if item.GroupID == "" && len(item.IssueRefs) == 0 {
+		item.Blockers = sortedUniqueNonEmpty(item.Blockers)
+		item.SourceRefs = sortedUniqueNonEmpty(item.SourceRefs)
+		if item.GroupID == "" && len(item.IssueRefs) == 0 && !issueIntakeGroupHasProjectedFields(item) {
 			continue
+		}
+		if item.GroupID == "" {
+			item.GroupID = issueIntakeGroupID("repo", item.PrimaryRepo, "substrate", item.TouchedSubstrate, "risk", item.RiskClass, "readiness", item.Readiness)
 		}
 		out = append(out, item)
 	}
@@ -147,14 +178,14 @@ func deriveIssueIntakeGroups(issues []OpsCivilizationIssueIntakeProjected) []Ops
 	groupsByKey := map[string]OpsCivilizationIssueIntakeGroupProjected{}
 	for _, issue := range issues {
 		primaryRepo := opsCivilizationValue(issue.PrimaryRepo, issue.Repo)
-		readiness := opsCivilizationValue(issue.PRReadyWhen, issue.Readiness)
+		readiness := opsCivilizationValue(issue.Readiness, issue.PRReadyWhen)
 		key := issueIntakeGroupKey(primaryRepo, issue.TouchedSubstrate, issue.RiskClass, readiness)
 		group := groupsByKey[key]
 		group.PrimaryRepo = primaryRepo
 		group.TouchedSubstrate = issue.TouchedSubstrate
 		group.RiskClass = issue.RiskClass
 		group.Readiness = readiness
-		group.GroupID = issueIntakeGroupID(primaryRepo, issue.TouchedSubstrate, issue.RiskClass, readiness)
+		group.GroupID = issueIntakeGroupID("repo", primaryRepo, "substrate", issue.TouchedSubstrate, "risk", issue.RiskClass, "readiness", readiness)
 		group.IssueRefs = append(group.IssueRefs, OpsCivilizationIssueRef{
 			Repo:        issue.Repo,
 			Number:      issue.Number,
@@ -164,7 +195,7 @@ func deriveIssueIntakeGroups(issues []OpsCivilizationIssueIntakeProjected) []Ops
 			StateReason: issue.StateReason,
 			Labels:      issue.Labels,
 		})
-		if issueIntakeHasLabel(issue.Labels, "cc:protected-action") {
+		if issueIntakeHasProtectedActionRisk(issue) {
 			group.Blockers = appendIssueIntakeUniqueString(group.Blockers, "protected-action issue requires separate authority scope before grouped implementation")
 		}
 		groupsByKey[key] = group
@@ -173,7 +204,7 @@ func deriveIssueIntakeGroups(issues []OpsCivilizationIssueIntakeProjected) []Ops
 	groups := make([]OpsCivilizationIssueIntakeGroupProjected, 0, len(groupsByKey))
 	for _, group := range groupsByKey {
 		group.IssueRefs = sortedIssueRefs(group.IssueRefs)
-		group.Blockers = sortedNonEmpty(group.Blockers)
+		group.Blockers = sortedUniqueNonEmpty(group.Blockers)
 		if len(group.IssueRefs) > 1 && len(group.Blockers) == 0 {
 			group.Recommendation = "aggregate candidate; verify same repo, substrate, risk, acceptance path, and readiness before PR grouping"
 		} else if len(group.Blockers) > 0 {
@@ -198,6 +229,9 @@ func sortIssueIntakeGroups(groups []OpsCivilizationIssueIntakeGroupProjected) {
 		}
 		if groups[i].TouchedSubstrate != groups[j].TouchedSubstrate {
 			return groups[i].TouchedSubstrate < groups[j].TouchedSubstrate
+		}
+		if groups[i].Readiness != groups[j].Readiness {
+			return groups[i].Readiness < groups[j].Readiness
 		}
 		return groups[i].GroupID < groups[j].GroupID
 	})
@@ -237,6 +271,49 @@ func issueIntakeHasLabel(labels []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func issueIntakeHasProtectedActionRisk(issue OpsCivilizationIssueIntakeProjected) bool {
+	if issueIntakeHasLabel(issue.Labels, "cc:protected-action") {
+		return true
+	}
+	if strings.EqualFold(strings.TrimSpace(issue.RiskClass), "protected-action") {
+		return true
+	}
+	for _, riskClass := range issue.RiskClasses {
+		if strings.EqualFold(strings.TrimSpace(riskClass), "protected-action") {
+			return true
+		}
+	}
+	return false
+}
+
+func issueIntakeGroupHasProjectedFields(group OpsCivilizationIssueIntakeGroupProjected) bool {
+	return group.Summary != "" ||
+		group.PrimaryRepo != "" ||
+		group.TouchedSubstrate != "" ||
+		group.RiskClass != "" ||
+		group.Readiness != "" ||
+		group.Recommendation != "" ||
+		len(group.Blockers) > 0 ||
+		len(group.SourceRefs) > 0
+}
+
+func sortedUniqueNonEmpty(items []string) []string {
+	items = sortedNonEmpty(items)
+	if len(items) < 2 {
+		return items
+	}
+	out := make([]string, 0, len(items))
+	last := ""
+	for i, item := range items {
+		if i > 0 && item == last {
+			continue
+		}
+		out = append(out, item)
+		last = item
+	}
+	return out
 }
 
 func appendIssueIntakeUniqueString(items []string, value string) []string {

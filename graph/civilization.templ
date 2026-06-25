@@ -65,12 +65,11 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 						<thead class="text-warm-faint border-b border-edge">
 							<tr>
 								<th class="py-2 px-3 font-medium min-w-[16rem]">Issue</th>
-								<th class="py-2 px-3 font-medium">State</th>
-								<th class="py-2 px-3 font-medium">Labels</th>
 								<th class="py-2 px-3 font-medium">Primary repo</th>
 								<th class="py-2 px-3 font-medium">Substrate</th>
 								<th class="py-2 px-3 font-medium">Risk</th>
 								<th class="py-2 px-3 font-medium">Readiness</th>
+								<th class="py-2 px-3 font-medium">Source refs</th>
 								<th class="py-2 px-3 font-medium">Authority boundary</th>
 							</tr>
 						</thead>
@@ -78,23 +77,28 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 							for _, issue := range data.IssueIntake.Issues {
 								<tr class="border-b border-edge/50 align-top">
 									<td class="py-2 px-3 text-warm min-w-[16rem]">
-										<p class="break-words">{ opsCivilizationValue(issue.Title, issueIntakeProjectedRefLabel(issue)) }</p>
-										<p class="text-[10px] text-warm-faint break-all">{ issueIntakeProjectedRefLabel(issue) }</p>
-										if issue.UpdatedAt != "" {
-											<p class="text-[10px] text-warm-faint break-all">updated { issue.UpdatedAt }</p>
+										<p class="break-words">{ issueIntakeProjectedRefLabel(issue) }</p>
+										if issue.URL != "" {
+											<p class="text-[10px] text-warm-faint break-all">{ issue.URL }</p>
 										}
 									</td>
-									<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(issue.State, "state not projected") }</td>
-									<td class="py-2 px-3 text-warm-faint break-words">{ opsCivilizationJoin(issue.Labels, "none projected") }</td>
 									<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(issue.PrimaryRepo, issue.Repo) }</td>
-									<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(issue.TouchedSubstrate, "not projected") }</td>
-									<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(issue.RiskClass, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-muted break-words">
+										<p>{ opsCivilizationValue(issue.TouchedSubstrate, "not projected") }</p>
+										<p class="text-[10px] text-warm-faint mt-1">{ opsCivilizationJoin(issue.TouchedSubstrates, "no substrate inputs projected") }</p>
+									</td>
+									<td class="py-2 px-3 text-warm-muted break-words">
+										<p>{ opsCivilizationValue(issue.RiskClass, "not projected") }</p>
+										<p class="text-[10px] text-warm-faint mt-1">inputs: { opsCivilizationJoin(issue.RiskClasses, "none projected") }</p>
+										if len(issue.UnrecognizedRisk) > 0 {
+											<p class="text-[10px] text-warm-faint mt-1">unrecognized: { opsCivilizationJoin(issue.UnrecognizedRisk, "none") }</p>
+										}
+									</td>
 									<td class="py-2 px-3 text-warm-muted break-words">
 										<p>{ opsCivilizationValue(issue.Readiness, "not projected") }</p>
-										if issue.PRReadyWhen != "" {
-											<p class="text-[10px] text-warm-faint mt-1">{ issue.PRReadyWhen }</p>
-										}
+										<p class="text-[10px] text-warm-faint mt-1">{ opsCivilizationJoin(issue.ReadinessStates, "no readiness inputs projected") }</p>
 									</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(issue.SourceRefs, "none projected") }</td>
 									<td class="py-2 px-3 text-warm-faint break-words">{ opsCivilizationValue(issue.AuthorityBoundary, "read-only issue record; no protected action authority") }</td>
 								</tr>
 							}
@@ -155,6 +159,8 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<dl class="grid gap-x-3 gap-y-2 text-xs md:grid-cols-[8rem_1fr]">
 					<dt class="text-warm-faint">Source refs</dt>
 					<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.IssueIntake.SourceRefs, "none projected") }</dd>
+					<dt class="text-warm-faint">Scanner limits</dt>
+					<dd class="text-warm-muted break-words">{ opsCivilizationJoin(data.IssueIntake.Boundaries, "scanner boundary metadata not projected") }</dd>
 					<dt class="text-warm-faint">No-write limit</dt>
 					<dd class="text-warm-muted break-words">This surface reads projection data only; it cannot edit GitHub issues, start Hive, write EventGraph, queue runs, create PRs, merge, deploy, or approve protected actions.</dd>
 				</dl>
