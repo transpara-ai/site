@@ -12,6 +12,7 @@ type OpsReviewConsoleData struct {
 	AuthorizationSource string
 	Boundary            []string
 	ExactHeadEvidence   []OpsExactHeadApprovalEvidence
+	DecisionQueue       []OpsExternalCommitteeDecisionQueueItem
 	Items               []OpsReviewItem
 }
 
@@ -30,6 +31,21 @@ type OpsExactHeadApprovalEvidence struct {
 	Summary           string
 	Limitation        string
 	DisplayOnly       bool
+}
+
+type OpsExternalCommitteeDecisionQueueItem struct {
+	ID             string
+	Title          string
+	SourceIssue    string
+	SourceURL      string
+	SourceRepo     string
+	QueueState     string
+	EvidenceState  string
+	RequiredActor  string
+	DecisionNeeded string
+	Blocker        string
+	NoWriteLimit   string
+	DisplayOnly    bool
 }
 
 type OpsReviewItem struct {
@@ -108,6 +124,64 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 				ApprovalActor:     "External Committee",
 				ResidualState:     "accepted_with_residual",
 			}),
+		},
+		DecisionQueue: []OpsExternalCommitteeDecisionQueueItem{
+			{
+				ID:             "site-117-human-required-decision",
+				Title:          "External Committee issue decision queue display",
+				SourceIssue:    "site#117",
+				SourceURL:      "https://github.com/transpara-ai/site/issues/117",
+				SourceRepo:     "transpara-ai/site",
+				QueueState:     "human_required",
+				EvidenceState:  "current",
+				RequiredActor:  "External Committee",
+				DecisionNeeded: "Review issue-sourced protected-action blockers and decide whether a later authority packet is needed.",
+				Blocker:        "This Site surface is read-only and cannot approve, deny, merge, label, comment, deploy, or close the issue.",
+				NoWriteLimit:   opsReviewConsoleNoWriteLimit(),
+				DisplayOnly:    true,
+			},
+			{
+				ID:             "site-116-missing-inputs",
+				Title:          "Replace temporary Civilization fixture display with issue and EventGraph projection inputs",
+				SourceIssue:    "site#116",
+				SourceURL:      "https://github.com/transpara-ai/site/issues/116",
+				SourceRepo:     "transpara-ai/site",
+				QueueState:     "blocked_missing_evidence",
+				EvidenceState:  "missing",
+				RequiredActor:  "External Committee",
+				DecisionNeeded: "Require EventGraph and issue read-input evidence before this can move from fixture display to live projection input.",
+				Blocker:        "Missing read input evidence must remain blocked and cannot be treated as approval.",
+				NoWriteLimit:   opsReviewConsoleNoWriteLimit(),
+				DisplayOnly:    true,
+			},
+			{
+				ID:             "site-118-stale-evidence",
+				Title:          "Stale exact-head approval evidence",
+				SourceIssue:    "site#118",
+				SourceURL:      "https://github.com/transpara-ai/site/issues/118",
+				SourceRepo:     "transpara-ai/site",
+				QueueState:     "blocked_stale_evidence",
+				EvidenceState:  "stale",
+				RequiredActor:  "External Committee",
+				DecisionNeeded: "Refresh exact-head approval evidence before citing the issue as clean approval.",
+				Blocker:        "Stale evidence fails closed and cannot unlock protected actions.",
+				NoWriteLimit:   opsReviewConsoleNoWriteLimit(),
+				DisplayOnly:    true,
+			},
+			{
+				ID:             "docs-172-residual-evidence",
+				Title:          "Docs #172 residual approval evidence",
+				SourceIssue:    "docs#172",
+				SourceURL:      "https://github.com/transpara-ai/docs/issues/172",
+				SourceRepo:     "transpara-ai/docs",
+				QueueState:     "blocked_residual_evidence",
+				EvidenceState:  "accepted_residual",
+				RequiredActor:  "External Committee",
+				DecisionNeeded: "Refresh or carry exact-head approval evidence before citing this issue as clean approval.",
+				Blocker:        "Accepted residual evidence must be carried and cannot unlock protected actions as clean approval.",
+				NoWriteLimit:   opsReviewConsoleNoWriteLimit(),
+				DisplayOnly:    true,
+			},
 		},
 		Items: []OpsReviewItem{
 			{
@@ -188,6 +262,10 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 			},
 		},
 	}
+}
+
+func opsReviewConsoleNoWriteLimit() string {
+	return "Display only: no approve, deny, merge, label, comment, GitHub write, Hive write, EventGraph write, runtime execution, deploy, gate closure, autonomy increase, value allocation, or protected-action approval."
 }
 
 type opsExactHeadApprovalFixture struct {
@@ -328,6 +406,37 @@ var opsReviewConsoleTemplate = template.Must(template.New("ops-review-console").
 							<dt class="text-warm-faint">approval_source</dt><dd class="text-warm-muted break-all">{{if .ApprovalSourceURL}}<a href="{{.ApprovalSourceURL}}" rel="noopener" class="text-brand hover:text-brand/80">{{.ApprovalSourceURL}}</a>{{else}}missing{{end}}</dd>
 							<dt class="text-warm-faint">approval_actor</dt><dd class="text-warm-muted">{{if .ApprovalActor}}{{.ApprovalActor}}{{else}}missing{{end}}</dd>
 							<dt class="text-warm-faint">limitation</dt><dd class="text-warm-muted">{{.Limitation}}</dd>
+						</dl>
+					</article>
+				{{end}}
+			</div>
+		</section>
+
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-external-committee-queue="read-only">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">External Committee decision queue</h2>
+				<p class="text-xs text-warm-faint mt-1">Issue-sourced human-required decisions and protected-action blockers. Queue rows are display-only and cannot approve, deny, merge, label, comment, or close anything.</p>
+			</header>
+			<div class="divide-y divide-edge">
+				{{range .DecisionQueue}}
+					<article class="p-4 space-y-3" data-external-committee-queue-item="{{.ID}}" data-queue-state="{{.QueueState}}" data-evidence-state="{{.EvidenceState}}" data-display-only="{{.DisplayOnly}}">
+						<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+							<div class="min-w-0">
+								<h3 class="text-base font-medium text-warm">{{.Title}}</h3>
+								<p class="text-xs text-warm-faint mt-1">{{.SourceIssue}} · {{.SourceRepo}}</p>
+							</div>
+							<div class="flex gap-2 flex-wrap">
+								<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{{.QueueState}}</span>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">evidence: {{.EvidenceState}}</span>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">display only</span>
+							</div>
+						</div>
+						<dl class="grid gap-x-3 gap-y-2 text-xs md:grid-cols-[9rem_1fr]">
+							<dt class="text-warm-faint">source</dt><dd class="text-warm-muted break-all">{{if .SourceURL}}<a href="{{.SourceURL}}" rel="noopener" class="text-brand hover:text-brand/80">{{.SourceURL}}</a>{{else}}missing{{end}}</dd>
+							<dt class="text-warm-faint">required_actor</dt><dd class="text-warm-muted">{{.RequiredActor}}</dd>
+							<dt class="text-warm-faint">decision_needed</dt><dd class="text-warm-muted">{{.DecisionNeeded}}</dd>
+							<dt class="text-warm-faint">blocker</dt><dd class="text-warm-muted">{{.Blocker}}</dd>
+							<dt class="text-warm-faint">no_write_limit</dt><dd class="text-warm-muted">{{.NoWriteLimit}}</dd>
 						</dl>
 					</article>
 				{{end}}

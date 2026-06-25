@@ -31,6 +31,20 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		`data-approval-state="accepted_residual"`,
 		`data-clean-approval="true"`,
 		`data-clean-approval="false"`,
+		`data-external-committee-queue="read-only"`,
+		`data-queue-state="human_required"`,
+		`data-queue-state="blocked_missing_evidence"`,
+		`data-queue-state="blocked_stale_evidence"`,
+		`data-queue-state="blocked_residual_evidence"`,
+		`data-evidence-state="current"`,
+		`data-evidence-state="stale"`,
+		`data-evidence-state="missing"`,
+		`data-evidence-state="accepted_residual"`,
+		"External Committee decision queue",
+		"https://github.com/transpara-ai/site/issues/117",
+		"This Site surface is read-only and cannot approve, deny, merge, label, comment",
+		"Accepted residual evidence must be carried and cannot unlock protected actions as clean approval.",
+		"Display only: no approve, deny, merge, label, comment",
 		"docs v4.0 Event 13 AuthorityDecision",
 		"127da4ef57dee34231cc50d87a249349fc0f768c",
 		"Stale exact-head approval is not approval for the current head.",
@@ -54,6 +68,73 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		}
 	}
 	assertOpsReviewConsoleNoMutationControls(t, body)
+}
+
+func TestOpsReviewConsoleExternalCommitteeQueueIsReadOnly(t *testing.T) {
+	data := buildOpsReviewConsoleData()
+	wantEvidenceStates := map[string]bool{
+		"current":           false,
+		"missing":           false,
+		"stale":             false,
+		"accepted_residual": false,
+	}
+	wantQueueStates := map[string]bool{
+		"human_required":            false,
+		"blocked_missing_evidence":  false,
+		"blocked_stale_evidence":    false,
+		"blocked_residual_evidence": false,
+	}
+	for _, item := range data.DecisionQueue {
+		if item.ID == "" ||
+			item.Title == "" ||
+			item.SourceIssue == "" ||
+			item.SourceURL == "" ||
+			item.SourceRepo == "" ||
+			item.QueueState == "" ||
+			item.EvidenceState == "" ||
+			item.RequiredActor == "" ||
+			item.DecisionNeeded == "" ||
+			item.Blocker == "" ||
+			item.NoWriteLimit == "" {
+			t.Fatalf("external committee queue item has incomplete fields: %#v", item)
+		}
+		if !strings.HasPrefix(item.SourceRepo, "transpara-ai/") {
+			t.Fatalf("external committee queue item %q SourceRepo = %q, want Transpara-AI repo", item.ID, item.SourceRepo)
+		}
+		if !strings.HasPrefix(item.SourceURL, "https://github.com/transpara-ai/") {
+			t.Fatalf("external committee queue item %q SourceURL = %q, want Transpara-AI GitHub issue source", item.ID, item.SourceURL)
+		}
+		if !item.DisplayOnly {
+			t.Fatalf("external committee queue item %q DisplayOnly = false", item.ID)
+		}
+		if !strings.Contains(item.NoWriteLimit, "no approve, deny, merge, label, comment") {
+			t.Fatalf("external committee queue item %q NoWriteLimit missing no-write boundary: %q", item.ID, item.NoWriteLimit)
+		}
+		forbiddenQueueStates := []string{"approved", "clean", "unlocked", "ready_to_merge", "merge_allowed"}
+		for _, forbidden := range forbiddenQueueStates {
+			if item.QueueState == forbidden {
+				t.Fatalf("external committee queue item %q has authority-implying QueueState %q", item.ID, item.QueueState)
+			}
+		}
+		forbiddenEvidenceStates := []string{"approved", "clean", "unlocked", "merge_allowed"}
+		for _, forbidden := range forbiddenEvidenceStates {
+			if item.EvidenceState == forbidden {
+				t.Fatalf("external committee queue item %q has authority-implying EvidenceState %q", item.ID, item.EvidenceState)
+			}
+		}
+		wantEvidenceStates[item.EvidenceState] = true
+		wantQueueStates[item.QueueState] = true
+	}
+	for state, seen := range wantEvidenceStates {
+		if !seen {
+			t.Fatalf("external committee queue fixtures do not cover evidence state %q", state)
+		}
+	}
+	for state, seen := range wantQueueStates {
+		if !seen {
+			t.Fatalf("external committee queue fixtures do not cover queue state %q", state)
+		}
+	}
 }
 
 func TestOpsReviewConsoleExactHeadApprovalEvidenceStates(t *testing.T) {
