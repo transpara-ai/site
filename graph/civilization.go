@@ -731,7 +731,7 @@ func opsCivilizationIssueReadinessStatus(projection *OpsCivilizationAssemblyProj
 		if stageID == "" {
 			continue
 		}
-		if task.Ready || opsCivilizationEvidenceObserved(task.RuntimeEvidenceStatus) || opsCivilizationEvidenceObserved(task.Status) {
+		if task.Ready || opsCivilizationEvidenceObserved(task.RuntimeEvidenceStatus) {
 			completedStageEvidence[stageID] = true
 		}
 	}
@@ -754,7 +754,7 @@ func opsCivilizationEvidenceObserved(status string) bool {
 	if normalized == "" {
 		return false
 	}
-	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared"} {
+	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared", "unavailable", "not_available", "not available"} {
 		if strings.Contains(normalized, blocked) {
 			return false
 		}

@@ -284,6 +284,108 @@ func TestOpsCivilizationEvidenceStatusValue(t *testing.T) {
 	}
 }
 
+func TestOpsCivilizationEvidenceObserved(t *testing.T) {
+	for _, tc := range []struct {
+		status string
+		want   bool
+	}{
+		{status: "", want: false},
+		{status: "unavailable", want: false},
+		{status: "not_available", want: false},
+		{status: "not available", want: false},
+		{status: "declared_pending_runtime_evidence", want: false},
+		{status: "expected_not_observed", want: false},
+		{status: "stage_completed_runtime_evidence_recorded", want: true},
+		{status: "available", want: true},
+		{status: "passed", want: true},
+	} {
+		t.Run(tc.status, func(t *testing.T) {
+			if got := opsCivilizationEvidenceObserved(tc.status); got != tc.want {
+				t.Fatalf("opsCivilizationEvidenceObserved(%q) = %v, want %v", tc.status, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOpsCivilizationIssueReadinessBranches(t *testing.T) {
+	selection := &OpsHiveQueuedRunSelectionPolicy{
+		PolicyID:       "scanner_order_first_candidate_v0.1",
+		SelectedRank:   1,
+		CandidateCount: 2,
+		RankingInputs:  []string{"repo_scan_order"},
+		Rationale:      "Select the first validated candidate.",
+	}
+
+	t.Run("unavailable evidence does not advance readiness", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_unavailable",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "unavailable"},
+				},
+			},
+			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+				Tasks: []OpsCivilizationAssemblyTaskEvidence{
+					{LifecycleStageID: "research", Status: "available"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "pending: Research" || data.IssueReadiness.FirstPendingStage != "Research" {
+			t.Fatalf("issue readiness = %+v, want pending Research", data.IssueReadiness)
+		}
+	})
+
+	t.Run("all observed stages are ready", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_ready",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+					{ID: "review", Name: "Review", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" || data.IssueReadiness.FirstPendingStage != "none" {
+			t.Fatalf("issue readiness = %+v, want ready", data.IssueReadiness)
+		}
+	})
+
+	t.Run("queued run without selection policy remains recommendation incomplete", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID: "run_no_policy",
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.RecommendationState != "queued issue-scan projected without a selection policy" {
+			t.Fatalf("recommendation state = %q", data.IssueReadiness.RecommendationState)
+		}
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" {
+			t.Fatalf("issue readiness = %+v, want ready from observed lifecycle", data.IssueReadiness)
+		}
+	})
+
+	t.Run("queued run without lifecycle is not projected", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_no_lifecycle",
+				SelectionPolicy: selection,
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "not projected" || data.IssueReadiness.FirstPendingStage != "lifecycle stages not projected" {
+			t.Fatalf("issue readiness = %+v, want lifecycle not projected", data.IssueReadiness)
+		}
+	})
+}
+
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
 // Civilization Assembly projection endpoint and this Site consumer. Keep this as
 // literal JSON so the test exercises wire keys and enum strings rather than
