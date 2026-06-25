@@ -704,7 +704,7 @@ func opsGitHubCanonical(data *OpsGitHubCanonicalData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-github-canonical-evidence-records=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Typed evidence records</h2><p class=\"text-xs text-warm-faint mt-1\">Projection-shaped EventGraph evidence that the monitor can display without writing to EventGraph or waking Hive.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">display contract</span></header><div class=\"grid gap-3 p-4 xl:grid-cols-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-github-canonical-evidence-records=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Typed evidence records</h2><p class=\"text-xs text-warm-faint mt-1\">Projection-shaped EventGraph evidence for display only; not a live gate, Test 001 GREEN claim, EventGraph write, or Hive wake.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">display contract</span></header><div class=\"grid gap-3 p-4 xl:grid-cols-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

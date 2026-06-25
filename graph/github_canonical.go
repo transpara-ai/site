@@ -237,10 +237,11 @@ func githubCanonicalRepoSummaries(lanes []OpsGitHubCanonicalLane) []OpsGitHubCan
 			summary.Deferred++
 		case githubCanonicalStateNeedsHumanScope:
 			summary.HumanScope++
-		case githubCanonicalStateProtectedAction:
-			summary.Protected++
 		case githubCanonicalStateLegacyEvidenceOnly:
 			summary.LegacyOnly++
+		}
+		if strings.EqualFold(strings.TrimSpace(lane.Risk), githubCanonicalStateProtectedAction) || lane.State == githubCanonicalStateProtectedAction {
+			summary.Protected++
 		}
 		if summary.BlockedReason == "" && strings.TrimSpace(lane.BlockedReason) != "" {
 			summary.BlockedReason = lane.BlockedReason
