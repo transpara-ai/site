@@ -293,6 +293,9 @@ func TestOpsCivilizationEvidenceObserved(t *testing.T) {
 		{status: "unavailable", want: false},
 		{status: "not_available", want: false},
 		{status: "not available", want: false},
+		{status: "incomplete", want: false},
+		{status: "not_recorded", want: false},
+		{status: "not passed", want: false},
 		{status: "declared_pending_runtime_evidence", want: false},
 		{status: "expected_not_observed", want: false},
 		{status: "stage_completed_runtime_evidence_recorded", want: true},
@@ -316,24 +319,45 @@ func TestOpsCivilizationIssueReadinessBranches(t *testing.T) {
 		Rationale:      "Select the first validated candidate.",
 	}
 
-	t.Run("unavailable evidence does not advance readiness", func(t *testing.T) {
+	t.Run("unavailable lifecycle and runtime evidence do not advance readiness", func(t *testing.T) {
 		projection := &OpsCivilizationAssemblyProjection{
 			QueuedRunRequest: &OpsHiveQueuedRunRequest{
 				RunID:           "run_unavailable",
 				SelectionPolicy: selection,
 				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
-					{ID: "research", Name: "Research", EvidenceStatus: "unavailable"},
+					{ID: "research", Name: "Research", EvidenceStatus: "expected_not_observed"},
 				},
 			},
 			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
 				Tasks: []OpsCivilizationAssemblyTaskEvidence{
-					{LifecycleStageID: "research", Status: "available"},
+					{LifecycleStageID: "research", RuntimeEvidenceStatus: "unavailable"},
 				},
 			},
 		}
 		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
 		if data.IssueReadiness.Status != "pending: Research" || data.IssueReadiness.FirstPendingStage != "Research" {
 			t.Fatalf("issue readiness = %+v, want pending Research", data.IssueReadiness)
+		}
+	})
+
+	t.Run("runtime evidence can complete a pending lifecycle stage", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_runtime_complete",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "expected_not_observed"},
+				},
+			},
+			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+				Tasks: []OpsCivilizationAssemblyTaskEvidence{
+					{LifecycleStageID: "research", RuntimeEvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" || data.IssueReadiness.FirstPendingStage != "none" {
+			t.Fatalf("issue readiness = %+v, want ready from runtime evidence", data.IssueReadiness)
 		}
 	})
 
@@ -1265,12 +1289,15 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			},
 		},
 		QueuedRunRequest: &OpsHiveQueuedRunRequest{
+			EventID:               `evt_<script>alert("event")</script>`,
 			RunID:                 `run_<script>alert("run")</script>`,
 			Title:                 `<button onclick="x">queued issue</button>`,
 			Status:                `<form method="post">queued</form>`,
 			TargetRepos:           []string{`transpara-ai/<script>site</script>`},
 			AuthorityInitialLevel: `<input name="authority">`,
 			AuthorityScope:        `<a hx-post="/approve">scope</a>`,
+			SourceEventID:         `source_<script>alert("source")</script>`,
+			BriefEventID:          `brief_<script>alert("brief")</script>`,
 			EvidenceKind:          `<select><option>queued</option></select>`,
 			BriefKind:             `<script>brief</script>`,
 			LifecycleVersion:      `v<script>3</script>`,
@@ -1309,6 +1336,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
+		ValidationRefs: []string{`validation_<script>alert("validation")</script>`},
 	}
 
 	data := buildOpsCivilizationAssemblyDataFromProjection(projection, now)
@@ -1323,7 +1351,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}

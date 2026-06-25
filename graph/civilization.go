@@ -754,7 +754,7 @@ func opsCivilizationEvidenceObserved(status string) bool {
 	if normalized == "" {
 		return false
 	}
-	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared", "unavailable", "not_available", "not available"} {
+	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared", "unavailable", "not_available", "not available", "incomplete", "not_recorded", "not recorded", "not_passed", "not passed"} {
 		if strings.Contains(normalized, blocked) {
 			return false
 		}
