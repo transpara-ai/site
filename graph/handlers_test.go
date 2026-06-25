@@ -1692,6 +1692,62 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 				},
 			},
 		},
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:            `kanban_run_<script>alert("kanban")</script>`,
+					FactoryOrderID:   `kanban_fo_<input name="fo">`,
+					LifecycleVersion: `v<script>4</script>`,
+					State:            `human_action`,
+					TargetIssue:      OpsCivilizationIssueRef{Repo: `transpara-ai/<script>docs</script>`, Number: 172},
+					SelectedIssue:    OpsCivilizationIssueRef{Repo: `transpara-ai/<script>docs</script>`, Number: 172},
+					CandidateIssues:  []OpsCivilizationIssueRef{{Repo: `transpara-ai/<script>site</script>`, Number: 115}},
+					SourceRefs:       []string{`kanban_source_<script>alert("source")</script>`},
+					EvidenceRefs:     []string{`kanban_evidence_<script>alert("evidence")</script>`},
+				},
+			},
+			Stages: []OpsCivilizationIssueScanStageProjected{
+				{
+					RunID:             `kanban_run_<script>alert("kanban")</script>`,
+					FactoryOrderID:    `kanban_fo_<input name="fo">`,
+					StageID:           `stage_<script>alert("stage")</script>`,
+					StageNumber:       1,
+					StageCount:        7,
+					CanonicalTaskID:   `kanban_task_<input name="stage">`,
+					TaskID:            `kanban_event_<script>alert("task")</script>`,
+					CurrentState:      `human_action`,
+					CompletionGate:    `<a hx-post="/wake">gate</a>`,
+					AuthorityBoundary: `<form action="/hive">boundary</form>`,
+					AssignedAgentIDs:  []string{`<button onclick="x">agent</button>`},
+					TouchingAgentIDs:  []string{`<script>touch()</script>`},
+					EvidenceRefs:      []string{`stage_evidence_<script>alert("stage-evidence")</script>`},
+					SourceRefs:        []string{`stage_source_<script>alert("stage-source")</script>`},
+				},
+			},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{
+				{
+					RunID:          `kanban_run_<script>alert("kanban")</script>`,
+					StageID:        `stage_<script>alert("stage")</script>`,
+					BlockerType:    `needs_human_scope`,
+					Reason:         `<script>reason()</script>`,
+					RequiredAction: `<button onclick="x">clarify</button>`,
+					EvidenceRefs:   []string{`blocker_evidence_<script>alert("blocker-evidence")</script>`},
+					SourceRefs:     []string{`blocker_source_<script>alert("blocker-source")</script>`},
+				},
+			},
+			Lineage: []OpsCivilizationIssueScanLineageProjected{
+				{
+					RunID:            `kanban_run_<script>alert("kanban")</script>`,
+					StageID:          `stage_<script>alert("stage")</script>`,
+					CanonicalTaskID:  `kanban_task_<input name="stage">`,
+					PrimaryTaskID:    `primary_<script>task</script>`,
+					TaskIDs:          []string{`primary_<script>task</script>`, `dup_<input name="dup">`},
+					DuplicateTaskIDs: []string{`dup_<input name="dup">`},
+					DuplicateOf:      `<form action="/canonical">canonical</form>`,
+					SourceRefs:       []string{`lineage_source_<script>alert("lineage")</script>`},
+				},
+			},
+		},
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
@@ -1710,7 +1766,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;", "kanban_run_&lt;script&gt;alert(&#34;kanban&#34;)&lt;/script&gt;", "kanban_task_&lt;input name=&#34;stage&#34;&gt;", "&lt;a hx-post=&#34;/wake&#34;&gt;gate&lt;/a&gt;", "&lt;form action=&#34;/hive&#34;&gt;boundary&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;agent&lt;/button&gt;", "&lt;script&gt;touch()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;clarify&lt;/button&gt;", "&lt;script&gt;reason()&lt;/script&gt;", "primary_&lt;script&gt;task&lt;/script&gt;", "dup_&lt;input name=&#34;dup&#34;&gt;", "&lt;form action=&#34;/canonical&#34;&gt;canonical&lt;/form&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
