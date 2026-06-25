@@ -162,6 +162,39 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</article>
 			}
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-evidence-records="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Typed evidence records</h2>
+					<p class="text-xs text-warm-faint mt-1">Projection-shaped EventGraph evidence that the monitor can display without writing to EventGraph or waking Hive.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">display contract</span>
+			</header>
+			<div class="grid gap-3 p-4 xl:grid-cols-3">
+				for _, record := range data.EvidenceRecords {
+					<article class="border border-edge bg-void/20 rounded-md p-3">
+						<div class="flex items-start justify-between gap-3">
+							<div>
+								<h3 class="text-sm font-medium text-warm">{ record.Name }</h3>
+								<p class="text-[11px] text-brand mt-1 break-all">{ record.EventType }</p>
+							</div>
+							<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(record.Outcome) }>{ record.Outcome }</span>
+						</div>
+						<dl class="grid grid-cols-[8.75rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+							<dt class="text-warm-faint">schema</dt><dd class="text-warm-muted break-all">{ record.Schema }</dd>
+							<dt class="text-warm-faint">source_issue_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.SourceIssueRefs, "none") }</dd>
+							<dt class="text-warm-faint">pr_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.PRRefs, "none") }</dd>
+							<dt class="text-warm-faint">validation_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.ValidationRefs, "none") }</dd>
+							<dt class="text-warm-faint">cfar_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.CFARRefs, "none") }</dd>
+							<dt class="text-warm-faint">authority_boundary_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.AuthorityBoundaryRefs, "none") }</dd>
+							<dt class="text-warm-faint">residual_risk_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(record.ResidualRiskRefs, "none") }</dd>
+							<dt class="text-warm-faint">trace_score_basis_points</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", record.TraceScoreBasisPoints) }</dd>
+						</dl>
+						<p class="text-[11px] text-warm-faint mt-3 leading-relaxed">{ record.ProjectionReadinessNote }</p>
+					</article>
+				}
+			</div>
+		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>
