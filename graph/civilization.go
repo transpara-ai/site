@@ -751,20 +751,25 @@ func opsCivilizationIssueReadinessStatus(projection *OpsCivilizationAssemblyProj
 
 func opsCivilizationEvidenceObserved(status string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(status))
-	if normalized == "" {
+	switch normalized {
+	case "available",
+		"complete",
+		"completed",
+		"green",
+		"passed",
+		"recorded",
+		"stage completed runtime evidence recorded",
+		"stage step completed runtime evidence recorded",
+		"stage_completed_runtime_evidence_recorded",
+		"stage_step_completed_runtime_evidence_recorded",
+		"zero blocker",
+		"zero blockers",
+		"zero_blocker",
+		"zero_blockers":
+		return true
+	default:
 		return false
 	}
-	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared", "unavailable", "not_available", "not available", "incomplete", "not_recorded", "not recorded", "not_passed", "not passed"} {
-		if strings.Contains(normalized, blocked) {
-			return false
-		}
-	}
-	for _, observed := range []string{"complete", "completed", "recorded", "available", "passed", "green", "zero_blocker"} {
-		if strings.Contains(normalized, observed) {
-			return true
-		}
-	}
-	return false
 }
 
 func opsCivilizationIssueGuardrails() []OpsCivilizationIssueGuardrail {
