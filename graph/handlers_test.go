@@ -95,6 +95,11 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		"EventGraph Civilization Assembly projection unavailable to Site",
 		"EventGraph Civilization Assembly projection",
 		"Projection facts",
+		"Issue intake projection",
+		`data-civilization-issue-intake="read-only"`,
+		"No issue intake records are projected.",
+		"No-write limit",
+		"cannot edit GitHub issues, start Hive, write EventGraph, queue runs, create PRs, merge, deploy, or approve protected actions",
 		"Issue readiness",
 		`data-civilization-issue-readiness="read-only"`,
 		"recommendations are not PR, merge, deploy, or authority approval",
@@ -165,6 +170,21 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"recommendation-only rank 1 of 3 by scanner_order_first_candidate_v0.1",
 		"Grouping recommendation",
 		"Grouping remains advisory until the matching repo, touched substrate, risk class, acceptance path, and PR-readiness condition are verified.",
+		"Issue intake projection",
+		`data-civilization-issue-intake="read-only"`,
+		"2 issue(s), 2 advisory group(s) projected.",
+		"Read-only issue intake aggregation projection UI",
+		"Replace temporary Civilization fixture display with issue and EventGraph projection inputs",
+		"transpara-ai/site#114",
+		"transpara-ai/site#116",
+		"site operator ui projection",
+		"site civilization display data source",
+		"pr-ready after fixture/read-model source, limitation labels, and no-write behavior are defined",
+		"cc:aggregate-candidate",
+		"cc:protected-action",
+		"do not group until protected-action scope is explicitly authorized",
+		"protected-action issue requires separate authority scope before grouped implementation",
+		"No-write limit",
 		"cc:intake",
 		"Durable source-of-intent and scope evidence",
 		"cc:pr-deferred",
@@ -978,6 +998,43 @@ const hiveCivilizationAssemblyProjectionFixture = `{
     "evidence_kind": "queued_request_not_runtime_start",
     "created_at": "2026-06-23T09:35:00Z"
   },
+  "issue_intake_projection": {
+    "source_refs": ["change-control-scan:2026-06-25T15:59:37Z"],
+    "issues": [
+      {
+        "repo": "transpara-ai/site",
+        "number": 114,
+        "url": "https://github.com/transpara-ai/site/issues/114",
+        "title": "Read-only issue intake aggregation projection UI",
+        "state": "open",
+        "labels": ["cc:intake", "cc:aggregate-candidate", "cc:civilization-presence", "cc:pr-ready"],
+        "primary_repo": "transpara-ai/site",
+        "touched_substrate": "site operator ui projection",
+        "risk_class": "normal",
+        "readiness": "cc:pr-ready",
+        "pr_ready_when": "pr-ready after fixture/read-model source, limitation labels, and no-write behavior are defined",
+        "authority_boundary": "read-only issue record; no implementation authority",
+        "updated_at": "2026-06-25T15:59:37Z",
+        "source_refs": ["github:transpara-ai/site#114"]
+      },
+      {
+        "repo": "transpara-ai/site",
+        "number": 116,
+        "url": "https://github.com/transpara-ai/site/issues/116",
+        "title": "Replace temporary Civilization fixture display with issue and EventGraph projection inputs",
+        "state": "open",
+        "labels": ["cc:intake", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"],
+        "primary_repo": "transpara-ai/site",
+        "touched_substrate": "site civilization display data source",
+        "risk_class": "protected-action",
+        "readiness": "cc:pr-deferred",
+        "pr_ready_when": "pr-ready only after EventGraph/issue read inputs and unavailable-state behavior are scoped",
+        "authority_boundary": "protected-action sensitive; issue record is not authority",
+        "updated_at": "2026-06-25T04:35:54Z",
+        "source_refs": ["github:transpara-ai/site#116"]
+      }
+    ]
+  },
   "issue_scan_projection": {
     "runs": [
       {
@@ -1742,6 +1799,39 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 				},
 			},
 		},
+		IssueIntakeProjection: OpsCivilizationIssueIntakeProjection{
+			SourceRefs: []string{`issue_source_<script>alert("issue-source")</script>`},
+			Issues: []OpsCivilizationIssueIntakeProjected{
+				{
+					Repo:              `transpara-ai/<script>issue</script>`,
+					Number:            114,
+					Title:             `<button onclick="x">issue title</button>`,
+					State:             `<script>open</script>`,
+					Labels:            []string{`cc:<script>label</script>`},
+					PrimaryRepo:       `transpara-ai/<input name="repo">`,
+					TouchedSubstrate:  `<form action="/substrate">substrate</form>`,
+					RiskClass:         `<select><option>risk</option></select>`,
+					Readiness:         `<script>ready</script>`,
+					PRReadyWhen:       `<textarea>ready when</textarea>`,
+					AuthorityBoundary: `<a hx-post="/authority">authority</a>`,
+					UpdatedAt:         `<script>updated</script>`,
+					SourceRefs:        []string{`github:<script>source</script>`},
+				},
+			},
+			Groups: []OpsCivilizationIssueIntakeGroupProjected{
+				{
+					GroupID:          `group_<script>alert("group")</script>`,
+					Summary:          `<button onclick="x">group summary</button>`,
+					PrimaryRepo:      `transpara-ai/<input name="group-repo">`,
+					TouchedSubstrate: `<form action="/group-substrate">group substrate</form>`,
+					RiskClass:        `<select><option>group risk</option></select>`,
+					Readiness:        `<script>group ready</script>`,
+					Recommendation:   `<a hx-post="/group">group recommendation</a>`,
+					IssueRefs:        []OpsCivilizationIssueRef{{Repo: `transpara-ai/<script>group-issue</script>`, Number: 116}},
+					Blockers:         []string{`<form action="/blocker">group blocker</form>`},
+				},
+			},
+		},
 		IssueScanProjection: OpsCivilizationIssueScanProjection{
 			Runs: []OpsCivilizationIssueScanRunProjected{
 				{
@@ -1816,7 +1906,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;", "kanban_run_&lt;script&gt;alert(&#34;kanban&#34;)&lt;/script&gt;", "kanban_task_&lt;input name=&#34;stage&#34;&gt;", "&lt;a hx-post=&#34;/wake&#34;&gt;gate&lt;/a&gt;", "&lt;form action=&#34;/hive&#34;&gt;boundary&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;agent&lt;/button&gt;", "&lt;script&gt;touch()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;clarify&lt;/button&gt;", "&lt;script&gt;reason()&lt;/script&gt;", "primary_&lt;script&gt;task&lt;/script&gt;", "dup_&lt;input name=&#34;dup&#34;&gt;", "&lt;form action=&#34;/canonical&#34;&gt;canonical&lt;/form&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;issue title&lt;/button&gt;", "transpara-ai/&lt;input name=&#34;repo&#34;&gt;", "&lt;form action=&#34;/substrate&#34;&gt;substrate&lt;/form&gt;", "&lt;textarea&gt;ready when&lt;/textarea&gt;", "&lt;a hx-post=&#34;/authority&#34;&gt;authority&lt;/a&gt;", "group_&lt;script&gt;alert(&#34;group&#34;)&lt;/script&gt;", "&lt;a hx-post=&#34;/group&#34;&gt;group recommendation&lt;/a&gt;", "&lt;form action=&#34;/blocker&#34;&gt;group blocker&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;", "kanban_run_&lt;script&gt;alert(&#34;kanban&#34;)&lt;/script&gt;", "kanban_task_&lt;input name=&#34;stage&#34;&gt;", "&lt;a hx-post=&#34;/wake&#34;&gt;gate&lt;/a&gt;", "&lt;form action=&#34;/hive&#34;&gt;boundary&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;agent&lt;/button&gt;", "&lt;script&gt;touch()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;clarify&lt;/button&gt;", "&lt;script&gt;reason()&lt;/script&gt;", "primary_&lt;script&gt;task&lt;/script&gt;", "dup_&lt;input name=&#34;dup&#34;&gt;", "&lt;form action=&#34;/canonical&#34;&gt;canonical&lt;/form&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
