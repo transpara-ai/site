@@ -173,9 +173,10 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"cc:protected-action",
 		"Issue-scan Kanban",
 		`data-civilization-issue-scan-kanban="read-only"`,
-		"2 run(s), 2 stage(s), 3 blocker(s), 1 lineage record(s) projected.",
+		"3 run(s), 3 stage(s), 4 blocker(s), 1 lineage record(s) projected.",
 		"run_docs_172",
 		"run_site_115",
+		"run_docs_172_scope",
 		"transpara-ai/docs#172",
 		"transpara-ai/site#115",
 		"Parked",
@@ -189,9 +190,11 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"agent_blocker_repair",
 		"agent_guardian",
 		"duplicate chain",
+		"needs human scope",
 		"protected action",
 		"stale target",
 		"collapse duplicate canonical stage chain",
+		"human must clarify issue scope before runtime continues",
 		"human must authorize protected repo action",
 		"confirm target issue is still live",
 		"lineage",
@@ -464,6 +467,13 @@ func TestOpsCivilizationIssueScanKanbanDocs172Site115TypedProjection(t *testing.
 					TargetIssue:    OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 115, State: "open"},
 					SelectedIssue:  OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 115, State: "open"},
 				},
+				{
+					RunID:          "run_docs_172_scope",
+					FactoryOrderID: "fo_docs_172_scope",
+					State:          "human_action",
+					TargetIssue:    OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open", Labels: []string{"cc:needs-human-scope"}},
+					SelectedIssue:  OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, State: "open", Labels: []string{"cc:needs-human-scope"}},
+				},
 			},
 			Stages: []OpsCivilizationIssueScanStageProjected{
 				{
@@ -494,11 +504,26 @@ func TestOpsCivilizationIssueScanKanbanDocs172Site115TypedProjection(t *testing.
 					AssignedAgentIDs:  []string{"agent_guardian"},
 					TouchingAgentIDs:  []string{"agent_guardian"},
 				},
+				{
+					RunID:             "run_docs_172_scope",
+					FactoryOrderID:    "fo_docs_172_scope",
+					StageID:           "select_and_design_approach",
+					StageNumber:       3,
+					StageCount:        7,
+					CanonicalTaskID:   "tsk_docs_172_scope_select_and_design_approach",
+					TaskID:            "task-docs-scope",
+					CurrentState:      "human_action",
+					CompletionGate:    "human scope decision recorded",
+					AuthorityBoundary: "human scope clarification required",
+					AssignedAgentIDs:  []string{"agent_guardian"},
+					TouchingAgentIDs:  []string{"agent_guardian"},
+				},
 			},
 			Blockers: []OpsCivilizationIssueScanBlockerProjected{
 				{RunID: "run_docs_172", StageID: "run_adversarial_review", BlockerType: "duplicate_chain", RequiredAction: "collapse duplicate canonical stage chain"},
 				{RunID: "run_site_115", StageID: "surface_ready_for_human_result_pr", BlockerType: "protected_action", RequiredAction: "human must authorize protected repo action"},
 				{RunID: "run_site_115", StageID: "research_issue_and_repo_context", BlockerType: "stale_target", RequiredAction: "confirm target issue is still live"},
+				{RunID: "run_docs_172_scope", StageID: "select_and_design_approach", BlockerType: "needs_human_scope", RequiredAction: "human must clarify issue scope before runtime continues"},
 			},
 			Lineage: []OpsCivilizationIssueScanLineageProjected{
 				{
@@ -545,6 +570,10 @@ func TestOpsCivilizationIssueScanKanbanDocs172Site115TypedProjection(t *testing.
 	staleCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_site_115", "research_issue_and_repo_context")
 	if staleCard == nil || staleCard.CurrentState != "blocked" || staleCard.Blockers[0].BlockerType != "stale_target" {
 		t.Fatalf("site#115 stale-target blocker card = %+v", staleCard)
+	}
+	scopeCard := issueScanKanbanCardByStage(data.IssueScanKanban, "run_docs_172_scope", "select_and_design_approach")
+	if scopeCard == nil || scopeCard.CurrentState != "human_action" || len(scopeCard.Blockers) != 1 || scopeCard.Blockers[0].BlockerType != "needs_human_scope" {
+		t.Fatalf("docs#172 needs-human-scope card = %+v", scopeCard)
 	}
 }
 
@@ -959,6 +988,34 @@ const hiveCivilizationAssemblyProjectionFixture = `{
           }
         ],
         "source_refs": ["github:transpara-ai/site#115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "lifecycle_version": "civilization_issue_to_human_ready_pr_v0.4",
+        "state": "human_action",
+        "target_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open",
+          "labels": ["cc:needs-human-scope"]
+        },
+        "selected_issue": {
+          "repo": "transpara-ai/docs",
+          "number": 172,
+          "url": "https://github.com/transpara-ai/docs/issues/172",
+          "state": "open",
+          "labels": ["cc:needs-human-scope"]
+        },
+        "candidate_issues": [
+          {
+            "repo": "transpara-ai/docs",
+            "number": 172,
+            "labels": ["cc:needs-human-scope"]
+          }
+        ],
+        "source_refs": ["github:transpara-ai/docs#172"]
       }
     ],
     "stages": [
@@ -991,6 +1048,21 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "assigned_agent_ids": ["agent_guardian"],
         "touching_agent_ids": ["agent_guardian"],
         "evidence_refs": ["human_ready_summary:site-115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "stage_id": "select_and_design_approach",
+        "stage_number": 3,
+        "stage_count": 7,
+        "canonical_task_id": "tsk_docs_172_scope_select_and_design_approach",
+        "task_id": "019c0000-0000-7000-8000-000000001174",
+        "current_state": "human_action",
+        "completion_gate": "human scope decision recorded",
+        "authority_boundary": "human scope clarification required",
+        "assigned_agent_ids": ["agent_guardian"],
+        "touching_agent_ids": ["agent_guardian"],
+        "evidence_refs": ["github:transpara-ai/docs#172"]
       }
     ],
     "blockers": [
@@ -1020,6 +1092,15 @@ const hiveCivilizationAssemblyProjectionFixture = `{
         "reason": "target state must be refreshed before runtime continues",
         "required_action": "confirm target issue is still live",
         "evidence_refs": ["github:transpara-ai/site#115"]
+      },
+      {
+        "run_id": "run_docs_172_scope",
+        "factory_order_id": "fo_docs_172_scope",
+        "stage_id": "select_and_design_approach",
+        "blocker_type": "needs_human_scope",
+        "reason": "issue requires human scope clarification",
+        "required_action": "human must clarify issue scope before runtime continues",
+        "evidence_refs": ["github:transpara-ai/docs#172"]
       }
     ],
     "lineage": [
