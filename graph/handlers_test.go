@@ -95,6 +95,16 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		"EventGraph Civilization Assembly projection unavailable to Site",
 		"EventGraph Civilization Assembly projection",
 		"Projection facts",
+		"Issue readiness",
+		`data-civilization-issue-readiness="read-only"`,
+		"recommendations are not PR, merge, deploy, or authority approval",
+		"PR-Ready-When",
+		"cc:intake",
+		"cc:pr-deferred",
+		"cc:aggregate-candidate",
+		"recommendation-only",
+		"cc:civilization-presence",
+		"cc:protected-action",
 		"FactoryOrder evidence",
 		"No Work FactoryOrder seed tasks are projected.",
 		"derivation status",
@@ -144,6 +154,23 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"runtime projection from Hive",
 		"FactoryOrder evidence",
 		"task rows can include runtime-evidence and completed-stage signals without merge or deployment authority",
+		"Issue readiness",
+		`data-civilization-issue-readiness="read-only"`,
+		"PR-ready state",
+		"pending: Debate with correct civic roles",
+		"PR-Ready-When",
+		"First pending gate",
+		"Debate with correct civic roles",
+		"Recommendation state",
+		"recommendation-only rank 1 of 3 by scanner_order_first_candidate_v0.1",
+		"Grouping recommendation",
+		"Grouping remains advisory until the matching repo, touched substrate, risk class, acceptance path, and PR-readiness condition are verified.",
+		"cc:intake",
+		"Durable source-of-intent and scope evidence",
+		"cc:pr-deferred",
+		"cc:aggregate-candidate",
+		"cc:civilization-presence",
+		"cc:protected-action",
 		"fo_run_issue_scan_001",
 		"work_task_seeded",
 		"human_required_before_merge",
@@ -1015,6 +1042,21 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if data.QueuedRunRequest.SelectionPolicy == nil || data.QueuedRunRequest.SelectionPolicy.PolicyID != "scanner_order_first_candidate_v0.1" || !sliceContains(data.QueuedRunRequest.SelectionPolicy.RankingInputs, "scanner_return_order") {
 		t.Fatalf("queued run selection policy = %+v", data.QueuedRunRequest.SelectionPolicy)
 	}
+	if data.IssueReadiness.Status != "pending: Surface ready-for-Human result PR" || data.IssueReadiness.FirstPendingStage != "Surface ready-for-Human result PR" {
+		t.Fatalf("issue readiness = %+v, want pending surface-ready stage", data.IssueReadiness)
+	}
+	if !strings.Contains(data.IssueReadiness.PRReadyWhen, "exact-head CFAR") {
+		t.Fatalf("issue PR-Ready-When = %q, want exact-head CFAR boundary", data.IssueReadiness.PRReadyWhen)
+	}
+	if !strings.Contains(data.IssueReadiness.RecommendationState, "recommendation-only rank 1 of 3") {
+		t.Fatalf("issue recommendation state = %q", data.IssueReadiness.RecommendationState)
+	}
+	if !sliceContains(data.IssueReadiness.GroupingInputs, "scanner_return_order") {
+		t.Fatalf("issue grouping inputs = %+v, want scanner_return_order", data.IssueReadiness.GroupingInputs)
+	}
+	if !issueGuardrailContains(data.IssueReadiness.Guardrails, "cc:aggregate-candidate", "recommendation-only") {
+		t.Fatalf("issue guardrails = %+v, want aggregate-candidate recommendation guardrail", data.IssueReadiness.Guardrails)
+	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
 	}
@@ -1360,6 +1402,15 @@ func civilizationTaskByID(items []OpsCivilizationAssemblyTaskEvidence, id string
 func roleOutputContractsContain(items []OpsCivilizationRoleOutputContract, role string, output string) bool {
 	for _, item := range items {
 		if item.Role == role && sliceContains(item.RequiredOutputs, output) {
+			return true
+		}
+	}
+	return false
+}
+
+func issueGuardrailContains(items []OpsCivilizationIssueGuardrail, label string, state string) bool {
+	for _, item := range items {
+		if item.Label == label && item.State == state {
 			return true
 		}
 	}

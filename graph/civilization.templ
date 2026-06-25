@@ -46,6 +46,58 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				}
 			</dl>
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-civilization-issue-readiness="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Issue readiness</h2>
+					<p class="text-xs text-warm-faint mt-1">Read-only change-control posture for issue-scan candidates; recommendations are not PR, merge, deploy, or authority approval.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ data.IssueReadiness.Status }</span>
+			</header>
+			<div class="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+				<div class="space-y-3">
+					<dl class="grid gap-x-3 gap-y-2 text-xs md:grid-cols-[10rem_1fr]">
+						<dt class="text-warm-faint">PR-ready state</dt>
+						<dd class="text-warm-muted break-words">{ data.IssueReadiness.Status }</dd>
+						<dt class="text-warm-faint">PR-Ready-When</dt>
+						<dd class="text-warm-muted break-words">{ data.IssueReadiness.PRReadyWhen }</dd>
+						<dt class="text-warm-faint">First pending gate</dt>
+						<dd class="text-warm-muted break-words">{ data.IssueReadiness.FirstPendingStage }</dd>
+						<dt class="text-warm-faint">Recommendation state</dt>
+						<dd class="text-warm-muted break-words">{ data.IssueReadiness.RecommendationState }</dd>
+						<dt class="text-warm-faint">Grouping inputs</dt>
+						<dd class="text-warm-muted break-words">{ opsCivilizationJoin(data.IssueReadiness.GroupingInputs, "none projected") }</dd>
+						<dt class="text-warm-faint">Source refs</dt>
+						<dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.IssueReadiness.SourceRefs, "none projected") }</dd>
+					</dl>
+					<div class="border border-edge bg-void/20 rounded-md p-3">
+						<h3 class="text-[11px] font-medium text-warm-muted uppercase tracking-widest">Grouping recommendation</h3>
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ data.IssueReadiness.GroupingSummary }</p>
+						<p class="text-[11px] text-warm-faint mt-2 leading-relaxed">Grouping remains advisory until the matching repo, touched substrate, risk class, acceptance path, and PR-readiness condition are verified.</p>
+					</div>
+				</div>
+				<div class="border border-edge bg-void/20 rounded-md overflow-hidden">
+					<table class="w-full min-w-[34rem] text-left text-xs">
+						<thead class="text-warm-faint border-b border-edge">
+							<tr>
+								<th class="py-2 px-3 font-medium">Guardrail label</th>
+								<th class="py-2 px-3 font-medium">State</th>
+								<th class="py-2 px-3 font-medium">Meaning</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, guardrail := range data.IssueReadiness.Guardrails {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-words">{ guardrail.Label }</td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ guardrail.State }</td>
+									<td class="py-2 px-3 text-warm-faint break-words">{ guardrail.Detail }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
 		if len(data.ReferenceGroups) > 0 {
 			<section class="grid gap-3 md:grid-cols-2">
 				for _, group := range data.ReferenceGroups {

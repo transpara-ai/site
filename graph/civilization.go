@@ -33,6 +33,7 @@ type OpsCivilizationAssemblyData struct {
 	Boundary               []OpsCivilizationBoundary
 	StatusRows             []OpsCivilizationStatusRow
 	ReferenceGroups        []OpsCivilizationReferenceGroup
+	IssueReadiness         OpsCivilizationIssueReadiness
 	FactoryOrders          []OpsCivilizationAssemblyFactoryOrder
 	WorkEvidence           OpsCivilizationAssemblyWorkEvidence
 	QueuedRunRequest       *OpsHiveQueuedRunRequest
@@ -53,6 +54,23 @@ type OpsCivilizationStatusRow struct {
 type OpsCivilizationReferenceGroup struct {
 	Label string
 	Refs  []string
+}
+
+type OpsCivilizationIssueReadiness struct {
+	Status              string
+	PRReadyWhen         string
+	FirstPendingStage   string
+	RecommendationState string
+	GroupingSummary     string
+	GroupingInputs      []string
+	SourceRefs          []string
+	Guardrails          []OpsCivilizationIssueGuardrail
+}
+
+type OpsCivilizationIssueGuardrail struct {
+	Label  string
+	State  string
+	Detail string
 }
 
 type OpsCivilizationAssemblyProjection struct {
@@ -283,6 +301,7 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 		Boundary:               opsCivilizationBoundary(projection, status, freshness),
 		StatusRows:             opsCivilizationStatusRows(projection, status, freshness),
 		ReferenceGroups:        opsCivilizationReferenceGroups(projection),
+		IssueReadiness:         opsCivilizationIssueReadiness(projection),
 		FactoryOrders:          opsCivilizationFactoryOrders(projection),
 		WorkEvidence:           opsCivilizationWorkEvidence(projection),
 		QueuedRunRequest:       opsCivilizationQueuedRunRequest(projection),
@@ -652,6 +671,130 @@ func opsCivilizationReferenceGroups(projection *OpsCivilizationAssemblyProjectio
 		out = append(out, group)
 	}
 	return out
+}
+
+func opsCivilizationIssueReadiness(projection *OpsCivilizationAssemblyProjection) OpsCivilizationIssueReadiness {
+	readiness := OpsCivilizationIssueReadiness{
+		Status:              opsCivilizationProjectionStatusUnavailable,
+		PRReadyWhen:         "PR-ready when recommendation states and guardrail labels are defined, validated, and supported by implementation, validation, exact-head CFAR, and ready-for-Human PR evidence.",
+		FirstPendingStage:   "not projected",
+		RecommendationState: "unavailable",
+		GroupingSummary:     "No grouping recommendation is available without queued issue-scan projection input.",
+		Guardrails:          opsCivilizationIssueGuardrails(),
+	}
+	if projection == nil {
+		return readiness
+	}
+
+	sourceRefs := []string{}
+	if projection.QueuedRunRequest != nil {
+		q := projection.QueuedRunRequest
+		sourceRefs = append(sourceRefs, q.EventID, q.SourceEventID, q.BriefEventID, q.RunID)
+		if q.SelectionPolicy != nil {
+			policy := q.SelectionPolicy
+			readiness.RecommendationState = fmt.Sprintf("recommendation-only rank %s of %s by %s",
+				opsHiveIntValue(policy.SelectedRank, "?"),
+				opsHiveIntValue(policy.CandidateCount, "?"),
+				opsCivilizationValue(policy.PolicyID, "unprojected policy"),
+			)
+			readiness.GroupingSummary = opsCivilizationValue(policy.Rationale, "Selection policy did not project a grouping rationale.")
+			readiness.GroupingInputs = opsCivilizationNonEmpty(policy.RankingInputs)
+			sort.Strings(readiness.GroupingInputs)
+		} else {
+			readiness.RecommendationState = "queued issue-scan projected without a selection policy"
+			readiness.GroupingSummary = "Candidate grouping remains undefined until selection policy evidence is projected."
+		}
+		readiness.Status, readiness.FirstPendingStage = opsCivilizationIssueReadinessStatus(projection)
+	} else {
+		readiness.Status = "not projected"
+		readiness.RecommendationState = "not projected"
+		readiness.GroupingSummary = "Queued issue-scan selection policy is not projected."
+	}
+	sourceRefs = append(sourceRefs, projection.ValidationRefs...)
+	readiness.SourceRefs = opsCivilizationNonEmpty(sourceRefs)
+	sort.Strings(readiness.SourceRefs)
+	return readiness
+}
+
+func opsCivilizationIssueReadinessStatus(projection *OpsCivilizationAssemblyProjection) (string, string) {
+	if projection == nil || projection.QueuedRunRequest == nil {
+		return "not projected", "not projected"
+	}
+	lifecycle := projection.QueuedRunRequest.DevelopmentLifecycle
+	if len(lifecycle) == 0 {
+		return "not projected", "lifecycle stages not projected"
+	}
+
+	completedStageEvidence := map[string]bool{}
+	for _, task := range projection.WorkEvidenceSummary.Tasks {
+		stageID := strings.TrimSpace(task.LifecycleStageID)
+		if stageID == "" {
+			continue
+		}
+		if task.Ready || opsCivilizationEvidenceObserved(task.RuntimeEvidenceStatus) || opsCivilizationEvidenceObserved(task.Status) {
+			completedStageEvidence[stageID] = true
+		}
+	}
+
+	for _, stage := range lifecycle {
+		stageID := strings.TrimSpace(stage.ID)
+		stageName := opsCivilizationValue(stage.Name, stageID)
+		if stageID != "" && completedStageEvidence[stageID] {
+			continue
+		}
+		if !opsCivilizationEvidenceObserved(stage.EvidenceStatus) {
+			return "pending: " + stageName, stageName
+		}
+	}
+	return "ready-for-Human PR evidence projected", "none"
+}
+
+func opsCivilizationEvidenceObserved(status string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	if normalized == "" {
+		return false
+	}
+	for _, blocked := range []string{"expected", "pending", "not_observed", "not observed", "declared"} {
+		if strings.Contains(normalized, blocked) {
+			return false
+		}
+	}
+	for _, observed := range []string{"complete", "completed", "recorded", "available", "passed", "green", "zero_blocker"} {
+		if strings.Contains(normalized, observed) {
+			return true
+		}
+	}
+	return false
+}
+
+func opsCivilizationIssueGuardrails() []OpsCivilizationIssueGuardrail {
+	return []OpsCivilizationIssueGuardrail{
+		{
+			Label:  "cc:intake",
+			State:  "scanner-visible",
+			Detail: "Durable source-of-intent and scope evidence; not implementation, PR, merge, deploy, or authority approval.",
+		},
+		{
+			Label:  "cc:pr-deferred",
+			State:  "hold",
+			Detail: "PR work remains deferred until PR-Ready-When evidence is satisfied and visibly validated.",
+		},
+		{
+			Label:  "cc:aggregate-candidate",
+			State:  "recommendation-only",
+			Detail: "Grouping is advisory and requires matching repo, substrate, risk, acceptance path, and readiness condition.",
+		},
+		{
+			Label:  "cc:civilization-presence",
+			State:  "visible",
+			Detail: "Issue should remain visible to future Civilization intake and aggregation scans.",
+		},
+		{
+			Label:  "cc:protected-action",
+			State:  "authority gate",
+			Detail: "If present or if scope becomes protected-action sensitive, implementation requires a separate human-scoped AuthorityDecision.",
+		},
+	}
 }
 
 func opsCivilizationFactoryOrders(projection *OpsCivilizationAssemblyProjection) []OpsCivilizationAssemblyFactoryOrder {
