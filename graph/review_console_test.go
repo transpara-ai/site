@@ -24,8 +24,20 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		"External Committee Review Console",
 		`data-review-console="read-only"`,
 		`data-review-console-boundary="display-only"`,
+		`data-exact-head-approval-evidence="read-only"`,
+		`data-approval-state="approved"`,
+		`data-approval-state="stale"`,
+		`data-approval-state="missing"`,
+		`data-approval-state="accepted_residual"`,
+		`data-clean-approval="true"`,
+		`data-clean-approval="false"`,
 		"docs v4.0 Event 13 AuthorityDecision",
 		"127da4ef57dee34231cc50d87a249349fc0f768c",
+		"Stale exact-head approval is not approval for the current head.",
+		"Missing evidence fails closed and is not approval.",
+		"Accepted residual evidence must be carried with later citations and is not clean approval.",
+		"Clean approval is display evidence only; Site does not merge, deploy, close gates, or approve protected actions.",
+		"Exact-head approval evidence matches the required head.",
 		"point-in-time docs#185 approval",
 		"Event 13 AuthorityDecision",
 		"DF-V4.0-EPIC-013-AUTHORITY-DECISION",
@@ -42,6 +54,110 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		}
 	}
 	assertOpsReviewConsoleNoMutationControls(t, body)
+}
+
+func TestOpsReviewConsoleExactHeadApprovalEvidenceStates(t *testing.T) {
+	data := buildOpsReviewConsoleData()
+	wantStates := map[string]bool{
+		"approved":          false,
+		"stale":             false,
+		"missing":           false,
+		"accepted_residual": false,
+	}
+	cleanCount := 0
+	for _, item := range data.ExactHeadEvidence {
+		if item.ID == "" ||
+			item.Title == "" ||
+			item.TargetRepo == "" ||
+			item.TargetRef == "" ||
+			item.ApprovalState == "" ||
+			item.ResidualState == "" ||
+			item.Summary == "" ||
+			item.Limitation == "" {
+			t.Fatalf("exact-head approval item has incomplete fields: %#v", item)
+		}
+		if !strings.HasPrefix(item.TargetRepo, "transpara-ai/") {
+			t.Fatalf("exact-head approval item %q TargetRepo = %q, want Transpara-AI repo", item.ID, item.TargetRepo)
+		}
+		if item.ApprovalSourceURL != "" && !strings.HasPrefix(item.ApprovalSourceURL, "https://github.com/transpara-ai/") {
+			t.Fatalf("exact-head approval item %q ApprovalSourceURL = %q, want Transpara-AI GitHub source", item.ID, item.ApprovalSourceURL)
+		}
+		if !item.DisplayOnly {
+			t.Fatalf("exact-head approval item %q DisplayOnly = false", item.ID)
+		}
+		wantStates[item.ApprovalState] = true
+		if item.ApprovalState == "approved" {
+			if !item.CleanApproval {
+				t.Fatalf("approved exact-head item %q CleanApproval = false", item.ID)
+			}
+			cleanCount++
+			continue
+		}
+		if item.CleanApproval {
+			t.Fatalf("non-approved exact-head item %q state %q has CleanApproval=true", item.ID, item.ApprovalState)
+		}
+	}
+	for state, seen := range wantStates {
+		if !seen {
+			t.Fatalf("exact-head approval fixtures do not cover state %q", state)
+		}
+	}
+	if cleanCount != 1 {
+		t.Fatalf("clean approved exact-head fixture count = %d, want 1", cleanCount)
+	}
+}
+
+func TestOpsExactHeadApprovalStateFailsClosed(t *testing.T) {
+	for name, tc := range map[string]struct {
+		required string
+		approved string
+		source   string
+		residual string
+		want     string
+	}{
+		"missing approved head": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			source:   "https://github.com/transpara-ai/site/issues/118",
+			want:     "missing",
+		},
+		"missing source": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			approved: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			want:     "missing",
+		},
+		"stale head": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			approved: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			source:   "https://github.com/transpara-ai/site/issues/118",
+			want:     "stale",
+		},
+		"accepted residual": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			approved: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			source:   "https://github.com/transpara-ai/site/issues/118",
+			residual: "accepted_with_residual",
+			want:     "accepted_residual",
+		},
+		"stale residual remains stale": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			approved: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			source:   "https://github.com/transpara-ai/site/issues/118",
+			residual: "accepted_with_residual",
+			want:     "stale",
+		},
+		"clean approved": {
+			required: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			approved: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			source:   "https://github.com/transpara-ai/site/issues/118",
+			want:     "approved",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := opsExactHeadApprovalState(tc.required, tc.approved, tc.source, tc.residual); got != tc.want {
+				t.Fatalf("opsExactHeadApprovalState() = %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) {

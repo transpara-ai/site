@@ -3,6 +3,7 @@ package graph
 import (
 	"html/template"
 	"net/http"
+	"strings"
 )
 
 type OpsReviewConsoleData struct {
@@ -10,7 +11,25 @@ type OpsReviewConsoleData struct {
 	GeneratedAt         string
 	AuthorizationSource string
 	Boundary            []string
+	ExactHeadEvidence   []OpsExactHeadApprovalEvidence
 	Items               []OpsReviewItem
+}
+
+type OpsExactHeadApprovalEvidence struct {
+	ID                string
+	Title             string
+	TargetRepo        string
+	TargetRef         string
+	RequiredHead      string
+	ApprovedHead      string
+	ApprovalSourceURL string
+	ApprovalActor     string
+	ApprovalState     string
+	ResidualState     string
+	CleanApproval     bool
+	Summary           string
+	Limitation        string
+	DisplayOnly       bool
 }
 
 type OpsReviewItem struct {
@@ -49,6 +68,46 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 			"no approve, reject, merge, close, label, comment, deploy, RuntimeBroker, EventGraph write, or protected action path",
 			"Site is a console, not the truth source",
 			"Gate W remains open until a later docs evidence-decision PR accepts, rejects, or defers the Site implementation evidence",
+		},
+		ExactHeadEvidence: []OpsExactHeadApprovalEvidence{
+			buildOpsExactHeadApprovalEvidence(opsExactHeadApprovalFixture{
+				ID:                "site-123-approved",
+				Title:             "Site #123 CFAR approval evidence",
+				TargetRepo:        "transpara-ai/site",
+				TargetRef:         "pull/123",
+				RequiredHead:      "d1ca6cd93f87072d4422b9de1e8574f4bfa973a9",
+				ApprovedHead:      "d1ca6cd93f87072d4422b9de1e8574f4bfa973a9",
+				ApprovalSourceURL: "https://github.com/transpara-ai/site/pull/123#issuecomment-4801761943",
+				ApprovalActor:     "CFAR",
+			}),
+			buildOpsExactHeadApprovalEvidence(opsExactHeadApprovalFixture{
+				ID:                "site-stale-head-fixture",
+				Title:             "Stale exact-head approval fixture",
+				TargetRepo:        "transpara-ai/site",
+				TargetRef:         "pull/example-stale",
+				RequiredHead:      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				ApprovedHead:      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				ApprovalSourceURL: "https://github.com/transpara-ai/site/issues/118",
+				ApprovalActor:     "External Committee",
+			}),
+			buildOpsExactHeadApprovalEvidence(opsExactHeadApprovalFixture{
+				ID:           "gate-w-missing-fixture",
+				Title:        "Missing exact-head approval fixture",
+				TargetRepo:   "transpara-ai/docs",
+				TargetRef:    "gate-w-closeout",
+				RequiredHead: "cccccccccccccccccccccccccccccccccccccccc",
+			}),
+			buildOpsExactHeadApprovalEvidence(opsExactHeadApprovalFixture{
+				ID:                "docs-172-accepted-residual",
+				Title:             "Gate S exact-head approval with accepted residual",
+				TargetRepo:        "transpara-ai/docs",
+				TargetRef:         "issues/172",
+				RequiredHead:      "dddddddddddddddddddddddddddddddddddddddd",
+				ApprovedHead:      "dddddddddddddddddddddddddddddddddddddddd",
+				ApprovalSourceURL: "https://github.com/transpara-ai/docs/issues/172#issuecomment-4757178868",
+				ApprovalActor:     "External Committee",
+				ResidualState:     "accepted_with_residual",
+			}),
 		},
 		Items: []OpsReviewItem{
 			{
@@ -131,6 +190,90 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 	}
 }
 
+type opsExactHeadApprovalFixture struct {
+	ID                string
+	Title             string
+	TargetRepo        string
+	TargetRef         string
+	RequiredHead      string
+	ApprovedHead      string
+	ApprovalSourceURL string
+	ApprovalActor     string
+	ResidualState     string
+}
+
+func buildOpsExactHeadApprovalEvidence(f opsExactHeadApprovalFixture) OpsExactHeadApprovalEvidence {
+	state := opsExactHeadApprovalState(f.RequiredHead, f.ApprovedHead, f.ApprovalSourceURL, f.ResidualState)
+	return OpsExactHeadApprovalEvidence{
+		ID:                f.ID,
+		Title:             f.Title,
+		TargetRepo:        f.TargetRepo,
+		TargetRef:         f.TargetRef,
+		RequiredHead:      f.RequiredHead,
+		ApprovedHead:      f.ApprovedHead,
+		ApprovalSourceURL: f.ApprovalSourceURL,
+		ApprovalActor:     f.ApprovalActor,
+		ApprovalState:     state,
+		ResidualState:     opsReviewResidualState(f.ResidualState),
+		CleanApproval:     state == "approved",
+		Summary:           opsExactHeadApprovalSummary(state),
+		Limitation:        opsExactHeadApprovalLimitation(state),
+		DisplayOnly:       true,
+	}
+}
+
+func opsExactHeadApprovalState(requiredHead, approvedHead, approvalSourceURL, residualState string) string {
+	requiredHead = strings.TrimSpace(requiredHead)
+	approvedHead = strings.TrimSpace(approvedHead)
+	approvalSourceURL = strings.TrimSpace(approvalSourceURL)
+	residualState = opsReviewResidualState(residualState)
+	if requiredHead == "" || approvedHead == "" || approvalSourceURL == "" {
+		return "missing"
+	}
+	// Review Console fixtures use full commit SHAs. Any mismatch fails closed as stale.
+	if approvedHead != requiredHead {
+		return "stale"
+	}
+	if residualState != "none" {
+		return "accepted_residual"
+	}
+	return "approved"
+}
+
+func opsReviewResidualState(state string) string {
+	state = strings.TrimSpace(state)
+	if state == "" {
+		return "none"
+	}
+	return state
+}
+
+func opsExactHeadApprovalSummary(state string) string {
+	switch state {
+	case "approved":
+		return "Exact-head approval evidence matches the required head."
+	case "stale":
+		return "Approval evidence exists for a different head; the target must be re-approved at the current head."
+	case "accepted_residual":
+		return "Exact-head approval evidence exists, but only with an accepted residual attached."
+	default:
+		return "Exact-head approval evidence is missing."
+	}
+}
+
+func opsExactHeadApprovalLimitation(state string) string {
+	switch state {
+	case "approved":
+		return "Clean approval is display evidence only; Site does not merge, deploy, close gates, or approve protected actions."
+	case "stale":
+		return "Stale exact-head approval is not approval for the current head."
+	case "accepted_residual":
+		return "Accepted residual evidence must be carried with later citations and is not clean approval."
+	default:
+		return "Missing evidence fails closed and is not approval."
+	}
+}
+
 var opsReviewConsoleTemplate = template.Must(template.New("ops-review-console").Parse(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -157,6 +300,38 @@ var opsReviewConsoleTemplate = template.Must(template.New("ops-review-console").
 					<p class="text-xs text-warm-muted leading-relaxed">{{.}}</p>
 				</div>
 			{{end}}
+		</section>
+
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-exact-head-approval-evidence="read-only">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Exact-head approval evidence</h2>
+				<p class="text-xs text-warm-faint mt-1">Read-only issue and PR evidence fixtures. Missing, stale, or residual-carrying evidence fails closed and is never shown as clean approval.</p>
+			</header>
+			<div class="divide-y divide-edge">
+				{{range .ExactHeadEvidence}}
+					<article class="p-4 space-y-3" data-exact-head-evidence="{{.ID}}" data-approval-state="{{.ApprovalState}}" data-clean-approval="{{.CleanApproval}}" data-display-only="{{.DisplayOnly}}">
+						<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+							<div class="min-w-0">
+								<h3 class="text-base font-medium text-warm">{{.Title}}</h3>
+								<p class="text-xs text-warm-faint mt-1">{{.TargetRepo}} · {{.TargetRef}}</p>
+							</div>
+							<div class="flex gap-2 flex-wrap">
+								<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{{.ApprovalState}}</span>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">residual: {{.ResidualState}}</span>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">display only</span>
+							</div>
+						</div>
+						<p class="text-xs text-warm-muted leading-relaxed">{{.Summary}}</p>
+						<dl class="grid gap-x-3 gap-y-2 text-xs md:grid-cols-[9rem_1fr]">
+							<dt class="text-warm-faint">required_head</dt><dd class="text-warm-muted break-all">{{if .RequiredHead}}{{.RequiredHead}}{{else}}missing{{end}}</dd>
+							<dt class="text-warm-faint">approved_head</dt><dd class="text-warm-muted break-all">{{if .ApprovedHead}}{{.ApprovedHead}}{{else}}missing{{end}}</dd>
+							<dt class="text-warm-faint">approval_source</dt><dd class="text-warm-muted break-all">{{if .ApprovalSourceURL}}<a href="{{.ApprovalSourceURL}}" rel="noopener" class="text-brand hover:text-brand/80">{{.ApprovalSourceURL}}</a>{{else}}missing{{end}}</dd>
+							<dt class="text-warm-faint">approval_actor</dt><dd class="text-warm-muted">{{if .ApprovalActor}}{{.ApprovalActor}}{{else}}missing{{end}}</dd>
+							<dt class="text-warm-faint">limitation</dt><dd class="text-warm-muted">{{.Limitation}}</dd>
+						</dl>
+					</article>
+				{{end}}
+			</div>
 		</section>
 
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-review-console="read-only">
