@@ -31,23 +31,24 @@ type OpsSurface struct {
 }
 
 type OpsPageData struct {
-	Title        string
-	Description  string
-	Active       string
-	View         string // optional sub-view selector; "forensic" shows the full evidence tiers
-	Surfaces     []OpsSurface
-	EmbedURL     string
-	EmbedLabel   string
-	Telemetry    *OpsTelemetryData
-	Work         *OpsWorkData
-	Hive         *OpsHiveData
-	HiveShell    *OpsHiveShellData
-	Evidence     *OpsEvidenceData
-	Decision     *OpsDecisionData
-	Approvals    *OpsApprovalsData
-	Observatory  *OpsObservatoryData
-	Civilization *OpsCivilizationAssemblyData
-	LegacyURL    string
+	Title           string
+	Description     string
+	Active          string
+	View            string // optional sub-view selector; "forensic" shows the full evidence tiers
+	Surfaces        []OpsSurface
+	EmbedURL        string
+	EmbedLabel      string
+	Telemetry       *OpsTelemetryData
+	Work            *OpsWorkData
+	Hive            *OpsHiveData
+	HiveShell       *OpsHiveShellData
+	Evidence        *OpsEvidenceData
+	Decision        *OpsDecisionData
+	Approvals       *OpsApprovalsData
+	Observatory     *OpsObservatoryData
+	Civilization    *OpsCivilizationAssemblyData
+	GitHubCanonical *OpsGitHubCanonicalData
+	LegacyURL       string
 }
 
 type OpsHiveShellData struct {
@@ -897,6 +898,15 @@ func (h *Handlers) handleOpsCivilization(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (h *Handlers) handleOpsGitHubCanonical(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:           "GitHub Canonical",
+		Description:     "Read-only migration progress for replacing markdown development arcs with GitHub issue-canonical work records.",
+		Active:          "github-canonical",
+		GitHubCanonical: buildOpsGitHubCanonicalData(time.Now().UTC()),
+	})
+}
+
 func (h *Handlers) handleOpsWork(w http.ResponseWriter, r *http.Request) {
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Work",
@@ -1471,6 +1481,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Target:      "EventGraph Civilization Assembly projection",
 			Owner:       "site read-only projection",
 			Status:      "v4.0 bounded",
+		},
+		{
+			ID:          "github-canonical",
+			Label:       "GitHub Canonical",
+			Description: "Migration progress for issue-canonical work, blocked lanes, completed traceability, and legacy markdown retirement.",
+			Href:        "/ops/github-canonical",
+			Target:      "static typed Site migration fixture",
+			Owner:       "site read-only projection",
+			Status:      "partial cutover",
 		},
 		{
 			ID:          "review-console",

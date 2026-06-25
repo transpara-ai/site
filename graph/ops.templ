@@ -51,6 +51,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 				</nav>
 				if data.Civilization != nil {
 					@opsCivilizationAssembly(data.Civilization)
+				} else if data.GitHubCanonical != nil {
+					@opsGitHubCanonical(data.GitHubCanonical)
 				} else if data.Observatory != nil {
 					@opsObservatorySummary(data.Observatory)
 				} else if data.Telemetry != nil {
@@ -114,6 +116,147 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 			@simpleFooter(p)
 		</body>
 	</html>
+}
+
+templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
+	<section class="space-y-4" data-github-canonical-migration="read-only">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">GitHub-canonical migration</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">GitHub Issues are the live source-of-intent target; legacy markdown is background evidence only until the cutover criteria in docs#197 are complete.</p>
+					<p class="text-xs text-warm-faint mt-2">Parent: <a href={ templ.SafeURL(data.Parent.URL) } class="text-brand hover:underline" target="_blank" rel="noopener">{ githubCanonicalIssueLabel(data.Parent) }</a> · { data.Parent.Title }</p>
+				</div>
+				<div class="flex flex-col items-start md:items-end gap-2">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap">{ data.Status }</span>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">effect = none</span>
+				</div>
+			</header>
+			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
+				<dt class="text-warm-faint">projection state</dt>
+				<dd class="text-warm-muted">{ data.ProjectionState }</dd>
+				<dt class="text-warm-faint">generated</dt>
+				<dd class="text-warm-muted">{ data.GeneratedAt }</dd>
+				<dt class="text-warm-faint">boundary</dt>
+				<dd class="text-warm-muted">read-only typed fixture; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
+			</dl>
+		</section>
+		<section class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+			for _, repo := range data.RepoSummaries {
+				<article class="border border-edge bg-surface rounded-lg p-4 min-h-[10rem]">
+					<div class="flex items-start justify-between gap-3">
+						<h3 class="text-sm font-medium text-warm break-all">{ repo.Repo }</h3>
+						<span class="text-[10px] text-warm-faint tabular-nums">{ fmt.Sprintf("%d", repo.Total) }</span>
+					</div>
+					<dl class="grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+						<dt class="text-warm-faint">completed</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.Completed) }</dd>
+						<dt class="text-warm-faint">ready</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.Ready) }</dd>
+						<dt class="text-warm-faint">deferred</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.Deferred) }</dd>
+						<dt class="text-warm-faint">human scope</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.HumanScope) }</dd>
+						<dt class="text-warm-faint">protected</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.Protected) }</dd>
+						<dt class="text-warm-faint">legacy only</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", repo.LegacyOnly) }</dd>
+					</dl>
+					if repo.BlockedReason != "" {
+						<p class="text-[11px] text-warm-faint mt-3 leading-relaxed">{ repo.BlockedReason }</p>
+					}
+				</article>
+			}
+		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Canonical issue lanes</h2>
+					<p class="text-xs text-warm-faint mt-1">One typed row per migration lane; markdown refs are historical evidence, not executable work.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">source-of-intent only</span>
+			</header>
+			<div class="overflow-x-auto" data-github-canonical-wide-table="lanes">
+				<table class="w-full min-w-[94rem] text-left text-xs">
+					<thead class="text-warm-faint border-b border-edge">
+						<tr>
+							<th class="py-2 px-3 font-medium min-w-[16rem]">Issue</th>
+							<th class="py-2 px-3 font-medium">Repo</th>
+							<th class="py-2 px-3 font-medium">State</th>
+							<th class="py-2 px-3 font-medium">Substrate</th>
+							<th class="py-2 px-3 font-medium">Readiness</th>
+							<th class="py-2 px-3 font-medium">Blocked reason</th>
+							<th class="py-2 px-3 font-medium">Labels</th>
+							<th class="py-2 px-3 font-medium">Evidence refs</th>
+							<th class="py-2 px-3 font-medium">Legacy refs</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, lane := range data.Lanes {
+							<tr class="border-b border-edge/50 align-top">
+								<td class="py-2 px-3 text-warm min-w-[16rem]">
+									if lane.Issue.URL != "" && strings.HasPrefix(lane.Issue.URL, "https://") {
+										<a href={ templ.SafeURL(lane.Issue.URL) } class="text-brand hover:underline break-all" target="_blank" rel="noopener">{ githubCanonicalIssueLabel(lane.Issue) }</a>
+									} else {
+										<p class="break-all">{ githubCanonicalIssueLabel(lane.Issue) }</p>
+									}
+									<p class="text-[10px] text-warm-faint mt-1 break-words">{ lane.Issue.Title }</p>
+									<p class="text-[10px] text-warm-faint mt-1">parent: { lane.ParentRef }</p>
+								</td>
+								<td class="py-2 px-3 text-warm-muted break-all">{ lane.Issue.Repo }</td>
+								<td class="py-2 px-3">
+									<span class={ "inline-flex text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(lane.State) }>{ lane.State }</span>
+									<p class="text-[10px] text-warm-faint mt-1">{ lane.Risk }</p>
+								</td>
+								<td class="py-2 px-3 text-warm-muted break-words">{ lane.Substrate }</td>
+								<td class="py-2 px-3 text-warm-muted break-words">{ lane.Readiness }</td>
+								<td class="py-2 px-3 text-warm-faint break-words">{ opsCivilizationValue(lane.BlockedReason, "none") }</td>
+								<td class="py-2 px-3 text-warm-faint break-words">{ opsCivilizationJoin(lane.Labels, "none") }</td>
+								<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(lane.EvidenceRefs, "none") }</td>
+								<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationJoin(lane.LegacyRefs, "none") }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+		<section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Cutover checks</h2>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, check := range data.CutoverChecks {
+						<div class="px-4 py-3">
+							<div class="flex items-start justify-between gap-3">
+								<h3 class="text-sm font-medium text-warm">{ check.Label }</h3>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(check.State) }>{ check.State }</span>
+							</div>
+							<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ check.Evidence }</p>
+							if check.Blocker != "" {
+								<p class="text-[11px] text-warm-faint mt-1 leading-relaxed">blocker: { check.Blocker }</p>
+							}
+						</div>
+					}
+				</div>
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Boundaries</h2>
+				</header>
+				<div class="p-4 space-y-4">
+					<ul class="space-y-2">
+						for _, boundary := range data.Boundaries {
+							<li class="text-sm text-warm-muted leading-relaxed">{ boundary }</li>
+						}
+					</ul>
+					<div class="border border-edge bg-void/20 rounded-md p-3">
+						<h3 class="text-xs font-medium text-warm uppercase tracking-widest">Legacy evidence</h3>
+						for _, item := range data.LegacyEvidence {
+							<div class="mt-3">
+								<p class="text-xs text-warm break-all">{ item.Ref }</p>
+								<p class="text-[11px] text-warm-faint mt-1">{ item.State } · { item.Disposition }</p>
+							</div>
+						}
+					</div>
+				</div>
+			</section>
+		</section>
+	</section>
 }
 
 templ opsDecisionSurface(d *OpsDecisionData) {

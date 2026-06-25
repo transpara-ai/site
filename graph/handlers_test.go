@@ -56,6 +56,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/observatory",
 		"/ops/observatory/events",
 		"/ops/civilization",
+		"/ops/github-canonical",
 		"/ops/hive",
 		"/ops/evidence",
 		"/ops/decision",
@@ -123,6 +124,57 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		}
 	}
 	assertNoCivilizationMutationControls(t, civilizationAssemblySurface(t, body))
+}
+
+func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
+	calledHive := false
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calledHive = true
+		http.Error(w, "unexpected hive call", http.StatusTeapot)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyOps(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/github-canonical?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/github-canonical: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if calledHive {
+		t.Fatal("GET /ops/github-canonical called Hive; want static read-only Site fixture")
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"GitHub-canonical migration",
+		`data-github-canonical-migration="read-only"`,
+		"transpara-ai/docs#197",
+		"transpara-ai/work#61",
+		"transpara-ai/work#62",
+		"transpara-ai/work#63",
+		"transpara-ai/site#127",
+		"completed",
+		"pr-ready",
+		"deferred",
+		"needs-human-scope",
+		"protected-action",
+		"legacy-evidence-only",
+		"legacy-markdown",
+		"effect = none",
+		"No Hive wake",
+		"GitHub Issues are the live source-of-intent target",
+		"no live GitHub fetch or mutation",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/github-canonical: body does not contain %q", want)
+		}
+	}
+	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
 }
 
 func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
@@ -2159,6 +2211,19 @@ func civilizationAssemblySurface(t *testing.T, body string) string {
 	start := strings.Index(body, `data-civilization-assembly="read-only"`)
 	if start < 0 {
 		t.Fatal("GET /ops/civilization: missing read-only assembly marker")
+	}
+	surface := body[start:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	return surface
+}
+
+func githubCanonicalSurface(t *testing.T, body string) string {
+	t.Helper()
+	start := strings.Index(body, `data-github-canonical-migration="read-only"`)
+	if start < 0 {
+		t.Fatal("GET /ops/github-canonical: missing read-only migration marker")
 	}
 	surface := body[start:]
 	if end := strings.Index(surface, "</main>"); end >= 0 {
