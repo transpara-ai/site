@@ -33,6 +33,7 @@ type OpsCivilizationAssemblyData struct {
 	Boundary               []OpsCivilizationBoundary
 	StatusRows             []OpsCivilizationStatusRow
 	ReferenceGroups        []OpsCivilizationReferenceGroup
+	IssueIntake            OpsCivilizationIssueIntake
 	IssueReadiness         OpsCivilizationIssueReadiness
 	FactoryOrders          []OpsCivilizationAssemblyFactoryOrder
 	WorkEvidence           OpsCivilizationAssemblyWorkEvidence
@@ -90,6 +91,7 @@ type OpsCivilizationAssemblyProjection struct {
 	FactoryOrderSummary                []OpsCivilizationAssemblyFactoryOrder     `json:"factory_order_summary"`
 	WorkEvidenceSummary                OpsCivilizationAssemblyWorkEvidence       `json:"work_evidence_summary"`
 	QueuedRunRequest                   *OpsHiveQueuedRunRequest                  `json:"queued_run_request,omitempty"`
+	IssueIntakeProjection              OpsCivilizationIssueIntakeProjection      `json:"issue_intake_projection,omitempty"`
 	IssueScanProjection                OpsCivilizationIssueScanProjection        `json:"issue_scan_projection,omitempty"`
 	SiteConsumerStatus                 OpsCivilizationAssemblyFieldStatus        `json:"site_consumer_status"`
 	OpenGateSummary                    []OpsCivilizationAssemblyGateSummary      `json:"open_gate_summary"`
@@ -303,6 +305,7 @@ func buildOpsCivilizationAssemblyDataFromProjection(projection *OpsCivilizationA
 		Boundary:               opsCivilizationBoundary(projection, status, freshness),
 		StatusRows:             opsCivilizationStatusRows(projection, status, freshness),
 		ReferenceGroups:        opsCivilizationReferenceGroups(projection),
+		IssueIntake:            opsCivilizationIssueIntake(projection),
 		IssueReadiness:         opsCivilizationIssueReadiness(projection),
 		FactoryOrders:          opsCivilizationFactoryOrders(projection),
 		WorkEvidence:           opsCivilizationWorkEvidence(projection),
