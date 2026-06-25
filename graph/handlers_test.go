@@ -95,6 +95,16 @@ func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 		"EventGraph Civilization Assembly projection unavailable to Site",
 		"EventGraph Civilization Assembly projection",
 		"Projection facts",
+		"Issue readiness",
+		`data-civilization-issue-readiness="read-only"`,
+		"recommendations are not PR, merge, deploy, or authority approval",
+		"PR-Ready-When",
+		"cc:intake",
+		"cc:pr-deferred",
+		"cc:aggregate-candidate",
+		"recommendation-only",
+		"cc:civilization-presence",
+		"cc:protected-action",
 		"FactoryOrder evidence",
 		"No Work FactoryOrder seed tasks are projected.",
 		"derivation status",
@@ -144,6 +154,23 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"runtime projection from Hive",
 		"FactoryOrder evidence",
 		"task rows can include runtime-evidence and completed-stage signals without merge or deployment authority",
+		"Issue readiness",
+		`data-civilization-issue-readiness="read-only"`,
+		"PR-ready state",
+		"pending: Debate with correct civic roles",
+		"PR-Ready-When",
+		"First pending gate",
+		"Debate with correct civic roles",
+		"Recommendation state",
+		"recommendation-only rank 1 of 3 by scanner_order_first_candidate_v0.1",
+		"Grouping recommendation",
+		"Grouping remains advisory until the matching repo, touched substrate, risk class, acceptance path, and PR-readiness condition are verified.",
+		"cc:intake",
+		"Durable source-of-intent and scope evidence",
+		"cc:pr-deferred",
+		"cc:aggregate-candidate",
+		"cc:civilization-presence",
+		"cc:protected-action",
 		"fo_run_issue_scan_001",
 		"work_task_seeded",
 		"human_required_before_merge",
@@ -255,6 +282,137 @@ func TestOpsCivilizationEvidenceStatusValue(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestOpsCivilizationEvidenceObserved(t *testing.T) {
+	for _, tc := range []struct {
+		status string
+		want   bool
+	}{
+		{status: "", want: false},
+		{status: "unavailable", want: false},
+		{status: "not_available", want: false},
+		{status: "not available", want: false},
+		{status: "incomplete", want: false},
+		{status: "not_complete", want: false},
+		{status: "not_completed", want: false},
+		{status: "not_green", want: false},
+		{status: "not_recorded", want: false},
+		{status: "not passed", want: false},
+		{status: "nonzero_blockers", want: false},
+		{status: "declared_pending_runtime_evidence", want: false},
+		{status: "expected_not_observed", want: false},
+		{status: "stage_completed_runtime_evidence_recorded", want: true},
+		{status: "stage completed runtime evidence recorded", want: true},
+		{status: "available", want: true},
+		{status: "passed", want: true},
+	} {
+		t.Run(tc.status, func(t *testing.T) {
+			if got := opsCivilizationEvidenceObserved(tc.status); got != tc.want {
+				t.Fatalf("opsCivilizationEvidenceObserved(%q) = %v, want %v", tc.status, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOpsCivilizationIssueReadinessBranches(t *testing.T) {
+	selection := &OpsHiveQueuedRunSelectionPolicy{
+		PolicyID:       "scanner_order_first_candidate_v0.1",
+		SelectedRank:   1,
+		CandidateCount: 2,
+		RankingInputs:  []string{"repo_scan_order"},
+		Rationale:      "Select the first validated candidate.",
+	}
+
+	t.Run("unavailable lifecycle and runtime evidence do not advance readiness", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_unavailable",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "expected_not_observed"},
+				},
+			},
+			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+				Tasks: []OpsCivilizationAssemblyTaskEvidence{
+					{LifecycleStageID: "research", RuntimeEvidenceStatus: "unavailable"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "pending: Research" || data.IssueReadiness.FirstPendingStage != "Research" {
+			t.Fatalf("issue readiness = %+v, want pending Research", data.IssueReadiness)
+		}
+	})
+
+	t.Run("runtime evidence can complete a pending lifecycle stage", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_runtime_complete",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "expected_not_observed"},
+				},
+			},
+			WorkEvidenceSummary: OpsCivilizationAssemblyWorkEvidence{
+				Tasks: []OpsCivilizationAssemblyTaskEvidence{
+					{LifecycleStageID: "research", RuntimeEvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" || data.IssueReadiness.FirstPendingStage != "none" {
+			t.Fatalf("issue readiness = %+v, want ready from runtime evidence", data.IssueReadiness)
+		}
+	})
+
+	t.Run("all observed stages are ready", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_ready",
+				SelectionPolicy: selection,
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+					{ID: "review", Name: "Review", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" || data.IssueReadiness.FirstPendingStage != "none" {
+			t.Fatalf("issue readiness = %+v, want ready", data.IssueReadiness)
+		}
+	})
+
+	t.Run("queued run without selection policy remains recommendation incomplete", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID: "run_no_policy",
+				DevelopmentLifecycle: []OpsHiveQueuedRunLifecycleStage{
+					{ID: "research", Name: "Research", EvidenceStatus: "stage_completed_runtime_evidence_recorded"},
+				},
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.RecommendationState != "queued issue-scan projected without a selection policy" {
+			t.Fatalf("recommendation state = %q", data.IssueReadiness.RecommendationState)
+		}
+		if data.IssueReadiness.Status != "ready-for-Human PR evidence projected" {
+			t.Fatalf("issue readiness = %+v, want ready from observed lifecycle", data.IssueReadiness)
+		}
+	})
+
+	t.Run("queued run without lifecycle is not projected", func(t *testing.T) {
+		projection := &OpsCivilizationAssemblyProjection{
+			QueuedRunRequest: &OpsHiveQueuedRunRequest{
+				RunID:           "run_no_lifecycle",
+				SelectionPolicy: selection,
+			},
+		}
+		data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+		if data.IssueReadiness.Status != "not projected" || data.IssueReadiness.FirstPendingStage != "lifecycle stages not projected" {
+			t.Fatalf("issue readiness = %+v, want lifecycle not projected", data.IssueReadiness)
+		}
+	})
 }
 
 // Raw Hive-shaped fixture for the contract between transpara-ai/hive#169's
@@ -1015,6 +1173,21 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if data.QueuedRunRequest.SelectionPolicy == nil || data.QueuedRunRequest.SelectionPolicy.PolicyID != "scanner_order_first_candidate_v0.1" || !sliceContains(data.QueuedRunRequest.SelectionPolicy.RankingInputs, "scanner_return_order") {
 		t.Fatalf("queued run selection policy = %+v", data.QueuedRunRequest.SelectionPolicy)
 	}
+	if data.IssueReadiness.Status != "pending: Surface ready-for-Human result PR" || data.IssueReadiness.FirstPendingStage != "Surface ready-for-Human result PR" {
+		t.Fatalf("issue readiness = %+v, want pending surface-ready stage", data.IssueReadiness)
+	}
+	if !strings.Contains(data.IssueReadiness.PRReadyWhen, "exact-head CFAR") {
+		t.Fatalf("issue PR-Ready-When = %q, want exact-head CFAR boundary", data.IssueReadiness.PRReadyWhen)
+	}
+	if !strings.Contains(data.IssueReadiness.RecommendationState, "recommendation-only rank 1 of 3") {
+		t.Fatalf("issue recommendation state = %q", data.IssueReadiness.RecommendationState)
+	}
+	if !sliceContains(data.IssueReadiness.GroupingInputs, "scanner_return_order") {
+		t.Fatalf("issue grouping inputs = %+v, want scanner_return_order", data.IssueReadiness.GroupingInputs)
+	}
+	if !issueGuardrailContains(data.IssueReadiness.Guardrails, "cc:aggregate-candidate", "recommendation-only") {
+		t.Fatalf("issue guardrails = %+v, want aggregate-candidate recommendation guardrail", data.IssueReadiness.Guardrails)
+	}
 	if findingContains(data, "fallback") {
 		t.Fatal("projection consumer retained a fallback finding")
 	}
@@ -1121,12 +1294,15 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			},
 		},
 		QueuedRunRequest: &OpsHiveQueuedRunRequest{
+			EventID:               `evt_<script>alert("event")</script>`,
 			RunID:                 `run_<script>alert("run")</script>`,
 			Title:                 `<button onclick="x">queued issue</button>`,
 			Status:                `<form method="post">queued</form>`,
 			TargetRepos:           []string{`transpara-ai/<script>site</script>`},
 			AuthorityInitialLevel: `<input name="authority">`,
 			AuthorityScope:        `<a hx-post="/approve">scope</a>`,
+			SourceEventID:         `source_<script>alert("source")</script>`,
+			BriefEventID:          `brief_<script>alert("brief")</script>`,
 			EvidenceKind:          `<select><option>queued</option></select>`,
 			BriefKind:             `<script>brief</script>`,
 			LifecycleVersion:      `v<script>3</script>`,
@@ -1165,6 +1341,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 		WithheldOrUnavailableFields: []OpsCivilizationAssemblyUnavailableField{
 			{Field: `authority_state`, Status: opsCivilizationFieldUnavailable, Reason: `<select><option>missing</option></select>`},
 		},
+		ValidationRefs: []string{`validation_<script>alert("validation")</script>`},
 	}
 
 	data := buildOpsCivilizationAssemblyDataFromProjection(projection, now)
@@ -1179,7 +1356,7 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "run_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
@@ -1360,6 +1537,15 @@ func civilizationTaskByID(items []OpsCivilizationAssemblyTaskEvidence, id string
 func roleOutputContractsContain(items []OpsCivilizationRoleOutputContract, role string, output string) bool {
 	for _, item := range items {
 		if item.Role == role && sliceContains(item.RequiredOutputs, output) {
+			return true
+		}
+	}
+	return false
+}
+
+func issueGuardrailContains(items []OpsCivilizationIssueGuardrail, label string, state string) bool {
+	for _, item := range items {
+		if item.Label == label && item.State == state {
 			return true
 		}
 	}
