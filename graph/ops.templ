@@ -162,6 +162,40 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</article>
 			}
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-autonomy-frontier="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Autonomy frontier</h2>
+					<p class="text-xs text-warm-faint mt-1">Typed scanner frontier for parking or candidate-work posture; recommendation is evidence only, not authority.</p>
+				</div>
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(data.AutonomyFrontier.Recommendation) }>{ data.AutonomyFrontier.Recommendation }</span>
+			</header>
+			<div class="grid gap-3 p-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+				<div class="grid gap-2 sm:grid-cols-2">
+					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[9.75rem_1fr] gap-x-2 gap-y-1">
+						<dt class="text-warm-faint">total_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.TotalIssueCount) }</dd>
+						<dt class="text-warm-faint">candidate_bundle_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.CandidateBundleCount) }</dd>
+						<dt class="text-warm-faint">review_group_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.ReviewGroupCount) }</dd>
+						<dt class="text-warm-faint">singleton_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.SingletonCount) }</dd>
+						<dt class="text-warm-faint">issue_shape_warning_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.IssueShapeWarningCount) }</dd>
+					</dl>
+					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[11.75rem_1fr] gap-x-2 gap-y-1">
+						<dt class="text-warm-faint">pr_ready_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.PRReadyIssueCount) }</dd>
+						<dt class="text-warm-faint">autonomous_pr_ready_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.AutonomousPRReadyIssueCount) }</dd>
+						<dt class="text-warm-faint">needs_human_scope_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.NeedsHumanScopeIssueCount) }</dd>
+						<dt class="text-warm-faint">protected_action_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.ProtectedActionIssueCount) }</dd>
+						<dt class="text-warm-faint">deferred_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.DeferredIssueCount) }</dd>
+					</dl>
+				</div>
+				<div class="border border-edge bg-void/20 rounded-md p-3">
+					<dl class="grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-2 text-[11px]">
+						<dt class="text-warm-faint">blocker_refs</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(data.AutonomyFrontier.BlockerRefs, "none") }</dd>
+						<dt class="text-warm-faint">evidence_refs</dt><dd class="text-warm-faint break-all">{ opsCivilizationJoin(data.AutonomyFrontier.EvidenceRefs, "none") }</dd>
+					</dl>
+					<p class="text-[11px] text-warm-faint mt-3 leading-relaxed">{ data.AutonomyFrontier.Boundary }</p>
+				</div>
+			</div>
+		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-issue-shape-warnings="read-only">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>

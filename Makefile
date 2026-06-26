@@ -1,4 +1,4 @@
-.PHONY: css generate-personas generate build test vet verify verify-canonical-paths verify-public-shell-clean run dev deploy
+.PHONY: css generate-personas generate build test vet verify-go verify verify-canonical-paths verify-public-shell-clean run dev deploy
 
 NODE_BIN ?= $(shell if [ -d "$(HOME)/.nvm/versions/node" ]; then latest=$$(find "$(HOME)/.nvm/versions/node" -mindepth 1 -maxdepth 1 -type d -name 'v*' | sort -V | tail -n 1); if [ -n "$$latest" ]; then printf '%s/bin' "$$latest"; fi; fi)
 TOOLS_PATH := $(HOME)/go/bin:$(HOME)/.local/bin$(if $(NODE_BIN),:$(NODE_BIN),):/snap/bin
@@ -32,6 +32,8 @@ test:
 
 vet:
 	$(GO) vet ./...
+
+verify-go: generate test vet
 
 verify-canonical-paths:
 	test -f graph/review_console.go
