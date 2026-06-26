@@ -218,6 +218,34 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</div>
 			</div>
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-authority-actions="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Authority action queue</h2>
+					<p class="text-xs text-warm-faint mt-1">Human-scope decisions required before the parked blocker refs can become PR-ready work.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">display only</span>
+			</header>
+			<div class="grid gap-3 p-4 lg:grid-cols-2">
+				for _, action := range data.AuthorityActions {
+					<article class="border border-edge bg-void/20 rounded-md p-3">
+						<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+							<div>
+								<h3 class="text-sm font-medium text-warm">{ action.Label }</h3>
+								<p class="text-[11px] text-warm-faint mt-1 break-all">{ opsCivilizationJoin(action.BlockerRefs, "none") }</p>
+							</div>
+							<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(action.State) }>{ action.State }</span>
+						</div>
+						<dl class="grid gap-x-2 gap-y-2 mt-3 text-[11px] md:grid-cols-[8.75rem_1fr]">
+							<dt class="text-warm-faint">required_decision</dt><dd class="text-warm-muted leading-relaxed">{ action.RequiredDecision }</dd>
+							<dt class="text-warm-faint">unlocks</dt><dd class="text-warm-muted leading-relaxed">{ action.Unlocks }</dd>
+							<dt class="text-warm-faint">evidence_expectation</dt><dd class="text-warm-faint leading-relaxed">{ action.EvidenceExpectation }</dd>
+							<dt class="text-warm-faint">forbidden_actions</dt><dd class="text-warm-faint break-words">{ opsCivilizationJoin(action.ForbiddenActions, "; ") }</dd>
+						</dl>
+					</article>
+				}
+			</div>
+		</section>
 		<section class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
 			for _, repo := range data.RepoSummaries {
 				<article class="border border-edge bg-surface rounded-lg p-4 min-h-[10rem]">

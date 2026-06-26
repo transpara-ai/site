@@ -222,6 +222,73 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 	}
 }
 
+func TestOpsGitHubCanonicalAuthorityActionsCoverParkedBlockers(t *testing.T) {
+	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 26, 13, 10, 0, 0, time.UTC))
+
+	if len(data.AuthorityActions) != 6 {
+		t.Fatalf("authority actions len = %d, want 6: %+v", len(data.AuthorityActions), data.AuthorityActions)
+	}
+	refs := map[string]int{}
+	for _, action := range data.AuthorityActions {
+		if action.Label == "" || action.RequiredDecision == "" || action.Unlocks == "" || action.EvidenceExpectation == "" {
+			t.Fatalf("authority action missing required text fields: %+v", action)
+		}
+		if len(action.ForbiddenActions) == 0 {
+			t.Fatalf("authority action missing forbidden actions: %+v", action)
+		}
+		if action.State != githubCanonicalStateNeedsHumanScope && action.State != githubCanonicalStateDeferred {
+			t.Fatalf("authority action state = %q, want human-scope or deferred", action.State)
+		}
+		for _, ref := range action.BlockerRefs {
+			if strings.Contains(ref, "site#157") || strings.Contains(ref, "transpara-ai/site#157") {
+				t.Fatalf("authority action should not self-reference current issue site#157: %+v", action)
+			}
+			refs[ref]++
+		}
+	}
+	if len(refs) != data.AutonomyFrontier.TotalIssueCount {
+		t.Fatalf("authority action refs len = %d, frontier total = %d: %+v", len(refs), data.AutonomyFrontier.TotalIssueCount, refs)
+	}
+	for _, ref := range data.AutonomyFrontier.BlockerRefs {
+		if refs[ref] != 1 {
+			t.Fatalf("frontier blocker %q authority action count = %d, want 1; refs=%+v", ref, refs[ref], refs)
+		}
+	}
+
+	assertAction := func(label string, refs []string, wantUnlock string, wantForbidden string) {
+		t.Helper()
+		for _, action := range data.AuthorityActions {
+			if action.Label != label {
+				continue
+			}
+			for _, ref := range refs {
+				if !githubCanonicalContainsString(action.BlockerRefs, ref) {
+					t.Fatalf("authority action %q missing blocker %q: %+v", label, ref, action)
+				}
+			}
+			if !strings.Contains(action.Unlocks, wantUnlock) {
+				t.Fatalf("authority action %q unlocks = %q, want substring %q", label, action.Unlocks, wantUnlock)
+			}
+			if !githubCanonicalContainsString(action.ForbiddenActions, wantForbidden) {
+				t.Fatalf("authority action %q forbidden actions missing %q: %+v", label, wantForbidden, action.ForbiddenActions)
+			}
+			return
+		}
+		t.Fatalf("missing authority action %q: %+v", label, data.AuthorityActions)
+	}
+
+	assertAction("Production EventGraph and runtime wiring scope", []string{"transpara-ai/docs#200", "transpara-ai/eventgraph#59", "transpara-ai/eventgraph#61", "transpara-ai/work#59", "transpara-ai/work#64"}, "EventGraph projection-store/write-path", "no production EventGraph write")
+	assertAction("Public-reader and correction evidence routing", []string{"transpara-ai/docs#193"}, "public-reader/correction evidence PR", "no private data publication")
+	assertAction("Residual-risk closure packets", []string{"transpara-ai/docs#201", "transpara-ai/docs#202", "transpara-ai/docs#203"}, "risk-governance closeout PRs", "no residual-risk closure by scanner recommendation")
+	assertAction("Gate S and Test 001 residual disposition", []string{"transpara-ai/docs#172", "transpara-ai/operation#26", "transpara-ai/operation#35"}, "docs/operation closeout", "no Test 001 GREEN without live evidence")
+	assertAction("Human-required value-allocation direction", []string{"transpara-ai/hive#204"}, "Hive/docs design", "no value allocation")
+	assertAction("GitHub-canonical cutover closeout", []string{"transpara-ai/docs#197"}, "Markdown development/design arc", "no markdown retirement before cutover criteria")
+
+	if !githubCanonicalContainsString(data.Boundaries, "Authority action queue is display-only; rows identify required human decisions but cannot approve, execute, allocate value, wake Hive, mutate GitHub, or write EventGraph.") {
+		t.Fatalf("authority action boundary missing: %+v", data.Boundaries)
+	}
+}
+
 func latestGitHubCanonicalScannerTimestamp(data *OpsGitHubCanonicalData) string {
 	// Lexical ordering is chronological because scanner evidence uses fixed-width UTC Z stamps.
 	scannerStamp := regexp.MustCompile(`scanner:(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)`)
@@ -274,6 +341,19 @@ func latestGitHubCanonicalScannerTimestamp(data *OpsGitHubCanonicalData) string 
 	}
 	observe(data.AutonomyFrontier.Recommendation)
 	observe(data.AutonomyFrontier.Boundary)
+	for _, action := range data.AuthorityActions {
+		observe(action.Label)
+		observe(action.State)
+		for _, ref := range action.BlockerRefs {
+			observe(ref)
+		}
+		observe(action.RequiredDecision)
+		observe(action.Unlocks)
+		observe(action.EvidenceExpectation)
+		for _, forbidden := range action.ForbiddenActions {
+			observe(forbidden)
+		}
+	}
 	for _, warning := range data.IssueWarnings {
 		observeIssue(warning.Issue)
 		for _, ref := range warning.EvidenceRefs {

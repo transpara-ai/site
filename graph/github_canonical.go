@@ -16,6 +16,7 @@ type OpsGitHubCanonicalData struct {
 	Parent            OpsGitHubCanonicalIssue
 	Progress          OpsGitHubCanonicalProgress
 	AutonomyFrontier  OpsGitHubCanonicalAutonomyFrontier
+	AuthorityActions  []OpsGitHubCanonicalAuthorityAction
 	RepoSummaries     []OpsGitHubCanonicalRepoSummary
 	Lanes             []OpsGitHubCanonicalLane
 	IssueWarnings     []OpsGitHubCanonicalIssueWarning
@@ -71,6 +72,16 @@ type OpsGitHubCanonicalParkedGroup struct {
 	Count        int
 	Refs         []string
 	RequiredNext string
+}
+
+type OpsGitHubCanonicalAuthorityAction struct {
+	Label               string
+	State               string
+	BlockerRefs         []string
+	RequiredDecision    string
+	Unlocks             string
+	EvidenceExpectation string
+	ForbiddenActions    []string
 }
 
 type OpsGitHubCanonicalIssue struct {
@@ -207,6 +218,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		ProjectionState:   "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
 		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
 		Progress:          githubCanonicalProgress(),
+		AuthorityActions:  githubCanonicalAuthorityActions(),
 		RepoSummaries:     githubCanonicalRepoSummaries(lanes),
 		Lanes:             lanes,
 		IssueWarnings:     githubCanonicalIssueWarnings(),
@@ -233,9 +245,113 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 			"Markdown is displayed only as archived/background evidence, never as the live work queue.",
 			"Issue-shape warning state is scanner evidence only; warning absence does not authorize issue closure, PR-ready state, Hive wake, GitHub mutation, Test 001 GREEN, or residual-risk closure.",
 			"Autonomy frontier state is parking evidence only; park-autonomy-no-pr-ready-work does not close docs#197, authorize protected lanes, or wake Hive.",
+			"Authority action queue is display-only; rows identify required human decisions but cannot approve, execute, allocate value, wake Hive, mutate GitHub, or write EventGraph.",
 			"source_issue_refs, validation_refs, cfar_refs, authority_boundary_refs, residual_risk_refs, and trace_score_basis_points are display contracts only until EventGraph write-path governance lands.",
 		},
 		LegacyEvidence: legacy,
+	}
+}
+
+func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
+	return []OpsGitHubCanonicalAuthorityAction{
+		{
+			Label: "Production EventGraph and runtime wiring scope",
+			State: githubCanonicalStateNeedsHumanScope,
+			BlockerRefs: []string{
+				"transpara-ai/docs#200",
+				"transpara-ai/eventgraph#59",
+				"transpara-ai/eventgraph#61",
+				"transpara-ai/work#59",
+				"transpara-ai/work#64",
+			},
+			RequiredDecision:    "Human-scoped AuthorityDecision naming exact repos, allowed write/runtime class, stop conditions, and evidence that distinguishes projection truth from local fixtures.",
+			Unlocks:             "Bounded EventGraph projection-store/write-path and Work runtime-envelope PRs may become PR-ready only inside the approved scope.",
+			EvidenceExpectation: "Authority packet, changed-file allowlist, dry-run/replay proof, no-side-effect negative tests, exact-head CFAR, and PR-visible approval evidence.",
+			ForbiddenActions: []string{
+				"no production EventGraph write",
+				"no runtime start or external adapter execution",
+				"no Hive action API",
+				"no Test 001 GREEN or production readiness claim",
+			},
+		},
+		{
+			Label:               "Public-reader and correction evidence routing",
+			State:               githubCanonicalStateNeedsHumanScope,
+			BlockerRefs:         []string{"transpara-ai/docs#193"},
+			RequiredDecision:    "Human routing decision selecting the public surface, implementation repo, allowed data sources, privacy boundary, and validation commands.",
+			Unlocks:             "A repo-specific public-reader/correction evidence PR can become PR-ready after the target surface and privacy proof are scoped.",
+			EvidenceExpectation: "Docs authority packet, public-safe fixture proof, stale/corrected/missing-source behavior tests, visual evidence where relevant, and exact-head CFAR.",
+			ForbiddenActions: []string{
+				"no private data publication",
+				"no deployment unless separately authorized",
+				"no Wiki mutation without explicit reopening",
+				"no Test 001 GREEN claim",
+			},
+		},
+		{
+			Label: "Residual-risk closure packets",
+			State: githubCanonicalStateNeedsHumanScope,
+			BlockerRefs: []string{
+				"transpara-ai/docs#201",
+				"transpara-ai/docs#202",
+				"transpara-ai/docs#203",
+			},
+			RequiredDecision:    "Human re-identification of R-001, R-002, and R-003 from canonical risk records plus approved evidence requirements for closure or carry-forward.",
+			Unlocks:             "Docs risk-governance closeout PRs can become PR-ready only after each residual has a canonical evidence basis.",
+			EvidenceExpectation: "Canonical risk record refs, closure/carry-forward criteria, residual disposition text, exact-head CFAR, and human approval evidence.",
+			ForbiddenActions: []string{
+				"no residual-risk closure by scanner recommendation",
+				"no value allocation",
+				"no autonomy increase",
+				"no production go-live claim",
+			},
+		},
+		{
+			Label: "Gate S and Test 001 residual disposition",
+			State: githubCanonicalStateNeedsHumanScope,
+			BlockerRefs: []string{
+				"transpara-ai/docs#172",
+				"transpara-ai/operation#26",
+				"transpara-ai/operation#35",
+			},
+			RequiredDecision:    "Human-scoped docs/process disposition for the PR #171 approval-artifact residual and Operation Test 001 live-evidence boundary.",
+			Unlocks:             "Narrow docs/operation closeout or evidence PRs may become PR-ready after the exact residual treatment and live-evidence criteria are approved.",
+			EvidenceExpectation: "Exact-head approval evidence treatment, incident/test tracker state, Operation live-evidence criteria, validation commands, CFAR, and human approval.",
+			ForbiddenActions: []string{
+				"no docs#172 closure by inference",
+				"no Test 001 GREEN without live evidence",
+				"no production go-live",
+				"no non-docs runtime mutation",
+			},
+		},
+		{
+			Label:               "Human-required value-allocation direction",
+			State:               githubCanonicalStateNeedsHumanScope,
+			BlockerRefs:         []string{"transpara-ai/hive#204"},
+			RequiredDecision:    "External Committee selection of whether value-allocation surface work should proceed, followed by a docs AuthorityDecision defining display-only semantics.",
+			Unlocks:             "A Hive/docs design or display-classification PR can become PR-ready only after the direction is explicitly selected.",
+			EvidenceExpectation: "Committee decision, no-allocation boundary, classification/display tests, negative allocation tests, exact-head CFAR, and human approval.",
+			ForbiddenActions: []string{
+				"no value allocation",
+				"no billing/payment action",
+				"no protected settings change",
+				"no model-policy mutation",
+			},
+		},
+		{
+			Label:               "GitHub-canonical cutover closeout",
+			State:               githubCanonicalStateDeferred,
+			BlockerRefs:         []string{"transpara-ai/docs#197"},
+			RequiredDecision:    "Final docs closeout only after EventGraph projection/write governance, Hive fail-closed issue intake, Site typed monitor coverage, and scanner evidence satisfy the declared cutover criteria.",
+			Unlocks:             "Markdown development/design arc may be marked historical-only for live operation after the final closeout PR passes validation and CFAR.",
+			EvidenceExpectation: "Zero stale markdown-source findings, zero invalid issue-shape warnings, typed projection coverage, closeout PR validation, exact-head CFAR, and human approval.",
+			ForbiddenActions: []string{
+				"no markdown retirement before cutover criteria",
+				"no Hive autonomy increase",
+				"no EventGraph truth claim without governance",
+				"no protected action execution",
+			},
+		},
 	}
 }
 
