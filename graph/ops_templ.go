@@ -704,7 +704,7 @@ func opsGitHubCanonical(data *OpsGitHubCanonicalData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-github-canonical-issue-shape-warnings=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue shape warnings</h2><p class=\"text-xs text-warm-faint mt-1\">Scanner evidence for repair or human-scope triage only; no automatic issue edit, PR work, Hive wake, or GitHub mutation.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap\">warning projection</span></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-github-canonical-issue-shape-warnings=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue shape warnings</h2><p class=\"text-xs text-warm-faint mt-1\">Scanner warning state for repair or human-scope triage only; absence does not authorize issue closure, PR-ready state, Hive wake, GitHub mutation, or Test 001 GREEN.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap\">warning projection</span></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
