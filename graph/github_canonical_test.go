@@ -191,6 +191,9 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 	if githubCanonicalContainsString(testRun.SourceIssueRefs, "site#147") {
 		t.Fatalf("TestRun should not self-reference current refresh issue site#147: %+v", testRun.SourceIssueRefs)
 	}
+	if githubCanonicalContainsString(testRun.SourceIssueRefs, "site#149") {
+		t.Fatalf("TestRun should not self-reference current repair issue site#149: %+v", testRun.SourceIssueRefs)
+	}
 
 	gateResult := records["evidence.gateresult.recorded"]
 	if gateResult.Schema != "GateResult" || gateResult.Outcome != "gate.partial" || gateResult.TraceScoreBasisPoints != 8500 {
@@ -205,12 +208,15 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 	if githubCanonicalContainsString(gateResult.SourceIssueRefs, "site#147") {
 		t.Fatalf("GateResult should not self-reference current refresh issue site#147: %+v", gateResult.SourceIssueRefs)
 	}
+	if githubCanonicalContainsString(gateResult.SourceIssueRefs, "site#149") {
+		t.Fatalf("GateResult should not self-reference current repair issue site#149: %+v", gateResult.SourceIssueRefs)
+	}
 
 	auditReport := records["evidence.auditreport.recorded"]
 	if auditReport.Schema != "AuditReport" || auditReport.Outcome != "closeout.blocked" || auditReport.TraceScoreBasisPoints != 7000 {
 		t.Fatalf("AuditReport record = %+v", auditReport)
 	}
-	if !githubCanonicalContainsString(auditReport.SourceIssueRefs, "docs#199") || !githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#143") || !githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#145") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "docs#199") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "eventgraph#59") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "work#59") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "docs#193") || !githubCanonicalContainsString(auditReport.ResidualRiskRefs, "docs#203") {
+	if !githubCanonicalContainsString(auditReport.SourceIssueRefs, "docs#199") || !githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#139") || !githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#143") || !githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#145") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "docs#199") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "eventgraph#59") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "work#59") || !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "docs#193") || !githubCanonicalContainsString(auditReport.ResidualRiskRefs, "docs#203") {
 		t.Fatalf("AuditReport refs are incomplete: %+v", auditReport)
 	}
 	if !githubCanonicalContainsString(auditReport.PRRefs, "https://github.com/transpara-ai/site/pull/144") || !githubCanonicalContainsString(auditReport.PRRefs, "https://github.com/transpara-ai/site/pull/146") || !githubCanonicalContainsString(auditReport.ValidationRefs, "site#143 validation complete by site PR #144") || !githubCanonicalContainsString(auditReport.ValidationRefs, "site#145 validation complete by site PR #146") || !githubCanonicalContainsString(auditReport.CFARRefs, "site PR #130/#132/#134/#136/#138/#140/#142/#144/#146 CFAR PASS") {
@@ -221,11 +227,14 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 			t.Fatalf("AuditReport still contains stale %q: %+v", stale, auditReport)
 		}
 	}
-	if !githubCanonicalContainsString(auditReport.ProvenanceRefs, "merge:874980a7ab6d1b5c6ef3bacfc8c02f1401f00a13") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "reviewed_head:2c76e779e51b004db4004f81117cfcb6dd3e3638") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#144 merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#144 reviewed_head:5d62b4d83c942795f49fd423aac29da9d0b897ea") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#146 merge:fac357e0836adc54a65f1778c229a44bd3f0d364") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#146 reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/144#issuecomment-4808318161") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/131") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/133") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/135") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/143") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/145") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4808529248") {
+	if !githubCanonicalContainsString(auditReport.ProvenanceRefs, "merge:874980a7ab6d1b5c6ef3bacfc8c02f1401f00a13") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "reviewed_head:2c76e779e51b004db4004f81117cfcb6dd3e3638") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#144 merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#144 reviewed_head:5d62b4d83c942795f49fd423aac29da9d0b897ea") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#146 merge:fac357e0836adc54a65f1778c229a44bd3f0d364") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "site#146 reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/144#issuecomment-4808318161") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/131") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/133") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/135") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/139") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/143") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/145") || !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4808529248") {
 		t.Fatalf("AuditReport provenance refs are incomplete: %+v", auditReport.ProvenanceRefs)
 	}
 	if githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#147") {
 		t.Fatalf("AuditReport should not self-reference current refresh issue site#147: %+v", auditReport.SourceIssueRefs)
+	}
+	if githubCanonicalContainsString(auditReport.SourceIssueRefs, "site#149") {
+		t.Fatalf("AuditReport should not self-reference current repair issue site#149: %+v", auditReport.SourceIssueRefs)
 	}
 }
 
