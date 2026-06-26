@@ -157,7 +157,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		`data-github-canonical-progress="read-only"`,
 		"Recent closeouts",
 		"Parked reasons",
-		"recent_closed_issue_count",
+		"recent_closeouts_shown",
 		"parked_open_issue_count",
 		"zero PR-ready issues",
 		"six most recent issue-source monitor or governance closeouts",

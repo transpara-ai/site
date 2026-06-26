@@ -641,14 +641,14 @@ func opsGitHubCanonical(data *OpsGitHubCanonicalData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</p><div class=\"grid gap-3 sm:grid-cols-2 xl:grid-cols-4\"><dl class=\"border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1\"><dt class=\"text-warm-faint\">recent_closed_issue_count</dt><dd class=\"text-warm-muted tabular-nums\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</p><div class=\"grid gap-3 sm:grid-cols-2 xl:grid-cols-4\"><dl class=\"border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1\"><dt class=\"text-warm-faint\">recent_closeouts_shown</dt><dd class=\"text-warm-muted tabular-nums\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.Progress.RecentClosedIssueCount))
+		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", data.Progress.RecentCloseoutsShown))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 160, Col: 162}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/ops.templ`, Line: 160, Col: 157}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {

@@ -144,14 +144,14 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 26, 12, 45, 0, 0, time.UTC))
 	progress := data.Progress
 
-	if progress.RecentClosedIssueCount != 6 || progress.ParkedOpenIssueCount != 14 || progress.PRReadyIssueCount != 0 || progress.CandidateBundleCount != 0 {
+	if progress.RecentCloseoutsShown != 6 || progress.ParkedOpenIssueCount != 14 || progress.PRReadyIssueCount != 0 || progress.CandidateBundleCount != 0 {
 		t.Fatalf("progress counts = %+v, want six recent closeouts, fourteen parked blockers, zero ready/candidate work", progress)
 	}
 	if progress.Recommendation != "park-autonomy-no-pr-ready-work" {
 		t.Fatalf("progress recommendation = %q", progress.Recommendation)
 	}
-	if len(progress.RecentCloseouts) != progress.RecentClosedIssueCount {
-		t.Fatalf("recent closeouts len = %d, want %d", len(progress.RecentCloseouts), progress.RecentClosedIssueCount)
+	if len(progress.RecentCloseouts) != progress.RecentCloseoutsShown {
+		t.Fatalf("recent closeouts len = %d, want %d", len(progress.RecentCloseouts), progress.RecentCloseoutsShown)
 	}
 
 	for _, want := range []struct {

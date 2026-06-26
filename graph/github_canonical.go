@@ -43,16 +43,16 @@ type OpsGitHubCanonicalAutonomyFrontier struct {
 }
 
 type OpsGitHubCanonicalProgress struct {
-	Summary                string
-	RecentClosedIssueCount int
-	ParkedOpenIssueCount   int
-	PRReadyIssueCount      int
-	CandidateBundleCount   int
-	Recommendation         string
-	RecentCloseouts        []OpsGitHubCanonicalCloseout
-	ParkedGroups           []OpsGitHubCanonicalParkedGroup
-	EvidenceRefs           []string
-	Boundary               string
+	Summary              string
+	RecentCloseoutsShown int
+	ParkedOpenIssueCount int
+	PRReadyIssueCount    int
+	CandidateBundleCount int
+	Recommendation       string
+	RecentCloseouts      []OpsGitHubCanonicalCloseout
+	ParkedGroups         []OpsGitHubCanonicalParkedGroup
+	EvidenceRefs         []string
+	Boundary             string
 }
 
 type OpsGitHubCanonicalCloseout struct {
@@ -241,12 +241,12 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 
 func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 	return OpsGitHubCanonicalProgress{
-		Summary:                "Closure progress is real, but the remaining issue-source frontier is parked: the latest scanner snapshot has zero PR-ready issues, and site#153 closed afterward without changing the parked backlog. Recent closeouts are the six most recent issue-source monitor or governance closeouts recorded in this projection.",
-		RecentClosedIssueCount: 6,
-		ParkedOpenIssueCount:   14,
-		PRReadyIssueCount:      0,
-		CandidateBundleCount:   0,
-		Recommendation:         "park-autonomy-no-pr-ready-work",
+		Summary:              "Closure progress is real, but the remaining issue-source frontier is parked: the latest scanner snapshot has zero PR-ready issues, and site#153 closed afterward without changing the parked backlog. Recent closeouts are the six most recent issue-source monitor or governance closeouts recorded in this projection.",
+		RecentCloseoutsShown: 6,
+		ParkedOpenIssueCount: 14,
+		PRReadyIssueCount:    0,
+		CandidateBundleCount: 0,
+		Recommendation:       "park-autonomy-no-pr-ready-work",
 		RecentCloseouts: []OpsGitHubCanonicalCloseout{
 			githubCanonicalCloseout("transpara-ai/site", 153, "Refresh GitHub-canonical monitor after platform#7 closeout", "https://github.com/transpara-ai/site/issues/153", "site PR #154", "https://github.com/transpara-ai/site/pull/154", "2026-06-26T12:35:13Z", "2026-06-26T12:35:12Z", "d177a8bbf019d0260862fab986474e6d8b8888b5", "618e22f084396b5721aa618d81d8b1e98a9fe7ec", "read-only monitor refresh; records platform#7 closeout and confirms parked frontier"),
 			githubCanonicalCloseout("transpara-ai/platform", 7, "Stage 2 and Stage 3 plumbing automation with model-family separation", "https://github.com/transpara-ai/platform/issues/7", "platform PR #19", "https://github.com/transpara-ai/platform/pull/19", "2026-06-26T12:04:27Z", "2026-06-26T12:04:26Z", "e6691b62c4fd98179441f0085f23ab1c7c9a2f52", "488bf95db116c0555757c7781173fd41923599e2", "docs-only/design boundary closeout; future implementation remains AuthorityDecision scoped"),
