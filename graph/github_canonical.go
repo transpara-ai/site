@@ -14,6 +14,7 @@ type OpsGitHubCanonicalData struct {
 	Status            string
 	ProjectionState   string
 	Parent            OpsGitHubCanonicalIssue
+	Progress          OpsGitHubCanonicalProgress
 	AutonomyFrontier  OpsGitHubCanonicalAutonomyFrontier
 	RepoSummaries     []OpsGitHubCanonicalRepoSummary
 	Lanes             []OpsGitHubCanonicalLane
@@ -39,6 +40,37 @@ type OpsGitHubCanonicalAutonomyFrontier struct {
 	BlockerRefs                 []string
 	EvidenceRefs                []string
 	Boundary                    string
+}
+
+type OpsGitHubCanonicalProgress struct {
+	Summary                string
+	RecentClosedIssueCount int
+	ParkedOpenIssueCount   int
+	PRReadyIssueCount      int
+	CandidateBundleCount   int
+	Recommendation         string
+	RecentCloseouts        []OpsGitHubCanonicalCloseout
+	ParkedGroups           []OpsGitHubCanonicalParkedGroup
+	EvidenceRefs           []string
+	Boundary               string
+}
+
+type OpsGitHubCanonicalCloseout struct {
+	Issue        OpsGitHubCanonicalIssue
+	PRRef        string
+	PRURL        string
+	ClosedAt     string
+	MergedAt     string
+	MergeCommit  string
+	ReviewedHead string
+	Note         string
+}
+
+type OpsGitHubCanonicalParkedGroup struct {
+	Label        string
+	Count        int
+	Refs         []string
+	RequiredNext string
 }
 
 type OpsGitHubCanonicalIssue struct {
@@ -174,6 +206,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		Status:            "partial",
 		ProjectionState:   "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
 		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
+		Progress:          githubCanonicalProgress(),
 		RepoSummaries:     githubCanonicalRepoSummaries(lanes),
 		Lanes:             lanes,
 		IssueWarnings:     githubCanonicalIssueWarnings(),
@@ -203,6 +236,59 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 			"source_issue_refs, validation_refs, cfar_refs, authority_boundary_refs, residual_risk_refs, and trace_score_basis_points are display contracts only until EventGraph write-path governance lands.",
 		},
 		LegacyEvidence: legacy,
+	}
+}
+
+func githubCanonicalProgress() OpsGitHubCanonicalProgress {
+	return OpsGitHubCanonicalProgress{
+		Summary:                "Closure progress is real, but the remaining issue-source frontier is parked: recent monitor/governance closeouts are done, and the open backlog has zero PR-ready issues after site#153 closes.",
+		RecentClosedIssueCount: 6,
+		ParkedOpenIssueCount:   14,
+		PRReadyIssueCount:      0,
+		CandidateBundleCount:   0,
+		Recommendation:         "park-autonomy-no-pr-ready-work",
+		RecentCloseouts: []OpsGitHubCanonicalCloseout{
+			githubCanonicalCloseout("transpara-ai/site", 153, "Refresh GitHub-canonical monitor after platform#7 closeout", "https://github.com/transpara-ai/site/issues/153", "site PR #154", "https://github.com/transpara-ai/site/pull/154", "2026-06-26T12:35:13Z", "2026-06-26T12:35:12Z", "d177a8bbf019d0260862fab986474e6d8b8888b5", "618e22f084396b5721aa618d81d8b1e98a9fe7ec", "read-only monitor refresh; records platform#7 closeout and confirms parked frontier"),
+			githubCanonicalCloseout("transpara-ai/platform", 7, "Stage 2 and Stage 3 plumbing automation with model-family separation", "https://github.com/transpara-ai/platform/issues/7", "platform PR #19", "https://github.com/transpara-ai/platform/pull/19", "2026-06-26T12:04:27Z", "2026-06-26T12:04:26Z", "e6691b62c4fd98179441f0085f23ab1c7c9a2f52", "488bf95db116c0555757c7781173fd41923599e2", "docs-only/design boundary closeout; future implementation remains AuthorityDecision scoped"),
+			githubCanonicalCloseout("transpara-ai/docs", 198, "Gate K go-live revalidation source issue", "https://github.com/transpara-ai/docs/issues/198", "docs PR #206", "https://github.com/transpara-ai/docs/pull/206", "2026-06-26T11:38:10Z", "2026-06-26T11:38:09Z", "87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8", "c9b1274e70173c3b29c5ee4a03805852a9a65d30", "evidence capture only; no go-live authority"),
+			githubCanonicalCloseout("transpara-ai/site", 151, "Separate render time from scanner snapshot freshness on GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/151", "site PR #152", "https://github.com/transpara-ai/site/pull/152", "2026-06-26T11:18:31Z", "2026-06-26T11:18:30Z", "50428bd3a7b61c2b42634eab4040928eee99e051", "99c277ade2e0af826e09faf3e87d9f880668cb5b", "separates rendered_at from scanner_snapshot_at so freshness is not overstated"),
+			githubCanonicalCloseout("transpara-ai/site", 149, "Align GitHub-canonical AuditReport source refs with site#139 validation evidence", "https://github.com/transpara-ai/site/issues/149", "site PR #150", "https://github.com/transpara-ai/site/pull/150", "2026-06-26T10:35:41Z", "2026-06-26T10:35:40Z", "08d5fc9d798fa60cefbb344666ebe2e59094b821", "62ced862bb6775f0da71e965cb0de4aa5472859f", "aligns AuditReport provenance with earlier Site validation evidence"),
+			githubCanonicalCloseout("transpara-ai/site", 147, "Record site#146 closeout evidence in GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/147", "site PR #148", "https://github.com/transpara-ai/site/pull/148", "2026-06-26T10:25:00Z", "2026-06-26T10:24:59Z", "56777d134cd2e1c9a0996162c6565ed88f01cb37", "ce992679f415e0ec0bdaa7f05d29396445f7560f", "records prior Site closeout evidence in the product monitor"),
+		},
+		ParkedGroups: []OpsGitHubCanonicalParkedGroup{
+			{
+				Label:        "remaining protected/human-scope blockers",
+				Count:        13,
+				Refs:         []string{"transpara-ai/docs#172", "transpara-ai/docs#193", "transpara-ai/docs#200", "transpara-ai/docs#201", "transpara-ai/docs#202", "transpara-ai/docs#203", "transpara-ai/eventgraph#59", "transpara-ai/eventgraph#61", "transpara-ai/hive#204", "transpara-ai/operation#26", "transpara-ai/operation#35", "transpara-ai/work#59", "transpara-ai/work#64"},
+				RequiredNext: "human AuthorityDecision or exact scope evidence before any implementation PR may be opened",
+			},
+			{
+				Label:        "deferred parent tracker",
+				Count:        1,
+				Refs:         []string{"transpara-ai/docs#197"},
+				RequiredNext: "final closeout waits for EventGraph projection/write governance and scanner evidence",
+			},
+		},
+		EvidenceRefs: []string{
+			"scanner:2026-06-26T12:08:57Z total_issue_count:14 pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 issue_shape_warning_count:0",
+			"https://github.com/transpara-ai/site/pull/154",
+			"https://github.com/transpara-ai/site/pull/154#issuecomment-4809609647",
+			"https://github.com/transpara-ai/docs/issues/197#issuecomment-4809621318",
+		},
+		Boundary: "Progress accounting is display-only. It explains why issues are not closing; it does not authorize protected actions, GitHub mutation, Hive wake, EventGraph writes, Test 001 GREEN, residual-risk closure, autonomy increase, value allocation, or docs#197 cutover.",
+	}
+}
+
+func githubCanonicalCloseout(repo string, number int, title string, issueURL string, prRef string, prURL string, closedAt string, mergedAt string, mergeCommit string, reviewedHead string, note string) OpsGitHubCanonicalCloseout {
+	return OpsGitHubCanonicalCloseout{
+		Issue:        OpsGitHubCanonicalIssue{Repo: repo, Number: number, Title: title, URL: issueURL},
+		PRRef:        prRef,
+		PRURL:        prURL,
+		ClosedAt:     closedAt,
+		MergedAt:     mergedAt,
+		MergeCommit:  mergeCommit,
+		ReviewedHead: reviewedHead,
+		Note:         note,
 	}
 }
 
