@@ -204,6 +204,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"https://github.com/transpara-ai/site/issues/133",
 		"https://github.com/transpara-ai/operation/pull/37",
 		"operation PR #37 CFAR PASS",
+		"operation_runbook",
 		"Operation continuity",
 		"authority_recommendation_policy",
 		"human_required_classification_policy",
