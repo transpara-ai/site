@@ -8,17 +8,35 @@ import (
 )
 
 type OpsGitHubCanonicalData struct {
-	GeneratedAt     string
-	Status          string
-	ProjectionState string
-	Parent          OpsGitHubCanonicalIssue
-	RepoSummaries   []OpsGitHubCanonicalRepoSummary
-	Lanes           []OpsGitHubCanonicalLane
-	IssueWarnings   []OpsGitHubCanonicalIssueWarning
-	EvidenceRecords []OpsGitHubCanonicalEvidenceRecord
-	CutoverChecks   []OpsGitHubCanonicalCutoverCheck
-	Boundaries      []string
-	LegacyEvidence  []OpsGitHubCanonicalLegacyEvidence
+	GeneratedAt      string
+	Status           string
+	ProjectionState  string
+	Parent           OpsGitHubCanonicalIssue
+	AutonomyFrontier OpsGitHubCanonicalAutonomyFrontier
+	RepoSummaries    []OpsGitHubCanonicalRepoSummary
+	Lanes            []OpsGitHubCanonicalLane
+	IssueWarnings    []OpsGitHubCanonicalIssueWarning
+	EvidenceRecords  []OpsGitHubCanonicalEvidenceRecord
+	CutoverChecks    []OpsGitHubCanonicalCutoverCheck
+	Boundaries       []string
+	LegacyEvidence   []OpsGitHubCanonicalLegacyEvidence
+}
+
+type OpsGitHubCanonicalAutonomyFrontier struct {
+	Recommendation              string
+	TotalIssueCount             int
+	CandidateBundleCount        int
+	ReviewGroupCount            int
+	SingletonCount              int
+	IssueShapeWarningCount      int
+	PRReadyIssueCount           int
+	AutonomousPRReadyIssueCount int
+	NeedsHumanScopeIssueCount   int
+	ProtectedActionIssueCount   int
+	DeferredIssueCount          int
+	BlockerRefs                 []string
+	EvidenceRefs                []string
+	Boundary                    string
 }
 
 type OpsGitHubCanonicalIssue struct {
@@ -101,7 +119,7 @@ const (
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 	lanes := []OpsGitHubCanonicalLane{
-		githubCanonicalLane("transpara-ai/docs", 197, "Development Arc issue-source migration parent tracker", "https://github.com/transpara-ai/docs/issues/197", "parent", "cross-repo governance coordination and scanner evidence", githubCanonicalStateDeferred, "docs PR deferred until EventGraph projection/write governance and scanner evidence are complete", "protected-action", "docs closeout PR cannot mark markdown superseded until EventGraph projection-store/write governance lands", []string{"cc:intake", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"scanner:2026-06-26T04:51:04Z", "site#135", "operation#34", "hive#220", "hive#221", "hive#232", "eventgraph#69", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4806461882"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
+		githubCanonicalLane("transpara-ai/docs", 197, "Development Arc issue-source migration parent tracker", "https://github.com/transpara-ai/docs/issues/197", "parent", "cross-repo governance coordination and scanner evidence", githubCanonicalStateDeferred, "docs PR deferred until EventGraph projection/write governance and scanner evidence are complete", "protected-action", "docs closeout PR cannot mark markdown superseded until EventGraph projection-store/write governance lands", []string{"cc:intake", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"scanner:2026-06-26T07:34:14Z autonomy_frontier:park-autonomy-no-pr-ready-work", "site#135", "operation#34", "hive#220", "hive#221", "hive#232", "eventgraph#69", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4807342322"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
 		githubCanonicalLane("transpara-ai/docs", 193, "Coordinate deployed public-reader and public-correction evidence event", "https://github.com/transpara-ai/docs/issues/193", "docs#197", "Public-reader freshness/correction evidence and user-facing proof boundary", githubCanonicalStateNeedsHumanScope, "requires docs AuthorityDecision selecting repo(s), routes, data sources, privacy boundary, and validation commands", "protected-action", "public-reader/public-correction implementation is still human-scope blocked", []string{"cc:intake", "cc:needs-human-scope", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "https://github.com/transpara-ai/docs/issues/193#issuecomment-4806459443"}, nil),
 		githubCanonicalLane("transpara-ai/work", 61, "Requirements and task-draft derivation from issue records", "https://github.com/transpara-ai/work/issues/61", "docs#197", "Work proposal evidence", githubCanonicalStateCompleted, "merged by PR #71", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"work#61", "work PR #71"}, nil),
 		githubCanonicalLane("transpara-ai/work", 62, "Proof-of-work packet linked to issue source records", "https://github.com/transpara-ai/work/issues/62", "docs#197", "Work proof-of-work packet contract", githubCanonicalStateCompleted, "merged by PR #72", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"work#62", "work PR #72"}, nil),
@@ -111,6 +129,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		githubCanonicalLane("transpara-ai/site", 129, "Typed projection-backed GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/129", "docs#197", "Site ops monitor and typed projection-shaped migration evidence view", githubCanonicalStateCompleted, "merged by PR #130; refreshed by site#131, site#133, site#135, and site#139", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "eventgraph#63", "eventgraph#69", "hive#232", "https://github.com/transpara-ai/site/pull/130", "https://github.com/transpara-ai/site/pull/132", "merge:cf3dcddbb06d47199dd7c94662e329422d27d10c", "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea", "site#131", "site#133", "site#135", "site#139"}, nil),
 		githubCanonicalLane("transpara-ai/platform", 5, "Arc issue duplicate and stale-source detection", "https://github.com/transpara-ai/platform/issues/5", "docs#197", "platform scanner/read-only validation rule", githubCanonicalStateCompleted, "merged by PR #8; latest duplicate-anchor scan returned Findings: 0", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"platform#5", "https://github.com/transpara-ai/platform/pull/8", "merge:566c518893ba152f93339082b4b94b4a6140aed2", "arc_issue_scan:Findings=0"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
 		githubCanonicalLane("transpara-ai/platform", 15, "Report change-control issue-shape warnings in aggregation scanner", "https://github.com/transpara-ai/platform/issues/15", "docs#197", "platform scanner issue-shape warning output", githubCanonicalStateCompleted, "merged by PR #16; scanner:2026-06-26T06:52:57Z reports issue_shape_warnings=[] while docs#172 and operation#26 remain open residual/protected trackers", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#15", "https://github.com/transpara-ai/platform/pull/16", "merge:c9b27259feceb4a7e4113afbbf36364cc84cde9d", "scanner:2026-06-26T06:52:57Z issue_shape_warnings:none", "docs#172 open deferred protected human-scope", "operation#26 open deferred protected human-scope"}, nil),
+		githubCanonicalLane("transpara-ai/platform", 17, "Emit autonomy frontier summary from change-control aggregation scanner", "https://github.com/transpara-ai/platform/issues/17", "docs#197", "platform change-control aggregation scanner output contract and tests", githubCanonicalStateCompleted, "merged by PR #18; scanner:2026-06-26T07:34:14Z reports autonomy_frontier recommendation=park-autonomy-no-pr-ready-work with pr_ready_issue_count=0, autonomous_pr_ready_issue_count=0, candidate_bundle_count=0, issue_shape_warning_count=0", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#17", "https://github.com/transpara-ai/platform/pull/18", "merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d", "reviewed_head:7d4da36507fc62e979c6d3a46efd005126d33f53", "scanner:2026-06-26T07:34:14Z autonomy_frontier:park-autonomy-no-pr-ready-work", "scanner:2026-06-26T07:34:14Z pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 issue_shape_warning_count:0"}, nil),
 		githubCanonicalLane("transpara-ai/.github", 3, "Change-control issue form arc-anchor field upgrade", "https://github.com/transpara-ai/.github/issues/3", "docs#197", "organization issue template and issue-first intake form", githubCanonicalStateCompleted, "merged by PR #4", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{".github#3", "https://github.com/transpara-ai/.github/pull/4", "merge:30cd2f25f6e0008c8d4b9fb412e66ce1e6c7bc8e"}, nil),
 		githubCanonicalLane("transpara-ai/eventgraph", 63, "Native TestRun GateResult and AuditReport persistence contract", "https://github.com/transpara-ai/eventgraph/issues/63", "docs#197", "EventGraph native evidence content contract", githubCanonicalStateCompleted, "merged by PR #67", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{"eventgraph#63", "https://github.com/transpara-ai/eventgraph/pull/67", "merge:c6f261a27a193a470a9e287d15580a05d1b0fafc", "evidence.testrun.recorded", "evidence.gateresult.recorded", "evidence.auditreport.recorded"}, nil),
 		githubCanonicalLane("transpara-ai/eventgraph", 62, "Authority evidence schema and store governance", "https://github.com/transpara-ai/eventgraph/issues/62", "docs#197", "EventGraph authority/evidence schema and migration governance", githubCanonicalStateCompleted, "merged by PR #68; authority schema/store-governance substrate only", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "eventgraph#63", "https://github.com/transpara-ai/eventgraph/pull/68", "merge:fd6f80253791e7500b2d43cae421d0a9701ae221"}, nil),
@@ -149,11 +168,12 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		IssueWarnings:   githubCanonicalIssueWarnings(),
 		EvidenceRecords: githubCanonicalEvidenceRecords(),
 		CutoverChecks: []OpsGitHubCanonicalCutoverCheck{
-			{Label: "Issue coverage", State: "partial", Evidence: "docs#197 and child issue lanes exist; scanner:2026-06-26T04:51:04Z found no PR-ready issues and no multi-issue bundles", Blocker: "remaining protected lanes are human-scope"},
+			{Label: "Issue coverage", State: "partial", Evidence: "docs#197 and child issue lanes exist; scanner:2026-06-26T07:34:14Z found no PR-ready issues, no autonomous PR-ready issues, no candidate bundles, and no issue-shape warnings", Blocker: "remaining protected lanes are human-scope"},
 			{Label: "Work traceability", State: "completed", Evidence: "work#61, work#62, work#63 merged", Blocker: ""},
 			{Label: "Issue form schema", State: "completed", Evidence: ".github#3 merged by PR #4", Blocker: ""},
 			{Label: "Duplicate stale-source scanner", State: "completed", Evidence: "platform#5 merged by PR #8; latest arc_issue_scan returned Findings: 0", Blocker: ""},
 			{Label: "Issue-shape warning scanner", State: "completed", Evidence: "platform#15 merged by PR #16; scanner:2026-06-26T06:52:57Z reports issue_shape_warnings=[] while docs#172 and operation#26 remain open residual/protected trackers", Blocker: ""},
+			{Label: "Autonomy frontier", State: githubCanonicalStateCompleted, Evidence: "platform#17 merged by PR #18; autonomy_frontier recommends park-autonomy-no-pr-ready-work with zero PR-ready, autonomous PR-ready, candidate-bundle, and issue-shape-warning counts", Blocker: ""},
 			{Label: "Native evidence content", State: "completed", Evidence: "eventgraph#63 merged by PR #67; TestRun, GateResult, and AuditReport content types registered", Blocker: ""},
 			{Label: "EventGraph authority projection", State: githubCanonicalStateNeedsHumanScope, Evidence: "eventgraph#62 and eventgraph#69 merged; eventgraph#59 and eventgraph#61 remain open", Blocker: "projection-store truth and production write path still not authorized"},
 			{Label: "Hive issue intake", State: "completed", Evidence: "hive#220, hive#221, hive#222, hive#223, and hive#232 merged with policy/model-routing CFAR evidence", Blocker: ""},
@@ -161,14 +181,63 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 			{Label: "Site typed monitor", State: "completed", Evidence: "site#129 merged by PR #130; site#131/site#133 merged; site#135 refresh scoped for latest model-routing/readiness evidence", Blocker: ""},
 			{Label: "Markdown retirement", State: githubCanonicalStateLegacyEvidenceOnly, Evidence: "docs#197 closeout pending", Blocker: "legacy arc remains background evidence only"},
 		},
+		AutonomyFrontier: githubCanonicalAutonomyFrontier(),
 		Boundaries: []string{
 			"Read-only typed projection-shaped Site data; no live GitHub fetch or mutation.",
 			"No Hive wake, runtime start, queue launch, EventGraph write, deploy, merge, approval, Test 001 GREEN claim, autonomy increase, value allocation, or residual-risk closure.",
 			"Markdown is displayed only as archived/background evidence, never as the live work queue.",
 			"Issue-shape warning state is scanner evidence only; warning absence does not authorize issue closure, PR-ready state, Hive wake, GitHub mutation, Test 001 GREEN, or residual-risk closure.",
+			"Autonomy frontier state is parking evidence only; park-autonomy-no-pr-ready-work does not close docs#197, authorize protected lanes, or wake Hive.",
 			"source_issue_refs, validation_refs, cfar_refs, authority_boundary_refs, residual_risk_refs, and trace_score_basis_points are display contracts only until EventGraph write-path governance lands.",
 		},
 		LegacyEvidence: legacy,
+	}
+}
+
+func githubCanonicalAutonomyFrontier() OpsGitHubCanonicalAutonomyFrontier {
+	return OpsGitHubCanonicalAutonomyFrontier{
+		Recommendation:              "park-autonomy-no-pr-ready-work",
+		TotalIssueCount:             17,
+		CandidateBundleCount:        0,
+		ReviewGroupCount:            0,
+		SingletonCount:              17,
+		IssueShapeWarningCount:      0,
+		PRReadyIssueCount:           0,
+		AutonomousPRReadyIssueCount: 0,
+		NeedsHumanScopeIssueCount:   16,
+		ProtectedActionIssueCount:   17,
+		DeferredIssueCount:          16,
+		BlockerRefs: []string{
+			"transpara-ai/docs#172",
+			"transpara-ai/docs#193",
+			"transpara-ai/docs#197",
+			"transpara-ai/docs#198",
+			"transpara-ai/docs#199",
+			"transpara-ai/docs#200",
+			"transpara-ai/docs#201",
+			"transpara-ai/docs#202",
+			"transpara-ai/docs#203",
+			"transpara-ai/eventgraph#59",
+			"transpara-ai/eventgraph#61",
+			"transpara-ai/hive#204",
+			"transpara-ai/operation#26",
+			"transpara-ai/operation#35",
+			"transpara-ai/platform#7",
+			"transpara-ai/work#59",
+			"transpara-ai/work#64",
+		},
+		EvidenceRefs: []string{
+			"platform#17",
+			"https://github.com/transpara-ai/platform/pull/18",
+			"merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d",
+			"reviewed_head:7d4da36507fc62e979c6d3a46efd005126d33f53",
+			"scanner:2026-06-26T07:34:14Z autonomy_frontier:park-autonomy-no-pr-ready-work",
+			"scanner:2026-06-26T07:34:14Z issue_shape_warning_count:0",
+			"scanner:2026-06-26T07:34:14Z total_issue_count:17 needs_human_scope_issue_count:16 protected_action_issue_count:17 deferred_issue_count:16",
+			"scanner:2026-06-26T07:34:14Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#198,transpara-ai/docs#199,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/platform#7,transpara-ai/work#59,transpara-ai/work#64",
+			"arc_issue_scan:Findings=0",
+		},
+		Boundary: "Read-only scanner projection. This parks autonomous work when no issue is PR-ready; it does not authorize protected actions, issue edits, Hive wake, EventGraph writes, Test 001 GREEN, residual-risk closure, value allocation, or markdown retirement.",
 	}
 }
 
@@ -183,13 +252,13 @@ func githubCanonicalEvidenceRecords() []OpsGitHubCanonicalEvidenceRecord {
 			EventType:               "evidence.testrun.recorded",
 			Outcome:                 "tests.pass",
 			Schema:                  "TestRun",
-			SourceIssueRefs:         []string{"docs#197", "site#129", "site#131", "site#133", "site#135", "site#139", "eventgraph#63", "eventgraph#69", "hive#232", "platform#15"},
-			PRRefs:                  []string{"eventgraph PR #67", "eventgraph PR #70", "hive PR #233", "site PR #130", "site PR #132", "platform PR #16"},
-			ValidationRefs:          []string{"go test ./pkg/event -run TestNativeEvidence -count=1", "make verify-go", "make verify", "platform scanner grouping comparison identical", "platform scanner issue_shape_warnings=[]"},
-			CFARRefs:                []string{"eventgraph PR #67/#70 CFAR PASS", "hive PR #233 CFAR PASS", "site PR #132 CFAR PASS", "platform PR #16 CFAR PASS"},
+			SourceIssueRefs:         []string{"docs#197", "site#129", "site#131", "site#133", "site#135", "site#139", "eventgraph#63", "eventgraph#69", "hive#232", "platform#15", "platform#17"},
+			PRRefs:                  []string{"eventgraph PR #67", "eventgraph PR #70", "hive PR #233", "site PR #130", "site PR #132", "platform PR #16", "platform PR #18"},
+			ValidationRefs:          []string{"go test ./pkg/event -run TestNativeEvidence -count=1", "make verify-go", "make verify", "platform scanner grouping comparison identical", "platform scanner issue_shape_warnings=[]", "platform scanner autonomy_frontier recommendation=park-autonomy-no-pr-ready-work"},
+			CFARRefs:                []string{"eventgraph PR #67/#70 CFAR PASS", "hive PR #233 CFAR PASS", "site PR #132 CFAR PASS", "platform PR #16/#18 CFAR PASS"},
 			AuthorityBoundaryRefs:   []string{"docs#197", "eventgraph#61", "docs#200"},
 			ResidualRiskRefs:        []string{"docs#201", "docs#202", "docs#203"},
-			ProvenanceRefs:          []string{"https://github.com/transpara-ai/eventgraph/pull/67", "https://github.com/transpara-ai/eventgraph/pull/70", "https://github.com/transpara-ai/hive/pull/233", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/platform/pull/16", "merge:c6f261a27a193a470a9e287d15580a05d1b0fafc", "merge:ec22be652d0f117c68393104ad911042fc5cc272", "merge:89921d82d5019f2181e2b75435019c19e9ab92c9", "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea", "merge:c9b27259feceb4a7e4113afbbf36364cc84cde9d", "https://github.com/transpara-ai/eventgraph/pull/67#issuecomment-4803740786", "https://github.com/transpara-ai/eventgraph/pull/70#issuecomment-4806223812", "https://github.com/transpara-ai/hive/pull/233#issuecomment-4806413483", "https://github.com/transpara-ai/platform/pull/16#issuecomment-4806876411"},
+			ProvenanceRefs:          []string{"https://github.com/transpara-ai/eventgraph/pull/67", "https://github.com/transpara-ai/eventgraph/pull/70", "https://github.com/transpara-ai/hive/pull/233", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/platform/pull/16", "https://github.com/transpara-ai/platform/pull/18", "merge:c6f261a27a193a470a9e287d15580a05d1b0fafc", "merge:ec22be652d0f117c68393104ad911042fc5cc272", "merge:89921d82d5019f2181e2b75435019c19e9ab92c9", "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea", "merge:c9b27259feceb4a7e4113afbbf36364cc84cde9d", "merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d", "https://github.com/transpara-ai/eventgraph/pull/67#issuecomment-4803740786", "https://github.com/transpara-ai/eventgraph/pull/70#issuecomment-4806223812", "https://github.com/transpara-ai/hive/pull/233#issuecomment-4806413483", "https://github.com/transpara-ai/platform/pull/16#issuecomment-4806876411", "https://github.com/transpara-ai/platform/pull/18#issuecomment-4807330168"},
 			TraceScoreBasisPoints:   10000,
 			ProjectionReadinessNote: "10000 bp covers content/model-routing validation only; projection store write path still human-scope blocked",
 		},
@@ -198,10 +267,10 @@ func githubCanonicalEvidenceRecords() []OpsGitHubCanonicalEvidenceRecord {
 			EventType:             "evidence.gateresult.recorded",
 			Outcome:               "gate.partial",
 			Schema:                "GateResult",
-			SourceIssueRefs:       []string{"docs#197", "docs#193", "work#59", "work#61", "work#62", "work#63", "site#127", "site#129", "site#131", "site#133", "site#135", "site#139", "platform#5", "platform#15", ".github#3", "eventgraph#59", "eventgraph#63", "eventgraph#62", "eventgraph#69", "hive#220", "hive#221", "hive#222", "hive#223", "hive#232", "operation#34"},
-			PRRefs:                []string{"https://github.com/transpara-ai/work/pull/71", "https://github.com/transpara-ai/work/pull/72", "https://github.com/transpara-ai/work/pull/73", "https://github.com/transpara-ai/site/pull/128", "https://github.com/transpara-ai/site/pull/130", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/platform/pull/8", "https://github.com/transpara-ai/platform/pull/16", "https://github.com/transpara-ai/.github/pull/4", "https://github.com/transpara-ai/eventgraph/pull/67", "https://github.com/transpara-ai/eventgraph/pull/68", "https://github.com/transpara-ai/eventgraph/pull/70", "https://github.com/transpara-ai/hive/pull/228", "https://github.com/transpara-ai/hive/pull/229", "https://github.com/transpara-ai/hive/pull/230", "https://github.com/transpara-ai/hive/pull/231", "https://github.com/transpara-ai/hive/pull/233", "https://github.com/transpara-ai/operation/pull/37"},
-			ValidationRefs:        []string{"change-control scan: no multi-issue bundles", "arc_issue_scan: Findings=0", "issue_shape_warnings:none"},
-			CFARRefs:              []string{"work PR #71/#72/#73 CFAR PASS", "site PR #128/#130/#132 CFAR PASS", "platform PR #8/#16 CFAR PASS", ".github PR #4 CFAR PASS", "eventgraph PR #67/#68/#70 CFAR PASS", "hive PR #228/#229/#230/#231/#233 CFAR PASS", "operation PR #37 CFAR PASS"},
+			SourceIssueRefs:       []string{"docs#197", "docs#193", "work#59", "work#61", "work#62", "work#63", "site#127", "site#129", "site#131", "site#133", "site#135", "site#139", "platform#5", "platform#15", "platform#17", ".github#3", "eventgraph#59", "eventgraph#63", "eventgraph#62", "eventgraph#69", "hive#220", "hive#221", "hive#222", "hive#223", "hive#232", "operation#34"},
+			PRRefs:                []string{"https://github.com/transpara-ai/work/pull/71", "https://github.com/transpara-ai/work/pull/72", "https://github.com/transpara-ai/work/pull/73", "https://github.com/transpara-ai/site/pull/128", "https://github.com/transpara-ai/site/pull/130", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/platform/pull/8", "https://github.com/transpara-ai/platform/pull/16", "https://github.com/transpara-ai/platform/pull/18", "https://github.com/transpara-ai/.github/pull/4", "https://github.com/transpara-ai/eventgraph/pull/67", "https://github.com/transpara-ai/eventgraph/pull/68", "https://github.com/transpara-ai/eventgraph/pull/70", "https://github.com/transpara-ai/hive/pull/228", "https://github.com/transpara-ai/hive/pull/229", "https://github.com/transpara-ai/hive/pull/230", "https://github.com/transpara-ai/hive/pull/231", "https://github.com/transpara-ai/hive/pull/233", "https://github.com/transpara-ai/operation/pull/37"},
+			ValidationRefs:        []string{"change-control scan: no multi-issue bundles", "arc_issue_scan: Findings=0", "issue_shape_warnings:none", "autonomy_frontier:park-autonomy-no-pr-ready-work"},
+			CFARRefs:              []string{"work PR #71/#72/#73 CFAR PASS", "site PR #128/#130/#132 CFAR PASS", "platform PR #8/#16/#18 CFAR PASS", ".github PR #4 CFAR PASS", "eventgraph PR #67/#68/#70 CFAR PASS", "hive PR #228/#229/#230/#231/#233 CFAR PASS", "operation PR #37 CFAR PASS"},
 			AuthorityBoundaryRefs: []string{"docs#197", "docs#193", "docs#199", "docs#200", "eventgraph#59", "work#59"},
 			ResidualRiskRefs:      []string{"docs#172", "operation#26", "operation#35"},
 			ProvenanceRefs: []string{
@@ -213,6 +282,7 @@ func githubCanonicalEvidenceRecords() []OpsGitHubCanonicalEvidenceRecord {
 				"site#132 merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea",
 				"platform#8 merge:566c518893ba152f93339082b4b94b4a6140aed2",
 				"platform#16 merge:c9b27259feceb4a7e4113afbbf36364cc84cde9d",
+				"platform#18 merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d",
 				".github#4 merge:30cd2f25f6e0008c8d4b9fb412e66ce1e6c7bc8e",
 				"eventgraph#67 merge:c6f261a27a193a470a9e287d15580a05d1b0fafc",
 				"eventgraph#68 merge:fd6f80253791e7500b2d43cae421d0a9701ae221",
