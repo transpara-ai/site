@@ -135,10 +135,14 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
 				<dt class="text-warm-faint">projection state</dt>
 				<dd class="text-warm-muted">{ data.ProjectionState }</dd>
-				<dt class="text-warm-faint">generated</dt>
+				<dt class="text-warm-faint">rendered_at</dt>
 				<dd class="text-warm-muted">{ data.GeneratedAt }</dd>
+				<dt class="text-warm-faint">scanner_snapshot_at</dt>
+				<dd class="text-warm-muted">{ data.ScannerSnapshotAt }</dd>
+				<dt class="text-warm-faint">source_mode</dt>
+				<dd class="text-warm-muted">{ data.ProjectionSource }</dd>
 				<dt class="text-warm-faint">boundary</dt>
-				<dd class="text-warm-muted">read-only typed fixture; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
+				<dd class="text-warm-muted">read-only static scanner-evidence transcription; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
 			</dl>
 		</section>
 		<section class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">

@@ -291,6 +291,12 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"runtime-envelope implementation is still human-scope blocked",
 		"public-reader/public-correction implementation is still human-scope blocked",
 		"effect = none",
+		"rendered_at",
+		"scanner_snapshot_at",
+		"source_mode",
+		"static transcription of scanner evidence; request render is not a live GitHub scan",
+		"read-only static scanner-evidence transcription",
+		"Rendered-at time is request freshness only",
 		"No Hive wake",
 		"GitHub Issues are the live source-of-intent target",
 		"no live GitHub fetch or mutation",
@@ -312,6 +318,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"issue_shape_warnings:docs#172,operation#26",
 		"Site projects docs#172 and operation#26 shape warnings as read-only evidence",
 		"scanner:2026-06-26T04:51:04Z",
+		"site#151",
 	} {
 		if strings.Contains(body, stale) {
 			t.Fatalf("GET /ops/github-canonical: body contains stale evidence %q", stale)
