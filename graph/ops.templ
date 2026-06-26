@@ -157,14 +157,20 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				<p class="text-sm text-warm-muted leading-relaxed">{ data.Progress.Summary }</p>
 				<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1">
+						<dt class="text-warm-faint">closure_window</dt><dd class="text-warm-muted break-all">{ data.Progress.ClosureWindow }</dd>
+						<dt class="text-warm-faint">closed_intake_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.ClosedIssueCount) }</dd>
+						<dt class="text-warm-faint">merged_pr_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.MergedPRCount) }</dd>
+					</dl>
+					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1">
 						<dt class="text-warm-faint">recent_closeouts_shown</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.RecentCloseoutsShown) }</dd>
 						<dt class="text-warm-faint">parked_open_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.ParkedOpenIssueCount) }</dd>
 					</dl>
 					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1">
 						<dt class="text-warm-faint">pr_ready_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.PRReadyIssueCount) }</dd>
 						<dt class="text-warm-faint">candidate_bundle_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.CandidateBundleCount) }</dd>
+						<dt class="text-warm-faint">candidate_singleton_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.CandidateSingletonCount) }</dd>
 					</dl>
-					<div class="border border-edge bg-void/20 rounded-md p-3 sm:col-span-2">
+					<div class="border border-edge bg-void/20 rounded-md p-3">
 						<p class="text-[11px] text-warm-faint leading-relaxed">{ data.Progress.Boundary }</p>
 					</div>
 				</div>
@@ -280,6 +286,7 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[9.75rem_1fr] gap-x-2 gap-y-1">
 						<dt class="text-warm-faint">total_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.TotalIssueCount) }</dd>
 						<dt class="text-warm-faint">candidate_bundle_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.CandidateBundleCount) }</dd>
+						<dt class="text-warm-faint">candidate_singleton_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.CandidateSingletonCount) }</dd>
 						<dt class="text-warm-faint">review_group_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.ReviewGroupCount) }</dd>
 						<dt class="text-warm-faint">singleton_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.SingletonCount) }</dd>
 						<dt class="text-warm-faint">issue_shape_warning_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.AutonomyFrontier.IssueShapeWarningCount) }</dd>
