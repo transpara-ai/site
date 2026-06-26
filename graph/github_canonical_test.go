@@ -21,10 +21,10 @@ func TestOpsGitHubCanonicalRepoSummariesCountProtectedRisk(t *testing.T) {
 		humanScope int
 		protected  int
 	}{
-		{repo: "transpara-ai/site", completed: 1, ready: 1, protected: 1},
+		{repo: "transpara-ai/site", completed: 2, protected: 1},
 		{repo: "transpara-ai/.github", completed: 1, protected: 1},
-		{repo: "transpara-ai/eventgraph", completed: 1, deferred: 2, humanScope: 1, protected: 4},
-		{repo: "transpara-ai/hive", deferred: 2, humanScope: 2, protected: 4},
+		{repo: "transpara-ai/eventgraph", completed: 2, deferred: 1, humanScope: 1, protected: 4},
+		{repo: "transpara-ai/hive", completed: 4, protected: 4},
 	}
 
 	for _, tt := range tests {
@@ -80,7 +80,7 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 	if testRun.Schema != "TestRun" || testRun.Outcome != "tests.pass" || testRun.TraceScoreBasisPoints != 10000 {
 		t.Fatalf("TestRun record = %+v", testRun)
 	}
-	if !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#129") || !githubCanonicalContainsString(testRun.ValidationRefs, "make verify") || !githubCanonicalContainsString(testRun.AuthorityBoundaryRefs, "eventgraph#61") {
+	if !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#131") || !githubCanonicalContainsString(testRun.ValidationRefs, "make verify") || !githubCanonicalContainsString(testRun.AuthorityBoundaryRefs, "eventgraph#61") {
 		t.Fatalf("TestRun refs are incomplete: %+v", testRun)
 	}
 	if !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:c6f261a27a193a470a9e287d15580a05d1b0fafc") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/eventgraph/pull/67#issuecomment-4803740786") {
@@ -88,24 +88,24 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 	}
 
 	gateResult := records["evidence.gateresult.recorded"]
-	if gateResult.Schema != "GateResult" || gateResult.Outcome != "gate.partial" || gateResult.TraceScoreBasisPoints != 7300 {
+	if gateResult.Schema != "GateResult" || gateResult.Outcome != "gate.partial" || gateResult.TraceScoreBasisPoints != 8300 {
 		t.Fatalf("GateResult record = %+v", gateResult)
 	}
-	if !githubCanonicalContainsString(gateResult.SourceIssueRefs, ".github#3") || !githubCanonicalContainsString(gateResult.CFARRefs, "eventgraph PR #67 CFAR PASS") {
+	if !githubCanonicalContainsString(gateResult.SourceIssueRefs, "hive#220") || !githubCanonicalContainsString(gateResult.CFARRefs, "hive PR #228/#229/#230/#231 CFAR PASS") {
 		t.Fatalf("GateResult refs are incomplete: %+v", gateResult)
 	}
-	if !githubCanonicalContainsString(gateResult.ProvenanceRefs, "work#71 merge:f118276665c0bbbea282be7803070948b8d8e297") || !githubCanonicalContainsString(gateResult.ProvenanceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4803515276") {
+	if !githubCanonicalContainsString(gateResult.ProvenanceRefs, "hive#231 merge:523181b83ad8540fba747a64a12975996db170a4") || !githubCanonicalContainsString(gateResult.ProvenanceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4803515276") {
 		t.Fatalf("GateResult provenance refs are incomplete: %+v", gateResult.ProvenanceRefs)
 	}
 
 	auditReport := records["evidence.auditreport.recorded"]
-	if auditReport.Schema != "AuditReport" || auditReport.Outcome != "closeout.blocked" || auditReport.TraceScoreBasisPoints != 6200 {
+	if auditReport.Schema != "AuditReport" || auditReport.Outcome != "closeout.blocked" || auditReport.TraceScoreBasisPoints != 7000 {
 		t.Fatalf("AuditReport record = %+v", auditReport)
 	}
-	if !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "hive#223") || !githubCanonicalContainsString(auditReport.ResidualRiskRefs, "docs#203") {
+	if !githubCanonicalContainsString(auditReport.AuthorityBoundaryRefs, "eventgraph#59") || !githubCanonicalContainsString(auditReport.ResidualRiskRefs, "docs#203") {
 		t.Fatalf("AuditReport refs are incomplete: %+v", auditReport)
 	}
-	if !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/129") {
+	if !githubCanonicalContainsString(auditReport.ProvenanceRefs, "https://github.com/transpara-ai/site/issues/131") {
 		t.Fatalf("AuditReport provenance refs are incomplete: %+v", auditReport.ProvenanceRefs)
 	}
 }
