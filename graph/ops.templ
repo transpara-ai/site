@@ -145,6 +145,79 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				<dd class="text-warm-muted">read-only static scanner-evidence transcription; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
 			</dl>
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-progress="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Progress accounting</h2>
+					<p class="text-xs text-warm-faint mt-1">Recent issue closeouts and the parked-frontier reason are shown together so activity and closure state are not confused.</p>
+				</div>
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(data.Progress.Recommendation) }>{ data.Progress.Recommendation }</span>
+			</header>
+			<div class="p-4 space-y-4">
+				<p class="text-sm text-warm-muted leading-relaxed">{ data.Progress.Summary }</p>
+				<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1">
+						<dt class="text-warm-faint">recent_closeouts_shown</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.RecentCloseoutsShown) }</dd>
+						<dt class="text-warm-faint">parked_open_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.ParkedOpenIssueCount) }</dd>
+					</dl>
+					<dl class="border border-edge bg-void/20 rounded-md p-3 text-[11px] grid grid-cols-[10.5rem_1fr] gap-x-2 gap-y-1">
+						<dt class="text-warm-faint">pr_ready_issue_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.PRReadyIssueCount) }</dd>
+						<dt class="text-warm-faint">candidate_bundle_count</dt><dd class="text-warm-muted tabular-nums">{ fmt.Sprintf("%d", data.Progress.CandidateBundleCount) }</dd>
+					</dl>
+					<div class="border border-edge bg-void/20 rounded-md p-3 sm:col-span-2">
+						<p class="text-[11px] text-warm-faint leading-relaxed">{ data.Progress.Boundary }</p>
+					</div>
+				</div>
+				<div class="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+					<section class="border border-edge bg-void/20 rounded-md overflow-hidden">
+						<header class="px-3 py-2 border-b border-edge flex items-center justify-between gap-3">
+							<h3 class="text-xs font-medium text-warm uppercase tracking-widest">Recent closeouts</h3>
+							<span class="text-[10px] text-warm-faint tabular-nums">{ fmt.Sprintf("%d", len(data.Progress.RecentCloseouts)) }</span>
+						</header>
+						<div class="divide-y divide-edge">
+							for _, item := range data.Progress.RecentCloseouts {
+								<article class="px-3 py-3">
+									<div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+										<div>
+											<a href={ templ.SafeURL(item.Issue.URL) } class="text-sm font-medium text-brand hover:underline break-all" target="_blank" rel="noopener">{ githubCanonicalIssueLabel(item.Issue) }</a>
+											<p class="text-[11px] text-warm-faint mt-1 break-words">{ item.Issue.Title }</p>
+										</div>
+										<a href={ templ.SafeURL(item.PRURL) } class="text-[11px] text-brand hover:underline whitespace-nowrap" target="_blank" rel="noopener">{ item.PRRef }</a>
+									</div>
+									<dl class="grid gap-x-2 gap-y-1 mt-3 text-[11px] md:grid-cols-[6.5rem_1fr]">
+										<dt class="text-warm-faint">closed_at</dt><dd class="text-warm-muted break-all">{ item.ClosedAt }</dd>
+										<dt class="text-warm-faint">merged_at</dt><dd class="text-warm-muted break-all">{ item.MergedAt }</dd>
+										<dt class="text-warm-faint">merge</dt><dd class="text-warm-muted break-all">{ item.MergeCommit }</dd>
+										<dt class="text-warm-faint">reviewed_head</dt><dd class="text-warm-muted break-all">{ item.ReviewedHead }</dd>
+										<dt class="text-warm-faint">note</dt><dd class="text-warm-faint break-words">{ item.Note }</dd>
+									</dl>
+								</article>
+							}
+						</div>
+					</section>
+					<section class="border border-edge bg-void/20 rounded-md overflow-hidden">
+						<header class="px-3 py-2 border-b border-edge">
+							<h3 class="text-xs font-medium text-warm uppercase tracking-widest">Parked reasons</h3>
+						</header>
+						<div class="divide-y divide-edge">
+							for _, group := range data.Progress.ParkedGroups {
+								<article class="px-3 py-3">
+									<div class="flex items-start justify-between gap-3">
+										<h4 class="text-sm font-medium text-warm">{ group.Label }</h4>
+										<span class="text-[10px] text-warm-faint tabular-nums">{ fmt.Sprintf("%d", group.Count) }</span>
+									</div>
+									<p class="text-[11px] text-warm-muted mt-2 leading-relaxed">{ group.RequiredNext }</p>
+									<p class="text-[11px] text-warm-faint mt-2 break-all">{ opsCivilizationJoin(group.Refs, "none") }</p>
+								</article>
+							}
+						</div>
+						<div class="px-3 py-3 border-t border-edge">
+							<p class="text-[11px] text-warm-faint break-all">evidence_refs: { opsCivilizationJoin(data.Progress.EvidenceRefs, "none") }</p>
+						</div>
+					</section>
+				</div>
+			</div>
+		</section>
 		<section class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
 			for _, repo := range data.RepoSummaries {
 				<article class="border border-edge bg-surface rounded-lg p-4 min-h-[10rem]">
