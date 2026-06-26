@@ -169,6 +169,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"transpara-ai/hive#221",
 		"transpara-ai/hive#222",
 		"transpara-ai/hive#223",
+		"transpara-ai/operation#34",
 		"completed",
 		"deferred",
 		"needs-human-scope",
@@ -194,10 +195,16 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"merge:c6f261a27a193a470a9e287d15580a05d1b0fafc",
 		"merge:523181b83ad8540fba747a64a12975996db170a4",
 		"merge:0c0fdb5f9c116cef99ed87ed9f31bfc5cbd9e10e",
+		"merge:326f90a49d986e66d171e0eb0b5be23b8e64324c",
+		"merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea",
 		"work#71 merge:f118276665c0bbbea282be7803070948b8d8e297",
 		"https://github.com/transpara-ai/docs/issues/197#issuecomment-4803515276",
 		"https://github.com/transpara-ai/site/issues/129",
 		"https://github.com/transpara-ai/site/issues/131",
+		"https://github.com/transpara-ai/site/issues/133",
+		"https://github.com/transpara-ai/operation/pull/37",
+		"operation PR #37 CFAR PASS",
+		"Operation continuity",
 		"authority_recommendation_policy",
 		"human_required_classification_policy",
 		"role_separation_policy",
@@ -211,6 +218,15 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/github-canonical: body does not contain %q", want)
+		}
+	}
+	for _, stale := range []string{
+		"operator continuity procedure not updated for GitHub-canonical cutover",
+		"runbook scope handoff evidence pending",
+		"remaining EventGraph/docs/operation protected lanes open",
+	} {
+		if strings.Contains(body, stale) {
+			t.Fatalf("GET /ops/github-canonical: body contains stale operation blocker %q", stale)
 		}
 	}
 	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
