@@ -26,7 +26,8 @@ func TestOpsGitHubCanonicalRepoSummariesCountProtectedRisk(t *testing.T) {
 		{repo: "transpara-ai/docs", completed: 2, deferred: 1, humanScope: 1, protected: 4},
 		{repo: "transpara-ai/work", completed: 3, humanScope: 1, protected: 1},
 		{repo: "transpara-ai/site", completed: 2, protected: 1},
-		{repo: "transpara-ai/platform", completed: 4, protected: 1},
+		{repo: "transpara-ai/platform", completed: 8, protected: 1},
+		{repo: "transpara-ai/wiki", completed: 2},
 		{repo: "transpara-ai/.github", completed: 1, protected: 1},
 		{repo: "transpara-ai/eventgraph", completed: 3, deferred: 0, humanScope: 2, protected: 5},
 		{repo: "transpara-ai/hive", completed: 5, protected: 5},
@@ -77,7 +78,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if data.GeneratedAt != "2026-06-26T10:40:00Z" {
 		t.Fatalf("GeneratedAt/rendered_at = %q", data.GeneratedAt)
 	}
-	if data.ScannerSnapshotAt != "2026-06-26T12:08:57Z" {
+	if data.ScannerSnapshotAt != "2026-06-26T14:46:35Z" {
 		t.Fatalf("ScannerSnapshotAt = %q", data.ScannerSnapshotAt)
 	}
 	if data.ProjectionSource != "static transcription of scanner evidence; request render is not a live GitHub scan" {
@@ -94,7 +95,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if frontier.Recommendation != "park-autonomy-no-pr-ready-work" {
 		t.Fatalf("Recommendation = %q, want parked frontier", frontier.Recommendation)
 	}
-	if frontier.PRReadyIssueCount != 0 || frontier.AutonomousPRReadyIssueCount != 0 || frontier.CandidateBundleCount != 0 || frontier.IssueShapeWarningCount != 0 {
+	if frontier.PRReadyIssueCount != 0 || frontier.AutonomousPRReadyIssueCount != 0 || frontier.CandidateBundleCount != 0 || frontier.CandidateSingletonCount != 0 || frontier.IssueShapeWarningCount != 0 {
 		t.Fatalf("frontier ready/candidate/warning counts should be zero: %+v", frontier)
 	}
 	if frontier.NeedsHumanScopeIssueCount != 13 || frontier.ProtectedActionIssueCount != 14 || frontier.DeferredIssueCount != 13 {
@@ -107,15 +108,21 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 		"platform#7",
 		"https://github.com/transpara-ai/platform/pull/18",
 		"https://github.com/transpara-ai/platform/pull/19",
+		"platform#20",
+		"platform#26",
+		"https://github.com/transpara-ai/platform/pull/27",
 		"merge:87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8",
 		"merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d",
 		"merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52",
 		"reviewed_head:c9b1274e70173c3b29c5ee4a03805852a9a65d30",
 		"reviewed_head:7d4da36507fc62e979c6d3a46efd005126d33f53",
 		"reviewed_head:488bf95db116c0555757c7781173fd41923599e2",
-		"scanner:2026-06-26T12:08:57Z autonomy_frontier:park-autonomy-no-pr-ready-work",
-		"scanner:2026-06-26T12:08:57Z total_issue_count:14 needs_human_scope_issue_count:13 protected_action_issue_count:14 deferred_issue_count:13",
-		"scanner:2026-06-26T12:08:57Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/work#59,transpara-ai/work#64",
+		"merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16",
+		"reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6",
+		"scanner:2026-06-26T14:46:35Z autonomy_frontier:park-autonomy-no-pr-ready-work",
+		"scanner:2026-06-26T14:46:35Z candidate_singleton_count:0",
+		"scanner:2026-06-26T14:46:35Z total_issue_count:14 needs_human_scope_issue_count:13 protected_action_issue_count:14 deferred_issue_count:13",
+		"scanner:2026-06-26T14:46:35Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/work#59,transpara-ai/work#64",
 		"arc_issue_scan:Findings=0",
 	} {
 		if !githubCanonicalContainsString(frontier.EvidenceRefs, want) {
@@ -133,7 +140,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if frontier.Boundary == "" {
 		t.Fatal("frontier boundary must be explicit")
 	}
-	for _, closed := range []string{"transpara-ai/docs#198", "transpara-ai/docs#199", "transpara-ai/platform#7", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147", "transpara-ai/site#149", "transpara-ai/site#151", "transpara-ai/site#153"} {
+	for _, closed := range []string{"transpara-ai/docs#198", "transpara-ai/docs#199", "transpara-ai/platform#7", "transpara-ai/platform#20", "transpara-ai/platform#22", "transpara-ai/platform#24", "transpara-ai/platform#26", "transpara-ai/wiki#35", "transpara-ai/wiki#36", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147", "transpara-ai/site#149", "transpara-ai/site#151", "transpara-ai/site#153", "transpara-ai/site#157", "transpara-ai/site#159"} {
 		if githubCanonicalContainsString(frontier.BlockerRefs, closed) {
 			t.Fatalf("frontier blocker refs include closed or self-refresh issue %q: %+v", closed, frontier.BlockerRefs)
 		}
@@ -144,7 +151,10 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 26, 12, 45, 0, 0, time.UTC))
 	progress := data.Progress
 
-	if progress.RecentCloseoutsShown != 6 || progress.ParkedOpenIssueCount != 14 || progress.PRReadyIssueCount != 0 || progress.CandidateBundleCount != 0 {
+	if progress.ClosureWindow != "2026-06-26T00:00:00Z..2026-06-26T14:46:35Z" || progress.ClosedIssueCount != 35 || progress.MergedPRCount != 35 {
+		t.Fatalf("progress closeout window = %+v, want 35 closed intake issues and 35 merged PRs", progress)
+	}
+	if progress.RecentCloseoutsShown != 6 || progress.ParkedOpenIssueCount != 14 || progress.PRReadyIssueCount != 0 || progress.CandidateBundleCount != 0 || progress.CandidateSingletonCount != 0 {
 		t.Fatalf("progress counts = %+v, want six recent closeouts, fourteen parked blockers, zero ready/candidate work", progress)
 	}
 	if progress.Recommendation != "park-autonomy-no-pr-ready-work" {
@@ -161,12 +171,12 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 		mergeCommit  string
 		reviewedHead string
 	}{
-		{repo: "transpara-ai/site", number: 153, prRef: "site PR #154", mergeCommit: "d177a8bbf019d0260862fab986474e6d8b8888b5", reviewedHead: "618e22f084396b5721aa618d81d8b1e98a9fe7ec"},
-		{repo: "transpara-ai/platform", number: 7, prRef: "platform PR #19", mergeCommit: "e6691b62c4fd98179441f0085f23ab1c7c9a2f52", reviewedHead: "488bf95db116c0555757c7781173fd41923599e2"},
-		{repo: "transpara-ai/docs", number: 198, prRef: "docs PR #206", mergeCommit: "87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8", reviewedHead: "c9b1274e70173c3b29c5ee4a03805852a9a65d30"},
-		{repo: "transpara-ai/site", number: 151, prRef: "site PR #152", mergeCommit: "50428bd3a7b61c2b42634eab4040928eee99e051", reviewedHead: "99c277ade2e0af826e09faf3e87d9f880668cb5b"},
-		{repo: "transpara-ai/site", number: 149, prRef: "site PR #150", mergeCommit: "08d5fc9d798fa60cefbb344666ebe2e59094b821", reviewedHead: "62ced862bb6775f0da71e965cb0de4aa5472859f"},
-		{repo: "transpara-ai/site", number: 147, prRef: "site PR #148", mergeCommit: "56777d134cd2e1c9a0996162c6565ed88f01cb37", reviewedHead: "ce992679f415e0ec0bdaa7f05d29396445f7560f"},
+		{repo: "transpara-ai/platform", number: 26, prRef: "platform PR #27", mergeCommit: "1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16", reviewedHead: "48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6"},
+		{repo: "transpara-ai/platform", number: 24, prRef: "platform PR #25", mergeCommit: "242e268017d4bc4316a25c6b30cb9213bc569c7a", reviewedHead: "5372e43d92f7c8712c6ddf84a6abd8fbbdd8ec12"},
+		{repo: "transpara-ai/platform", number: 22, prRef: "platform PR #23", mergeCommit: "1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3", reviewedHead: "565e3665dd0163fcea8a78a874d93e40d652e27a"},
+		{repo: "transpara-ai/wiki", number: 36, prRef: "wiki PR #38", mergeCommit: "e509226a19cf1c1a763a9c3b2fe1984027105a56", reviewedHead: "d9bdd8734848e4e89a468269833d9e544fb05486"},
+		{repo: "transpara-ai/wiki", number: 35, prRef: "wiki PR #37", mergeCommit: "2fda2af6c69872aeaca2d7e7fa7ea54705d65def", reviewedHead: "4d1f06584b95df1c20e551eaaa7b11c9021f625f"},
+		{repo: "transpara-ai/platform", number: 20, prRef: "platform PR #21", mergeCommit: "3709f7fd811450cd387177589f79aaac1fc20443", reviewedHead: "b0dbc958a07ecf1ff19bc16681590746e3f7ce6b"},
 	} {
 		var found *OpsGitHubCanonicalCloseout
 		for i := range progress.RecentCloseouts {
@@ -215,9 +225,20 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 	if progress.ParkedGroups[1].Count != 1 || !githubCanonicalContainsString(progress.ParkedGroups[1].Refs, "transpara-ai/docs#197") {
 		t.Fatalf("parent tracker parked group incomplete: %+v", progress.ParkedGroups[1])
 	}
+	for _, want := range []string{
+		"gh-search:2026-06-26T14:46:35Z closed:2026-06-26 label:cc:intake count:35",
+		"gh-search:2026-06-26T14:46:35Z merged:2026-06-26 count:35",
+		"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/agent state:open label:cc:intake count:0",
+		"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/wiki state:open label:cc:intake count:0",
+		"scanner:2026-06-26T14:46:35Z total_issue_count:14 pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 candidate_singleton_count:0 issue_shape_warning_count:0",
+	} {
+		if !githubCanonicalContainsString(progress.EvidenceRefs, want) {
+			t.Fatalf("progress evidence refs missing %q: %+v", want, progress.EvidenceRefs)
+		}
+	}
 	for _, ref := range progress.EvidenceRefs {
-		if strings.Contains(ref, "site#155") {
-			t.Fatalf("progress evidence should not self-reference current refresh issue site#155: %+v", progress.EvidenceRefs)
+		if strings.Contains(ref, "site#159") {
+			t.Fatalf("progress evidence should not self-reference current refresh issue site#159: %+v", progress.EvidenceRefs)
 		}
 	}
 }
@@ -240,8 +261,8 @@ func TestOpsGitHubCanonicalAuthorityActionsCoverParkedBlockers(t *testing.T) {
 			t.Fatalf("authority action state = %q, want human-scope or deferred", action.State)
 		}
 		for _, ref := range action.BlockerRefs {
-			if strings.Contains(ref, "site#157") || strings.Contains(ref, "transpara-ai/site#157") {
-				t.Fatalf("authority action should not self-reference current issue site#157: %+v", action)
+			if strings.Contains(ref, "site#159") || strings.Contains(ref, "transpara-ai/site#159") {
+				t.Fatalf("authority action should not self-reference current issue site#159: %+v", action)
 			}
 			refs[ref]++
 		}
@@ -407,22 +428,37 @@ func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) 
 	for _, want := range []string{
 		"site#143",
 		"site#145",
+		"site#157",
 		"https://github.com/transpara-ai/site/pull/144",
 		"https://github.com/transpara-ai/site/pull/146",
+		"https://github.com/transpara-ai/site/pull/158",
 		"https://github.com/transpara-ai/platform/pull/19",
+		"https://github.com/transpara-ai/platform/pull/21",
+		"https://github.com/transpara-ai/platform/pull/23",
+		"https://github.com/transpara-ai/platform/pull/25",
+		"https://github.com/transpara-ai/platform/pull/27",
+		"https://github.com/transpara-ai/wiki/pull/37",
+		"https://github.com/transpara-ai/wiki/pull/38",
 		"merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d",
 		"merge:fac357e0836adc54a65f1778c229a44bd3f0d364",
 		"merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52",
+		"merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16",
+		"merge:e509226a19cf1c1a763a9c3b2fe1984027105a56",
 		"reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f",
 		"reviewed_head:488bf95db116c0555757c7781173fd41923599e2",
+		"reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6",
+		"reviewed_head:d9bdd8734848e4e89a468269833d9e544fb05486",
 		"https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003",
+		"https://github.com/transpara-ai/site/pull/158#issuecomment-4809931353",
 		"https://github.com/transpara-ai/platform/pull/19#issuecomment-4809397170",
+		"https://github.com/transpara-ai/platform/pull/27#issuecomment-4810585823",
+		"https://github.com/transpara-ai/wiki/pull/38#issuecomment-4810383462",
 	} {
 		if !githubCanonicalContainsString(lane.EvidenceRefs, want) {
 			t.Fatalf("site#129 lane evidence refs missing %q: %+v", want, lane.EvidenceRefs)
 		}
 	}
-	if lane.Readiness != "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, site#145, and site#153" {
+	if lane.Readiness != "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, site#145, site#153, and site#157; latest projection records platform/wiki closeout velocity" {
 		t.Fatalf("site#129 readiness = %q", lane.Readiness)
 	}
 
@@ -436,7 +472,7 @@ func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) 
 	if parent == nil {
 		t.Fatal("missing docs#197 parent lane")
 	}
-	if !githubCanonicalContainsString(parent.EvidenceRefs, "site#145") || !githubCanonicalContainsString(parent.EvidenceRefs, "platform#19") {
+	if !githubCanonicalContainsString(parent.EvidenceRefs, "site#157") || !githubCanonicalContainsString(parent.EvidenceRefs, "platform#26") || !githubCanonicalContainsString(parent.EvidenceRefs, "wiki#36") {
 		t.Fatalf("docs#197 parent lane evidence refs missing refresh evidence: %+v", parent.EvidenceRefs)
 	}
 	if !githubCanonicalContainsString(parent.EvidenceRefs, "docs#198") || !githubCanonicalContainsString(parent.EvidenceRefs, "docs#206") {
@@ -447,6 +483,9 @@ func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) 
 	}
 	if !githubCanonicalContainsString(parent.EvidenceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809411010") {
 		t.Fatalf("docs#197 parent lane evidence refs missing latest closeout comment: %+v", parent.EvidenceRefs)
+	}
+	if !githubCanonicalContainsString(parent.EvidenceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810595229") {
+		t.Fatalf("docs#197 parent lane evidence refs missing platform#26 closeout comment: %+v", parent.EvidenceRefs)
 	}
 }
 
@@ -509,7 +548,7 @@ func TestOpsGitHubCanonicalEvidenceRecordsExposeEventGraphContract(t *testing.T)
 	if !githubCanonicalContainsString(testRun.SourceIssueRefs, "docs#199") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#131") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#133") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#135") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#143") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "site#145") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "eventgraph#69") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "hive#232") || !githubCanonicalContainsString(testRun.SourceIssueRefs, "platform#17") || !githubCanonicalContainsString(testRun.ValidationRefs, "make verify") || !githubCanonicalContainsString(testRun.ValidationRefs, "site#143 validation complete") || !githubCanonicalContainsString(testRun.ValidationRefs, "site#145 validation complete by site PR #146") || !githubCanonicalContainsString(testRun.ValidationRefs, "platform scanner autonomy_frontier recommendation=park-autonomy-no-pr-ready-work") || !githubCanonicalContainsString(testRun.AuthorityBoundaryRefs, "eventgraph#61") {
 		t.Fatalf("TestRun refs are incomplete: %+v", testRun)
 	}
-	if !githubCanonicalContainsString(testRun.PRRefs, "site PR #144") || !githubCanonicalContainsString(testRun.PRRefs, "site PR #146") || !githubCanonicalContainsString(testRun.CFARRefs, "site PR #132/#144/#146 CFAR PASS") {
+	if !githubCanonicalContainsString(testRun.PRRefs, "site PR #144") || !githubCanonicalContainsString(testRun.PRRefs, "site PR #146") || !githubCanonicalContainsString(testRun.PRRefs, "site PR #158") || !githubCanonicalContainsString(testRun.PRRefs, "platform PR #27") || !githubCanonicalContainsString(testRun.PRRefs, "wiki PR #38") || !githubCanonicalContainsString(testRun.CFARRefs, "site PR #132/#144/#146/#158 CFAR PASS") || !githubCanonicalContainsString(testRun.CFARRefs, "platform PR #16/#18/#19/#21/#23/#25/#27 CFAR PASS") || !githubCanonicalContainsString(testRun.CFARRefs, "wiki PR #37/#38 CFAR PASS") {
 		t.Fatalf("TestRun missing site PR/CFAR refs: %+v", testRun)
 	}
 	if !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:874980a7ab6d1b5c6ef3bacfc8c02f1401f00a13") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "reviewed_head:2c76e779e51b004db4004f81117cfcb6dd3e3638") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:c6f261a27a193a470a9e287d15580a05d1b0fafc") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:ec22be652d0f117c68393104ad911042fc5cc272") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:89921d82d5019f2181e2b75435019c19e9ab92c9") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:fac357e0836adc54a65f1778c229a44bd3f0d364") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/docs/pull/205#issuecomment-4808081439") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/eventgraph/pull/67#issuecomment-4803740786") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/hive/pull/233#issuecomment-4806413483") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/144#issuecomment-4808318161") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003") || !githubCanonicalContainsString(testRun.ProvenanceRefs, "https://github.com/transpara-ai/platform/pull/18#issuecomment-4807330168") {
