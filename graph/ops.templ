@@ -162,6 +162,42 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</article>
 			}
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-issue-shape-warnings="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Issue shape warnings</h2>
+					<p class="text-xs text-warm-faint mt-1">Scanner evidence for repair or human-scope triage only; no automatic issue edit, PR work, Hive wake, or GitHub mutation.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap">warning projection</span>
+			</header>
+			if len(data.IssueWarnings) == 0 {
+				<p class="p-4 text-sm text-warm-faint">No issue-shape warnings projected.</p>
+			} else {
+				<div class="grid gap-3 p-4 lg:grid-cols-2">
+					for _, warning := range data.IssueWarnings {
+						<article class="border border-edge bg-void/20 rounded-md p-3">
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									if warning.Issue.URL != "" {
+										<a href={ templ.SafeURL(warning.Issue.URL) } class="text-sm font-medium text-brand hover:underline break-all" target="_blank" rel="noopener">{ githubCanonicalIssueLabel(warning.Issue) }</a>
+									} else {
+										<h3 class="text-sm font-medium text-warm break-all">{ githubCanonicalIssueLabel(warning.Issue) }</h3>
+									}
+									<p class="text-[11px] text-warm-faint mt-1 break-words">{ warning.Issue.Title }</p>
+								</div>
+								<span class="text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap">shape warning</span>
+							</div>
+							<dl class="grid grid-cols-[8.75rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+								<dt class="text-warm-faint">missing_fields</dt><dd class="text-warm-muted break-words">{ opsCivilizationJoin(warning.MissingFields, "none") }</dd>
+								<dt class="text-warm-faint">recommendation</dt><dd class="text-warm-muted break-all">{ warning.Recommendation }</dd>
+								<dt class="text-warm-faint">evidence_refs</dt><dd class="text-warm-faint break-all">{ opsCivilizationJoin(warning.EvidenceRefs, "none") }</dd>
+							</dl>
+							<p class="text-[11px] text-warm-faint mt-3 leading-relaxed">{ warning.Boundary }</p>
+						</article>
+					}
+				</div>
+			}
+		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-evidence-records="read-only">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>
