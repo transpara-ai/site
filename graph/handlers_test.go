@@ -160,6 +160,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"recent_closed_issue_count",
 		"parked_open_issue_count",
 		"zero PR-ready issues",
+		"six most recent issue-source monitor or governance closeouts",
 		"transpara-ai/site#153",
 		"site PR #154",
 		"d177a8bbf019d0260862fab986474e6d8b8888b5",
@@ -170,6 +171,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"transpara-ai/platform#7",
 		"platform PR #19",
 		"remaining protected/human-scope blockers",
+		"parent closeout pending",
 		"human AuthorityDecision or exact scope evidence before any implementation PR may be opened",
 		"transpara-ai/docs#197",
 		"transpara-ai/docs#193",
@@ -350,6 +352,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"scanner:2026-06-26T10:02:13Z",
 		"total_issue_count:16",
 		"transpara-ai/platform#7,transpara-ai/work#59",
+		"deferred parent tracker",
 		"transpara-ai/site#155",
 	} {
 		if strings.Contains(body, stale) {

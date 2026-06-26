@@ -241,7 +241,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 
 func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 	return OpsGitHubCanonicalProgress{
-		Summary:                "Closure progress is real, but the remaining issue-source frontier is parked: recent monitor/governance closeouts are done, and the open backlog has zero PR-ready issues after site#153 closes.",
+		Summary:                "Closure progress is real, but the remaining issue-source frontier is parked: the latest scanner snapshot has zero PR-ready issues, and site#153 closed afterward without changing the parked backlog. Recent closeouts are the six most recent issue-source monitor or governance closeouts recorded in this projection.",
 		RecentClosedIssueCount: 6,
 		ParkedOpenIssueCount:   14,
 		PRReadyIssueCount:      0,
@@ -263,7 +263,7 @@ func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 				RequiredNext: "human AuthorityDecision or exact scope evidence before any implementation PR may be opened",
 			},
 			{
-				Label:        "deferred parent tracker",
+				Label:        "parent closeout pending",
 				Count:        1,
 				Refs:         []string{"transpara-ai/docs#197"},
 				RequiredNext: "final closeout waits for EventGraph projection/write governance and scanner evidence",

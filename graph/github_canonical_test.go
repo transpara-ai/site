@@ -133,7 +133,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if frontier.Boundary == "" {
 		t.Fatal("frontier boundary must be explicit")
 	}
-	for _, closed := range []string{"transpara-ai/docs#198", "transpara-ai/docs#199", "transpara-ai/platform#7", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147"} {
+	for _, closed := range []string{"transpara-ai/docs#198", "transpara-ai/docs#199", "transpara-ai/platform#7", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147", "transpara-ai/site#149", "transpara-ai/site#151", "transpara-ai/site#153"} {
 		if githubCanonicalContainsString(frontier.BlockerRefs, closed) {
 			t.Fatalf("frontier blocker refs include closed or self-refresh issue %q: %+v", closed, frontier.BlockerRefs)
 		}
@@ -164,6 +164,9 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 		{repo: "transpara-ai/site", number: 153, prRef: "site PR #154", mergeCommit: "d177a8bbf019d0260862fab986474e6d8b8888b5", reviewedHead: "618e22f084396b5721aa618d81d8b1e98a9fe7ec"},
 		{repo: "transpara-ai/platform", number: 7, prRef: "platform PR #19", mergeCommit: "e6691b62c4fd98179441f0085f23ab1c7c9a2f52", reviewedHead: "488bf95db116c0555757c7781173fd41923599e2"},
 		{repo: "transpara-ai/docs", number: 198, prRef: "docs PR #206", mergeCommit: "87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8", reviewedHead: "c9b1274e70173c3b29c5ee4a03805852a9a65d30"},
+		{repo: "transpara-ai/site", number: 151, prRef: "site PR #152", mergeCommit: "50428bd3a7b61c2b42634eab4040928eee99e051", reviewedHead: "99c277ade2e0af826e09faf3e87d9f880668cb5b"},
+		{repo: "transpara-ai/site", number: 149, prRef: "site PR #150", mergeCommit: "08d5fc9d798fa60cefbb344666ebe2e59094b821", reviewedHead: "62ced862bb6775f0da71e965cb0de4aa5472859f"},
+		{repo: "transpara-ai/site", number: 147, prRef: "site PR #148", mergeCommit: "56777d134cd2e1c9a0996162c6565ed88f01cb37", reviewedHead: "ce992679f415e0ec0bdaa7f05d29396445f7560f"},
 	} {
 		var found *OpsGitHubCanonicalCloseout
 		for i := range progress.RecentCloseouts {
