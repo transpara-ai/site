@@ -224,6 +224,33 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</div>
 			</div>
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-source-counts="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Scanner source counts</h2>
+					<p class="text-xs text-warm-faint mt-1">Typed per-source counts from the platform scanner; zero-count repos are shown explicitly so clear lanes do not look unscanned.</p>
+				</div>
+				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">display only</span>
+			</header>
+			<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+				for _, source := range data.SourceSummaries {
+					<article class="border border-edge bg-void/20 rounded-md p-3 min-h-[8rem]">
+						<div class="flex items-start justify-between gap-3">
+							<h3 class="text-sm font-medium text-warm break-all">{ source.Repo }</h3>
+							<span class={ "text-[10px] px-2 py-1 rounded-full border tabular-nums whitespace-nowrap", templ.KV("border-emerald-400/40 text-emerald-300 bg-emerald-400/10", source.IssueCount == 0), templ.KV("border-amber-300/40 text-amber-300 bg-amber-300/10", source.IssueCount > 0) }>{ fmt.Sprintf("%d", source.IssueCount) }</span>
+						</div>
+						<dl class="grid grid-cols-[4.25rem_1fr] gap-x-2 gap-y-1 mt-3 text-[11px]">
+							<dt class="text-warm-faint">source</dt><dd class="text-warm-muted break-all">{ source.Source }</dd>
+							<dt class="text-warm-faint">kind</dt><dd class="text-warm-muted">{ source.Kind }</dd>
+							<dt class="text-warm-faint">labels</dt><dd class="text-warm-muted break-all">{ opsCivilizationJoin(source.Labels, "none") }</dd>
+							if source.Error != "" {
+								<dt class="text-warm-faint">error</dt><dd class="text-amber-300 break-all">{ source.Error }</dd>
+							}
+						</dl>
+					</article>
+				}
+			</div>
+		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-authority-actions="read-only">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>
