@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"regexp"
 	"testing"
 	"time"
 )
@@ -70,7 +71,23 @@ func TestOpsGitHubCanonicalRepoSummariesCountLiteralProtectedStateOnce(t *testin
 }
 
 func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing.T) {
-	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 26, 7, 40, 0, 0, time.UTC))
+	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 26, 10, 40, 0, 0, time.UTC))
+
+	if data.GeneratedAt != "2026-06-26T10:40:00Z" {
+		t.Fatalf("GeneratedAt/rendered_at = %q", data.GeneratedAt)
+	}
+	if data.ScannerSnapshotAt != "2026-06-26T10:02:13Z" {
+		t.Fatalf("ScannerSnapshotAt = %q", data.ScannerSnapshotAt)
+	}
+	if data.ProjectionSource != "static transcription of scanner evidence; request render is not a live GitHub scan" {
+		t.Fatalf("ProjectionSource = %q", data.ProjectionSource)
+	}
+	if !githubCanonicalContainsString(data.Boundaries, "Rendered-at time is request freshness only; scanner_snapshot_at is the latest scan represented by autonomy frontier and issue-shape state; individual evidence rows may cite earlier confirming scans.") {
+		t.Fatalf("freshness boundary missing: %+v", data.Boundaries)
+	}
+	if got := latestGitHubCanonicalScannerTimestamp(data); got != data.ScannerSnapshotAt {
+		t.Fatalf("ScannerSnapshotAt = %q, want latest scanner timestamp %q", data.ScannerSnapshotAt, got)
+	}
 
 	frontier := data.AutonomyFrontier
 	if frontier.Recommendation != "park-autonomy-no-pr-ready-work" {
@@ -113,6 +130,95 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 			t.Fatalf("frontier blocker refs include closed or self-refresh issue %q: %+v", closed, frontier.BlockerRefs)
 		}
 	}
+}
+
+func latestGitHubCanonicalScannerTimestamp(data *OpsGitHubCanonicalData) string {
+	// Lexical ordering is chronological because scanner evidence uses fixed-width UTC Z stamps.
+	scannerStamp := regexp.MustCompile(`scanner:(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)`)
+	var latest string
+	observe := func(text string) {
+		for _, match := range scannerStamp.FindAllStringSubmatch(text, -1) {
+			if len(match) == 2 && match[1] > latest {
+				latest = match[1]
+			}
+		}
+	}
+	observeIssue := func(issue OpsGitHubCanonicalIssue) {
+		observe(issue.Repo)
+		observe(issue.Title)
+		observe(issue.URL)
+	}
+	observe(data.GeneratedAt)
+	observe(data.ScannerSnapshotAt)
+	observe(data.ProjectionSource)
+	observe(data.Status)
+	observe(data.ProjectionState)
+	observeIssue(data.Parent)
+	for _, lane := range data.Lanes {
+		observeIssue(lane.Issue)
+		observe(lane.ParentRef)
+		observe(lane.Substrate)
+		observe(lane.State)
+		observe(lane.Readiness)
+		observe(lane.Risk)
+		observe(lane.BlockedReason)
+		for _, label := range lane.Labels {
+			observe(label)
+		}
+		for _, ref := range lane.EvidenceRefs {
+			observe(ref)
+		}
+		for _, ref := range lane.LegacyRefs {
+			observe(ref)
+		}
+	}
+	for _, summary := range data.RepoSummaries {
+		observe(summary.Repo)
+		observe(summary.BlockedReason)
+	}
+	for _, ref := range data.AutonomyFrontier.EvidenceRefs {
+		observe(ref)
+	}
+	for _, ref := range data.AutonomyFrontier.BlockerRefs {
+		observe(ref)
+	}
+	observe(data.AutonomyFrontier.Recommendation)
+	observe(data.AutonomyFrontier.Boundary)
+	for _, warning := range data.IssueWarnings {
+		observeIssue(warning.Issue)
+		for _, ref := range warning.EvidenceRefs {
+			observe(ref)
+		}
+		observe(warning.Recommendation)
+		observe(warning.Boundary)
+	}
+	for _, record := range data.EvidenceRecords {
+		observe(record.Name)
+		observe(record.EventType)
+		observe(record.Outcome)
+		observe(record.Schema)
+		for _, refs := range [][]string{record.SourceIssueRefs, record.PRRefs, record.ValidationRefs, record.CFARRefs, record.AuthorityBoundaryRefs, record.ResidualRiskRefs, record.ProvenanceRefs} {
+			for _, ref := range refs {
+				observe(ref)
+			}
+		}
+		observe(record.ProjectionReadinessNote)
+	}
+	for _, check := range data.CutoverChecks {
+		observe(check.Label)
+		observe(check.State)
+		observe(check.Evidence)
+		observe(check.Blocker)
+	}
+	for _, boundary := range data.Boundaries {
+		observe(boundary)
+	}
+	for _, legacy := range data.LegacyEvidence {
+		observe(legacy.Ref)
+		observe(legacy.State)
+		observe(legacy.Disposition)
+	}
+	return latest
 }
 
 func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) {

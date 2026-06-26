@@ -8,18 +8,20 @@ import (
 )
 
 type OpsGitHubCanonicalData struct {
-	GeneratedAt      string
-	Status           string
-	ProjectionState  string
-	Parent           OpsGitHubCanonicalIssue
-	AutonomyFrontier OpsGitHubCanonicalAutonomyFrontier
-	RepoSummaries    []OpsGitHubCanonicalRepoSummary
-	Lanes            []OpsGitHubCanonicalLane
-	IssueWarnings    []OpsGitHubCanonicalIssueWarning
-	EvidenceRecords  []OpsGitHubCanonicalEvidenceRecord
-	CutoverChecks    []OpsGitHubCanonicalCutoverCheck
-	Boundaries       []string
-	LegacyEvidence   []OpsGitHubCanonicalLegacyEvidence
+	GeneratedAt       string
+	ScannerSnapshotAt string
+	ProjectionSource  string
+	Status            string
+	ProjectionState   string
+	Parent            OpsGitHubCanonicalIssue
+	AutonomyFrontier  OpsGitHubCanonicalAutonomyFrontier
+	RepoSummaries     []OpsGitHubCanonicalRepoSummary
+	Lanes             []OpsGitHubCanonicalLane
+	IssueWarnings     []OpsGitHubCanonicalIssueWarning
+	EvidenceRecords   []OpsGitHubCanonicalEvidenceRecord
+	CutoverChecks     []OpsGitHubCanonicalCutoverCheck
+	Boundaries        []string
+	LegacyEvidence    []OpsGitHubCanonicalLegacyEvidence
 }
 
 type OpsGitHubCanonicalAutonomyFrontier struct {
@@ -115,6 +117,10 @@ const (
 	githubCanonicalStateNeedsHumanScope    = "needs-human-scope"
 	githubCanonicalStateProtectedAction    = "protected-action"
 	githubCanonicalStateLegacyEvidenceOnly = "legacy-evidence-only"
+
+	// Keep this equal to the latest scanner: timestamp represented in monitor evidence.
+	githubCanonicalScannerSnapshotAt = "2026-06-26T10:02:13Z"
+	githubCanonicalProjectionSource  = "static transcription of scanner evidence; request render is not a live GitHub scan"
 )
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
@@ -160,14 +166,16 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 	})
 
 	return &OpsGitHubCanonicalData{
-		GeneratedAt:     now.UTC().Format(time.RFC3339),
-		Status:          "partial",
-		ProjectionState: "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
-		Parent:          OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
-		RepoSummaries:   githubCanonicalRepoSummaries(lanes),
-		Lanes:           lanes,
-		IssueWarnings:   githubCanonicalIssueWarnings(),
-		EvidenceRecords: githubCanonicalEvidenceRecords(),
+		GeneratedAt:       now.UTC().Format(time.RFC3339),
+		ScannerSnapshotAt: githubCanonicalScannerSnapshotAt,
+		ProjectionSource:  githubCanonicalProjectionSource,
+		Status:            "partial",
+		ProjectionState:   "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
+		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
+		RepoSummaries:     githubCanonicalRepoSummaries(lanes),
+		Lanes:             lanes,
+		IssueWarnings:     githubCanonicalIssueWarnings(),
+		EvidenceRecords:   githubCanonicalEvidenceRecords(),
 		CutoverChecks: []OpsGitHubCanonicalCutoverCheck{
 			{Label: "Issue coverage", State: "partial", Evidence: "docs#197 and child issue lanes exist; scanner:2026-06-26T10:02:13Z found no PR-ready issues, no autonomous PR-ready issues, no candidate bundles, and no issue-shape warnings after site#145 closed", Blocker: "remaining protected lanes are human-scope"},
 			{Label: "Work traceability", State: "completed", Evidence: "work#61, work#62, work#63 merged", Blocker: ""},
@@ -185,6 +193,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		AutonomyFrontier: githubCanonicalAutonomyFrontier(),
 		Boundaries: []string{
 			"Read-only typed projection-shaped Site data; no live GitHub fetch or mutation.",
+			"Rendered-at time is request freshness only; scanner_snapshot_at is the latest scan represented by autonomy frontier and issue-shape state; individual evidence rows may cite earlier confirming scans.",
 			"No Hive wake, runtime start, queue launch, EventGraph write, deploy, merge, approval, Test 001 GREEN claim, autonomy increase, value allocation, or residual-risk closure.",
 			"Markdown is displayed only as archived/background evidence, never as the live work queue.",
 			"Issue-shape warning state is scanner evidence only; warning absence does not authorize issue closure, PR-ready state, Hive wake, GitHub mutation, Test 001 GREEN, or residual-risk closure.",
