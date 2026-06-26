@@ -25,7 +25,7 @@ func TestOpsGitHubCanonicalRepoSummariesCountProtectedRisk(t *testing.T) {
 		{repo: "transpara-ai/docs", completed: 1, deferred: 1, humanScope: 1, protected: 3},
 		{repo: "transpara-ai/work", completed: 3, humanScope: 1, protected: 1},
 		{repo: "transpara-ai/site", completed: 2, protected: 1},
-		{repo: "transpara-ai/platform", completed: 3},
+		{repo: "transpara-ai/platform", completed: 4, protected: 1},
 		{repo: "transpara-ai/.github", completed: 1, protected: 1},
 		{repo: "transpara-ai/eventgraph", completed: 3, deferred: 0, humanScope: 2, protected: 5},
 		{repo: "transpara-ai/hive", completed: 5, protected: 5},
@@ -76,7 +76,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if data.GeneratedAt != "2026-06-26T10:40:00Z" {
 		t.Fatalf("GeneratedAt/rendered_at = %q", data.GeneratedAt)
 	}
-	if data.ScannerSnapshotAt != "2026-06-26T10:02:13Z" {
+	if data.ScannerSnapshotAt != "2026-06-26T12:08:57Z" {
 		t.Fatalf("ScannerSnapshotAt = %q", data.ScannerSnapshotAt)
 	}
 	if data.ProjectionSource != "static transcription of scanner evidence; request render is not a live GitHub scan" {
@@ -96,17 +96,21 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if frontier.PRReadyIssueCount != 0 || frontier.AutonomousPRReadyIssueCount != 0 || frontier.CandidateBundleCount != 0 || frontier.IssueShapeWarningCount != 0 {
 		t.Fatalf("frontier ready/candidate/warning counts should be zero: %+v", frontier)
 	}
-	if frontier.NeedsHumanScopeIssueCount != 15 || frontier.ProtectedActionIssueCount != 16 || frontier.DeferredIssueCount != 15 {
-		t.Fatalf("frontier guarded counts = %+v, want human=15 protected=16 deferred=15", frontier)
+	if frontier.NeedsHumanScopeIssueCount != 13 || frontier.ProtectedActionIssueCount != 14 || frontier.DeferredIssueCount != 13 {
+		t.Fatalf("frontier guarded counts = %+v, want human=13 protected=14 deferred=13", frontier)
 	}
 	for _, want := range []string{
 		"platform#17",
+		"platform#7",
 		"https://github.com/transpara-ai/platform/pull/18",
+		"https://github.com/transpara-ai/platform/pull/19",
 		"merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d",
+		"merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52",
 		"reviewed_head:7d4da36507fc62e979c6d3a46efd005126d33f53",
-		"scanner:2026-06-26T10:02:13Z autonomy_frontier:park-autonomy-no-pr-ready-work",
-		"scanner:2026-06-26T10:02:13Z total_issue_count:16 needs_human_scope_issue_count:15 protected_action_issue_count:16 deferred_issue_count:15",
-		"scanner:2026-06-26T10:02:13Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#198,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/platform#7,transpara-ai/work#59,transpara-ai/work#64",
+		"reviewed_head:488bf95db116c0555757c7781173fd41923599e2",
+		"scanner:2026-06-26T12:08:57Z autonomy_frontier:park-autonomy-no-pr-ready-work",
+		"scanner:2026-06-26T12:08:57Z total_issue_count:14 needs_human_scope_issue_count:13 protected_action_issue_count:14 deferred_issue_count:13",
+		"scanner:2026-06-26T12:08:57Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/work#59,transpara-ai/work#64",
 		"arc_issue_scan:Findings=0",
 	} {
 		if !githubCanonicalContainsString(frontier.EvidenceRefs, want) {
@@ -115,7 +119,6 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	}
 	for _, want := range []string{
 		"transpara-ai/docs#197",
-		"transpara-ai/platform#7",
 		"transpara-ai/work#64",
 	} {
 		if !githubCanonicalContainsString(frontier.BlockerRefs, want) {
@@ -125,7 +128,7 @@ func TestOpsGitHubCanonicalAutonomyFrontierReflectsParkedScannerState(t *testing
 	if frontier.Boundary == "" {
 		t.Fatal("frontier boundary must be explicit")
 	}
-	for _, closed := range []string{"transpara-ai/docs#199", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147"} {
+	for _, closed := range []string{"transpara-ai/docs#198", "transpara-ai/docs#199", "transpara-ai/platform#7", "transpara-ai/site#143", "transpara-ai/site#145", "transpara-ai/site#147"} {
 		if githubCanonicalContainsString(frontier.BlockerRefs, closed) {
 			t.Fatalf("frontier blocker refs include closed or self-refresh issue %q: %+v", closed, frontier.BlockerRefs)
 		}
@@ -239,16 +242,20 @@ func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) 
 		"site#145",
 		"https://github.com/transpara-ai/site/pull/144",
 		"https://github.com/transpara-ai/site/pull/146",
+		"https://github.com/transpara-ai/platform/pull/19",
 		"merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d",
 		"merge:fac357e0836adc54a65f1778c229a44bd3f0d364",
+		"merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52",
 		"reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f",
+		"reviewed_head:488bf95db116c0555757c7781173fd41923599e2",
 		"https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003",
+		"https://github.com/transpara-ai/platform/pull/19#issuecomment-4809397170",
 	} {
 		if !githubCanonicalContainsString(lane.EvidenceRefs, want) {
 			t.Fatalf("site#129 lane evidence refs missing %q: %+v", want, lane.EvidenceRefs)
 		}
 	}
-	if lane.Readiness != "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, and site#145" {
+	if lane.Readiness != "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, site#145, and site#153" {
 		t.Fatalf("site#129 readiness = %q", lane.Readiness)
 	}
 
@@ -262,10 +269,10 @@ func TestOpsGitHubCanonicalSiteMonitorLaneIncludesRefreshEvidence(t *testing.T) 
 	if parent == nil {
 		t.Fatal("missing docs#197 parent lane")
 	}
-	if !githubCanonicalContainsString(parent.EvidenceRefs, "site#145") {
-		t.Fatalf("docs#197 parent lane evidence refs missing site#145: %+v", parent.EvidenceRefs)
+	if !githubCanonicalContainsString(parent.EvidenceRefs, "site#145") || !githubCanonicalContainsString(parent.EvidenceRefs, "platform#19") {
+		t.Fatalf("docs#197 parent lane evidence refs missing refresh evidence: %+v", parent.EvidenceRefs)
 	}
-	if !githubCanonicalContainsString(parent.EvidenceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4808529248") {
+	if !githubCanonicalContainsString(parent.EvidenceRefs, "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809411010") {
 		t.Fatalf("docs#197 parent lane evidence refs missing latest closeout comment: %+v", parent.EvidenceRefs)
 	}
 }
