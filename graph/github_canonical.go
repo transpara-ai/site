@@ -17,6 +17,7 @@ type OpsGitHubCanonicalData struct {
 	Progress          OpsGitHubCanonicalProgress
 	AutonomyFrontier  OpsGitHubCanonicalAutonomyFrontier
 	AuthorityActions  []OpsGitHubCanonicalAuthorityAction
+	SourceSummaries   []OpsGitHubCanonicalSourceSummary
 	RepoSummaries     []OpsGitHubCanonicalRepoSummary
 	Lanes             []OpsGitHubCanonicalLane
 	IssueWarnings     []OpsGitHubCanonicalIssueWarning
@@ -87,6 +88,15 @@ type OpsGitHubCanonicalAuthorityAction struct {
 	Unlocks             string
 	EvidenceExpectation string
 	ForbiddenActions    []string
+}
+
+type OpsGitHubCanonicalSourceSummary struct {
+	Source     string
+	Kind       string
+	Repo       string
+	Labels     []string
+	IssueCount int
+	Error      string
 }
 
 type OpsGitHubCanonicalIssue struct {
@@ -167,13 +177,13 @@ const (
 	githubCanonicalStateLegacyEvidenceOnly = "legacy-evidence-only"
 
 	// Keep this equal to the latest scanner: timestamp represented in monitor evidence.
-	githubCanonicalScannerSnapshotAt = "2026-06-26T14:46:35Z"
+	githubCanonicalScannerSnapshotAt = "2026-06-26T15:29:28Z"
 	githubCanonicalProjectionSource  = "static transcription of scanner evidence; request render is not a live GitHub scan"
 )
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 	lanes := []OpsGitHubCanonicalLane{
-		githubCanonicalLane("transpara-ai/docs", 197, "Development Arc issue-source migration parent tracker", "https://github.com/transpara-ai/docs/issues/197", "parent", "cross-repo governance coordination and scanner evidence", githubCanonicalStateDeferred, "docs PR deferred until EventGraph projection/write governance and scanner evidence are complete", "protected-action", "docs closeout PR cannot mark markdown superseded until EventGraph projection-store/write governance lands", []string{"cc:intake", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"scanner:2026-06-26T14:46:35Z autonomy_frontier:park-autonomy-no-pr-ready-work", "site#135", "site#143", "site#145", "site#157", "operation#34", "hive#220", "hive#221", "hive#232", "eventgraph#69", "docs#198", "docs#199", "docs#206", "platform#7", "platform#19", "platform#20", "platform#22", "platform#24", "platform#26", "wiki#35", "wiki#36", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809241930", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809411010", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810485806", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810533191", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810595229"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
+		githubCanonicalLane("transpara-ai/docs", 197, "Development Arc issue-source migration parent tracker", "https://github.com/transpara-ai/docs/issues/197", "parent", "cross-repo governance coordination and scanner evidence", githubCanonicalStateDeferred, "docs PR deferred until EventGraph projection/write governance and scanner evidence are complete", "protected-action", "docs closeout PR cannot mark markdown superseded until EventGraph projection-store/write governance lands", []string{"cc:intake", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"scanner:2026-06-26T15:29:28Z autonomy_frontier:park-autonomy-no-pr-ready-work", "site#135", "site#143", "site#145", "site#157", "site#159", "operation#34", "hive#220", "hive#221", "hive#232", "eventgraph#69", "docs#198", "docs#199", "docs#206", "platform#7", "platform#19", "platform#20", "platform#22", "platform#24", "platform#26", "platform#28", "platform#29", "wiki#35", "wiki#36", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809241930", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809411010", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810485806", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810533191", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810595229", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810831722", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4810985018"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
 		githubCanonicalLane("transpara-ai/docs", 193, "Coordinate deployed public-reader and public-correction evidence event", "https://github.com/transpara-ai/docs/issues/193", "docs#197", "Public-reader freshness/correction evidence and user-facing proof boundary", githubCanonicalStateNeedsHumanScope, "requires docs AuthorityDecision selecting repo(s), routes, data sources, privacy boundary, and validation commands", "protected-action", "public-reader/public-correction implementation is still human-scope blocked", []string{"cc:intake", "cc:needs-human-scope", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "https://github.com/transpara-ai/docs/issues/193#issuecomment-4806459443"}, nil),
 		githubCanonicalLane("transpara-ai/docs", 199, "Protected execution authorization design packet", "https://github.com/transpara-ai/docs/issues/199", "docs#197", "Protected execution boundary and AuthorityDecision packet", githubCanonicalStateCompleted, "closed by docs PR #205", "protected-action", "", []string{"cc:intake", "cc:pr-ready", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#199", "https://github.com/transpara-ai/docs/pull/205", "merge:874980a7ab6d1b5c6ef3bacfc8c02f1401f00a13", "reviewed_head:2c76e779e51b004db4004f81117cfcb6dd3e3638", "https://github.com/transpara-ai/docs/pull/205#issuecomment-4808081439"}, nil),
 		githubCanonicalLane("transpara-ai/docs", 198, "Gate K go-live revalidation source issue", "https://github.com/transpara-ai/docs/issues/198", "docs#197", "docs-only Gate K revalidation evidence record", githubCanonicalStateCompleted, "closed by docs PR #206; evidence capture only, no go-live authority", "protected-action", "", []string{"cc:intake", "cc:pr-ready", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#198", "https://github.com/transpara-ai/docs/pull/206", "merge:87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8", "reviewed_head:c9b1274e70173c3b29c5ee4a03805852a9a65d30", "https://github.com/transpara-ai/docs/pull/206#issuecomment-4809200144", "https://github.com/transpara-ai/docs/issues/197#issuecomment-4809241930"}, nil),
@@ -182,7 +192,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		githubCanonicalLane("transpara-ai/work", 63, "AuditReport closeout linked to GitHub issue source records", "https://github.com/transpara-ai/work/issues/63", "docs#197", "Work AuditReport closeout evidence", githubCanonicalStateCompleted, "merged by PR #73", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"work#63", "work PR #73"}, nil),
 		githubCanonicalLane("transpara-ai/work", 59, "Runtime-envelope follow-on for governed runtime observation", "https://github.com/transpara-ai/work/issues/59", "docs#197", "Work runtime-envelope evidence and governed runtime observation path", githubCanonicalStateNeedsHumanScope, "requires docs AuthorityDecision granting precise Work lifecycle and allowed paths", "protected-action", "runtime-envelope implementation is still human-scope blocked", []string{"cc:intake", "cc:needs-human-scope", "cc:pr-deferred", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "https://github.com/transpara-ai/work/issues/59#issuecomment-4806453322"}, nil),
 		githubCanonicalLane("transpara-ai/site", 127, "GitHub-canonical issue migration progress surface", "https://github.com/transpara-ai/site/issues/127", "docs#197", "Site operator UI and read-only migration progress projection", githubCanonicalStateCompleted, "merged by PR #128", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"site#127", "https://github.com/transpara-ai/site/pull/128", "merge:07cd69f730faf93ed7e9e03ed74c2836db9dc62c", "docs#197"}, nil),
-		githubCanonicalLane("transpara-ai/site", 129, "Typed projection-backed GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/129", "docs#197", "Site ops monitor and typed projection-shaped migration evidence view", githubCanonicalStateCompleted, "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, site#145, site#153, and site#157; latest projection records platform/wiki closeout velocity", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "docs#199", "eventgraph#63", "eventgraph#69", "hive#232", "platform#7", "platform#19", "platform#20", "platform#22", "platform#24", "platform#26", "wiki#35", "wiki#36", "https://github.com/transpara-ai/site/pull/130", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/site/pull/144", "https://github.com/transpara-ai/site/pull/146", "https://github.com/transpara-ai/site/pull/158", "https://github.com/transpara-ai/platform/pull/19", "https://github.com/transpara-ai/platform/pull/21", "https://github.com/transpara-ai/platform/pull/23", "https://github.com/transpara-ai/platform/pull/25", "https://github.com/transpara-ai/platform/pull/27", "https://github.com/transpara-ai/wiki/pull/37", "https://github.com/transpara-ai/wiki/pull/38", "merge:cf3dcddbb06d47199dd7c94662e329422d27d10c", "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea", "merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d", "merge:fac357e0836adc54a65f1778c229a44bd3f0d364", "merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52", "merge:671911e934e5b5a5c346a891158d3e5de34a027f", "merge:3709f7fd811450cd387177589f79aaac1fc20443", "merge:1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3", "merge:242e268017d4bc4316a25c6b30cb9213bc569c7a", "merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16", "merge:2fda2af6c69872aeaca2d7e7fa7ea54705d65def", "merge:e509226a19cf1c1a763a9c3b2fe1984027105a56", "reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f", "reviewed_head:488bf95db116c0555757c7781173fd41923599e2", "reviewed_head:9ae9546547dd86df4f6e5bb122ebbf274f13bc2e", "reviewed_head:b0dbc958a07ecf1ff19bc16681590746e3f7ce6b", "reviewed_head:565e3665dd0163fcea8a78a874d93e40d652e27a", "reviewed_head:5372e43d92f7c8712c6ddf84a6abd8fbbdd8ec12", "reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6", "reviewed_head:4d1f06584b95df1c20e551eaaa7b11c9021f625f", "reviewed_head:d9bdd8734848e4e89a468269833d9e544fb05486", "https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003", "https://github.com/transpara-ai/site/pull/158#issuecomment-4809931353", "https://github.com/transpara-ai/platform/pull/19#issuecomment-4809397170", "https://github.com/transpara-ai/platform/pull/21#issuecomment-4810071561", "https://github.com/transpara-ai/platform/pull/23#issuecomment-4810467264", "https://github.com/transpara-ai/platform/pull/25#issuecomment-4810522047", "https://github.com/transpara-ai/platform/pull/27#issuecomment-4810585823", "https://github.com/transpara-ai/wiki/pull/37#issuecomment-4810245050", "https://github.com/transpara-ai/wiki/pull/38#issuecomment-4810383462", "site#131", "site#133", "site#135", "site#139", "site#143", "site#145", "site#153", "site#157"}, nil),
+		githubCanonicalLane("transpara-ai/site", 129, "Typed projection-backed GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/129", "docs#197", "Site ops monitor and typed projection-shaped migration evidence view", githubCanonicalStateCompleted, "merged by PR #130; refreshed by site#131, site#133, site#135, site#139, site#143, site#145, site#153, site#157, and site#159; latest projection records source-count visibility from platform#28/#29", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{"docs#197", "docs#199", "eventgraph#63", "eventgraph#69", "hive#232", "platform#7", "platform#19", "platform#20", "platform#22", "platform#24", "platform#26", "platform#28", "wiki#35", "wiki#36", "https://github.com/transpara-ai/site/pull/130", "https://github.com/transpara-ai/site/pull/132", "https://github.com/transpara-ai/site/pull/144", "https://github.com/transpara-ai/site/pull/146", "https://github.com/transpara-ai/site/pull/158", "https://github.com/transpara-ai/site/pull/160", "https://github.com/transpara-ai/platform/pull/19", "https://github.com/transpara-ai/platform/pull/21", "https://github.com/transpara-ai/platform/pull/23", "https://github.com/transpara-ai/platform/pull/25", "https://github.com/transpara-ai/platform/pull/27", "https://github.com/transpara-ai/platform/pull/29", "https://github.com/transpara-ai/wiki/pull/37", "https://github.com/transpara-ai/wiki/pull/38", "merge:cf3dcddbb06d47199dd7c94662e329422d27d10c", "merge:c3dc3a63eb16eafed490b7e6be28affe3469f7ea", "merge:885d8f14fbcf15c6d5ae1b67d88a3f40a7d9104d", "merge:fac357e0836adc54a65f1778c229a44bd3f0d364", "merge:b620039e40fd4f14f0bb4f61e40fe44e89e48888", "merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52", "merge:671911e934e5b5a5c346a891158d3e5de34a027f", "merge:3709f7fd811450cd387177589f79aaac1fc20443", "merge:1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3", "merge:242e268017d4bc4316a25c6b30cb9213bc569c7a", "merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16", "merge:4c0bb9e5496a3bced9b4e5c9982765f2ee197682", "merge:2fda2af6c69872aeaca2d7e7fa7ea54705d65def", "merge:e509226a19cf1c1a763a9c3b2fe1984027105a56", "reviewed_head:80c979a8c969e8c3f10511f4de10aadef783be9f", "reviewed_head:c396bef864bbdd5fd571b796c13cf128526151ce", "reviewed_head:488bf95db116c0555757c7781173fd41923599e2", "reviewed_head:9ae9546547dd86df4f6e5bb122ebbf274f13bc2e", "reviewed_head:b0dbc958a07ecf1ff19bc16681590746e3f7ce6b", "reviewed_head:565e3665dd0163fcea8a78a874d93e40d652e27a", "reviewed_head:5372e43d92f7c8712c6ddf84a6abd8fbbdd8ec12", "reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6", "reviewed_head:e05d58f6fb8d6f13960236192316244e2d35d57c", "reviewed_head:4d1f06584b95df1c20e551eaaa7b11c9021f625f", "reviewed_head:d9bdd8734848e4e89a468269833d9e544fb05486", "https://github.com/transpara-ai/site/pull/146#issuecomment-4808512003", "https://github.com/transpara-ai/site/pull/158#issuecomment-4809931353", "https://github.com/transpara-ai/site/pull/160#issuecomment-4810816017", "https://github.com/transpara-ai/platform/pull/19#issuecomment-4809397170", "https://github.com/transpara-ai/platform/pull/21#issuecomment-4810071561", "https://github.com/transpara-ai/platform/pull/23#issuecomment-4810467264", "https://github.com/transpara-ai/platform/pull/25#issuecomment-4810522047", "https://github.com/transpara-ai/platform/pull/27#issuecomment-4810585823", "https://github.com/transpara-ai/platform/pull/29#issuecomment-4810973575", "https://github.com/transpara-ai/wiki/pull/37#issuecomment-4810245050", "https://github.com/transpara-ai/wiki/pull/38#issuecomment-4810383462", "site#131", "site#133", "site#135", "site#139", "site#143", "site#145", "site#153", "site#157", "site#159"}, nil),
 		githubCanonicalLane("transpara-ai/platform", 5, "Arc issue duplicate and stale-source detection", "https://github.com/transpara-ai/platform/issues/5", "docs#197", "platform scanner/read-only validation rule", githubCanonicalStateCompleted, "merged by PR #8; latest duplicate-anchor scan returned Findings: 0", "normal", "", []string{"cc:intake", "cc:civilization-presence"}, []string{"platform#5", "https://github.com/transpara-ai/platform/pull/8", "merge:566c518893ba152f93339082b4b94b4a6140aed2", "arc_issue_scan:Findings=0"}, []string{"dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md"}),
 		githubCanonicalLane("transpara-ai/platform", 15, "Report change-control issue-shape warnings in aggregation scanner", "https://github.com/transpara-ai/platform/issues/15", "docs#197", "platform scanner issue-shape warning output", githubCanonicalStateCompleted, "merged by PR #16; scanner:2026-06-26T06:52:57Z reports issue_shape_warnings=[] while docs#172 and operation#26 remain open residual/protected trackers", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#15", "https://github.com/transpara-ai/platform/pull/16", "merge:c9b27259feceb4a7e4113afbbf36364cc84cde9d", "scanner:2026-06-26T06:52:57Z issue_shape_warnings:none", "docs#172 open deferred protected human-scope", "operation#26 open deferred protected human-scope"}, nil),
 		githubCanonicalLane("transpara-ai/platform", 17, "Emit autonomy frontier summary from change-control aggregation scanner", "https://github.com/transpara-ai/platform/issues/17", "docs#197", "platform change-control aggregation scanner output contract and tests", githubCanonicalStateCompleted, "merged by PR #18; scanner:2026-06-26T07:34:14Z reports autonomy_frontier recommendation=park-autonomy-no-pr-ready-work with pr_ready_issue_count=0, autonomous_pr_ready_issue_count=0, candidate_bundle_count=0, issue_shape_warning_count=0", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#17", "https://github.com/transpara-ai/platform/pull/18", "merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d", "reviewed_head:7d4da36507fc62e979c6d3a46efd005126d33f53", "scanner:2026-06-26T07:34:14Z autonomy_frontier:park-autonomy-no-pr-ready-work", "scanner:2026-06-26T07:34:14Z pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 issue_shape_warning_count:0"}, nil),
@@ -191,6 +201,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		githubCanonicalLane("transpara-ai/platform", 22, "Include Wiki in Civilization change-control scanner registry", "https://github.com/transpara-ai/platform/issues/22", "docs#197", "platform scanner registry coverage", githubCanonicalStateCompleted, "merged by PR #23; registry includes transpara-ai/wiki cc:intake source", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#22", "https://github.com/transpara-ai/platform/pull/23", "merge:1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3", "reviewed_head:565e3665dd0163fcea8a78a874d93e40d652e27a", "https://github.com/transpara-ai/platform/pull/23#issuecomment-4810467264", "scanner:2026-06-26T14:46:35Z source:live:transpara-ai/wiki labels=cc:intake"}, nil),
 		githubCanonicalLane("transpara-ai/platform", 24, "Include Agent in Civilization change-control scanner registry", "https://github.com/transpara-ai/platform/issues/24", "docs#197", "platform scanner registry coverage", githubCanonicalStateCompleted, "merged by PR #25; registry includes transpara-ai/agent cc:intake source", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#24", "https://github.com/transpara-ai/platform/pull/25", "merge:242e268017d4bc4316a25c6b30cb9213bc569c7a", "reviewed_head:5372e43d92f7c8712c6ddf84a6abd8fbbdd8ec12", "https://github.com/transpara-ai/platform/pull/25#issuecomment-4810522047", "scanner:2026-06-26T14:46:35Z source:live:transpara-ai/agent labels=cc:intake"}, nil),
 		githubCanonicalLane("transpara-ai/platform", 26, "Expose singleton PR-ready issues as scanner candidate work", "https://github.com/transpara-ai/platform/issues/26", "docs#197", "platform scanner singleton candidate output", githubCanonicalStateCompleted, "merged by PR #27; scanner now distinguishes candidate_singletons from parked singleton blockers", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#26", "https://github.com/transpara-ai/platform/pull/27", "merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16", "reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6", "https://github.com/transpara-ai/platform/pull/27#issuecomment-4810585823", "scanner:2026-06-26T14:46:35Z candidate_singleton_count:0 candidate_singletons:[]"}, nil),
+		githubCanonicalLane("transpara-ai/platform", 28, "Expose per-source issue counts in change-control scanner", "https://github.com/transpara-ai/platform/issues/28", "docs#197", "platform scanner source summary output", githubCanonicalStateCompleted, "merged by PR #29; scanner now emits typed source_summaries with per-repo issue counts", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"platform#28", "https://github.com/transpara-ai/platform/pull/29", "merge:4c0bb9e5496a3bced9b4e5c9982765f2ee197682", "reviewed_head:e05d58f6fb8d6f13960236192316244e2d35d57c", "https://github.com/transpara-ai/platform/pull/29#issuecomment-4810973575", "scanner:2026-06-26T15:29:28Z source_summaries:docs=7,eventgraph=2,work=2,site=0,wiki=0,hive=1,agent=0,platform=0,.github=0,operation=2"}, nil),
 		githubCanonicalLane("transpara-ai/wiki", 35, "wiki nav: collapse single-entry investigation groups", "https://github.com/transpara-ai/wiki/issues/35", "docs#197", "Wiki navigation readability for investigation groups", githubCanonicalStateCompleted, "merged by PR #37", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"wiki#35", "https://github.com/transpara-ai/wiki/pull/37", "merge:2fda2af6c69872aeaca2d7e7fa7ea54705d65def", "reviewed_head:4d1f06584b95df1c20e551eaaa7b11c9021f625f", "https://github.com/transpara-ai/wiki/pull/37#issuecomment-4810245050"}, nil),
 		githubCanonicalLane("transpara-ai/wiki", 36, "wiki nav: show investigation Civilization-contribution marker", "https://github.com/transpara-ai/wiki/issues/36", "docs#197", "Wiki navigation contribution marker for Civilization investigation content", githubCanonicalStateCompleted, "merged by PR #38", "normal", "", []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"}, []string{"wiki#36", "https://github.com/transpara-ai/wiki/pull/38", "merge:e509226a19cf1c1a763a9c3b2fe1984027105a56", "reviewed_head:d9bdd8734848e4e89a468269833d9e544fb05486", "https://github.com/transpara-ai/wiki/pull/38#issuecomment-4810383462"}, nil),
 		githubCanonicalLane("transpara-ai/.github", 3, "Change-control issue form arc-anchor field upgrade", "https://github.com/transpara-ai/.github/issues/3", "docs#197", "organization issue template and issue-first intake form", githubCanonicalStateCompleted, "merged by PR #4", "protected-action", "", []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"}, []string{".github#3", "https://github.com/transpara-ai/.github/pull/4", "merge:30cd2f25f6e0008c8d4b9fb412e66ce1e6c7bc8e"}, nil),
@@ -230,22 +241,23 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
 		Progress:          githubCanonicalProgress(),
 		AuthorityActions:  githubCanonicalAuthorityActions(),
+		SourceSummaries:   githubCanonicalSourceSummaries(),
 		RepoSummaries:     githubCanonicalRepoSummaries(lanes),
 		Lanes:             lanes,
 		IssueWarnings:     githubCanonicalIssueWarnings(),
 		EvidenceRecords:   githubCanonicalEvidenceRecords(),
 		CutoverChecks: []OpsGitHubCanonicalCutoverCheck{
-			{Label: "Issue coverage", State: "partial", Evidence: "docs#197 and child issue lanes exist; scanner:2026-06-26T14:46:35Z found no PR-ready issues, no autonomous PR-ready issues, no candidate bundles, no candidate singleton PRs, and no issue-shape warnings after platform#22/#24/#26 and wiki#35/#36 closed", Blocker: "remaining protected lanes are human-scope"},
+			{Label: "Issue coverage", State: "partial", Evidence: "docs#197 and child issue lanes exist; scanner:2026-06-26T15:29:28Z found no PR-ready issues, no autonomous PR-ready issues, no candidate bundles, no candidate singleton PRs, no issue-shape warnings, and typed source_summaries after platform#28/#29 closed", Blocker: "remaining protected lanes are human-scope"},
 			{Label: "Work traceability", State: "completed", Evidence: "work#61, work#62, work#63 merged", Blocker: ""},
 			{Label: "Issue form schema", State: "completed", Evidence: ".github#3 merged by PR #4", Blocker: ""},
 			{Label: "Duplicate stale-source scanner", State: "completed", Evidence: "platform#5 merged by PR #8; latest arc_issue_scan returned Findings: 0", Blocker: ""},
 			{Label: "Issue-shape warning scanner", State: "completed", Evidence: "platform#15 merged by PR #16; scanner:2026-06-26T06:52:57Z reports issue_shape_warnings=[] while docs#172 and operation#26 remain open residual/protected trackers", Blocker: ""},
-			{Label: "Autonomy frontier", State: githubCanonicalStateCompleted, Evidence: "platform#17 and platform#26 merged; latest autonomy_frontier remains park-autonomy-no-pr-ready-work with zero PR-ready, autonomous PR-ready, candidate-bundle, candidate-singleton, and issue-shape-warning counts", Blocker: ""},
+			{Label: "Autonomy frontier", State: githubCanonicalStateCompleted, Evidence: "platform#17, platform#26, and platform#28 merged; latest autonomy_frontier remains park-autonomy-no-pr-ready-work with zero PR-ready, autonomous PR-ready, candidate-bundle, candidate-singleton, and issue-shape-warning counts", Blocker: ""},
 			{Label: "Native evidence content", State: "completed", Evidence: "eventgraph#63 merged by PR #67; TestRun, GateResult, and AuditReport content types registered", Blocker: ""},
 			{Label: "EventGraph authority projection", State: githubCanonicalStateNeedsHumanScope, Evidence: "eventgraph#62 and eventgraph#69 merged; eventgraph#59 and eventgraph#61 remain open", Blocker: "projection-store truth and production write path still not authorized"},
 			{Label: "Hive issue intake", State: "completed", Evidence: "hive#220, hive#221, hive#222, hive#223, and hive#232 merged with policy/model-routing CFAR evidence", Blocker: ""},
 			{Label: "Operation continuity", State: "completed", Evidence: "operation#34 merged by PR #37; issue-source workflow runbook merged", Blocker: ""},
-			{Label: "Site typed monitor", State: "completed", Evidence: "site#129 merged by PR #130; site#131/site#133/site#135/site#139/site#143/site#145/site#153/site#157 merged; latest refresh records platform#22/#24/#26 and wiki#35/#36 closeout velocity", Blocker: ""},
+			{Label: "Site typed monitor", State: "completed", Evidence: "site#129 merged by PR #130; site#131/site#133/site#135/site#139/site#143/site#145/site#153/site#157/site#159 merged; latest refresh records platform#28/#29 source-count visibility", Blocker: ""},
 			{Label: "Markdown retirement", State: githubCanonicalStateLegacyEvidenceOnly, Evidence: "docs#197 closeout pending", Blocker: "legacy arc remains background evidence only"},
 		},
 		AutonomyFrontier: githubCanonicalAutonomyFrontier(),
@@ -368,10 +380,10 @@ func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
 
 func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 	return OpsGitHubCanonicalProgress{
-		Summary:                 "Closure progress is real, but the remaining issue-source frontier is parked: the 2026-06-26 closeout window shows 35 closed cc:intake issues and 35 merged PRs, while the latest scanner snapshot has zero PR-ready issues, zero candidate bundles, and zero candidate singleton PRs. Recent closeouts are the six most recent issue-source closeouts recorded in this projection.",
-		ClosureWindow:           "2026-06-26T00:00:00Z..2026-06-26T14:46:35Z",
-		ClosedIssueCount:        35,
-		MergedPRCount:           35,
+		Summary:                 "Closure progress is real, but the remaining issue-source frontier is parked: the 2026-06-26 closeout window shows 37 closed cc:intake issues and 37 merged PRs, while the latest scanner snapshot has zero PR-ready issues, zero candidate bundles, and zero candidate singleton PRs. Recent closeouts are the six most recent issue-source closeouts recorded in this projection.",
+		ClosureWindow:           "2026-06-26T00:00:00Z..2026-06-26T15:29:28Z",
+		ClosedIssueCount:        37,
+		MergedPRCount:           37,
 		RecentCloseoutsShown:    6,
 		ParkedOpenIssueCount:    14,
 		PRReadyIssueCount:       0,
@@ -379,12 +391,12 @@ func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 		CandidateSingletonCount: 0,
 		Recommendation:          "park-autonomy-no-pr-ready-work",
 		RecentCloseouts: []OpsGitHubCanonicalCloseout{
+			githubCanonicalCloseout("transpara-ai/platform", 28, "Expose per-source issue counts in change-control scanner", "https://github.com/transpara-ai/platform/issues/28", "platform PR #29", "https://github.com/transpara-ai/platform/pull/29", "2026-06-26T15:29:06Z", "2026-06-26T15:29:05Z", "4c0bb9e5496a3bced9b4e5c9982765f2ee197682", "e05d58f6fb8d6f13960236192316244e2d35d57c", "scanner now exposes source_summaries; post-merge live count for platform is zero"),
+			githubCanonicalCloseout("transpara-ai/site", 159, "Show current closeout velocity in GitHub-canonical monitor", "https://github.com/transpara-ai/site/issues/159", "site PR #160", "https://github.com/transpara-ai/site/pull/160", "2026-06-26T15:10:41Z", "2026-06-26T15:10:04Z", "b620039e40fd4f14f0bb4f61e40fe44e89e48888", "c396bef864bbdd5fd571b796c13cf128526151ce", "monitor records closeout velocity and parked frontier counts"),
 			githubCanonicalCloseout("transpara-ai/platform", 26, "Expose singleton PR-ready issues as scanner candidate work", "https://github.com/transpara-ai/platform/issues/26", "platform PR #27", "https://github.com/transpara-ai/platform/pull/27", "2026-06-26T14:40:09Z", "2026-06-26T14:40:08Z", "1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16", "48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6", "scanner now exposes candidate_singletons separately; latest live count remains zero"),
 			githubCanonicalCloseout("transpara-ai/platform", 24, "Include Agent in Civilization change-control scanner registry", "https://github.com/transpara-ai/platform/issues/24", "platform PR #25", "https://github.com/transpara-ai/platform/pull/25", "2026-06-26T14:31:54Z", "2026-06-26T14:31:53Z", "242e268017d4bc4316a25c6b30cb9213bc569c7a", "5372e43d92f7c8712c6ddf84a6abd8fbbdd8ec12", "registry now scans transpara-ai/agent for cc:intake visibility"),
 			githubCanonicalCloseout("transpara-ai/platform", 22, "Include Wiki in Civilization change-control scanner registry", "https://github.com/transpara-ai/platform/issues/22", "platform PR #23", "https://github.com/transpara-ai/platform/pull/23", "2026-06-26T14:25:10Z", "2026-06-26T14:25:08Z", "1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3", "565e3665dd0163fcea8a78a874d93e40d652e27a", "registry now scans transpara-ai/wiki for cc:intake visibility"),
 			githubCanonicalCloseout("transpara-ai/wiki", 36, "wiki nav: show investigation Civilization-contribution marker", "https://github.com/transpara-ai/wiki/issues/36", "wiki PR #38", "https://github.com/transpara-ai/wiki/pull/38", "2026-06-26T14:14:56Z", "2026-06-26T14:14:55Z", "e509226a19cf1c1a763a9c3b2fe1984027105a56", "d9bdd8734848e4e89a468269833d9e544fb05486", "Wiki navigation now marks Civilization contribution investigation content"),
-			githubCanonicalCloseout("transpara-ai/wiki", 35, "wiki nav: collapse single-entry investigation groups", "https://github.com/transpara-ai/wiki/issues/35", "wiki PR #37", "https://github.com/transpara-ai/wiki/pull/37", "2026-06-26T13:59:27Z", "2026-06-26T13:59:26Z", "2fda2af6c69872aeaca2d7e7fa7ea54705d65def", "4d1f06584b95df1c20e551eaaa7b11c9021f625f", "Wiki navigation now collapses single-entry investigation groups"),
-			githubCanonicalCloseout("transpara-ai/platform", 20, "Emit authority action groups from change-control aggregation scanner", "https://github.com/transpara-ai/platform/issues/20", "platform PR #21", "https://github.com/transpara-ai/platform/pull/21", "2026-06-26T13:37:05Z", "2026-06-26T13:37:04Z", "3709f7fd811450cd387177589f79aaac1fc20443", "b0dbc958a07ecf1ff19bc16681590746e3f7ce6b", "scanner separates human authority-action groups from implementable PR-ready work"),
 		},
 		ParkedGroups: []OpsGitHubCanonicalParkedGroup{
 			{
@@ -401,14 +413,18 @@ func githubCanonicalProgress() OpsGitHubCanonicalProgress {
 			},
 		},
 		EvidenceRefs: []string{
-			"gh-search:2026-06-26T14:46:35Z closed:2026-06-26 label:cc:intake count:35",
-			"gh-search:2026-06-26T14:46:35Z merged:2026-06-26 count:35",
-			"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/agent state:open label:cc:intake count:0",
-			"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/wiki state:open label:cc:intake count:0",
-			"scanner:2026-06-26T14:46:35Z total_issue_count:14 pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 candidate_singleton_count:0 issue_shape_warning_count:0",
+			"gh-search:2026-06-26T15:29:28Z closed:2026-06-26 label:cc:intake count:37",
+			"gh-search:2026-06-26T15:29:28Z merged:2026-06-26 count:37",
+			"scanner:2026-06-26T15:29:28Z source_summaries:docs=7,eventgraph=2,work=2,site=0,wiki=0,hive=1,agent=0,platform=0,.github=0,operation=2",
+			"scanner:2026-06-26T15:29:28Z total_issue_count:14 pr_ready_issue_count:0 autonomous_pr_ready_issue_count:0 candidate_bundle_count:0 candidate_singleton_count:0 issue_shape_warning_count:0",
+			"https://github.com/transpara-ai/site/pull/160",
+			"https://github.com/transpara-ai/site/pull/160#issuecomment-4810816017",
 			"https://github.com/transpara-ai/platform/pull/27",
 			"https://github.com/transpara-ai/platform/pull/27#issuecomment-4810585823",
+			"https://github.com/transpara-ai/platform/pull/29",
+			"https://github.com/transpara-ai/platform/pull/29#issuecomment-4810973575",
 			"https://github.com/transpara-ai/docs/issues/197#issuecomment-4810595229",
+			"https://github.com/transpara-ai/docs/issues/197#issuecomment-4810985018",
 		},
 		Boundary: "Progress accounting is display-only. It explains why closeouts are happening while the remaining frontier stays parked; it does not authorize protected actions, GitHub mutation, Hive wake, EventGraph writes, Test 001 GREEN, residual-risk closure, autonomy increase, value allocation, or docs#197 cutover.",
 	}
@@ -424,6 +440,31 @@ func githubCanonicalCloseout(repo string, number int, title string, issueURL str
 		MergeCommit:  mergeCommit,
 		ReviewedHead: reviewedHead,
 		Note:         note,
+	}
+}
+
+func githubCanonicalSourceSummaries() []OpsGitHubCanonicalSourceSummary {
+	return []OpsGitHubCanonicalSourceSummary{
+		githubCanonicalSourceSummary("transpara-ai/docs", 7),
+		githubCanonicalSourceSummary("transpara-ai/eventgraph", 2),
+		githubCanonicalSourceSummary("transpara-ai/work", 2),
+		githubCanonicalSourceSummary("transpara-ai/site", 0),
+		githubCanonicalSourceSummary("transpara-ai/wiki", 0),
+		githubCanonicalSourceSummary("transpara-ai/hive", 1),
+		githubCanonicalSourceSummary("transpara-ai/agent", 0),
+		githubCanonicalSourceSummary("transpara-ai/platform", 0),
+		githubCanonicalSourceSummary("transpara-ai/.github", 0),
+		githubCanonicalSourceSummary("transpara-ai/operation", 2),
+	}
+}
+
+func githubCanonicalSourceSummary(repo string, count int) OpsGitHubCanonicalSourceSummary {
+	return OpsGitHubCanonicalSourceSummary{
+		Source:     fmt.Sprintf("live:%s labels=cc:intake", repo),
+		Kind:       "live",
+		Repo:       repo,
+		Labels:     []string{"cc:intake"},
+		IssueCount: count,
 	}
 }
 
@@ -466,12 +507,14 @@ func githubCanonicalAutonomyFrontier() OpsGitHubCanonicalAutonomyFrontier {
 			"platform#22",
 			"platform#24",
 			"platform#26",
+			"platform#28",
 			"https://github.com/transpara-ai/platform/pull/19",
 			"https://github.com/transpara-ai/platform/pull/18",
 			"https://github.com/transpara-ai/platform/pull/21",
 			"https://github.com/transpara-ai/platform/pull/23",
 			"https://github.com/transpara-ai/platform/pull/25",
 			"https://github.com/transpara-ai/platform/pull/27",
+			"https://github.com/transpara-ai/platform/pull/29",
 			"merge:87b0337f380b7e6ec9beb3c5be6dc7c0c5ec8ee8",
 			"merge:b4ba2f98254ff32360dfcb490eb86e4613d8999d",
 			"merge:e6691b62c4fd98179441f0085f23ab1c7c9a2f52",
@@ -482,14 +525,15 @@ func githubCanonicalAutonomyFrontier() OpsGitHubCanonicalAutonomyFrontier {
 			"merge:1ecd57c3363f2c2e830da0ed64c904ccfd3d35d3",
 			"merge:242e268017d4bc4316a25c6b30cb9213bc569c7a",
 			"merge:1c0bcafa5bfedb64eb030f0e05bc4a0cb99e6b16",
+			"merge:4c0bb9e5496a3bced9b4e5c9982765f2ee197682",
 			"reviewed_head:48f6bf6f5be968d00d0e8353b891ae14b9ffb7a6",
-			"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/agent state:open label:cc:intake count:0",
-			"gh-issue-list:2026-06-26T14:46:35Z repo:transpara-ai/wiki state:open label:cc:intake count:0",
-			"scanner:2026-06-26T14:46:35Z autonomy_frontier:park-autonomy-no-pr-ready-work",
-			"scanner:2026-06-26T14:46:35Z issue_shape_warning_count:0",
-			"scanner:2026-06-26T14:46:35Z candidate_singleton_count:0",
-			"scanner:2026-06-26T14:46:35Z total_issue_count:14 needs_human_scope_issue_count:13 protected_action_issue_count:14 deferred_issue_count:13",
-			"scanner:2026-06-26T14:46:35Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/work#59,transpara-ai/work#64",
+			"reviewed_head:e05d58f6fb8d6f13960236192316244e2d35d57c",
+			"scanner:2026-06-26T15:29:28Z source_summaries:docs=7,eventgraph=2,work=2,site=0,wiki=0,hive=1,agent=0,platform=0,.github=0,operation=2",
+			"scanner:2026-06-26T15:29:28Z autonomy_frontier:park-autonomy-no-pr-ready-work",
+			"scanner:2026-06-26T15:29:28Z issue_shape_warning_count:0",
+			"scanner:2026-06-26T15:29:28Z candidate_singleton_count:0",
+			"scanner:2026-06-26T15:29:28Z total_issue_count:14 needs_human_scope_issue_count:13 protected_action_issue_count:14 deferred_issue_count:13",
+			"scanner:2026-06-26T15:29:28Z blocker_refs:transpara-ai/docs#172,transpara-ai/docs#193,transpara-ai/docs#197,transpara-ai/docs#200,transpara-ai/docs#201,transpara-ai/docs#202,transpara-ai/docs#203,transpara-ai/eventgraph#59,transpara-ai/eventgraph#61,transpara-ai/hive#204,transpara-ai/operation#26,transpara-ai/operation#35,transpara-ai/work#59,transpara-ai/work#64",
 			"arc_issue_scan:Findings=0",
 		},
 		Boundary: "Read-only scanner projection. This parks autonomous work when no issue is PR-ready; it does not authorize protected actions, issue edits, Hive wake, EventGraph writes, Test 001 GREEN, residual-risk closure, value allocation, or markdown retirement.",
@@ -501,7 +545,7 @@ func githubCanonicalIssueWarnings() []OpsGitHubCanonicalIssueWarning {
 }
 
 func githubCanonicalEvidenceRecords() []OpsGitHubCanonicalEvidenceRecord {
-	return []OpsGitHubCanonicalEvidenceRecord{
+	records := []OpsGitHubCanonicalEvidenceRecord{
 		{
 			Name:                    "GitHub canonical validation TestRun",
 			EventType:               "evidence.testrun.recorded",
@@ -575,6 +619,21 @@ func githubCanonicalEvidenceRecords() []OpsGitHubCanonicalEvidenceRecord {
 			ProjectionReadinessNote: "7000 bp is a blocked-closeout display score; canonical cutover stays blocked until human-scoped EventGraph/runtime/public-reader authority lands",
 		},
 	}
+	records[0].SourceIssueRefs = append(records[0].SourceIssueRefs, "site#159", "platform#28")
+	records[0].PRRefs = append(records[0].PRRefs, "site PR #160", "platform PR #29")
+	records[0].ValidationRefs = append(records[0].ValidationRefs, "site#159 validation complete by site PR #160", "platform#28 validation complete by platform PR #29", "platform scanner source_summaries=docs=7,eventgraph=2,work=2,site=0,wiki=0,hive=1,agent=0,platform=0,.github=0,operation=2")
+	records[0].CFARRefs = append(records[0].CFARRefs, "site PR #160 CFAR PASS", "platform PR #29 CFAR PASS")
+	records[0].ProvenanceRefs = append(records[0].ProvenanceRefs,
+		"https://github.com/transpara-ai/site/pull/160",
+		"https://github.com/transpara-ai/platform/pull/29",
+		"merge:b620039e40fd4f14f0bb4f61e40fe44e89e48888",
+		"merge:4c0bb9e5496a3bced9b4e5c9982765f2ee197682",
+		"reviewed_head:c396bef864bbdd5fd571b796c13cf128526151ce",
+		"reviewed_head:e05d58f6fb8d6f13960236192316244e2d35d57c",
+		"https://github.com/transpara-ai/site/pull/160#issuecomment-4810816017",
+		"https://github.com/transpara-ai/platform/pull/29#issuecomment-4810973575",
+	)
+	return records
 }
 
 func githubCanonicalLane(repo string, number int, title string, url string, parentRef string, substrate string, state string, readiness string, risk string, blockedReason string, labels []string, evidenceRefs []string, legacyRefs []string) OpsGitHubCanonicalLane {
