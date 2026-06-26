@@ -1,7 +1,11 @@
 package graph
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -11,6 +15,7 @@ type OpsGitHubCanonicalData struct {
 	GeneratedAt       string
 	ScannerSnapshotAt string
 	ProjectionSource  string
+	ScannerArtifact   OpsGitHubCanonicalScannerArtifact
 	Status            string
 	ProjectionState   string
 	Parent            OpsGitHubCanonicalIssue
@@ -99,6 +104,13 @@ type OpsGitHubCanonicalSourceSummary struct {
 	Error      string
 }
 
+type OpsGitHubCanonicalScannerArtifact struct {
+	Status   string
+	Path     string
+	LoadedAt string
+	Error    string
+}
+
 type OpsGitHubCanonicalIssue struct {
 	Repo   string
 	Number int
@@ -177,8 +189,11 @@ const (
 	githubCanonicalStateLegacyEvidenceOnly = "legacy-evidence-only"
 
 	// Keep this equal to the latest scanner: timestamp represented in monitor evidence.
-	githubCanonicalScannerSnapshotAt = "2026-06-26T15:29:28Z"
-	githubCanonicalProjectionSource  = "static transcription of scanner evidence; request render is not a live GitHub scan"
+	githubCanonicalScannerSnapshotAt    = "2026-06-26T15:29:28Z"
+	githubCanonicalProjectionSource     = "static transcription of scanner evidence; request render is not a live GitHub scan"
+	githubCanonicalScannerArtifactEnv   = "SITE_GITHUB_CANONICAL_SCAN_JSON"
+	githubCanonicalScannerArtifactBound = "Read-only platform scanner JSON artifact; Site reads the configured file only and does not call GitHub, Hive, EventGraph, or runtime services."
+	githubCanonicalScannerArtifactMax   = 1 << 20
 )
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
@@ -236,6 +251,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		GeneratedAt:       now.UTC().Format(time.RFC3339),
 		ScannerSnapshotAt: githubCanonicalScannerSnapshotAt,
 		ProjectionSource:  githubCanonicalProjectionSource,
+		ScannerArtifact:   OpsGitHubCanonicalScannerArtifact{Status: "static-fallback"},
 		Status:            "partial",
 		ProjectionState:   "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
 		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
@@ -273,6 +289,329 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		},
 		LegacyEvidence: legacy,
 	}
+}
+
+func buildOpsGitHubCanonicalDataWithScannerArtifact(now time.Time, artifactPath string) *OpsGitHubCanonicalData {
+	data := buildOpsGitHubCanonicalData(now)
+	artifactPath = strings.TrimSpace(artifactPath)
+	if artifactPath == "" {
+		return data
+	}
+	artifact, loadedAt, err := readOpsGitHubCanonicalScannerArtifact(artifactPath)
+	if err != nil {
+		data.ScannerArtifact = OpsGitHubCanonicalScannerArtifact{
+			Status:   "artifact-unavailable",
+			Path:     githubCanonicalScannerArtifactDisplayPath(artifactPath),
+			LoadedAt: now.UTC().Format(time.RFC3339),
+			Error:    githubCanonicalScannerArtifactDisplayError(err),
+		}
+		data.ProjectionSource = "static fallback; configured scanner artifact could not be read"
+		data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
+		return data
+	}
+	applyOpsGitHubCanonicalScannerArtifact(data, artifact, filepath.Clean(artifactPath), loadedAt)
+	return data
+}
+
+type opsGitHubCanonicalScannerPayload struct {
+	GeneratedAt       string `json:"generated_at"`
+	ScannerSnapshotAt string `json:"scanner_snapshot_at"`
+	SourceSummaries   []struct {
+		Source     string   `json:"source"`
+		Kind       string   `json:"kind"`
+		Repo       string   `json:"repo"`
+		Labels     []string `json:"labels"`
+		IssueCount int      `json:"issue_count"`
+		Error      string   `json:"error"`
+	} `json:"source_summaries"`
+	AutonomyFrontier struct {
+		Recommendation              string   `json:"recommendation"`
+		TotalIssueCount             int      `json:"total_issue_count"`
+		CandidateBundleCount        int      `json:"candidate_bundle_count"`
+		CandidateSingletonCount     int      `json:"candidate_singleton_count"`
+		ReviewGroupCount            int      `json:"review_group_count"`
+		SingletonCount              int      `json:"singleton_count"`
+		IssueShapeWarningCount      int      `json:"issue_shape_warning_count"`
+		PRReadyIssueCount           int      `json:"pr_ready_issue_count"`
+		AutonomousPRReadyIssueCount int      `json:"autonomous_pr_ready_issue_count"`
+		NeedsHumanScopeIssueCount   int      `json:"needs_human_scope_issue_count"`
+		ProtectedActionIssueCount   int      `json:"protected_action_issue_count"`
+		DeferredIssueCount          int      `json:"deferred_issue_count"`
+		BlockerRefs                 []string `json:"blocker_refs"`
+	} `json:"autonomy_frontier"`
+	AuthorityActions []struct {
+		Label               string   `json:"label"`
+		State               string   `json:"state"`
+		BlockerRefs         []string `json:"blocker_refs"`
+		RequiredDecision    string   `json:"required_decision"`
+		Unlocks             string   `json:"unlocks"`
+		EvidenceExpectation string   `json:"evidence_expectation"`
+		ForbiddenActions    []string `json:"forbidden_actions"`
+	} `json:"authority_actions"`
+	Errors []string `json:"errors"`
+}
+
+func readOpsGitHubCanonicalScannerArtifact(path string) (opsGitHubCanonicalScannerPayload, string, error) {
+	var payload opsGitHubCanonicalScannerPayload
+	info, err := os.Stat(path)
+	if err != nil {
+		return payload, "", fmt.Errorf("stat scanner artifact: %w", err)
+	}
+	if info.Size() > githubCanonicalScannerArtifactMax {
+		return payload, "", fmt.Errorf("scanner artifact exceeds %d byte read bound", githubCanonicalScannerArtifactMax)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return payload, "", fmt.Errorf("read scanner artifact: %w", err)
+	}
+	defer file.Close()
+	raw, err := io.ReadAll(io.LimitReader(file, githubCanonicalScannerArtifactMax+1))
+	if err != nil {
+		return payload, "", fmt.Errorf("read scanner artifact: %w", err)
+	}
+	if len(raw) > githubCanonicalScannerArtifactMax {
+		return payload, "", fmt.Errorf("scanner artifact exceeds %d byte read bound", githubCanonicalScannerArtifactMax)
+	}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return payload, "", fmt.Errorf("parse scanner artifact JSON: %w", err)
+	}
+	return payload, info.ModTime().UTC().Format(time.RFC3339), nil
+}
+
+func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload, path string, loadedAt string) {
+	displayPath := githubCanonicalScannerArtifactDisplayPath(path)
+	if payloadErrors := sortedNonEmpty(payload.Errors); len(payloadErrors) > 0 {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-error", displayPath, loadedAt, "scanner artifact contains scanner errors")
+		return
+	}
+	if len(payload.SourceSummaries) == 0 {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-incomplete", displayPath, loadedAt, "scanner artifact missing source summaries")
+		return
+	}
+	for _, summary := range payload.SourceSummaries {
+		if strings.TrimSpace(summary.Error) != "" {
+			rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-error", displayPath, loadedAt, "scanner artifact contains source errors")
+			return
+		}
+	}
+	if !opsGitHubCanonicalScannerPayloadHasFrontier(payload) {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-incomplete", displayPath, loadedAt, "scanner artifact missing autonomy frontier")
+		return
+	}
+	if reason := opsGitHubCanonicalScannerPayloadMismatch(data, payload); reason != "" {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-inconsistent", displayPath, loadedAt, reason)
+		return
+	}
+
+	data.ScannerArtifact = OpsGitHubCanonicalScannerArtifact{
+		Status:   "artifact-loaded",
+		Path:     displayPath,
+		LoadedAt: loadedAt,
+	}
+	if snapshotAt := opsGitHubCanonicalScannerPayloadSnapshotAt(payload); snapshotAt != "" {
+		data.ScannerSnapshotAt = snapshotAt
+	}
+	data.ProjectionSource = "platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services"
+	data.ProjectionState = "typed projection-shaped Site contract; scanner frontier fields are populated from a read-only platform scanner artifact when configured"
+	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
+
+	if len(payload.SourceSummaries) > 0 {
+		summaries := make([]OpsGitHubCanonicalSourceSummary, 0, len(payload.SourceSummaries))
+		for _, summary := range payload.SourceSummaries {
+			summaries = append(summaries, OpsGitHubCanonicalSourceSummary{
+				Source:     strings.TrimSpace(summary.Source),
+				Kind:       strings.TrimSpace(summary.Kind),
+				Repo:       strings.TrimSpace(summary.Repo),
+				Labels:     sortedNonEmpty(summary.Labels),
+				IssueCount: summary.IssueCount,
+				Error:      strings.TrimSpace(summary.Error),
+			})
+		}
+		data.SourceSummaries = summaries
+	}
+
+	if payload.AutonomyFrontier.Recommendation != "" || payload.AutonomyFrontier.TotalIssueCount > 0 {
+		data.AutonomyFrontier.Recommendation = strings.TrimSpace(payload.AutonomyFrontier.Recommendation)
+		data.AutonomyFrontier.TotalIssueCount = payload.AutonomyFrontier.TotalIssueCount
+		data.AutonomyFrontier.CandidateBundleCount = payload.AutonomyFrontier.CandidateBundleCount
+		data.AutonomyFrontier.CandidateSingletonCount = payload.AutonomyFrontier.CandidateSingletonCount
+		data.AutonomyFrontier.ReviewGroupCount = payload.AutonomyFrontier.ReviewGroupCount
+		data.AutonomyFrontier.SingletonCount = payload.AutonomyFrontier.SingletonCount
+		data.AutonomyFrontier.IssueShapeWarningCount = payload.AutonomyFrontier.IssueShapeWarningCount
+		data.AutonomyFrontier.PRReadyIssueCount = payload.AutonomyFrontier.PRReadyIssueCount
+		data.AutonomyFrontier.AutonomousPRReadyIssueCount = payload.AutonomyFrontier.AutonomousPRReadyIssueCount
+		data.AutonomyFrontier.NeedsHumanScopeIssueCount = payload.AutonomyFrontier.NeedsHumanScopeIssueCount
+		data.AutonomyFrontier.ProtectedActionIssueCount = payload.AutonomyFrontier.ProtectedActionIssueCount
+		data.AutonomyFrontier.DeferredIssueCount = payload.AutonomyFrontier.DeferredIssueCount
+		data.AutonomyFrontier.BlockerRefs = sortedNonEmpty(payload.AutonomyFrontier.BlockerRefs)
+		data.AutonomyFrontier.EvidenceRefs = append(data.AutonomyFrontier.EvidenceRefs, fmt.Sprintf("scanner_artifact:%s loaded_at:%s", displayPath, loadedAt))
+		data.Progress.ParkedOpenIssueCount = payload.AutonomyFrontier.TotalIssueCount - payload.AutonomyFrontier.AutonomousPRReadyIssueCount
+		if data.Progress.ParkedOpenIssueCount < 0 {
+			data.Progress.ParkedOpenIssueCount = 0
+		}
+		data.Progress.PRReadyIssueCount = payload.AutonomyFrontier.PRReadyIssueCount
+		data.Progress.CandidateBundleCount = payload.AutonomyFrontier.CandidateBundleCount
+		data.Progress.CandidateSingletonCount = payload.AutonomyFrontier.CandidateSingletonCount
+		data.Progress.Recommendation = data.AutonomyFrontier.Recommendation
+		data.Progress.Summary = fmt.Sprintf("Configured scanner artifact reports %d open intake issues, %d PR-ready issues, %d candidate bundles, and %d candidate singleton PRs. This is read-only evidence; it does not authorize implementation, protected actions, Hive wake, GitHub mutation, EventGraph writes, merge, deploy, or autonomy increase.", payload.AutonomyFrontier.TotalIssueCount, payload.AutonomyFrontier.PRReadyIssueCount, payload.AutonomyFrontier.CandidateBundleCount, payload.AutonomyFrontier.CandidateSingletonCount)
+		if len(data.AutonomyFrontier.BlockerRefs) > 0 {
+			data.Progress.ParkedGroups = []OpsGitHubCanonicalParkedGroup{{
+				Label:        "scanner artifact blockers",
+				Count:        len(data.AutonomyFrontier.BlockerRefs),
+				Refs:         data.AutonomyFrontier.BlockerRefs,
+				RequiredNext: "scanner artifact reports no autonomous PR-ready work for these blockers; human scope remains required before implementation",
+			}}
+		}
+		data.Progress.EvidenceRefs = append(data.Progress.EvidenceRefs, fmt.Sprintf("scanner_artifact:%s loaded_at:%s", displayPath, loadedAt))
+	}
+}
+
+func rejectOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, status string, path string, loadedAt string, errorText string) {
+	data.ScannerArtifact = OpsGitHubCanonicalScannerArtifact{
+		Status:   status,
+		Path:     path,
+		LoadedAt: loadedAt,
+		Error:    errorText,
+	}
+	data.ProjectionSource = "static fallback; configured scanner artifact was rejected"
+	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
+}
+
+func githubCanonicalScannerArtifactDisplayPath(path string) string {
+	path = filepath.Clean(strings.TrimSpace(path))
+	if path == "." || path == "" {
+		return ""
+	}
+	return filepath.Base(path)
+}
+
+func githubCanonicalScannerArtifactDisplayError(err error) string {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "parse scanner artifact JSON"):
+		return "scanner artifact JSON is invalid"
+	case strings.Contains(msg, "byte read bound"):
+		return "scanner artifact exceeds read bound"
+	default:
+		return "scanner artifact unavailable"
+	}
+}
+
+func opsGitHubCanonicalScannerPayloadSnapshotAt(payload opsGitHubCanonicalScannerPayload) string {
+	snapshotAt, ok, err := opsGitHubCanonicalScannerPayloadTimestamp(payload)
+	if !ok || err != nil {
+		return ""
+	}
+	return snapshotAt
+}
+
+func opsGitHubCanonicalScannerPayloadTimestamp(payload opsGitHubCanonicalScannerPayload) (string, bool, error) {
+	candidate := strings.TrimSpace(payload.ScannerSnapshotAt)
+	if candidate == "" {
+		candidate = strings.TrimSpace(payload.GeneratedAt)
+	}
+	if candidate == "" {
+		return "", false, nil
+	}
+	timestamp, err := time.Parse(time.RFC3339, candidate)
+	if err != nil {
+		return "", true, err
+	}
+	return timestamp.UTC().Format(time.RFC3339), true, nil
+}
+
+func opsGitHubCanonicalScannerPayloadHasFrontier(payload opsGitHubCanonicalScannerPayload) bool {
+	frontier := payload.AutonomyFrontier
+	return strings.TrimSpace(frontier.Recommendation) != "" ||
+		frontier.TotalIssueCount != 0 ||
+		frontier.CandidateBundleCount != 0 ||
+		frontier.CandidateSingletonCount != 0 ||
+		frontier.ReviewGroupCount != 0 ||
+		frontier.SingletonCount != 0 ||
+		frontier.IssueShapeWarningCount != 0 ||
+		frontier.PRReadyIssueCount != 0 ||
+		frontier.AutonomousPRReadyIssueCount != 0 ||
+		frontier.NeedsHumanScopeIssueCount != 0 ||
+		frontier.ProtectedActionIssueCount != 0 ||
+		frontier.DeferredIssueCount != 0 ||
+		len(frontier.BlockerRefs) > 0
+}
+
+func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload) string {
+	frontier := payload.AutonomyFrontier
+	static := data.AutonomyFrontier
+	if strings.TrimSpace(frontier.Recommendation) != static.Recommendation {
+		return "scanner artifact frontier does not match static projection: recommendation"
+	}
+	checks := []struct {
+		label string
+		got   int
+		want  int
+	}{
+		{"total_issue_count", frontier.TotalIssueCount, static.TotalIssueCount},
+		{"candidate_bundle_count", frontier.CandidateBundleCount, static.CandidateBundleCount},
+		{"candidate_singleton_count", frontier.CandidateSingletonCount, static.CandidateSingletonCount},
+		{"review_group_count", frontier.ReviewGroupCount, static.ReviewGroupCount},
+		{"singleton_count", frontier.SingletonCount, static.SingletonCount},
+		{"issue_shape_warning_count", frontier.IssueShapeWarningCount, static.IssueShapeWarningCount},
+		{"pr_ready_issue_count", frontier.PRReadyIssueCount, static.PRReadyIssueCount},
+		{"autonomous_pr_ready_issue_count", frontier.AutonomousPRReadyIssueCount, static.AutonomousPRReadyIssueCount},
+		{"needs_human_scope_issue_count", frontier.NeedsHumanScopeIssueCount, static.NeedsHumanScopeIssueCount},
+		{"protected_action_issue_count", frontier.ProtectedActionIssueCount, static.ProtectedActionIssueCount},
+		{"deferred_issue_count", frontier.DeferredIssueCount, static.DeferredIssueCount},
+	}
+	for _, check := range checks {
+		if check.got != check.want {
+			return "scanner artifact frontier does not match static projection: " + check.label
+		}
+	}
+	if strings.Join(sortedNonEmpty(frontier.BlockerRefs), "\n") != strings.Join(sortedNonEmpty(static.BlockerRefs), "\n") {
+		return "scanner artifact frontier does not match static projection: blocker_refs"
+	}
+	if snapshotAt, ok, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
+		return "scanner artifact timestamp is invalid"
+	} else if ok && snapshotAt != data.ScannerSnapshotAt {
+		return "scanner artifact timestamp does not match static projection"
+	}
+	total := 0
+	gotByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
+	for _, summary := range payload.SourceSummaries {
+		if summary.IssueCount < 0 {
+			return "scanner artifact source summaries contain negative issue count"
+		}
+		repo := strings.TrimSpace(summary.Repo)
+		if repo == "" {
+			return "scanner artifact source summaries contain empty repo"
+		}
+		if _, exists := gotByRepo[repo]; exists {
+			return "scanner artifact source summaries contain duplicate repo"
+		}
+		gotByRepo[repo] = OpsGitHubCanonicalSourceSummary{
+			Source:     strings.TrimSpace(summary.Source),
+			Kind:       strings.TrimSpace(summary.Kind),
+			Repo:       repo,
+			Labels:     sortedNonEmpty(summary.Labels),
+			IssueCount: summary.IssueCount,
+		}
+		total += summary.IssueCount
+	}
+	if total != frontier.TotalIssueCount {
+		return "scanner artifact source summary total does not match frontier total"
+	}
+	wantByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
+	for _, summary := range data.SourceSummaries {
+		wantByRepo[summary.Repo] = summary
+	}
+	if len(gotByRepo) != len(wantByRepo) {
+		return "scanner artifact source summaries do not match static projection"
+	}
+	for repo, want := range wantByRepo {
+		got := gotByRepo[repo]
+		if got.Source != want.Source || got.Kind != want.Kind || got.IssueCount != want.IssueCount || strings.Join(got.Labels, "\n") != strings.Join(want.Labels, "\n") {
+			return "scanner artifact source summaries do not match static projection"
+		}
+	}
+	return ""
 }
 
 func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {

@@ -134,6 +134,7 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv(githubCanonicalScannerArtifactEnv, "")
 
 	h := NewHandlers(nil, nil, nil)
 	mux := http.NewServeMux()
@@ -390,9 +391,11 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		"effect = none",
 		"rendered_at",
 		"scanner_snapshot_at",
+		"scanner_artifact",
+		"static-fallback",
 		"source_mode",
 		"static transcription of scanner evidence; request render is not a live GitHub scan",
-		"read-only static scanner-evidence transcription",
+		"read-only scanner evidence projection",
 		"Rendered-at time is request freshness only",
 		"No Hive wake",
 		"GitHub Issues are the live source-of-intent target",
@@ -425,6 +428,51 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 		if strings.Contains(body, stale) {
 			t.Fatalf("GET /ops/github-canonical: body contains stale evidence %q", stale)
 		}
+	}
+	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
+}
+
+func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T) {
+	calledHive := false
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calledHive = true
+		http.Error(w, "unexpected hive call", http.StatusTeapot)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	artifactPath := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), matchingGitHubCanonicalScannerArtifactJSON())
+	t.Setenv(githubCanonicalScannerArtifactEnv, artifactPath)
+
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyOps(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/github-canonical?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/github-canonical: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if calledHive {
+		t.Fatal("GET /ops/github-canonical called Hive while reading scanner artifact")
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"artifact-loaded",
+		"loaded_at 2026-06-26T16:10:00Z",
+		"platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services",
+		"park-autonomy-no-pr-ready-work",
+		"live:transpara-ai/docs labels=cc:intake",
+		"read-only scanner evidence projection",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/github-canonical artifact body does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "candidate-pr-work-available") {
+		t.Fatalf("GET /ops/github-canonical artifact body contains rejected candidate state")
 	}
 	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
 }

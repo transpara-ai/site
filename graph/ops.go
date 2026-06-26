@@ -903,7 +903,7 @@ func (h *Handlers) handleOpsGitHubCanonical(w http.ResponseWriter, r *http.Reque
 		Title:           "GitHub Canonical",
 		Description:     "Read-only migration progress for replacing markdown development arcs with GitHub issue-canonical work records.",
 		Active:          "github-canonical",
-		GitHubCanonical: buildOpsGitHubCanonicalData(time.Now().UTC()),
+		GitHubCanonical: buildOpsGitHubCanonicalDataWithScannerArtifact(time.Now().UTC(), os.Getenv(githubCanonicalScannerArtifactEnv)),
 	})
 }
 
