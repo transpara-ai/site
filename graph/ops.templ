@@ -141,8 +141,21 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				<dd class="text-warm-muted">{ data.ScannerSnapshotAt }</dd>
 				<dt class="text-warm-faint">source_mode</dt>
 				<dd class="text-warm-muted">{ data.ProjectionSource }</dd>
+				<dt class="text-warm-faint">scanner_artifact</dt>
+				<dd class="text-warm-muted break-all">
+					{ data.ScannerArtifact.Status }
+					if data.ScannerArtifact.Path != "" {
+						<span> · { data.ScannerArtifact.Path }</span>
+					}
+					if data.ScannerArtifact.LoadedAt != "" {
+						<span> · loaded_at { data.ScannerArtifact.LoadedAt }</span>
+					}
+					if data.ScannerArtifact.Error != "" {
+						<span class="text-amber-300"> · { data.ScannerArtifact.Error }</span>
+					}
+				</dd>
 				<dt class="text-warm-faint">boundary</dt>
-				<dd class="text-warm-muted">read-only static scanner-evidence transcription; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
+				<dd class="text-warm-muted">read-only scanner evidence projection; no Hive wake, GitHub mutation, EventGraph write, runtime start, approval, merge, deploy, or autonomy increase</dd>
 			</dl>
 		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-progress="read-only">
