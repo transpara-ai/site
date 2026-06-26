@@ -187,6 +187,28 @@ func TestOpsGitHubCanonicalProgressShowsCloseoutsAndParkedReasons(t *testing.T) 
 	if len(progress.ParkedGroups) != 2 {
 		t.Fatalf("parked groups len = %d, want 2", len(progress.ParkedGroups))
 	}
+	if progress.ParkedOpenIssueCount != data.AutonomyFrontier.TotalIssueCount {
+		t.Fatalf("progress parked count = %d, frontier total = %d", progress.ParkedOpenIssueCount, data.AutonomyFrontier.TotalIssueCount)
+	}
+	groupRefs := map[string]bool{}
+	groupCount := 0
+	for _, group := range progress.ParkedGroups {
+		groupCount += group.Count
+		for _, ref := range group.Refs {
+			groupRefs[ref] = true
+		}
+	}
+	if groupCount != data.AutonomyFrontier.TotalIssueCount {
+		t.Fatalf("parked group count sum = %d, frontier total = %d", groupCount, data.AutonomyFrontier.TotalIssueCount)
+	}
+	if len(groupRefs) != len(data.AutonomyFrontier.BlockerRefs) {
+		t.Fatalf("parked group refs len = %d, frontier blockers len = %d: %+v", len(groupRefs), len(data.AutonomyFrontier.BlockerRefs), groupRefs)
+	}
+	for _, ref := range data.AutonomyFrontier.BlockerRefs {
+		if !groupRefs[ref] {
+			t.Fatalf("frontier blocker %q missing from progress parked groups: %+v", ref, progress.ParkedGroups)
+		}
+	}
 	if progress.ParkedGroups[0].Count != 13 || !githubCanonicalContainsString(progress.ParkedGroups[0].Refs, "transpara-ai/work#64") {
 		t.Fatalf("protected/human-scope parked group incomplete: %+v", progress.ParkedGroups[0])
 	}
