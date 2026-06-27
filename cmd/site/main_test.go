@@ -213,6 +213,15 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 				"read-only projection",
 			},
 		},
+		{
+			path: "/ops/review-console",
+			want: []string{
+				"External Committee Review Console",
+				"Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence.",
+				"bounded Gate W evidence decision merged by docs#186",
+				"read-only",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -282,7 +291,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical"} {
+	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -317,6 +326,36 @@ func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 				t.Fatalf("GET %s with user context body missing operator name", path)
 			}
 		})
+	}
+}
+
+func TestNoDatabaseReviewConsoleToleratesUserContextWithoutStore(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/review-console", nil)
+	req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{
+		ID:      "user_test",
+		Name:    "Test Operator",
+		Picture: "https://example.invalid/avatar.png",
+	}))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/review-console with user context and no store status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"External Committee Review Console",
+		"data-review-console=\"read-only\"",
+		"Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence.",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/review-console with user context body missing %q", want)
+		}
 	}
 }
 
