@@ -182,7 +182,18 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing
 			"protected_action_issue_count":0,
 			"deferred_issue_count":0,
 			"blocker_refs":[]
-		}
+		},
+		"authority_actions": [
+			{
+				"label":"Rejected artifact action must not render",
+				"state":"ready",
+				"blocker_refs":["transpara-ai/site#168"],
+				"required_decision":"This rejected artifact action must be ignored.",
+				"unlocks":"Nothing.",
+				"evidence_expectation":"None.",
+				"forbidden_actions":["do not render rejected artifact authority actions"]
+			}
+		]
 	}`)
 	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
 
@@ -200,6 +211,11 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing
 	}
 	if len(data.AuthorityActions) != 6 || data.AuthorityActions[0].Label != "Production EventGraph and runtime wiring scope" {
 		t.Fatalf("rejected artifact changed static AuthorityActions: %+v", data.AuthorityActions)
+	}
+	for _, action := range data.AuthorityActions {
+		if action.Label == "Rejected artifact action must not render" {
+			t.Fatalf("rejected artifact authority action rendered: %+v", data.AuthorityActions)
+		}
 	}
 }
 
