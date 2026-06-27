@@ -1085,14 +1085,24 @@ templ opsHiveSubnav(active string) {
 
 templ opsHiveShell(shell *OpsHiveShellData) {
 	<section class="space-y-4">
-		@opsHiveSubnav(shell.Active)
+		if !shell.Intake.ReadOnly {
+			@opsHiveSubnav(shell.Active)
+		}
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
 				<div>
 					<h2 class="text-base font-medium text-warm">Hive control room</h2>
-					<p class="text-sm text-warm-muted mt-2 leading-relaxed">Site-owned operator shell. Intake can queue governed Hive launch intent; runtime start remains separate evidence.</p>
+					if shell.Intake.ReadOnly {
+						<p class="text-sm text-warm-muted mt-2 leading-relaxed">Read-only operator shell. Source capture and queued launch are unavailable; runtime start remains separate evidence.</p>
+					} else {
+						<p class="text-sm text-warm-muted mt-2 leading-relaxed">Site-owned operator shell. Intake can queue governed Hive launch intent; runtime start remains separate evidence.</p>
+					}
 				</div>
-				<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">queued launch boundary</span>
+				if shell.Intake.ReadOnly {
+					<span class="text-[10px] px-2 py-1 rounded-full border border-amber-400/30 text-amber-300 bg-amber-400/10 whitespace-nowrap self-start">read-only ingestion boundary</span>
+				} else {
+					<span class="text-[10px] px-2 py-1 rounded-full border border-brand/30 text-brand bg-brand/10 whitespace-nowrap self-start">queued launch boundary</span>
+				}
 			</header>
 			if shell.Active == "intake" {
 				@opsHiveIntakeShell(shell.Intake, shell.Profile)
@@ -1112,36 +1122,50 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge">
 				<h3 class="text-sm font-medium text-warm">Source input</h3>
-				<p class="text-xs text-warm-faint mt-1">Persisted source cards for draft brief assembly and governed queued launch requests.</p>
+				if intake.ReadOnly {
+					<p class="text-xs text-warm-faint mt-1">Read-only ingestion boundary. Source capture is unavailable in this shell.</p>
+				} else {
+					<p class="text-xs text-warm-faint mt-1">Persisted source cards for draft brief assembly and governed queued launch requests.</p>
+				}
 				if intake.StorageStatus != "" {
 					<p class="text-[11px] text-warm-faint mt-1">Storage: { intake.StorageStatus }</p>
 				}
+				if intake.ReadOnlyReason != "" {
+					<p class="text-[11px] text-warm-faint mt-1">{ intake.ReadOnlyReason }</p>
+				}
 			</header>
 			<div class="p-4 space-y-3">
-				<form method="post" action="/ops/hive/intake/sources" class="border border-brand/30 bg-brand/5 rounded-lg p-4 space-y-3">
-					if profileSlug != "" {
-						<input type="hidden" name="profile" value={ profileSlug }/>
-					}
-					<div class="grid gap-3 md:grid-cols-[9rem_1fr]">
-						<label class="block text-[11px] text-warm-faint">
-							Type
-							<select name="source_kind" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand">
-								<option value="text">Text</option>
-								<option value="url">URL</option>
-								<option value="repo">Repo</option>
-							</select>
-						</label>
-						<label class="block text-[11px] text-warm-faint">
-							Title
-							<input name="title" maxlength="72" placeholder="Optional title" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
-						</label>
+				if intake.ReadOnly {
+					<div class="border border-amber-400/30 bg-amber-400/10 rounded-lg p-4 space-y-2">
+						<p class="text-sm text-warm">Ingestion unavailable in this shell.</p>
+						<p class="text-xs text-warm-muted leading-relaxed">Source capture, brief derivation, and queued Hive run requests require configured storage and the governed Hive write path. This read-only render preserves the ingestion surface without accepting writes.</p>
 					</div>
-					<label class="block text-[11px] text-warm-faint">
-						Source
-						<textarea name="content" required maxlength="20000" rows="4" placeholder="Paste PRD/spec/plan text, a URL, or owner/repo context" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y"></textarea>
-					</label>
-					<button type="submit" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Add source</button>
-				</form>
+				} else {
+					<form method="post" action="/ops/hive/intake/sources" class="border border-brand/30 bg-brand/5 rounded-lg p-4 space-y-3">
+						if profileSlug != "" {
+							<input type="hidden" name="profile" value={ profileSlug }/>
+						}
+						<div class="grid gap-3 md:grid-cols-[9rem_1fr]">
+							<label class="block text-[11px] text-warm-faint">
+								Type
+								<select name="source_kind" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand">
+									<option value="text">Text</option>
+									<option value="url">URL</option>
+									<option value="repo">Repo</option>
+								</select>
+							</label>
+							<label class="block text-[11px] text-warm-faint">
+								Title
+								<input name="title" maxlength="72" placeholder="Optional title" class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand"/>
+							</label>
+						</div>
+						<label class="block text-[11px] text-warm-faint">
+							Source
+							<textarea name="content" required maxlength="20000" rows="4" placeholder="Paste PRD/spec/plan text, a URL, or owner/repo context" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand resize-y"></textarea>
+						</label>
+						<button type="submit" class="inline-flex items-center justify-center px-3 py-2 rounded-md bg-brand text-void text-xs font-medium hover:bg-brand-dark transition-colors">Add source</button>
+					</form>
+				}
 				if intake.Error != "" {
 					<p class="text-xs text-red-300">{ intake.Error }</p>
 				}
@@ -1156,7 +1180,11 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 							<div class="flex items-start justify-between gap-3">
 								<div class="min-w-0">
 									<h4 class="text-sm font-medium text-warm truncate">{ source.Title }</h4>
-									<p class="text-xs text-warm-faint mt-1">{ source.Kind } / { source.CreatedAt }</p>
+									if source.CreatedAt != "" {
+										<p class="text-xs text-warm-faint mt-1">{ source.Kind } / { source.CreatedAt }</p>
+									} else {
+										<p class="text-xs text-warm-faint mt-1">{ source.Kind }</p>
+									}
 								</div>
 								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(source.Status) }>{ source.Status }</span>
 							</div>
@@ -1171,8 +1199,13 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 		</section>
 		<section class="border border-edge bg-void/20 rounded-lg overflow-hidden">
 			<header class="px-4 py-3 border-b border-edge">
-				<h3 class="text-sm font-medium text-warm">Live interpretation</h3>
-				<p class="text-xs text-warm-faint mt-1">Sample derived brief readiness for the initial shell.</p>
+				if intake.ReadOnly {
+					<h3 class="text-sm font-medium text-warm">Degraded interpretation</h3>
+					<p class="text-xs text-warm-faint mt-1">Unavailable source interpretation state for the read-only shell.</p>
+				} else {
+					<h3 class="text-sm font-medium text-warm">Live interpretation</h3>
+					<p class="text-xs text-warm-faint mt-1">Sample derived brief readiness for the initial shell.</p>
+				}
 			</header>
 			<div class="p-4 space-y-4">
 				<div class="grid gap-3 sm:grid-cols-2">
@@ -1186,28 +1219,38 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 						<h4 class="text-xs font-medium text-warm uppercase tracking-widest">Factory brief</h4>
 						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsHiveShellStatusClass(intake.Status) }>{ intake.Status }</span>
 					</div>
-					<label class="block text-[11px] text-warm-faint">
-						Title
-						<input maxlength="72" value={ intake.Brief.Title } class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
-					</label>
-					<label class="block text-[11px] text-warm-faint">
-						Objective
-						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Objective }</textarea>
-					</label>
-					<div class="grid gap-3 md:grid-cols-2">
+					if intake.ReadOnly {
+						<div class="grid gap-3">
+							@opsReadOnlyField("Title", intake.Brief.Title)
+							@opsReadOnlyField("Objective", intake.Brief.Objective)
+							@opsReadOnlyField("Scope", intake.Brief.Scope)
+							@opsReadOnlyField("Acceptance", intake.Brief.Acceptance)
+							@opsReadOnlyField("Risks", intake.Brief.Risks)
+						</div>
+					} else {
 						<label class="block text-[11px] text-warm-faint">
-							Scope
-							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Scope }</textarea>
+							Title
+							<input maxlength="72" value={ intake.Brief.Title } class="mt-1 w-full px-2 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand"/>
 						</label>
 						<label class="block text-[11px] text-warm-faint">
-							Acceptance
-							<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Acceptance }</textarea>
+							Objective
+							<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Objective }</textarea>
 						</label>
-					</div>
-					<label class="block text-[11px] text-warm-faint">
-						Risks
-						<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Risks }</textarea>
-					</label>
+						<div class="grid gap-3 md:grid-cols-2">
+							<label class="block text-[11px] text-warm-faint">
+								Scope
+								<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Scope }</textarea>
+							</label>
+							<label class="block text-[11px] text-warm-faint">
+								Acceptance
+								<textarea rows="4" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Acceptance }</textarea>
+							</label>
+						</div>
+						<label class="block text-[11px] text-warm-faint">
+							Risks
+							<textarea rows="3" class="mt-1 w-full px-3 py-2 bg-elevated border border-edge rounded-md text-xs text-warm focus:outline-none focus:ring-1 focus:ring-brand resize-y">{ intake.Brief.Risks }</textarea>
+						</label>
+					}
 					<div class="flex flex-wrap gap-2">
 						for _, field := range intake.Brief.Missing {
 							<span class={ "text-[10px] px-2 py-1 rounded-full border", opsHiveShellStatusClass(field.Status) }>{ field.Label }: { field.Status }</span>
@@ -1236,7 +1279,9 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 					if intake.LaunchError != "" {
 						<p class="text-xs text-red-300 mt-2">{ intake.LaunchError }</p>
 					}
-					if len(intake.Sources) == 0 {
+					if intake.ReadOnly {
+						<p class="text-xs text-warm-faint mt-3">Run request queueing is unavailable in the read-only no-DB shell.</p>
+					} else if len(intake.Sources) == 0 {
 						<p class="text-xs text-warm-faint mt-3">Add at least one source before queueing a Hive run request.</p>
 					} else {
 						<form method="post" action="/ops/hive/intake/launch" class="mt-3 grid gap-3">
@@ -1263,6 +1308,13 @@ templ opsHiveIntakeShell(intake OpsHiveIntakeView, profileSlug string) {
 				</div>
 			</div>
 		</section>
+	</div>
+}
+
+templ opsReadOnlyField(label string, value string) {
+	<div class="border border-edge bg-void/20 rounded-md p-3">
+		<p class="text-[10px] text-warm-faint uppercase tracking-widest">{ label }</p>
+		<p class="text-xs text-warm-muted mt-1 leading-relaxed">{ value }</p>
 	</div>
 }
 
