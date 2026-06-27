@@ -395,11 +395,20 @@ func issueScanFallbackDeferredOrStale(issue OpsCivilizationIssueIntakeProjected)
 	if issueIntakeHasLabel(issue.Labels, "cc:pr-deferred") {
 		return true
 	}
-	text := issueScanFallbackText(issue)
-	return strings.Contains(text, "pr-deferred") ||
-		strings.Contains(text, "deferred") ||
-		strings.Contains(text, "stale") ||
-		strings.Contains(text, "blocked")
+	for _, signal := range issueScanFallbackStateSignals(issue) {
+		text := strings.ToLower(strings.TrimSpace(signal))
+		if strings.Contains(text, "pr-deferred") ||
+			strings.Contains(text, "deferred") ||
+			strings.Contains(text, "stale") {
+			return true
+		}
+		if strings.Contains(text, "blocked") &&
+			!strings.Contains(text, "not blocked") &&
+			!strings.Contains(text, "unblocked") {
+			return true
+		}
+	}
+	return false
 }
 
 func issueScanFallbackPRReady(issue OpsCivilizationIssueIntakeProjected) bool {
@@ -423,6 +432,17 @@ func issueScanFallbackText(issue OpsCivilizationIssueIntakeProjected) string {
 	parts = append(parts, issue.RiskClasses...)
 	parts = append(parts, issue.Labels...)
 	return strings.ToLower(strings.Join(parts, " "))
+}
+
+func issueScanFallbackStateSignals(issue OpsCivilizationIssueIntakeProjected) []string {
+	parts := []string{
+		issue.Readiness,
+		issue.State,
+		issue.StateReason,
+	}
+	parts = append(parts, issue.ReadinessStates...)
+	parts = append(parts, issue.Labels...)
+	return parts
 }
 
 func issueScanCardFromStage(run OpsCivilizationIssueScanRunProjected, stage OpsCivilizationIssueScanStageProjected, blockersByRunStage map[string][]OpsCivilizationIssueScanBlockerProjected, lineageByRunStage map[string]OpsCivilizationIssueScanLineageProjected) OpsCivilizationIssueScanKanbanCard {

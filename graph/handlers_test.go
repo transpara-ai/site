@@ -1046,6 +1046,19 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 					RiskClass:        "normal",
 					Readiness:        "pr-deferred:stale target must be refreshed before PR work",
 				},
+				{
+					Repo:              "transpara-ai/site",
+					Number:            170,
+					URL:               "https://github.com/transpara-ai/site/issues/170",
+					Title:             "Ordinary intake record without ready or parked state",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/site",
+					TouchedSubstrate:  "site operator ui projection",
+					RiskClass:         "normal",
+					Readiness:         "intake captured; no PR-ready condition has been verified",
+					AuthorityBoundary: "read-only display scope; not blocked by protected actions",
+				},
 			},
 		},
 	}
@@ -1058,8 +1071,8 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 		!strings.Contains(data.IssueScanKanban.Summary, "not runtime execution or agent-touch evidence") {
 		t.Fatalf("fallback summary does not carry non-runtime warning: %q", data.IssueScanKanban.Summary)
 	}
-	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 4 {
-		t.Fatalf("fallback card count = %d, want 4: %+v", got, data.IssueScanKanban)
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 5 {
+		t.Fatalf("fallback card count = %d, want 5: %+v", got, data.IssueScanKanban)
 	}
 
 	siteCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 166)
@@ -1096,10 +1109,15 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 	if workCard == nil || workCard.CurrentState != "parked" || len(workCard.Blockers) != 1 || workCard.Blockers[0].BlockerType != "parked_issue_intake" {
 		t.Fatalf("work#64 fallback = %+v, want parked deferred/stale issue", workCard)
 	}
+	projectionOnlyCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 170)
+	if projectionOnlyCard == nil || projectionOnlyCard.CurrentState != "projection_only" || len(projectionOnlyCard.Blockers) != 0 {
+		t.Fatalf("site#170 fallback = %+v, want projection_only without blockers", projectionOnlyCard)
+	}
 	if !sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "ready_for_human") ||
 		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "human_action") ||
-		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "parked") {
-		t.Fatalf("fallback columns = %+v, want ready_for_human, parked, and human_action", data.IssueScanKanban.Columns)
+		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "parked") ||
+		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "projection_only") {
+		t.Fatalf("fallback columns = %+v, want ready_for_human, parked, human_action, and projection_only", data.IssueScanKanban.Columns)
 	}
 
 	var body strings.Builder
