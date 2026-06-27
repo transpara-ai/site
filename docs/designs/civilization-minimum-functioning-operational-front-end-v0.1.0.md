@@ -10,7 +10,7 @@ owner: Michael Saucier
 steward: assistant
 primary_repo: transpara-ai/site
 canonical_arc: dark-factory/v4.0
-telemetry_precedent: docs/designs/telemetry-mission-control-design-v0.4.1.md
+telemetry_precedent: transpara-ai/docs:designs/telemetry-mission-control-design-v0.4.1.md
 authority: design-only; no runtime, deploy, Test 001 GREEN, autonomy increase, or production EventGraph write
 ---
 
