@@ -185,6 +185,7 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 	defer feeder.Close()
 	t.Setenv("WORK_API_BASE_URL", feeder.URL)
 	t.Setenv("HIVE_OPS_API_BASE_URL", feeder.URL)
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
 
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +221,23 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 				"Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence.",
 				"bounded Gate W evidence decision merged by docs#186",
 				"read-only",
+			},
+		},
+		{
+			path: "/ops/evidence",
+			want: []string{
+				"Evidence-surface guardrails",
+				"Read-only FactoryOrder evidence projection",
+				"Operator shell",
+			},
+		},
+		{
+			path: "/ops/evidence?view=forensic",
+			want: []string{
+				"Evidence projection",
+				"projection URL is not configured",
+				"FactoryOrder timeline",
+				"Read-only",
 			},
 		},
 	}
@@ -291,7 +309,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console"} {
+	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/evidence"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -357,6 +375,73 @@ func TestNoDatabaseReviewConsoleToleratesUserContextWithoutStore(t *testing.T) {
 			t.Fatalf("GET /ops/review-console with user context body missing %q", want)
 		}
 	}
+}
+
+func TestNoDatabaseEvidenceToleratesUserContextWithoutStore(t *testing.T) {
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence", nil)
+	req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{
+		ID:      "user_test",
+		Name:    "Test Operator",
+		Picture: "https://example.invalid/avatar.png",
+	}))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence with user context and no store status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Evidence-surface guardrails",
+		"Read-only FactoryOrder evidence projection",
+		"Operator shell",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/evidence with user context body missing %q", want)
+		}
+	}
+}
+
+func TestNoDatabaseEvidenceForensicToleratesUserContextWithoutStore(t *testing.T) {
+	t.Setenv("DARK_FACTORY_EVIDENCE_PROJECTION_URL", "")
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/evidence?view=forensic", nil)
+	req = req.WithContext(auth.ContextWithUser(req.Context(), &auth.User{
+		ID:      "user_test",
+		Name:    "Test Operator",
+		Picture: "https://example.invalid/avatar.png",
+	}))
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/evidence?view=forensic with user context and no store status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Evidence projection",
+		"projection URL is not configured",
+		"Projection unavailable",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/evidence?view=forensic with user context body missing %q", want)
+		}
+	}
+	evidenceSurface := body
+	if start := strings.Index(body, "Evidence projection"); start >= 0 {
+		evidenceSurface = body[start:]
+	}
+	assertNoMutationControls(t, "/ops/evidence?view=forensic evidence surface", evidenceSurface)
 }
 
 func assertNoMutationControls(t *testing.T, path string, body string) {

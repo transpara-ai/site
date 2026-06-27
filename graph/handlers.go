@@ -393,6 +393,7 @@ func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops/civilization", h.handleOpsCivilization)
 	mux.HandleFunc("GET /ops/github-canonical", h.handleOpsGitHubCanonical)
 	mux.HandleFunc("GET /ops/review-console", h.handleOpsReviewConsole)
+	mux.HandleFunc("GET /ops/evidence", h.handleOpsEvidence)
 }
 
 // ────────────────────────────────────────────────────────────────────

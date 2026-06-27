@@ -1830,7 +1830,9 @@ func TestFetchOpsHiveProjectionTimeoutIsNonFatal(t *testing.T) {
 
 func TestFetchOpsEvidenceProjection(t *testing.T) {
 	var gotFactoryOrder, gotReleaseCandidate string
+	var gotMethod string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
 		gotFactoryOrder = r.URL.Query().Get("factory_order_id")
 		gotReleaseCandidate = r.URL.Query().Get("release_candidate_id")
 		w.Header().Set("Content-Type", "application/json")
@@ -1845,6 +1847,9 @@ func TestFetchOpsEvidenceProjection(t *testing.T) {
 
 	if got.ProjectionError != "" {
 		t.Fatalf("ProjectionError = %q, want empty", got.ProjectionError)
+	}
+	if gotMethod != http.MethodGet {
+		t.Fatalf("projection request method = %q, want GET", gotMethod)
 	}
 	if gotFactoryOrder != "fo_001" || gotReleaseCandidate != "rc_001" {
 		t.Fatalf("forwarded query = factory_order_id:%q release_candidate_id:%q", gotFactoryOrder, gotReleaseCandidate)
