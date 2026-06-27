@@ -386,6 +386,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 // projection/fallback data and expose no mutation handlers.
 func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops", h.handleOps)
+	mux.HandleFunc("GET /ops/telemetry", h.handleOpsTelemetry)
+	mux.HandleFunc("GET /ops/observatory", h.handleOpsObservatory)
+	mux.HandleFunc("GET /ops/observatory/events", h.handleOpsObservatoryEvents)
 	mux.HandleFunc("GET /ops/civilization", h.handleOpsCivilization)
 	mux.HandleFunc("GET /ops/github-canonical", h.handleOpsGitHubCanonical)
 }
