@@ -209,7 +209,7 @@ func Layout(title, description string, p *profile.Profile, user ...SiteUser) tem
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-void text-warm-secondary min-h-screen flex flex-col\"><header class=\"border-b border-edge bg-surface\"><nav class=\"max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex items-center justify-between\"><a href=\"/\" class=\"font-display text-xl font-semibold text-brand flex items-center gap-2\"><img src=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"><script src=\"/static/js/htmx.min.js\"></script></head><body class=\"bg-void text-warm-secondary min-h-screen flex flex-col\"><header class=\"border-b border-edge bg-surface\"><nav class=\"max-w-4xl mx-auto px-4 md:px-6 py-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2\"><a href=\"/\" class=\"font-display text-xl font-semibold text-brand flex shrink-0 items-center gap-2\"><img src=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -248,7 +248,7 @@ func Layout(title, description string, p *profile.Profile, user ...SiteUser) tem
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</a><div class=\"flex items-center gap-5 text-sm text-warm-muted\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</a><div class=\"min-w-0 flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-2 md:gap-x-5 text-sm text-warm-muted\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

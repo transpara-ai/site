@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/transpara-ai/site/auth"
+	"github.com/transpara-ai/site/profile"
+	"github.com/transpara-ai/site/views"
 )
 
 func TestValidateProductionAuthConfigFailsClosedWithoutOAuth(t *testing.T) {
@@ -70,6 +72,8 @@ func TestNoDatabaseRoutesExposeReadOnlyCivilization(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		`data-civilization-assembly="read-only"`,
+		`id="issue-intake"`,
+		`id="issue-scan-kanban"`,
 		"Civilization Assembly",
 		"projection unavailable",
 		"this page has no execution authority",
@@ -108,6 +112,42 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 	assertNoMutationControls(t, "/ops", body)
 }
 
+func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		views.Home(views.HomeStats{}, profile.FromContext(r.Context())).Render(r.Context(), w)
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET / without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		`aria-label="Civilization monitoring surfaces"`,
+		`href="/ops/civilization"`,
+		`href="/ops/observatory"`,
+		`href="/ops/telemetry"`,
+		`href="/ops/civilization#issue-intake"`,
+		`href="/ops/github-canonical"`,
+		`href="/ops/civilization#issue-scan-kanban"`,
+		`href="/ops/github-canonical#test-001-posture"`,
+		`href="/ops/review-console"`,
+		`href="/ops/evidence"`,
+		"YELLOW/open",
+		"projection only",
+		"scanner evidence",
+		"read-only",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET / without DATABASE_URL body missing %q", want)
+		}
+	}
+	assertNoMutationControls(t, "/", body)
+}
+
 func TestNoDatabaseRoutesExposeReadOnlyGitHubCanonicalTest001Posture(t *testing.T) {
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +163,7 @@ func TestNoDatabaseRoutesExposeReadOnlyGitHubCanonicalTest001Posture(t *testing.
 	}
 	body := w.Body.String()
 	for _, want := range []string{
+		`id="test-001-posture"`,
 		`data-github-canonical-test-001-posture="read-only"`,
 		"Test 001 carried-evidence posture",
 		"YELLOW",

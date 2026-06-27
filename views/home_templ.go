@@ -56,12 +56,52 @@ func Home(stats HomeStats, p *profile.Profile) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><section class=\"py-14 md:py-20 border-b border-edge\"><div class=\"space-y-6 max-w-3xl\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Command surface</p><h1 class=\"font-display text-4xl md:text-6xl font-semibold leading-tight text-warm\">Transpara-AI Civilization operations</h1><p class=\"text-lg text-warm-muted max-w-2xl leading-relaxed\">A live surface for governed autonomous work: operator routes, runtime evidence, review posture, and the civilization assembly.</p><div class=\"flex flex-wrap gap-3 pt-2\"><a href=\"/ops/civilization\" class=\"inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium\">Open civilization</a> <a href=\"/ops\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Ops console</a> <a href=\"/hive\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Hive status</a></div></div></section><section class=\"grid gap-4 md:grid-cols-3\"><a href=\"/ops/observatory\" class=\"group border border-edge bg-surface rounded-lg p-5 hover:border-brand/50 transition-colors\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Runtime</p><h2 class=\"mt-3 text-xl font-semibold text-warm group-hover:text-brand transition-colors\">Observatory</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed\">Telemetry, authority posture, causal traces, and lifecycle projection.</p></a> <a href=\"/ops/review-console\" class=\"group border border-edge bg-surface rounded-lg p-5 hover:border-brand/50 transition-colors\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Review</p><h2 class=\"mt-3 text-xl font-semibold text-warm group-hover:text-brand transition-colors\">Review console</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed\">Exact-head review state, issue posture, and gate evidence.</p></a> <a href=\"/ops/evidence\" class=\"group border border-edge bg-surface rounded-lg p-5 hover:border-brand/50 transition-colors\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Evidence</p><h2 class=\"mt-3 text-xl font-semibold text-warm group-hover:text-brand transition-colors\">Evidence packet</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed\">Read-only projection of proof, tests, decisions, and known failures.</p></a></section>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><section class=\"py-14 md:py-20 border-b border-edge\"><div class=\"space-y-6 max-w-3xl\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Command surface</p><h1 class=\"font-display text-4xl md:text-6xl font-semibold leading-tight text-warm\">Transpara-AI Civilization operations</h1><p class=\"text-lg text-warm-muted max-w-2xl leading-relaxed\">A live surface for governed autonomous work: operator routes, runtime evidence, review posture, and the civilization assembly.</p><div class=\"flex flex-wrap gap-3 pt-2\"><a href=\"/ops/civilization\" class=\"inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium\">Open civilization</a> <a href=\"/ops\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Ops console</a> <a href=\"/hive\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Hive status</a></div></div></section><section class=\"grid gap-4 md:grid-cols-2 xl:grid-cols-3\" aria-label=\"Civilization monitoring surfaces\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Control", "Civilization assembly", "/ops/civilization", "v4.0 projection", "Roles, gates, issue intake, Kanban, and non-authority boundaries.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Runtime", "Observatory", "/ops/observatory", "read-only", "Vitals, lifecycle timelines, causal traces, and explicit unavailable states.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Telemetry", "Pipeline telemetry", "/ops/telemetry", "native summary", "Agent activity, phase status, event stream health, and feeder errors.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Ingestion", "Issue intake", "/ops/civilization#issue-intake", "read-only", "Source records, grouping inputs, scanner limits, and advisory boundaries.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Scan", "GitHub canonical", "/ops/github-canonical", "scanner evidence", "Issue-canonical progress, parked blockers, warnings, and source-count posture.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Kanban", "Issue-scan board", "/ops/civilization#issue-scan-kanban", "projection only", "Run stages, blocker reasons, agent touch, evidence refs, and human action state.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Test 001", "Carried-evidence posture", "/ops/github-canonical#test-001-posture", "YELLOW/open", "Operation tracker state, unavailable evidence rows, and product-monitor support.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Review", "Review and evidence", "/ops/review-console", "display only", "Exact-head approvals, authority packets, residuals, and gate closeout state.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = homeSurface("Evidence", "Evidence packet", "/ops/evidence", "display only", "Proof packets, tests, decisions, and known failures without execution authority.").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</section>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if stats.Spaces > 0 || stats.Tasks > 0 || stats.AgentOps > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<section class=\"grid grid-cols-2 md:grid-cols-4 gap-3\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<section class=\"grid grid-cols-2 md:grid-cols-4 gap-3\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -81,12 +121,12 @@ func Home(stats HomeStats, p *profile.Profile) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</section>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</section>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<section class=\"border border-edge bg-surface rounded-lg p-5 md:p-6\"><div class=\"flex flex-col gap-4 md:flex-row md:items-center md:justify-between\"><div><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Product profile</p><h2 class=\"mt-2 text-xl font-semibold text-warm\">Industrial Transpara surface</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed max-w-2xl\">The operational intelligence product identity remains available as an explicit profile while this root stays focused on Transpara-AI Civilization operations.</p></div><a href=\"/?profile=transpara\" class=\"inline-block px-4 py-2 border border-edge-strong rounded-md text-sm text-warm-muted hover:border-brand hover:text-brand transition-colors whitespace-nowrap\">View Transpara profile</a></div></section></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<section class=\"border border-edge bg-surface rounded-lg p-5 md:p-6\"><div class=\"flex flex-col gap-4 md:flex-row md:items-center md:justify-between\"><div><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Product profile</p><h2 class=\"mt-2 text-xl font-semibold text-warm\">Industrial Transpara surface</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed max-w-2xl\">The operational intelligence product identity remains available as an explicit profile while this root stays focused on Transpara-AI Civilization operations.</p></div><a href=\"/?profile=transpara\" class=\"inline-block px-4 py-2 border border-edge-strong rounded-md text-sm text-warm-muted hover:border-brand hover:text-brand transition-colors whitespace-nowrap\">View Transpara profile</a></div></section></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -121,33 +161,140 @@ func homeMetric(label string, value int) templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"border border-edge bg-surface rounded-lg p-4\"><p class=\"text-2xl font-semibold text-brand\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"border border-edge bg-surface rounded-lg p-4\"><p class=\"text-2xl font-semibold text-brand\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 91, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 85, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</p><p class=\"mt-1 text-xs uppercase tracking-widest text-warm-faint\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</p><p class=\"mt-1 text-xs uppercase tracking-widest text-warm-faint\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 92, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 86, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</p></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</p></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func homeSurface(kicker string, label string, href string, status string, detail string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var6 == nil {
+			templ_7745c5c3_Var6 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<a href=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 templ.SafeURL
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(href))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 91, Col: 26}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" class=\"group border border-edge bg-surface rounded-lg p-5 hover:border-brand/50 transition-colors min-h-[10.5rem] flex flex-col\"><div class=\"flex items-start justify-between gap-3\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(kicker)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 93, Col: 72}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</p><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(status)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 94, Col: 124}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></div><h2 class=\"mt-3 text-xl font-semibold text-warm group-hover:text-brand transition-colors\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 96, Col: 99}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</h2><p class=\"mt-2 text-sm text-warm-muted leading-relaxed flex-1\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(detail)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 97, Col: 73}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</p><p class=\"mt-3 text-[11px] text-warm-faint break-all\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(href)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 98, Col: 62}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</p></a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

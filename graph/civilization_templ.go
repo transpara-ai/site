@@ -207,7 +207,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</dl></section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-intake=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue intake projection</h2><p class=\"text-xs text-warm-faint mt-1\">Scanner-visible GitHub issue records rendered as read-only planning input; grouping is advisory and has no PR, merge, deploy, or runtime authority.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</dl></section><section id=\"issue-intake\" class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-intake=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue intake projection</h2><p class=\"text-xs text-warm-faint mt-1\">Scanner-visible GitHub issue records rendered as read-only planning input; grouping is advisory and has no PR, merge, deploy, or runtime authority.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -626,7 +626,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</dd><dt class=\"text-warm-faint\">No-write limit</dt><dd class=\"text-warm-muted break-words\">This surface reads projection data only; it cannot edit GitHub issues, start Hive, write EventGraph, queue runs, create PRs, merge, deploy, or approve protected actions.</dd></dl></div></section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-readiness=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue readiness</h2><p class=\"text-xs text-warm-faint mt-1\">Read-only change-control posture for issue-scan candidates; recommendations are not PR, merge, deploy, or authority approval.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</dd><dt class=\"text-warm-faint\">No-write limit</dt><dd class=\"text-warm-muted break-words\">This surface reads projection data only; it cannot edit GitHub issues, start Hive, write EventGraph, queue runs, create PRs, merge, deploy, or approve protected actions.</dd></dl></div></section><section id=\"issue-readiness\" class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-readiness=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue readiness</h2><p class=\"text-xs text-warm-faint mt-1\">Read-only change-control posture for issue-scan candidates; recommendations are not PR, merge, deploy, or authority approval.</p></div><span class=\"text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -779,7 +779,7 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</tbody></table></div></div></section><section class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-scan-kanban=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue-scan Kanban</h2><p class=\"text-xs text-warm-faint mt-1\">Typed projection state for runs, stages, blockers, agent touch, and human action.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</tbody></table></div></div></section><section id=\"issue-scan-kanban\" class=\"border border-edge bg-surface rounded-lg overflow-hidden\" data-civilization-issue-scan-kanban=\"read-only\"><header class=\"px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between\"><div><h2 class=\"text-sm font-medium text-warm\">Issue-scan Kanban</h2><p class=\"text-xs text-warm-faint mt-1\">Typed projection state for runs, stages, blockers, agent touch, and human action.</p><p class=\"text-xs text-warm-muted mt-2 leading-relaxed\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
