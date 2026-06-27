@@ -110,6 +110,59 @@ func TestOpsGitHubCanonicalConsumesScannerArtifact(t *testing.T) {
 	}
 }
 
+func TestOpsGitHubCanonicalConsumesScannerArtifactAuthorityActions(t *testing.T) {
+	loadedAt := time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC)
+	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSONWithAuthorityActions(), `"source_summaries":`, `"scanner_snapshot_at":"2026-06-26T15:29:28Z","source_summaries":`, 1)
+	path := writeGitHubCanonicalScannerArtifact(t, loadedAt, body)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if len(data.AuthorityActions) != 1 {
+		t.Fatalf("AuthorityActions len = %d, want artifact-derived singleton: %+v", len(data.AuthorityActions), data.AuthorityActions)
+	}
+	action := data.AuthorityActions[0]
+	if action.Label != "Scanner artifact Gate S and Test 001 residual disposition" ||
+		action.State != "needs-human-scope" ||
+		action.RequiredDecision != "Human-scoped docs/process disposition from scanner artifact." ||
+		action.Unlocks != "Narrow docs/operation evidence PRs after exact scope approval." ||
+		action.EvidenceExpectation != "Exact-head evidence treatment and Test 001 live-evidence criteria." {
+		t.Fatalf("artifact authority action not preserved: %+v", action)
+	}
+	for _, want := range []string{"transpara-ai/docs#172", "transpara-ai/operation#26", "transpara-ai/operation#35"} {
+		if !githubCanonicalContainsString(action.BlockerRefs, want) {
+			t.Fatalf("artifact authority action blocker refs missing %q: %+v", want, action.BlockerRefs)
+		}
+	}
+	for _, want := range []string{"no docs#172 closure by inference", "no Test 001 GREEN without live evidence"} {
+		if !githubCanonicalContainsString(action.ForbiddenActions, want) {
+			t.Fatalf("artifact authority action forbidden actions missing %q: %+v", want, action.ForbiddenActions)
+		}
+	}
+	for _, staticLabel := range []string{"Production EventGraph and runtime wiring scope", "Human-required value-allocation direction"} {
+		for _, got := range data.AuthorityActions {
+			if got.Label == staticLabel {
+				t.Fatalf("artifact authority actions retained static action %q: %+v", staticLabel, data.AuthorityActions)
+			}
+		}
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactKeepsStaticAuthorityActionsWhenEmpty(t *testing.T) {
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), matchingGitHubCanonicalScannerArtifactJSONWithEmptyAuthorityActions())
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if len(data.AuthorityActions) != 6 || data.AuthorityActions[0].Label != "Production EventGraph and runtime wiring scope" {
+		t.Fatalf("empty artifact AuthorityActions should preserve static fallback: %+v", data.AuthorityActions)
+	}
+}
+
 func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing.T) {
 	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), `{
 		"source_summaries": [
@@ -144,6 +197,9 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing
 	}
 	if data.AutonomyFrontier.Recommendation != "park-autonomy-no-pr-ready-work" || data.AutonomyFrontier.TotalIssueCount != 14 || data.Progress.ParkedOpenIssueCount != 14 {
 		t.Fatalf("inconsistent artifact changed static projection: frontier=%+v progress=%+v", data.AutonomyFrontier, data.Progress)
+	}
+	if len(data.AuthorityActions) != 6 || data.AuthorityActions[0].Label != "Production EventGraph and runtime wiring scope" {
+		t.Fatalf("rejected artifact changed static AuthorityActions: %+v", data.AuthorityActions)
 	}
 }
 
@@ -341,6 +397,30 @@ func matchingGitHubCanonicalScannerArtifactJSON() string {
 			"deferred_issue_count":13,
 			"blocker_refs":["transpara-ai/docs#172","transpara-ai/docs#193","transpara-ai/docs#197","transpara-ai/docs#200","transpara-ai/docs#201","transpara-ai/docs#202","transpara-ai/docs#203","transpara-ai/eventgraph#59","transpara-ai/eventgraph#61","transpara-ai/hive#204","transpara-ai/operation#26","transpara-ai/operation#35","transpara-ai/work#59","transpara-ai/work#64"]
 		}
+	}`
+}
+
+func matchingGitHubCanonicalScannerArtifactJSONWithAuthorityActions() string {
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}")
+	return body + `,
+		"authority_actions": [
+			{
+				"label":"Scanner artifact Gate S and Test 001 residual disposition",
+				"state":"needs-human-scope",
+				"blocker_refs":["transpara-ai/operation#35","transpara-ai/docs#172","transpara-ai/operation#26"],
+				"required_decision":"Human-scoped docs/process disposition from scanner artifact.",
+				"unlocks":"Narrow docs/operation evidence PRs after exact scope approval.",
+				"evidence_expectation":"Exact-head evidence treatment and Test 001 live-evidence criteria.",
+				"forbidden_actions":["no Test 001 GREEN without live evidence","no docs#172 closure by inference"]
+			}
+		]
+	}`
+}
+
+func matchingGitHubCanonicalScannerArtifactJSONWithEmptyAuthorityActions() string {
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}")
+	return body + `,
+		"authority_actions": []
 	}`
 }
 
