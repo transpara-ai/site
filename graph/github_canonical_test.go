@@ -241,6 +241,351 @@ func TestOpsGitHubCanonicalScannerArtifactKeepsStaticAuthorityActionsWhenEmpty(t
 	}
 }
 
+func TestOpsGitHubCanonicalStaticTest001PostureKeepsYellowCategoriesVisible(t *testing.T) {
+	data := buildOpsGitHubCanonicalData(time.Date(2026, 6, 27, 15, 20, 0, 0, time.UTC))
+	posture := data.Test001Posture
+
+	if !posture.Available || posture.Status != "available" || posture.State != "YELLOW" {
+		t.Fatalf("static Test 001 posture status = %+v, want available YELLOW", posture)
+	}
+	if posture.TrackerRef != "transpara-ai/operation#26" || posture.TrackerState != "open_required" {
+		t.Fatalf("static Test 001 tracker = %q/%q", posture.TrackerRef, posture.TrackerState)
+	}
+	if posture.ReplacementMonitoringState != "not_proven_by_scanner_alone" {
+		t.Fatalf("replacement monitoring state = %q", posture.ReplacementMonitoringState)
+	}
+	if !strings.Contains(posture.SourceMode, "static fallback") || !strings.Contains(posture.SourceRef, "test-001-carried-evidence-matrix.md") {
+		t.Fatalf("static posture source not explicit: %+v", posture)
+	}
+	if !strings.Contains(posture.Boundary, "does not authorize Test 001 GREEN") || !strings.Contains(posture.Boundary, "operation#26 closure") {
+		t.Fatalf("static posture boundary missing forbidden actions: %q", posture.Boundary)
+	}
+	if len(posture.Rows) != 10 {
+		t.Fatalf("static posture rows = %d, want all 10 carried-evidence categories", len(posture.Rows))
+	}
+	for _, row := range posture.Rows {
+		if row.Classification != "STILL_UNAVAILABLE_YELLOW_KEEPING" {
+			t.Fatalf("row classification = %q, want YELLOW-keeping: %+v", row.Classification, row)
+		}
+	}
+}
+
+func TestOpsGitHubCanonicalConsumesScannerArtifactTest001Posture(t *testing.T) {
+	loadedAt := time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC)
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}") + `,
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "YELLOW",
+			"source_path": "/Transpara/transpara-ai/repos/operation/docs/operations/test-001-carried-evidence-matrix.md",
+			"source_ref": "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
+			"tracker_ref": "transpara-ai/operation#26",
+			"tracker_state": "open_required",
+			"replacement_monitoring_state": "not_proven_by_scanner_alone",
+			"replacement_monitoring_summary": "scanner says product consumer is complete",
+			"boundary": "Scanner attempted to replace the display disclaimer.",
+			"rows": [
+				{
+					"evidence_category": "Exact live evidence for the incident scenario.",
+					"classification": "STILL_UNAVAILABLE_YELLOW_KEEPING",
+					"current_cited_evidence": "tabletop local/pre-live",
+					"current_consequence": "No exact live incident evidence is cited."
+				},
+				{
+					"evidence_category": "Actual EventGraph incident-dispositive records and chain verification.",
+					"classification": "STILL_UNAVAILABLE_YELLOW_KEEPING",
+					"current_cited_evidence": "eventgraph#54",
+					"current_consequence": "No actual incident-dispositive EventGraph records are cited."
+				}
+			]
+		}
+	}`
+	path := writeGitHubCanonicalScannerArtifact(t, loadedAt, body)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+	posture := data.Test001Posture
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if !strings.Contains(posture.SourceMode, "scanner artifact") || !strings.Contains(posture.SourceMode, filepath.Base(path)) {
+		t.Fatalf("posture source mode = %q, want scanner artifact provenance", posture.SourceMode)
+	}
+	if posture.State != "YELLOW" || posture.TrackerRef != "transpara-ai/operation#26" || posture.TrackerState != "open_required" {
+		t.Fatalf("artifact posture identity not preserved: %+v", posture)
+	}
+	if posture.SourcePath != "test-001-carried-evidence-matrix.md" {
+		t.Fatalf("source path = %q, want basename", posture.SourcePath)
+	}
+	if !strings.Contains(posture.ReplacementMonitoringSummary, "does not close or replace operation#26") {
+		t.Fatalf("static replacement summary did not survive artifact path: %q", posture.ReplacementMonitoringSummary)
+	}
+	if !strings.Contains(posture.Boundary, "does not authorize Test 001 GREEN") || strings.Contains(posture.Boundary, "Scanner attempted") {
+		t.Fatalf("static boundary did not survive artifact path: %q", posture.Boundary)
+	}
+	if len(posture.Rows) != 2 || posture.Rows[1].EvidenceCategory != "Actual EventGraph incident-dispositive records and chain verification." {
+		t.Fatalf("artifact posture rows not consumed: %+v", posture.Rows)
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactRejectsNonYellowTest001Posture(t *testing.T) {
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}") + `,
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "GREEN",
+			"tracker_ref": "transpara-ai/operation#26",
+			"rows": [
+				{"evidence_category":"Exact live evidence","classification":"ACTUAL_EVIDENCE_CITED"}
+			]
+		}
+	}`
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC), body)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-inconsistent" {
+		t.Fatalf("ScannerArtifact = %+v, want artifact-inconsistent", data.ScannerArtifact)
+	}
+	if data.Test001Posture.State != "YELLOW" || len(data.Test001Posture.Rows) != 10 {
+		t.Fatalf("rejected non-YELLOW artifact should preserve static fallback posture: %+v", data.Test001Posture)
+	}
+	if !strings.Contains(data.ScannerArtifact.Error, "YELLOW display boundary") {
+		t.Fatalf("artifact error = %q, want YELLOW boundary reason", data.ScannerArtifact.Error)
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactRejectsClosureBearingTest001PostureFields(t *testing.T) {
+	tests := []struct {
+		name        string
+		postureJSON string
+		wantError   string
+	}{
+		{
+			name: "wrong tracker ref",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#35",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "not_proven_by_scanner_alone",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
+				]
+			}`,
+			wantError: "operation#26 boundary",
+		},
+		{
+			name: "closed posture status",
+			postureJSON: `{
+				"available": true,
+				"status": "closed",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "not_proven_by_scanner_alone",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
+				]
+			}`,
+			wantError: "display-status boundary",
+		},
+		{
+			name: "closed tracker state",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "closed",
+				"replacement_monitoring_state": "not_proven_by_scanner_alone",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
+				]
+			}`,
+			wantError: "open tracker boundary",
+		},
+		{
+			name: "proven replacement monitoring",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "proven",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
+				]
+			}`,
+			wantError: "non-closure boundary",
+		},
+		{
+			name: "green row classification",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "not_proven_by_scanner_alone",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"ACTUAL_EVIDENCE_CITED"}
+				]
+			}`,
+			wantError: "YELLOW-keeping boundary",
+		},
+		{
+			name: "available empty rows",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "not_proven_by_scanner_alone",
+				"rows": [
+					{"evidence_category":"  ","classification":"  "}
+				]
+			}`,
+			wantError: "has no evidence rows",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}") + `,
+				"test_001_posture": ` + tt.postureJSON + `
+			}`
+			path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC), body)
+
+			data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+
+			if data.ScannerArtifact.Status != "artifact-inconsistent" {
+				t.Fatalf("ScannerArtifact = %+v, want artifact-inconsistent", data.ScannerArtifact)
+			}
+			if data.Test001Posture.State != "YELLOW" || len(data.Test001Posture.Rows) != 10 {
+				t.Fatalf("rejected artifact should preserve static fallback posture: %+v", data.Test001Posture)
+			}
+			if !strings.Contains(data.ScannerArtifact.Error, tt.wantError) {
+				t.Fatalf("artifact error = %q, want substring %q", data.ScannerArtifact.Error, tt.wantError)
+			}
+		})
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactNormalizesTest001PostureState(t *testing.T) {
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}") + `,
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "yellow",
+			"source_path": "/Transpara/transpara-ai/repos/operation/docs/operations/test-001-carried-evidence-matrix.md",
+			"source_ref": "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
+			"tracker_ref": "transpara-ai/operation#26",
+			"tracker_state": "OPEN_REQUIRED",
+			"replacement_monitoring_state": "not_proven_by_scanner_alone",
+			"replacement_monitoring_summary": "scanner says product consumer still required",
+			"boundary": "Read-only Test 001 posture evidence. This projection does not authorize Test 001 GREEN or operation#26 closure.",
+			"rows": [
+				{
+					"evidence_category": "Exact live evidence for the incident scenario.",
+					"classification": "STILL_UNAVAILABLE_YELLOW_KEEPING",
+					"current_cited_evidence": "tabletop local/pre-live",
+					"current_consequence": "No exact live incident evidence is cited."
+				}
+			]
+		}
+	}`
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC), body)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if data.Test001Posture.State != "YELLOW" || data.Test001Posture.TrackerState != "open_required" {
+		t.Fatalf("posture state not normalized: %+v", data.Test001Posture)
+	}
+	if class := githubCanonicalStateClass(data.Test001Posture.State); !strings.Contains(class, "amber") {
+		t.Fatalf("state class = %q, want amber YELLOW class", class)
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactConsumesPostureOnlyArtifact(t *testing.T) {
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC), `{
+		"scanner_snapshot_at": "2026-06-27T15:29:00Z",
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "YELLOW",
+			"source_path": "/Transpara/transpara-ai/repos/operation/docs/operations/test-001-carried-evidence-matrix.md",
+			"source_ref": "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
+			"tracker_ref": "transpara-ai/operation#26",
+			"tracker_state": "open_required",
+			"replacement_monitoring_state": "not_proven_by_scanner_alone",
+			"replacement_monitoring_summary": "scanner supplied free text should not replace static display summary",
+			"boundary": "scanner supplied free text should not replace static display boundary",
+			"rows": [
+				{
+					"evidence_category": "Exact live evidence for the incident scenario.",
+					"classification": "STILL_UNAVAILABLE_YELLOW_KEEPING",
+					"current_cited_evidence": "tabletop local/pre-live",
+					"current_consequence": "No exact live incident evidence is cited."
+				}
+			]
+		}
+	}`)
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if data.AutonomyFrontier.TotalIssueCount != 14 || data.Progress.ParkedOpenIssueCount != 14 {
+		t.Fatalf("posture-only artifact should not replace static frontier: frontier=%+v progress=%+v", data.AutonomyFrontier, data.Progress)
+	}
+	if data.ScannerSnapshotAt != githubCanonicalScannerSnapshotAt {
+		t.Fatalf("posture-only artifact should not refresh global scanner snapshot: %q", data.ScannerSnapshotAt)
+	}
+	if data.Test001Posture.State != "YELLOW" || len(data.Test001Posture.Rows) != 1 {
+		t.Fatalf("posture-only artifact not consumed: %+v", data.Test001Posture)
+	}
+	if data.Test001Posture.SourcePath != "test-001-carried-evidence-matrix.md" {
+		t.Fatalf("posture-only source path = %q, want basename", data.Test001Posture.SourcePath)
+	}
+	if !strings.Contains(data.Test001Posture.Boundary, "does not authorize Test 001 GREEN") || !strings.Contains(data.Test001Posture.ReplacementMonitoringSummary, "does not close or replace operation#26") {
+		t.Fatalf("static posture safety text not preserved: %+v", data.Test001Posture)
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactRejectsUnsafePostureOnlyArtifact(t *testing.T) {
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 15, 30, 0, 0, time.UTC), `{
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "GREEN",
+			"tracker_ref": "transpara-ai/operation#26",
+			"tracker_state": "closed",
+			"replacement_monitoring_state": "proven",
+			"rows": [
+				{"evidence_category":"Exact live evidence","classification":"ACTUAL_EVIDENCE_CITED"}
+			]
+		}
+	}`)
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 15, 31, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-inconsistent" {
+		t.Fatalf("ScannerArtifact = %+v, want artifact-inconsistent", data.ScannerArtifact)
+	}
+	if data.Test001Posture.State != "YELLOW" || len(data.Test001Posture.Rows) != 10 {
+		t.Fatalf("unsafe posture-only artifact should preserve static fallback posture: %+v", data.Test001Posture)
+	}
+	if !strings.Contains(data.ScannerArtifact.Error, "YELLOW display boundary") {
+		t.Fatalf("artifact error = %q, want YELLOW boundary reason", data.ScannerArtifact.Error)
+	}
+}
+
 func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing.T) {
 	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), `{
 		"source_summaries": [

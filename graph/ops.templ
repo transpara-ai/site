@@ -237,6 +237,67 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 				</div>
 			</div>
 		</section>
+		<section id="test-001-posture" class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-test-001-posture="read-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Test 001 carried-evidence posture</h2>
+					<p class="text-xs text-warm-faint mt-1">Read-only scanner/product posture for the surviving Operation Test 001 tracker; unavailable categories remain visible and do not become closure evidence.</p>
+					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ data.Test001Posture.ReplacementMonitoringSummary }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", githubCanonicalStateClass(data.Test001Posture.State) }>{ data.Test001Posture.State }</span>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ data.Test001Posture.TrackerState }</span>
+				</div>
+			</header>
+			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[12rem_1fr]">
+				<dt class="text-warm-faint">status</dt>
+				<dd class="text-warm-muted">{ opsCivilizationValue(data.Test001Posture.Status, "not projected") }</dd>
+				<dt class="text-warm-faint">source_mode</dt>
+				<dd class="text-warm-muted break-words">{ opsCivilizationValue(data.Test001Posture.SourceMode, "static fallback") }</dd>
+				<dt class="text-warm-faint">source_ref</dt>
+				<dd class="text-warm-muted break-all">{ opsCivilizationValue(data.Test001Posture.SourceRef, "not projected") }</dd>
+				<dt class="text-warm-faint">source_path</dt>
+				<dd class="text-warm-faint break-all">{ opsCivilizationValue(data.Test001Posture.SourcePath, "not projected") }</dd>
+				<dt class="text-warm-faint">tracker</dt>
+				<dd class="text-warm-muted break-all">{ opsCivilizationValue(data.Test001Posture.TrackerRef, "not projected") } · { opsCivilizationValue(data.Test001Posture.TrackerState, "not projected") }</dd>
+				<dt class="text-warm-faint">replacement_monitoring</dt>
+				<dd class="text-warm-muted break-words">{ opsCivilizationValue(data.Test001Posture.ReplacementMonitoringState, "not projected") }</dd>
+				if data.Test001Posture.Error != "" || data.Test001Posture.ErrorKind != "" {
+					<dt class="text-warm-faint">posture_error</dt>
+					<dd class="text-amber-300 break-words">{ opsCivilizationValue(data.Test001Posture.ErrorKind, "error") }: { data.Test001Posture.Error }</dd>
+				}
+				<dt class="text-warm-faint">boundary</dt>
+				<dd class="text-warm-faint leading-relaxed">{ opsCivilizationValue(data.Test001Posture.Boundary, "read-only display; no Test 001 closure or runtime authority") }</dd>
+			</dl>
+			if len(data.Test001Posture.Rows) == 0 {
+				<p class="px-4 py-5 border-t border-edge text-sm text-warm-faint">No Test 001 carried-evidence rows are projected.</p>
+			} else {
+				<div class="border-t border-edge overflow-x-auto" data-github-canonical-wide-table="test-001-posture">
+					<table class="w-full min-w-[88rem] text-left text-xs">
+						<thead class="text-warm-faint border-b border-edge">
+							<tr>
+								<th class="py-2 px-3 font-medium min-w-[20rem]">Evidence category</th>
+								<th class="py-2 px-3 font-medium">Classification</th>
+								<th class="py-2 px-3 font-medium min-w-[20rem]">Cited evidence</th>
+								<th class="py-2 px-3 font-medium min-w-[20rem]">Consequence</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, row := range data.Test001Posture.Rows {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-words min-w-[20rem]">{ row.EvidenceCategory }</td>
+									<td class="py-2 px-3">
+										<span class="inline-flex text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap">{ opsCivilizationValue(row.Classification, "not projected") }</span>
+									</td>
+									<td class="py-2 px-3 text-warm-faint break-words min-w-[20rem]">{ opsCivilizationValue(row.CurrentCitedEvidence, "not projected") }</td>
+									<td class="py-2 px-3 text-warm-muted break-words min-w-[20rem]">{ opsCivilizationValue(row.CurrentConsequence, "not projected") }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</section>
 		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-github-canonical-source-counts="read-only">
 			<header class="px-4 py-3 border-b border-edge flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
 				<div>

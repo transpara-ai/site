@@ -108,6 +108,35 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 	assertNoMutationControls(t, "/ops", body)
 }
 
+func TestNoDatabaseRoutesExposeReadOnlyGitHubCanonicalTest001Posture(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/github-canonical", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/github-canonical without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		`data-github-canonical-test-001-posture="read-only"`,
+		"Test 001 carried-evidence posture",
+		"YELLOW",
+		"transpara-ai/operation#26",
+		"STILL_UNAVAILABLE_YELLOW_KEEPING",
+		"does not authorize Test 001 GREEN",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/github-canonical without DATABASE_URL body missing %q", want)
+		}
+	}
+	assertNoMutationControls(t, "/ops/github-canonical", body)
+}
+
 func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 	feeder := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "feeder unavailable in test", http.StatusServiceUnavailable)

@@ -20,6 +20,7 @@ type OpsGitHubCanonicalData struct {
 	ProjectionState   string
 	Parent            OpsGitHubCanonicalIssue
 	Progress          OpsGitHubCanonicalProgress
+	Test001Posture    OpsGitHubCanonicalTest001Posture
 	AutonomyFrontier  OpsGitHubCanonicalAutonomyFrontier
 	AuthorityActions  []OpsGitHubCanonicalAuthorityAction
 	SourceSummaries   []OpsGitHubCanonicalSourceSummary
@@ -83,6 +84,30 @@ type OpsGitHubCanonicalParkedGroup struct {
 	Count        int
 	Refs         []string
 	RequiredNext string
+}
+
+type OpsGitHubCanonicalTest001Posture struct {
+	Available                    bool
+	Status                       string
+	State                        string
+	SourceMode                   string
+	SourcePath                   string
+	SourceRef                    string
+	TrackerRef                   string
+	TrackerState                 string
+	ReplacementMonitoringState   string
+	ReplacementMonitoringSummary string
+	Boundary                     string
+	Error                        string
+	ErrorKind                    string
+	Rows                         []OpsGitHubCanonicalTest001PostureRow
+}
+
+type OpsGitHubCanonicalTest001PostureRow struct {
+	EvidenceCategory     string
+	Classification       string
+	CurrentCitedEvidence string
+	CurrentConsequence   string
 }
 
 type OpsGitHubCanonicalAuthorityAction struct {
@@ -194,6 +219,10 @@ const (
 	githubCanonicalScannerArtifactEnv   = "SITE_GITHUB_CANONICAL_SCAN_JSON"
 	githubCanonicalScannerArtifactBound = "Read-only platform scanner JSON artifact; Site reads the configured file only and does not call GitHub, Hive, EventGraph, or runtime services."
 	githubCanonicalScannerArtifactMax   = 1 << 20
+
+	githubCanonicalTest001PostureSourcePath = "test-001-carried-evidence-matrix.md"
+	githubCanonicalTest001PostureSummary    = "No qualifying replacement monitoring surface is proven by scanner projection alone. This Site display keeps unavailable YELLOW categories visible, but it does not close or replace operation#26 unless a later governed operation/docs decision accepts that disposition."
+	githubCanonicalTest001PostureBoundary   = "Read-only Test 001 posture display. This does not authorize Test 001 GREEN, Test 001 closure, incident closure, operation#26 closure, operation#35 closure, runtime execution, Hive wake or action APIs, EventGraph or Work writes, protected execution, deployment, service restart, settings or secrets changes, branch protection changes, residual-risk closure, value allocation, production go-live, public/live-reader evidence claims, or autonomy increase."
 )
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
@@ -256,6 +285,7 @@ func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
 		ProjectionState:   "typed projection-shaped Site contract; static until EventGraph store governance is authorized",
 		Parent:            OpsGitHubCanonicalIssue{Repo: "transpara-ai/docs", Number: 197, Title: "Development Arc issue-source migration parent tracker", URL: "https://github.com/transpara-ai/docs/issues/197"},
 		Progress:          githubCanonicalProgress(),
+		Test001Posture:    githubCanonicalTest001Posture(),
 		AuthorityActions:  githubCanonicalAuthorityActions(),
 		SourceSummaries:   githubCanonicalSourceSummaries(),
 		RepoSummaries:     githubCanonicalRepoSummaries(lanes),
@@ -339,8 +369,32 @@ type opsGitHubCanonicalScannerPayload struct {
 		DeferredIssueCount          int      `json:"deferred_issue_count"`
 		BlockerRefs                 []string `json:"blocker_refs"`
 	} `json:"autonomy_frontier"`
+	Test001Posture   opsGitHubCanonicalScannerTest001Posture    `json:"test_001_posture"`
 	AuthorityActions []opsGitHubCanonicalScannerAuthorityAction `json:"authority_actions"`
 	Errors           []string                                   `json:"errors"`
+}
+
+type opsGitHubCanonicalScannerTest001Posture struct {
+	Available                    bool                                  `json:"available"`
+	Status                       string                                `json:"status"`
+	State                        string                                `json:"state"`
+	SourcePath                   string                                `json:"source_path"`
+	SourceRef                    string                                `json:"source_ref"`
+	TrackerRef                   string                                `json:"tracker_ref"`
+	TrackerState                 string                                `json:"tracker_state"`
+	ReplacementMonitoringState   string                                `json:"replacement_monitoring_state"`
+	ReplacementMonitoringSummary string                                `json:"replacement_monitoring_summary"`
+	Boundary                     string                                `json:"boundary"`
+	Error                        string                                `json:"error"`
+	ErrorKind                    string                                `json:"error_kind"`
+	Rows                         []opsGitHubCanonicalScannerTest001Row `json:"rows"`
+}
+
+type opsGitHubCanonicalScannerTest001Row struct {
+	EvidenceCategory     string `json:"evidence_category"`
+	Classification       string `json:"classification"`
+	CurrentCitedEvidence string `json:"current_cited_evidence"`
+	CurrentConsequence   string `json:"current_consequence"`
 }
 
 type opsGitHubCanonicalScannerAuthorityAction struct {
@@ -384,6 +438,10 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 	displayPath := githubCanonicalScannerArtifactDisplayPath(path)
 	if payloadErrors := sortedNonEmpty(payload.Errors); len(payloadErrors) > 0 {
 		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-error", displayPath, loadedAt, "scanner artifact contains scanner errors")
+		return
+	}
+	if opsGitHubCanonicalScannerPayloadIsPostureOnly(payload) {
+		applyOpsGitHubCanonicalPostureOnlyScannerArtifact(data, payload, displayPath, loadedAt)
 		return
 	}
 	if len(payload.SourceSummaries) == 0 {
@@ -467,9 +525,46 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 		data.Progress.EvidenceRefs = append(data.Progress.EvidenceRefs, fmt.Sprintf("scanner_artifact:%s loaded_at:%s", displayPath, loadedAt))
 	}
 
+	if posture, ok := opsGitHubCanonicalTest001PostureFromScannerArtifact(payload.Test001Posture, displayPath, loadedAt); ok {
+		data.Test001Posture = posture
+	}
+
 	if actions := opsGitHubCanonicalAuthorityActionsFromScannerArtifact(payload.AuthorityActions); len(actions) > 0 {
 		data.AuthorityActions = actions
 	}
+}
+
+func opsGitHubCanonicalScannerPayloadIsPostureOnly(payload opsGitHubCanonicalScannerPayload) bool {
+	return len(payload.SourceSummaries) == 0 &&
+		!opsGitHubCanonicalScannerPayloadHasFrontier(payload) &&
+		opsGitHubCanonicalScannerTest001PostureHasData(payload.Test001Posture) &&
+		len(payload.AuthorityActions) == 0
+}
+
+func applyOpsGitHubCanonicalPostureOnlyScannerArtifact(data *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload, displayPath string, loadedAt string) {
+	if _, _, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-inconsistent", displayPath, loadedAt, "scanner artifact timestamp is invalid")
+		return
+	}
+	if reason := opsGitHubCanonicalScannerTest001PostureMismatch(payload.Test001Posture); reason != "" {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-inconsistent", displayPath, loadedAt, reason)
+		return
+	}
+	posture, ok := opsGitHubCanonicalTest001PostureFromScannerArtifact(payload.Test001Posture, displayPath, loadedAt)
+	if !ok {
+		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-incomplete", displayPath, loadedAt, "scanner artifact missing Test 001 posture")
+		return
+	}
+	data.ScannerArtifact = OpsGitHubCanonicalScannerArtifact{
+		Status:   "artifact-loaded",
+		Path:     displayPath,
+		LoadedAt: loadedAt,
+	}
+	data.ProjectionSource = "platform scanner JSON artifact verified for Test 001 posture only; request render does not call GitHub, Hive, EventGraph, or runtime services"
+	data.ProjectionState = "typed projection-shaped Site contract; Test 001 posture fields are populated from a read-only scanner artifact when configured"
+	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
+	data.Test001Posture = posture
+	data.Progress.EvidenceRefs = append(data.Progress.EvidenceRefs, fmt.Sprintf("scanner_artifact:%s loaded_at:%s test_001_posture_only", displayPath, loadedAt))
 }
 
 func rejectOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, status string, path string, loadedAt string, errorText string) {
@@ -570,6 +665,9 @@ func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerP
 	if total != frontier.TotalIssueCount {
 		return "scanner artifact source summary total does not match frontier total"
 	}
+	if reason := opsGitHubCanonicalScannerTest001PostureMismatch(payload.Test001Posture); reason != "" {
+		return reason
+	}
 	return ""
 }
 
@@ -619,6 +717,129 @@ func opsGitHubCanonicalAuthorityActionsFromScannerArtifact(actions []opsGitHubCa
 		out = append(out, mapped)
 	}
 	return out
+}
+
+func opsGitHubCanonicalScannerTest001PostureHasData(posture opsGitHubCanonicalScannerTest001Posture) bool {
+	return posture.Available ||
+		strings.TrimSpace(posture.Status) != "" ||
+		strings.TrimSpace(posture.State) != "" ||
+		strings.TrimSpace(posture.SourcePath) != "" ||
+		strings.TrimSpace(posture.SourceRef) != "" ||
+		strings.TrimSpace(posture.TrackerRef) != "" ||
+		strings.TrimSpace(posture.TrackerState) != "" ||
+		strings.TrimSpace(posture.ReplacementMonitoringState) != "" ||
+		strings.TrimSpace(posture.ReplacementMonitoringSummary) != "" ||
+		strings.TrimSpace(posture.Boundary) != "" ||
+		strings.TrimSpace(posture.Error) != "" ||
+		strings.TrimSpace(posture.ErrorKind) != "" ||
+		len(posture.Rows) > 0
+}
+
+func opsGitHubCanonicalScannerTest001PostureMismatch(posture opsGitHubCanonicalScannerTest001Posture) string {
+	if !opsGitHubCanonicalScannerTest001PostureHasData(posture) {
+		return ""
+	}
+	if state := strings.TrimSpace(posture.State); state != "" && !strings.EqualFold(state, "YELLOW") {
+		return "scanner artifact Test 001 posture state is outside the current YELLOW display boundary"
+	}
+	if status := strings.TrimSpace(posture.Status); status != "" &&
+		!strings.EqualFold(status, "available") &&
+		!strings.EqualFold(status, "degraded") &&
+		!strings.EqualFold(status, "unavailable") {
+		return "scanner artifact Test 001 posture status is outside the current display-status boundary"
+	}
+	if trackerRef := strings.TrimSpace(posture.TrackerRef); trackerRef != "" && trackerRef != "transpara-ai/operation#26" {
+		return "scanner artifact Test 001 posture tracker ref is outside the current operation#26 boundary"
+	}
+	if trackerState := strings.TrimSpace(posture.TrackerState); trackerState != "" && !strings.EqualFold(trackerState, "open_required") && !strings.EqualFold(trackerState, "open") {
+		return "scanner artifact Test 001 posture tracker state is outside the current open tracker boundary"
+	}
+	if monitoringState := strings.TrimSpace(posture.ReplacementMonitoringState); monitoringState != "" && monitoringState != "not_proven_by_scanner_alone" {
+		return "scanner artifact Test 001 replacement monitoring state is outside the current non-closure boundary"
+	}
+	for _, row := range posture.Rows {
+		if classification := strings.TrimSpace(row.Classification); classification != "" && classification != "STILL_UNAVAILABLE_YELLOW_KEEPING" {
+			return "scanner artifact Test 001 posture row classification is outside the current YELLOW-keeping boundary"
+		}
+	}
+	if posture.Available && opsGitHubCanonicalScannerTest001PostureRowDataCount(posture.Rows) == 0 {
+		return "scanner artifact Test 001 posture is available but has no evidence rows"
+	}
+	return ""
+}
+
+func opsGitHubCanonicalScannerTest001PostureRowDataCount(rows []opsGitHubCanonicalScannerTest001Row) int {
+	count := 0
+	for _, row := range rows {
+		if strings.TrimSpace(row.EvidenceCategory) == "" &&
+			strings.TrimSpace(row.Classification) == "" &&
+			strings.TrimSpace(row.CurrentCitedEvidence) == "" &&
+			strings.TrimSpace(row.CurrentConsequence) == "" {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+func opsGitHubCanonicalTest001PostureFromScannerArtifact(posture opsGitHubCanonicalScannerTest001Posture, displayPath string, loadedAt string) (OpsGitHubCanonicalTest001Posture, bool) {
+	if !opsGitHubCanonicalScannerTest001PostureHasData(posture) {
+		return OpsGitHubCanonicalTest001Posture{}, false
+	}
+	rows := make([]OpsGitHubCanonicalTest001PostureRow, 0, len(posture.Rows))
+	for _, row := range posture.Rows {
+		mapped := OpsGitHubCanonicalTest001PostureRow{
+			EvidenceCategory:     strings.TrimSpace(row.EvidenceCategory),
+			Classification:       strings.TrimSpace(row.Classification),
+			CurrentCitedEvidence: strings.TrimSpace(row.CurrentCitedEvidence),
+			CurrentConsequence:   strings.TrimSpace(row.CurrentConsequence),
+		}
+		if mapped.EvidenceCategory == "" && mapped.Classification == "" && mapped.CurrentCitedEvidence == "" && mapped.CurrentConsequence == "" {
+			continue
+		}
+		rows = append(rows, mapped)
+	}
+	return OpsGitHubCanonicalTest001Posture{
+		Available:                    posture.Available,
+		Status:                       opsGitHubCanonicalTest001Status(posture.Status),
+		State:                        "YELLOW",
+		SourceMode:                   fmt.Sprintf("scanner artifact %s loaded_at %s", displayPath, loadedAt),
+		SourcePath:                   githubCanonicalScannerArtifactDisplayPath(posture.SourcePath),
+		SourceRef:                    strings.TrimSpace(posture.SourceRef),
+		TrackerRef:                   strings.TrimSpace(posture.TrackerRef),
+		TrackerState:                 opsGitHubCanonicalTest001TrackerState(posture.TrackerState),
+		ReplacementMonitoringState:   opsCivilizationValue(strings.TrimSpace(posture.ReplacementMonitoringState), "not_proven_by_scanner_alone"),
+		ReplacementMonitoringSummary: githubCanonicalTest001PostureSummary,
+		Boundary:                     githubCanonicalTest001PostureBoundary,
+		Error:                        strings.TrimSpace(posture.Error),
+		ErrorKind:                    strings.TrimSpace(posture.ErrorKind),
+		Rows:                         rows,
+	}, true
+}
+
+func opsGitHubCanonicalTest001Status(status string) string {
+	status = strings.TrimSpace(status)
+	switch {
+	case status == "" || strings.EqualFold(status, "available"):
+		return "available"
+	case strings.EqualFold(status, "degraded"):
+		return "degraded"
+	case strings.EqualFold(status, "unavailable"):
+		return "unavailable"
+	default:
+		return status
+	}
+}
+
+func opsGitHubCanonicalTest001TrackerState(state string) string {
+	state = strings.TrimSpace(state)
+	if state == "" || strings.EqualFold(state, "open_required") {
+		return "open_required"
+	}
+	if strings.EqualFold(state, "open") {
+		return "open"
+	}
+	return state
 }
 
 func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
@@ -719,6 +940,84 @@ func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
 				"no Hive autonomy increase",
 				"no EventGraph truth claim without governance",
 				"no protected action execution",
+			},
+		},
+	}
+}
+
+func githubCanonicalTest001Posture() OpsGitHubCanonicalTest001Posture {
+	return OpsGitHubCanonicalTest001Posture{
+		Available:                    true,
+		Status:                       "available",
+		State:                        "YELLOW",
+		SourceMode:                   "static fallback from operation carried-evidence matrix; request render is not a live scan",
+		SourcePath:                   githubCanonicalTest001PostureSourcePath,
+		SourceRef:                    "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
+		TrackerRef:                   "transpara-ai/operation#26",
+		TrackerState:                 "open_required",
+		ReplacementMonitoringState:   "not_proven_by_scanner_alone",
+		ReplacementMonitoringSummary: githubCanonicalTest001PostureSummary,
+		Boundary:                     githubCanonicalTest001PostureBoundary,
+		Rows: []OpsGitHubCanonicalTest001PostureRow{
+			{
+				EvidenceCategory:     "Exact live evidence for the incident scenario.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "The tabletop record is local/pre-live and closed with YELLOW: docs/incidents/001-cross-repo-runtime-doctrine-drift-tabletop.md.",
+				CurrentConsequence:   "No exact live incident evidence is cited. Test 001 remains YELLOW; operation#26 remains open.",
+			},
+			{
+				EvidenceCategory:     "Active production roster evidence and duty assignment evidence beyond PRE_LIVE_SINGLE_PRINCIPAL.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "pre-live-roster-source.md and production-on-call-model.md.",
+				CurrentConsequence:   "Pre-live ownership is recorded, but active production roster and duty assignment evidence is not.",
+			},
+			{
+				EvidenceCategory:     "Actual Hive runtime/deployment identifiers, runtime event IDs, operator projection responses, operator approvals, or production observations.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "hive-runtime-deployment-evidence.md and prior accepted missing-runtime finding transpara-ai/hive#164.",
+				CurrentConsequence:   "A prior missing-runtime finding is cited, but no actual Hive runtime/deployment evidence is cited.",
+			},
+			{
+				EvidenceCategory:     "Actual EventGraph incident-dispositive records and chain verification.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "eventgraph-incident-record-semantics.md and prior accepted missing-evidence finding transpara-ai/eventgraph#54.",
+				CurrentConsequence:   "A prior missing-evidence finding is cited, but no actual incident-dispositive EventGraph records or chain verification are cited.",
+			},
+			{
+				EvidenceCategory:     "Real incident use of the work follow-up slice.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "work-incident-follow-up-schema.md, transpara-ai/work#51, and transpara-ai/work#52 closure evidence.",
+				CurrentConsequence:   "The schema and follow-up routing evidence exist, but no later real-incident work execution is cited.",
+			},
+			{
+				EvidenceCategory:     "Deployed Site routes, live visitor evidence, live feeder response, public correction proof, or production-backed telemetry.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "user-facing-correction-standards.md, user-facing-surface-inventory.md, transpara-ai/site#85, and selected local render evidence transpara-ai/site#86.",
+				CurrentConsequence:   "Source-defined and selected local-render evidence exists, but deployed/live/public-correction evidence is not cited.",
+			},
+			{
+				EvidenceCategory:     "Deployed Civilization Wiki pages, live-reader evidence, public correction proof, stale-claim adjudication, doctrine acceptance, runtime truth, or EventGraph evidence.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "user-facing-surface-inventory.md, transpara-ai/wiki#17, and selected local browser-render evidence transpara-ai/wiki#19.",
+				CurrentConsequence:   "Source-defined and selected local browser-render evidence exists, but deployed/live-reader/public-correction/stale-claim evidence is not cited.",
+			},
+			{
+				EvidenceCategory:     "OpenBrain memory evidence beyond handoff continuity.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "openbrain-memory-evidence-packages.md and inc-001-openbrain-pr19-merge-memory-package-2026-06-18.md.",
+				CurrentConsequence:   "Handoff continuity is cited, but no memory package proves live evidence, runtime truth, rendered output, public correction, EventGraph records, human authorization, or incident closure.",
+			},
+			{
+				EvidenceCategory:     "Live conflict-specific docs authority refresh with action-specific human authorization evidence where required.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "canonical-authority-map.md and human-authorization-evidence.md.",
+				CurrentConsequence:   "Generic authority and authorization standards exist, but no live conflict-specific authority refresh or action-specific authorization artifact is cited.",
+			},
+			{
+				EvidenceCategory:     "Source-repo adoption of runtime-facing contracts outside accepted source-repo slices.",
+				Classification:       "STILL_UNAVAILABLE_YELLOW_KEEPING",
+				CurrentCitedEvidence: "Accepted slices cited in the tabletop record, including transpara-ai/work#51, transpara-ai/eventgraph#53, transpara-ai/hive#164, transpara-ai/site#85, and transpara-ai/wiki#17.",
+				CurrentConsequence:   "Accepted slices are evidence for their bounded scopes only; broader runtime-facing adoption is not cited.",
 			},
 		},
 	}
@@ -1055,7 +1354,7 @@ func githubCanonicalStateClass(state string) string {
 		return "border-emerald-400/40 text-emerald-300 bg-emerald-400/10"
 	case githubCanonicalStateReady:
 		return "border-brand/40 text-brand bg-brand/10"
-	case githubCanonicalStateNeedsHumanScope, "gate.partial":
+	case githubCanonicalStateNeedsHumanScope, "gate.partial", "YELLOW":
 		return "border-amber-300/40 text-amber-300 bg-amber-300/10"
 	case githubCanonicalStateProtectedAction, "closeout.blocked":
 		return "border-red-300/40 text-red-300 bg-red-300/10"
