@@ -98,6 +98,10 @@ type OpsCivilizationIssueScanKanbanCard struct {
 	CanonicalTaskID   string
 	TaskID            string
 	CurrentState      string
+	ProjectionSource  string
+	Readiness         string
+	PRReadyWhen       string
+	Labels            []string
 	CompletionGate    string
 	AuthorityBoundary string
 	TargetIssue       OpsCivilizationIssueRef
@@ -120,11 +124,8 @@ func opsCivilizationIssueScanKanban(projection *OpsCivilizationAssemblyProjectio
 		}
 	}
 	input := projection.IssueScanProjection
-	if len(input.Runs) == 0 && len(input.Stages) == 0 && len(input.Blockers) == 0 && len(input.Lineage) == 0 {
-		return OpsCivilizationIssueScanKanban{
-			Status:  "not projected",
-			Summary: "No typed issue-scan projection records are present.",
-		}
+	if !issueScanProjectionHasRecords(input) {
+		return issueScanKanbanFromIssueIntakeFallback(projection)
 	}
 
 	runsByID := map[string]OpsCivilizationIssueScanRunProjected{}
@@ -215,6 +216,37 @@ func opsCivilizationIssueScanKanban(projection *OpsCivilizationAssemblyProjectio
 		cards = append(cards, card)
 	}
 
+	return OpsCivilizationIssueScanKanban{
+		Status:  opsCivilizationFieldAvailable,
+		Summary: fmt.Sprintf("%d run(s), %d stage(s), %d blocker(s), %d lineage record(s) projected.", len(input.Runs), len(input.Stages), len(input.Blockers), len(input.Lineage)),
+		Columns: issueScanKanbanColumns(cards),
+	}
+}
+
+func issueScanProjectionHasRecords(input OpsCivilizationIssueScanProjection) bool {
+	return len(input.Runs) > 0 || len(input.Stages) > 0 || len(input.Blockers) > 0 || len(input.Lineage) > 0
+}
+
+func issueScanKanbanFromIssueIntakeFallback(projection *OpsCivilizationAssemblyProjection) OpsCivilizationIssueScanKanban {
+	issues := normalizedIssueIntakeIssues(projection.IssueIntakeProjection.Issues)
+	if len(issues) == 0 {
+		return OpsCivilizationIssueScanKanban{
+			Status:  "not projected",
+			Summary: "No typed issue-scan projection records are present.",
+		}
+	}
+	cards := make([]OpsCivilizationIssueScanKanbanCard, 0, len(issues))
+	for _, issue := range issues {
+		cards = append(cards, issueScanCardFromIssueIntakeFallback(issue))
+	}
+	return OpsCivilizationIssueScanKanban{
+		Status:  "intake fallback",
+		Summary: fmt.Sprintf("No typed issue-scan projection records are present; rendering %d scanner issue-intake fallback card(s). Fallback cards are not runtime execution or agent-touch evidence.", len(cards)),
+		Columns: issueScanKanbanColumns(cards),
+	}
+}
+
+func issueScanKanbanColumns(cards []OpsCivilizationIssueScanKanbanCard) []OpsCivilizationIssueScanKanbanColumn {
 	columnsByState := map[string][]OpsCivilizationIssueScanKanbanCard{}
 	for _, card := range cards {
 		state := issueScanColumnState(card.CurrentState, card.Blockers)
@@ -250,12 +282,147 @@ func opsCivilizationIssueScanKanban(projection *OpsCivilizationAssemblyProjectio
 			Cards: columnCards,
 		})
 	}
+	return columns
+}
 
-	return OpsCivilizationIssueScanKanban{
-		Status:  opsCivilizationFieldAvailable,
-		Summary: fmt.Sprintf("%d run(s), %d stage(s), %d blocker(s), %d lineage record(s) projected.", len(input.Runs), len(input.Stages), len(input.Blockers), len(input.Lineage)),
-		Columns: columns,
+func issueScanCardFromIssueIntakeFallback(issue OpsCivilizationIssueIntakeProjected) OpsCivilizationIssueScanKanbanCard {
+	labels := sortedUniqueNonEmpty(issue.Labels)
+	readiness := issueScanFallbackReadiness(issue)
+	sourceRefs := sortedUniqueNonEmpty(append(append([]string{}, issue.SourceRefs...), issue.URL))
+	selectedIssue := OpsCivilizationIssueRef{
+		Repo:        issue.Repo,
+		Number:      issue.Number,
+		URL:         issue.URL,
+		Title:       issue.Title,
+		State:       issue.State,
+		StateReason: issue.StateReason,
+		Labels:      labels,
 	}
+	return OpsCivilizationIssueScanKanbanCard{
+		RunID:             issueScanFallbackRunID(issue),
+		StageID:           "issue_intake_fallback",
+		CurrentState:      issueScanFallbackState(issue),
+		ProjectionSource:  "scanner issue-intake fallback; not runtime execution or agent-touch evidence",
+		Readiness:         readiness,
+		PRReadyWhen:       issue.PRReadyWhen,
+		Labels:            labels,
+		CompletionGate:    opsCivilizationValue(issue.PRReadyWhen, opsCivilizationValue(readiness, "read-only scanner issue-intake fallback")),
+		AuthorityBoundary: opsCivilizationValue(issue.AuthorityBoundary, "read-only scanner issue record; no runtime, protected-action, or merge authority"),
+		TargetIssue:       selectedIssue,
+		SelectedIssue:     selectedIssue,
+		Blockers:          issueScanFallbackBlockers(issue, sourceRefs),
+		SourceRefs:        sourceRefs,
+	}
+}
+
+func issueScanFallbackRunID(issue OpsCivilizationIssueIntakeProjected) string {
+	id := issueIntakeGroupID("intake", issue.Repo, fmt.Sprintf("%d", issue.Number), issue.Title)
+	if id == "" {
+		return "intake-issue"
+	}
+	return id
+}
+
+func issueScanFallbackReadiness(issue OpsCivilizationIssueIntakeProjected) string {
+	if strings.TrimSpace(issue.Readiness) != "" {
+		return strings.TrimSpace(issue.Readiness)
+	}
+	return strings.Join(sortedUniqueNonEmpty(issue.ReadinessStates), ", ")
+}
+
+func issueScanFallbackState(issue OpsCivilizationIssueIntakeProjected) string {
+	if issueScanFallbackNeedsHumanScope(issue) || issueIntakeHasProtectedActionRisk(issue) {
+		return "human_action"
+	}
+	if issueScanFallbackDeferredOrStale(issue) {
+		return "parked"
+	}
+	if issueScanFallbackPRReady(issue) {
+		return "ready_for_human"
+	}
+	return "projection_only"
+}
+
+func issueScanFallbackBlockers(issue OpsCivilizationIssueIntakeProjected, sourceRefs []string) []OpsCivilizationIssueScanBlockerProjected {
+	blockers := []OpsCivilizationIssueScanBlockerProjected{}
+	reason := issueScanFallbackReason(issue)
+	if issueIntakeHasProtectedActionRisk(issue) {
+		blockers = append(blockers, OpsCivilizationIssueScanBlockerProjected{
+			RunID:          issueScanFallbackRunID(issue),
+			StageID:        "issue_intake_fallback",
+			BlockerType:    "protected_action",
+			Reason:         reason,
+			RequiredAction: "separate authority scope is required before protected work can proceed",
+			SourceRefs:     sourceRefs,
+		})
+	}
+	if issueScanFallbackNeedsHumanScope(issue) {
+		blockers = append(blockers, OpsCivilizationIssueScanBlockerProjected{
+			RunID:          issueScanFallbackRunID(issue),
+			StageID:        "issue_intake_fallback",
+			BlockerType:    "needs_human_scope",
+			Reason:         reason,
+			RequiredAction: "human scope decision is required before runtime or PR work continues",
+			SourceRefs:     sourceRefs,
+		})
+	}
+	if issueScanFallbackDeferredOrStale(issue) {
+		blockers = append(blockers, OpsCivilizationIssueScanBlockerProjected{
+			RunID:          issueScanFallbackRunID(issue),
+			StageID:        "issue_intake_fallback",
+			BlockerType:    "parked_issue_intake",
+			Reason:         reason,
+			RequiredAction: "issue remains parked in scanner intake; do not queue runtime work from this fallback card",
+			SourceRefs:     sourceRefs,
+		})
+	}
+	return blockers
+}
+
+func issueScanFallbackReason(issue OpsCivilizationIssueIntakeProjected) string {
+	return opsCivilizationValue(issueScanFallbackReadiness(issue), opsCivilizationValue(issue.StateReason, issue.AuthorityBoundary))
+}
+
+func issueScanFallbackNeedsHumanScope(issue OpsCivilizationIssueIntakeProjected) bool {
+	if issueIntakeHasLabel(issue.Labels, "cc:needs-human-scope") {
+		return true
+	}
+	text := issueScanFallbackText(issue)
+	return strings.Contains(text, "needs-human-scope") || strings.Contains(text, "human scope")
+}
+
+func issueScanFallbackDeferredOrStale(issue OpsCivilizationIssueIntakeProjected) bool {
+	if issueIntakeHasLabel(issue.Labels, "cc:pr-deferred") {
+		return true
+	}
+	text := issueScanFallbackText(issue)
+	return strings.Contains(text, "pr-deferred") ||
+		strings.Contains(text, "deferred") ||
+		strings.Contains(text, "stale") ||
+		strings.Contains(text, "blocked")
+}
+
+func issueScanFallbackPRReady(issue OpsCivilizationIssueIntakeProjected) bool {
+	if issueIntakeHasLabel(issue.Labels, "cc:pr-ready") {
+		return true
+	}
+	readiness := strings.ToLower(strings.TrimSpace(issue.Readiness))
+	return strings.HasPrefix(readiness, "ready:") || strings.Contains(readiness, "pr-ready now")
+}
+
+func issueScanFallbackText(issue OpsCivilizationIssueIntakeProjected) string {
+	parts := []string{
+		issue.Readiness,
+		issue.PRReadyWhen,
+		issue.State,
+		issue.StateReason,
+		issue.RiskClass,
+		issue.AuthorityBoundary,
+	}
+	parts = append(parts, issue.ReadinessStates...)
+	parts = append(parts, issue.RiskClasses...)
+	parts = append(parts, issue.Labels...)
+	return strings.ToLower(strings.Join(parts, " "))
 }
 
 func issueScanCardFromStage(run OpsCivilizationIssueScanRunProjected, stage OpsCivilizationIssueScanStageProjected, blockersByRunStage map[string][]OpsCivilizationIssueScanBlockerProjected, lineageByRunStage map[string]OpsCivilizationIssueScanLineageProjected) OpsCivilizationIssueScanKanbanCard {
@@ -279,6 +446,8 @@ func issueScanCardFromStage(run OpsCivilizationIssueScanRunProjected, stage OpsC
 		CanonicalTaskID:   stage.CanonicalTaskID,
 		TaskID:            stage.TaskID,
 		CurrentState:      issueScanColumnState(stage.CurrentState, blockers),
+		ProjectionSource:  "typed issue-scan projection",
+		Labels:            sortedNonEmpty(run.SelectedIssue.Labels),
 		CompletionGate:    stage.CompletionGate,
 		AuthorityBoundary: stage.AuthorityBoundary,
 		TargetIssue:       run.TargetIssue,
@@ -302,6 +471,8 @@ func issueScanCardFromRun(run OpsCivilizationIssueScanRunProjected, blockersByRu
 		FactoryOrderID:   run.FactoryOrderID,
 		LifecycleVersion: run.LifecycleVersion,
 		CurrentState:     issueScanColumnState(run.State, blockers),
+		ProjectionSource: "typed issue-scan projection",
+		Labels:           sortedNonEmpty(run.SelectedIssue.Labels),
 		TargetIssue:      run.TargetIssue,
 		SelectedIssue:    run.SelectedIssue,
 		CandidateIssues:  sortedIssueRefs(run.CandidateIssues),
