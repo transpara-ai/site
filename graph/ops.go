@@ -2530,6 +2530,10 @@ func (h *Handlers) fetchOpsHive(r *http.Request) *OpsHiveData {
 		GeneratedAt: time.Now().UTC().Format("2006-01-02 15:04:05"),
 	}
 	applyHiveOperatorProjection(r, data)
+	if h == nil || h.store == nil {
+		data.Error = "Hive local store is unavailable in read-only no-database mode."
+		return data
+	}
 
 	entries, _ := h.store.ListHiveDiagnostics(ctx, maxHiveDiagEntries)
 	if len(entries) == 0 {

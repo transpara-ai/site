@@ -108,6 +108,90 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 	assertNoMutationControls(t, "/ops", body)
 }
 
+func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
+	feeder := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "feeder unavailable in test", http.StatusServiceUnavailable)
+	}))
+	defer feeder.Close()
+	t.Setenv("WORK_API_BASE_URL", feeder.URL)
+	t.Setenv("HIVE_OPS_API_BASE_URL", feeder.URL)
+
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	tests := []struct {
+		path string
+		want []string
+	}{
+		{
+			path: "/ops/telemetry",
+			want: []string{
+				"Telemetry",
+				"Telemetry summary",
+				"work telemetry returned 503 Service Unavailable",
+			},
+		},
+		{
+			path: "/ops/observatory",
+			want: []string{
+				"Observatory",
+				"Civilization vitals",
+				"Vitals unavailable",
+				"feeder returned 503 Service Unavailable",
+				"read-only projection",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "http://site.test"+tt.path, nil)
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusOK {
+				t.Fatalf("GET %s without DATABASE_URL status = %d, want 200; body: %s", tt.path, w.Code, w.Body.String())
+			}
+			body := w.Body.String()
+			for _, want := range tt.want {
+				if !strings.Contains(body, want) {
+					t.Fatalf("GET %s without DATABASE_URL body missing %q", tt.path, want)
+				}
+			}
+			assertNoMutationControls(t, tt.path, body)
+		})
+	}
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyObservatoryEvents(t *testing.T) {
+	feeder := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "feeder unavailable in test", http.StatusServiceUnavailable)
+	}))
+	defer feeder.Close()
+	t.Setenv("WORK_API_BASE_URL", feeder.URL)
+
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home fallback"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/observatory/events", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("GET /ops/observatory/events without DATABASE_URL status = %d, want 502; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "home fallback") {
+		t.Fatal("GET /ops/observatory/events without DATABASE_URL fell through to home fallback")
+	}
+	if !strings.Contains(body, "event pulse feeder returned 503 Service Unavailable") {
+		t.Fatalf("GET /ops/observatory/events without DATABASE_URL body missing feeder failure; body: %s", body)
+	}
+}
+
 func TestNoDatabaseCivilizationRejectsMutationMethod(t *testing.T) {
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
@@ -128,11 +212,15 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops", nil)
-	mux.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("POST /ops without DATABASE_URL status = %d, want 405; body: %s", w.Code, w.Body.String())
+	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("POST %s without DATABASE_URL status = %d, want 405; body: %s", path, w.Code, w.Body.String())
+			}
+		})
 	}
 }
 
@@ -142,7 +230,7 @@ func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/civilization"} {
+	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
