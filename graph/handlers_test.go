@@ -462,13 +462,15 @@ func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T)
 	for _, want := range []string{
 		"artifact-loaded",
 		"loaded_at 2026-06-26T16:10:00Z",
-		"platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services",
+		"platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services",
+		"Configured scanner artifact reports 3 open intake issues, 0 PR-ready issues, 0 candidate bundles, and 0 candidate singleton PRs",
 		"park-autonomy-no-pr-ready-work",
 		"live:transpara-ai/docs labels=cc:intake",
 		"read-only scanner evidence projection",
 		"Scanner artifact Gate S and Test 001 residual disposition",
 		"Human-scoped docs/process disposition from scanner artifact.",
 		"no docs#172 closure by inference",
+		"transpara-ai/operation#35",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/github-canonical artifact body does not contain %q", want)

@@ -413,7 +413,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 	if snapshotAt := opsGitHubCanonicalScannerPayloadSnapshotAt(payload); snapshotAt != "" {
 		data.ScannerSnapshotAt = snapshotAt
 	}
-	data.ProjectionSource = "platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services"
+	data.ProjectionSource = "platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services"
 	data.ProjectionState = "typed projection-shaped Site contract; scanner frontier fields are populated from a read-only platform scanner artifact when configured"
 	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
 
@@ -543,41 +543,12 @@ func opsGitHubCanonicalScannerPayloadHasFrontier(payload opsGitHubCanonicalScann
 		len(frontier.BlockerRefs) > 0
 }
 
-func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload) string {
+func opsGitHubCanonicalScannerPayloadMismatch(_ *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload) string {
 	frontier := payload.AutonomyFrontier
-	static := data.AutonomyFrontier
-	if strings.TrimSpace(frontier.Recommendation) != static.Recommendation {
-		return "scanner artifact frontier does not match static projection: recommendation"
-	}
-	checks := []struct {
-		label string
-		got   int
-		want  int
-	}{
-		{"total_issue_count", frontier.TotalIssueCount, static.TotalIssueCount},
-		{"candidate_bundle_count", frontier.CandidateBundleCount, static.CandidateBundleCount},
-		{"candidate_singleton_count", frontier.CandidateSingletonCount, static.CandidateSingletonCount},
-		{"review_group_count", frontier.ReviewGroupCount, static.ReviewGroupCount},
-		{"singleton_count", frontier.SingletonCount, static.SingletonCount},
-		{"issue_shape_warning_count", frontier.IssueShapeWarningCount, static.IssueShapeWarningCount},
-		{"pr_ready_issue_count", frontier.PRReadyIssueCount, static.PRReadyIssueCount},
-		{"autonomous_pr_ready_issue_count", frontier.AutonomousPRReadyIssueCount, static.AutonomousPRReadyIssueCount},
-		{"needs_human_scope_issue_count", frontier.NeedsHumanScopeIssueCount, static.NeedsHumanScopeIssueCount},
-		{"protected_action_issue_count", frontier.ProtectedActionIssueCount, static.ProtectedActionIssueCount},
-		{"deferred_issue_count", frontier.DeferredIssueCount, static.DeferredIssueCount},
-	}
-	for _, check := range checks {
-		if check.got != check.want {
-			return "scanner artifact frontier does not match static projection: " + check.label
-		}
-	}
-	if strings.Join(sortedNonEmpty(frontier.BlockerRefs), "\n") != strings.Join(sortedNonEmpty(static.BlockerRefs), "\n") {
-		return "scanner artifact frontier does not match static projection: blocker_refs"
-	}
 	if snapshotAt, ok, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
 		return "scanner artifact timestamp is invalid"
-	} else if ok && snapshotAt != data.ScannerSnapshotAt {
-		return "scanner artifact timestamp does not match static projection"
+	} else if ok && snapshotAt == "" {
+		return "scanner artifact timestamp is empty"
 	}
 	total := 0
 	gotByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
@@ -603,19 +574,6 @@ func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payl
 	}
 	if total != frontier.TotalIssueCount {
 		return "scanner artifact source summary total does not match frontier total"
-	}
-	wantByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
-	for _, summary := range data.SourceSummaries {
-		wantByRepo[summary.Repo] = summary
-	}
-	if len(gotByRepo) != len(wantByRepo) {
-		return "scanner artifact source summaries do not match static projection"
-	}
-	for repo, want := range wantByRepo {
-		got := gotByRepo[repo]
-		if got.Source != want.Source || got.Kind != want.Kind || got.IssueCount != want.IssueCount || strings.Join(got.Labels, "\n") != strings.Join(want.Labels, "\n") {
-			return "scanner artifact source summaries do not match static projection"
-		}
 	}
 	return ""
 }

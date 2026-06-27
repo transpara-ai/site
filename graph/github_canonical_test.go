@@ -87,22 +87,22 @@ func TestOpsGitHubCanonicalConsumesScannerArtifact(t *testing.T) {
 	if data.ScannerSnapshotAt != githubCanonicalScannerSnapshotAt {
 		t.Fatalf("ScannerSnapshotAt = %q, want static scanner timestamp without artifact timestamp", data.ScannerSnapshotAt)
 	}
-	if data.ProjectionSource != "platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services" {
+	if data.ProjectionSource != "platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services" {
 		t.Fatalf("ProjectionSource = %q", data.ProjectionSource)
 	}
-	if !strings.Contains(data.Progress.Summary, "Configured scanner artifact reports 14 open intake issues, 0 PR-ready issues, 0 candidate bundles, and 0 candidate singleton PRs") {
+	if !strings.Contains(data.Progress.Summary, "Configured scanner artifact reports 3 open intake issues, 0 PR-ready issues, 0 candidate bundles, and 0 candidate singleton PRs") {
 		t.Fatalf("Progress summary does not reflect artifact counts: %q", data.Progress.Summary)
 	}
 	if !githubCanonicalContainsString(data.Boundaries, githubCanonicalScannerArtifactBound) {
 		t.Fatalf("scanner artifact boundary missing: %+v", data.Boundaries)
 	}
-	if len(data.SourceSummaries) != 10 || data.SourceSummaries[0].Repo != "transpara-ai/docs" || data.SourceSummaries[0].IssueCount != 7 {
+	if len(data.SourceSummaries) != 10 || data.SourceSummaries[0].Repo != "transpara-ai/docs" || data.SourceSummaries[0].IssueCount != 1 {
 		t.Fatalf("SourceSummaries = %+v", data.SourceSummaries)
 	}
-	if data.AutonomyFrontier.Recommendation != "park-autonomy-no-pr-ready-work" || data.AutonomyFrontier.CandidateSingletonCount != 0 || data.AutonomyFrontier.PRReadyIssueCount != 0 || data.AutonomyFrontier.ProtectedActionIssueCount != 14 {
+	if data.AutonomyFrontier.Recommendation != "park-autonomy-no-pr-ready-work" || data.AutonomyFrontier.CandidateSingletonCount != 0 || data.AutonomyFrontier.PRReadyIssueCount != 0 || data.AutonomyFrontier.ProtectedActionIssueCount != 3 {
 		t.Fatalf("AutonomyFrontier not artifact-derived: %+v", data.AutonomyFrontier)
 	}
-	if data.Progress.Recommendation != "park-autonomy-no-pr-ready-work" || data.Progress.ParkedOpenIssueCount != 14 || data.Progress.CandidateSingletonCount != 0 {
+	if data.Progress.Recommendation != "park-autonomy-no-pr-ready-work" || data.Progress.ParkedOpenIssueCount != 3 || data.Progress.CandidateSingletonCount != 0 {
 		t.Fatalf("Progress not artifact-derived: %+v", data.Progress)
 	}
 	if len(data.AuthorityActions) != 6 || data.AuthorityActions[0].Label != "Production EventGraph and runtime wiring scope" {
@@ -166,7 +166,7 @@ func TestOpsGitHubCanonicalScannerArtifactKeepsStaticAuthorityActionsWhenEmpty(t
 func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing.T) {
 	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), `{
 		"source_summaries": [
-			{"source":"live:transpara-ai/docs labels=cc:intake","kind":"live","repo":"transpara-ai/docs","labels":["cc:intake"],"issue_count":1}
+			{"source":"live:transpara-ai/docs labels=cc:intake","kind":"live","repo":"transpara-ai/docs","labels":["cc:intake"],"issue_count":2}
 		],
 		"autonomy_frontier": {
 			"recommendation":"candidate-pr-work-available",
@@ -200,8 +200,8 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsInconsistentFrontier(t *testing
 	if data.ScannerArtifact.Status != "artifact-inconsistent" {
 		t.Fatalf("ScannerArtifact = %+v", data.ScannerArtifact)
 	}
-	if !strings.Contains(data.ScannerArtifact.Error, "recommendation") {
-		t.Fatalf("ScannerArtifact error = %+v, want recommendation mismatch", data.ScannerArtifact)
+	if !strings.Contains(data.ScannerArtifact.Error, "source summary total") {
+		t.Fatalf("ScannerArtifact error = %+v, want source summary total mismatch", data.ScannerArtifact)
 	}
 	if data.ProjectionSource != "static fallback; configured scanner artifact was rejected" {
 		t.Fatalf("ProjectionSource = %q", data.ProjectionSource)
@@ -233,7 +233,7 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsPayloadErrors(t *testing.T) {
 }
 
 func TestOpsGitHubCanonicalScannerArtifactRejectsSourceErrors(t *testing.T) {
-	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"issue_count":7}`, `"issue_count":7,"error":"source failed"}`, 1)
+	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"issue_count":1}`, `"issue_count":1,"error":"source failed"}`, 1)
 	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), body)
 	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
 
@@ -246,16 +246,51 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsSourceErrors(t *testing.T) {
 }
 
 func TestOpsGitHubCanonicalScannerArtifactRejectsSourceCountDrift(t *testing.T) {
-	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"issue_count":7}`, `"issue_count":6}`, 1)
-	body = strings.Replace(body, `"issue_count":2}`, `"issue_count":3}`, 1)
+	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"issue_count":1}`, `"issue_count":2}`, 1)
 	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), body)
 	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
 
-	if data.ScannerArtifact.Status != "artifact-inconsistent" || data.ScannerArtifact.Error != "scanner artifact source summaries do not match static projection" {
+	if data.ScannerArtifact.Status != "artifact-inconsistent" || data.ScannerArtifact.Error != "scanner artifact source summary total does not match frontier total" {
 		t.Fatalf("ScannerArtifact = %+v", data.ScannerArtifact)
 	}
 	if data.SourceSummaries[0].IssueCount != 7 || data.AutonomyFrontier.TotalIssueCount != 14 {
 		t.Fatalf("source-drift artifact changed static projection: sources=%+v frontier=%+v", data.SourceSummaries, data.AutonomyFrontier)
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactRejectsInvalidSourceSummaries(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "negative issue count",
+			body: strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"issue_count":1}`, `"issue_count":-1}`, 1),
+			want: "negative issue count",
+		},
+		{
+			name: "duplicate repo",
+			body: strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"repo":"transpara-ai/eventgraph"`, `"repo":"transpara-ai/docs"`, 1),
+			want: "duplicate repo",
+		},
+		{
+			name: "empty repo",
+			body: strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"repo":"transpara-ai/docs"`, `"repo":""`, 1),
+			want: "empty repo",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), tc.body)
+			data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
+
+			if data.ScannerArtifact.Status != "artifact-inconsistent" || !strings.Contains(data.ScannerArtifact.Error, tc.want) {
+				t.Fatalf("ScannerArtifact = %+v, want %q", data.ScannerArtifact, tc.want)
+			}
+			if data.AutonomyFrontier.TotalIssueCount != 14 || data.Progress.ParkedOpenIssueCount != 14 {
+				t.Fatalf("invalid source artifact changed static projection: frontier=%+v progress=%+v", data.AutonomyFrontier, data.Progress)
+			}
+		})
 	}
 }
 
@@ -387,12 +422,12 @@ func writeGitHubCanonicalScannerArtifact(t *testing.T, loadedAt time.Time, body 
 func matchingGitHubCanonicalScannerArtifactJSON() string {
 	return `{
 		"source_summaries": [
-			{"source":"live:transpara-ai/docs labels=cc:intake","kind":"live","repo":"transpara-ai/docs","labels":["cc:intake"],"issue_count":7},
-			{"source":"live:transpara-ai/eventgraph labels=cc:intake","kind":"live","repo":"transpara-ai/eventgraph","labels":["cc:intake"],"issue_count":2},
-			{"source":"live:transpara-ai/work labels=cc:intake","kind":"live","repo":"transpara-ai/work","labels":["cc:intake"],"issue_count":2},
+			{"source":"live:transpara-ai/docs labels=cc:intake","kind":"live","repo":"transpara-ai/docs","labels":["cc:intake"],"issue_count":1},
+			{"source":"live:transpara-ai/eventgraph labels=cc:intake","kind":"live","repo":"transpara-ai/eventgraph","labels":["cc:intake"],"issue_count":0},
+			{"source":"live:transpara-ai/work labels=cc:intake","kind":"live","repo":"transpara-ai/work","labels":["cc:intake"],"issue_count":0},
 			{"source":"live:transpara-ai/site labels=cc:intake","kind":"live","repo":"transpara-ai/site","labels":["cc:intake"],"issue_count":0},
 			{"source":"live:transpara-ai/wiki labels=cc:intake","kind":"live","repo":"transpara-ai/wiki","labels":["cc:intake"],"issue_count":0},
-			{"source":"live:transpara-ai/hive labels=cc:intake","kind":"live","repo":"transpara-ai/hive","labels":["cc:intake"],"issue_count":1},
+			{"source":"live:transpara-ai/hive labels=cc:intake","kind":"live","repo":"transpara-ai/hive","labels":["cc:intake"],"issue_count":0},
 			{"source":"live:transpara-ai/agent labels=cc:intake","kind":"live","repo":"transpara-ai/agent","labels":["cc:intake"],"issue_count":0},
 			{"source":"live:transpara-ai/platform labels=cc:intake","kind":"live","repo":"transpara-ai/platform","labels":["cc:intake"],"issue_count":0},
 			{"source":"live:transpara-ai/.github labels=cc:intake","kind":"live","repo":"transpara-ai/.github","labels":["cc:intake"],"issue_count":0},
@@ -400,18 +435,18 @@ func matchingGitHubCanonicalScannerArtifactJSON() string {
 		],
 		"autonomy_frontier": {
 			"recommendation":"park-autonomy-no-pr-ready-work",
-			"total_issue_count":14,
+			"total_issue_count":3,
 			"candidate_bundle_count":0,
 			"candidate_singleton_count":0,
 			"review_group_count":0,
-			"singleton_count":14,
+			"singleton_count":3,
 			"issue_shape_warning_count":0,
 			"pr_ready_issue_count":0,
 			"autonomous_pr_ready_issue_count":0,
-			"needs_human_scope_issue_count":13,
-			"protected_action_issue_count":14,
-			"deferred_issue_count":13,
-			"blocker_refs":["transpara-ai/docs#172","transpara-ai/docs#193","transpara-ai/docs#197","transpara-ai/docs#200","transpara-ai/docs#201","transpara-ai/docs#202","transpara-ai/docs#203","transpara-ai/eventgraph#59","transpara-ai/eventgraph#61","transpara-ai/hive#204","transpara-ai/operation#26","transpara-ai/operation#35","transpara-ai/work#59","transpara-ai/work#64"]
+			"needs_human_scope_issue_count":3,
+			"protected_action_issue_count":3,
+			"deferred_issue_count":3,
+			"blocker_refs":["transpara-ai/docs#172","transpara-ai/operation#26","transpara-ai/operation#35"]
 		}
 	}`
 }
