@@ -25,6 +25,7 @@ index, not an authority packet and not implementation evidence.
 
 | Reference | Role in the design update | Boundary |
 | --- | --- | --- |
+| `transpara-ai/site#174` | Source-of-intent issue for the Site-owned MFOF design handoff. | Intake and scope evidence only; does not authorize implementation or runtime action. |
 | `transpara-ai/docs:dark-factory/v4.0/README.md` | Accepted canonical Dark Factory baseline. | Canonical arc source; does not itself authorize MFOF implementation. |
 | `transpara-ai/docs:dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md` | Accepted integration arc and governed event/gate record. | Source for current arc framing; not a newer baseline. |
 | `transpara-ai/docs:designs/telemetry-mission-control-design-v0.4.1.md` | Historical telemetry dashboard and mission-control visualization precedent. | Visualization precedent only; stale repo/process assumptions are not carried forward. |

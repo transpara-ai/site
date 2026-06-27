@@ -21,10 +21,10 @@ authority: design-only; no runtime, deploy, Test 001 GREEN, autonomy increase, o
 ## Purpose
 
 This document defines the minimum functioning operational front end for the
-Civilization operator surfaces in `transpara-ai/site`. It incorporates the
-2026-06-27 development-arc sweep and the telemetry mission-control `0.4.1`
-findings as visualization precedent, while preserving `dark-factory/v4.0` as
-the current canonical arc.
+Civilization operator surfaces in `transpara-ai/site`. It records the source
+reconciliation requested by `transpara-ai/site#174` and the telemetry
+mission-control `0.4.1` findings as visualization precedent, while preserving
+`dark-factory/v4.0` as the current canonical arc.
 
 This is a design input for the Site implementation. It does not authorize
 runtime execution, deployment, production EventGraph writes, Hive wake/start,
