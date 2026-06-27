@@ -3,7 +3,7 @@ doc_id: SITE-CIVILIZATION-MFOF-DESIGN-001
 title: Civilization Minimum Functioning Operational Front End
 doc_type: design
 status: proposal
-version: 0.1.1
+version: 0.1.0
 created: 2026-06-27
 updated: 2026-06-27
 owner: Michael Saucier
@@ -14,7 +14,7 @@ telemetry_precedent: docs/designs/telemetry-mission-control-design-v0.4.1.md
 authority: design-only; no runtime, deploy, Test 001 GREEN, autonomy increase, or production EventGraph write
 ---
 
-<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-DESIGN-001 type=design version=0.1.1 status=proposal -->
+<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-DESIGN-001 type=design version=0.1.0 status=proposal -->
 
 # Civilization Minimum Functioning Operational Front End
 
@@ -35,8 +35,8 @@ protected settings changes, or autonomy increase.
 
 | Source | Current disposition | Implementation consequence |
 | --- | --- | --- |
-| `docs/dark-factory/v4.0/README.md` | Accepted canonical Dark Factory baseline. | Site must treat this as the canonical arc source until a later accepted baseline supersedes it. |
-| `docs/dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md` | Accepted integration arc for the current governed event/gate record. | Site operator UI must not imply a newer canonical arc when rendering Civilization status. |
+| `transpara-ai/docs:dark-factory/v4.0/README.md` | Accepted canonical Dark Factory baseline. | Site must treat this as the canonical arc source until a later accepted baseline supersedes it. |
+| `transpara-ai/docs:dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md` | Accepted integration arc for the current governed event/gate record. | Site operator UI must not imply a newer canonical arc when rendering Civilization status. |
 | Wiki `Civilization v4.1 Event 15` material | Proposal/provenance corpus copied into Wiki raw sources, not accepted canonical docs. | Site may cite it only as provenance or proposal context, not as authority. |
 | `G-4.1` / `G-4.2` references | Gate or packet labels in older deployment/reunification material. | Do not treat these labels as semver baselines. |
 | Telemetry mission-control `0.4.1` | Historical observability design and dashboard precedent. | Carry forward visualization lessons only; do not carry forward stale repo, routing, or process assumptions. |

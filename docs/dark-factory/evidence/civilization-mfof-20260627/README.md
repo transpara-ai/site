@@ -17,19 +17,19 @@ authority: evidence-index only; no runtime, deploy, Test 001 GREEN, autonomy inc
 
 # Civilization MFOF Design Evidence Index
 
-This index records the source material used for the
-`SITE-CIVILIZATION-MFOF-DESIGN-001` update. It is a design evidence index, not
-an authority packet and not implementation evidence.
+This index records the source material used for
+`SITE-CIVILIZATION-MFOF-DESIGN-001` version `0.1.0`. It is a design evidence
+index, not an authority packet and not implementation evidence.
 
 ## References
 
 | Reference | Role in the design update | Boundary |
 | --- | --- | --- |
-| `/Transpara/transpara-ai/repos/docs/dark-factory/v4.0/README.md` | Accepted canonical Dark Factory baseline. | Canonical arc source; does not itself authorize MFOF implementation. |
-| `/Transpara/transpara-ai/repos/docs/dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md` | Accepted integration arc and governed event/gate record. | Source for current arc framing; not a newer baseline. |
-| `/Transpara/transpara-ai/repos/docs/designs/telemetry-mission-control-design-v0.4.1.md` | Historical telemetry dashboard and mission-control visualization precedent. | Visualization precedent only; stale repo/process assumptions are not carried forward. |
-| `/Transpara/transpara-ai/repos/docs/designs/telemetry-claude-code-prompts-v0.4.1.md` | Companion prompt record showing `0.4.1` implementation sequence and completed prompt posture. | Historical context only; Claude-specific flow is not a Site implementation contract. |
-| `/Transpara/transpara-ai/repos/wiki/raw/civilization/stage-0-institutional-substrate/README.md` | Wiki proposal/provenance corpus for `Civilization v4.1 Event 15 Gate Y`. | Proposal/provenance corpus only, not accepted canonical docs. |
+| `transpara-ai/docs:dark-factory/v4.0/README.md` | Accepted canonical Dark Factory baseline. | Canonical arc source; does not itself authorize MFOF implementation. |
+| `transpara-ai/docs:dark-factory/v4.0/implementation/epics/00-integration-arc-v4.0.md` | Accepted integration arc and governed event/gate record. | Source for current arc framing; not a newer baseline. |
+| `transpara-ai/docs:designs/telemetry-mission-control-design-v0.4.1.md` | Historical telemetry dashboard and mission-control visualization precedent. | Visualization precedent only; stale repo/process assumptions are not carried forward. |
+| `transpara-ai/docs:designs/telemetry-claude-code-prompts-v0.4.1.md` | Companion prompt record showing `0.4.1` implementation sequence and completed prompt posture. | Historical context only; Claude-specific flow is not a Site implementation contract. |
+| `transpara-ai/wiki:raw/civilization/stage-0-institutional-substrate/README.md` | Wiki proposal/provenance corpus for `Civilization v4.1 Event 15 Gate Y`. | Proposal/provenance corpus only, not accepted canonical docs. |
 
 ## Reconciliation Finding
 
