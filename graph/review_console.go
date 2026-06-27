@@ -78,12 +78,12 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 	return OpsReviewConsoleData{
 		Title:               "External Committee Review Console",
 		GeneratedAt:         "static Event 13 fixture; not a live recency or revocation check",
-		AuthorizationSource: "docs v4.0 Event 13 AuthorityDecision, merged by docs#185",
+		AuthorizationSource: "docs v4.0 Event 13 AuthorityDecision, merged by docs#185; bounded Gate W evidence decision merged by docs#186",
 		Boundary: []string{
 			"display_only=true for every review item",
 			"no approve, reject, merge, close, label, comment, deploy, RuntimeBroker, EventGraph write, or protected action path",
 			"Site is a console, not the truth source",
-			"Gate W remains open until a later docs evidence-decision PR accepts, rejects, or defers the Site implementation evidence",
+			"Gate W is closed only for bounded Event 13 Level 0 read-only display evidence; this console grants no broader authority",
 		},
 		ExactHeadEvidence: []OpsExactHeadApprovalEvidence{
 			buildOpsExactHeadApprovalEvidence(opsExactHeadApprovalFixture{
@@ -234,15 +234,16 @@ func buildOpsReviewConsoleData() OpsReviewConsoleData {
 				ID:             "gate-w-closeout",
 				Title:          "Gate W closeout evidence",
 				DecisionKind:   "gate_closeout",
-				SourceURL:      "https://github.com/transpara-ai/docs/pull/185",
+				SourceURL:      "https://github.com/transpara-ai/docs/blob/15b13db7c0ea3c05298a37793095b841baa4a696/dark-factory/v4.0/implementation/epics/epic-13-external-committee-review-console/05-external-committee-review-console-evidence-decision-v4.0.md",
 				SourceType:     "docs_packet",
 				SourceRepo:     "transpara-ai/docs",
+				ExactHead:      "15b13db7c0ea3c05298a37793095b841baa4a696",
 				RequiredActor:  "operator and External Committee",
-				RequiredAction: "merge bounded Site PR, then accept/reject/defer evidence in later docs PR",
-				EvidenceState:  "missing",
-				ResidualState:  "open",
+				RequiredAction: "carry bounded Gate W limitation with later citations",
+				EvidenceState:  "accepted",
+				ResidualState:  "bounded_level_0_display_only",
 				GateScope:      "Event 13 / Gate W",
-				Limitation:     "This Site page cannot self-close Gate W and cannot treat missing implementation evidence as accepted.",
+				Limitation:     "Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence. This Site page cannot close gates or authorize protected actions.",
 				DisplayOnly:    true,
 			},
 			{

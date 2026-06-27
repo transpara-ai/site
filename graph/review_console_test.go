@@ -46,6 +46,7 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		"Accepted residual evidence must be carried and cannot unlock protected actions as clean approval.",
 		"Display only: no approve, deny, merge, label, comment",
 		"docs v4.0 Event 13 AuthorityDecision",
+		"bounded Gate W evidence decision merged by docs#186",
 		"127da4ef57dee34231cc50d87a249349fc0f768c",
 		"Stale exact-head approval is not approval for the current head.",
 		"Missing evidence fails closed and is not approval.",
@@ -58,6 +59,10 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 		"Gate S approval artifact residual",
 		"accepted_with_residual",
 		"Gate W closeout evidence",
+		`data-evidence-state="accepted"`,
+		`data-residual-state="bounded_level_0_display_only"`,
+		"Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence.",
+		"15b13db7c0ea3c05298a37793095b841baa4a696",
 		`data-evidence-state="missing"`,
 		"Test 001 remains YELLOW",
 		"not applicable",
@@ -65,6 +70,14 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/review-console: body does not contain %q", want)
+		}
+	}
+	for _, stale := range []string{
+		"Gate W remains open",
+		"This Site page cannot self-close Gate W and cannot treat missing implementation evidence as accepted.",
+	} {
+		if strings.Contains(body, stale) {
+			t.Fatalf("GET /ops/review-console: body contains stale Gate W posture %q", stale)
 		}
 	}
 	assertOpsReviewConsoleNoMutationControls(t, body)
@@ -84,6 +97,7 @@ func TestOpsReviewConsoleExternalCommitteeQueueIsReadOnly(t *testing.T) {
 		"blocked_stale_evidence":    false,
 		"blocked_residual_evidence": false,
 	}
+	var site116Missing bool
 	for _, item := range data.DecisionQueue {
 		if item.ID == "" ||
 			item.Title == "" ||
@@ -110,6 +124,15 @@ func TestOpsReviewConsoleExternalCommitteeQueueIsReadOnly(t *testing.T) {
 		if !strings.Contains(item.NoWriteLimit, "no approve, deny, merge, label, comment") {
 			t.Fatalf("external committee queue item %q NoWriteLimit missing no-write boundary: %q", item.ID, item.NoWriteLimit)
 		}
+		if strings.Contains(strings.ToLower(item.ID+" "+item.Title+" "+item.SourceIssue+" "+item.DecisionNeeded+" "+item.Blocker), "gate w") {
+			t.Fatalf("external committee queue item %q must not represent Gate W after Gate W bounded closeout", item.ID)
+		}
+		if item.ID == "site-116-missing-inputs" &&
+			item.SourceIssue == "site#116" &&
+			item.QueueState == "blocked_missing_evidence" &&
+			item.EvidenceState == "missing" {
+			site116Missing = true
+		}
 		forbiddenQueueStates := []string{"approved", "clean", "unlocked", "ready_to_merge", "merge_allowed"}
 		for _, forbidden := range forbiddenQueueStates {
 			if item.QueueState == forbidden {
@@ -134,6 +157,9 @@ func TestOpsReviewConsoleExternalCommitteeQueueIsReadOnly(t *testing.T) {
 		if !seen {
 			t.Fatalf("external committee queue fixtures do not cover queue state %q", state)
 		}
+	}
+	if !site116Missing {
+		t.Fatal("external committee queue missing blocker must remain the site#116 input-evidence row, not Gate W")
 	}
 }
 
@@ -250,7 +276,7 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 		"gate_closeout":        false,
 		"issue_disposition":    false,
 	}
-	var missing, residual bool
+	var residual bool
 	for _, item := range data.Items {
 		if item.ID == "" ||
 			item.Title == "" ||
@@ -272,9 +298,6 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 		if _, ok := requiredKinds[item.DecisionKind]; ok {
 			requiredKinds[item.DecisionKind] = true
 		}
-		if item.EvidenceState == "missing" && item.DisplayOnly && item.ResidualState == "open" {
-			missing = true
-		}
 		if item.EvidenceState == "carried_residual" && item.DisplayOnly && item.ResidualState == "accepted_with_residual" {
 			residual = true
 		}
@@ -282,14 +305,31 @@ func TestOpsReviewConsoleFailsClosedForMissingAndResidualEvidence(t *testing.T) 
 			t.Fatalf("review item %q DisplayOnly = false", item.ID)
 		}
 	}
-	if !missing {
-		t.Fatal("review console data does not include a display-only missing evidence item")
-	}
 	if !residual {
 		t.Fatal("review console data does not include a carried residual item")
 	}
-	if gateW := findOpsReviewItem(t, data, "gate-w-closeout"); gateW.EvidenceState != "missing" || gateW.ResidualState != "open" {
-		t.Fatalf("gate-w-closeout state = %s/%s, want missing/open", gateW.EvidenceState, gateW.ResidualState)
+	if !strings.Contains(data.AuthorizationSource, "docs#185") ||
+		!strings.Contains(data.AuthorizationSource, "docs#186") ||
+		!strings.Contains(data.AuthorizationSource, "bounded Gate W evidence decision") {
+		t.Fatalf("AuthorizationSource = %q, want Event 13 authority and Gate W evidence-decision provenance", data.AuthorizationSource)
+	}
+	gateW := findOpsReviewItem(t, data, "gate-w-closeout")
+	if gateW.EvidenceState != "accepted" || gateW.ResidualState != "bounded_level_0_display_only" {
+		t.Fatalf("gate-w-closeout state = %s/%s, want accepted/bounded_level_0_display_only", gateW.EvidenceState, gateW.ResidualState)
+	}
+	if gateW.ExactHead != "15b13db7c0ea3c05298a37793095b841baa4a696" {
+		t.Fatalf("gate-w-closeout ExactHead = %q, want docs#186 merge commit", gateW.ExactHead)
+	}
+	if !strings.Contains(gateW.SourceURL, "/blob/15b13db7c0ea3c05298a37793095b841baa4a696/") {
+		t.Fatalf("gate-w-closeout SourceURL = %q, want pinned docs#186 merge commit", gateW.SourceURL)
+	}
+	if !strings.Contains(gateW.Limitation, "docs#186 evidence-decision accepting Site PR #90 evidence") ||
+		!strings.Contains(gateW.Limitation, "Event 13 Level 0 read-only review-console display evidence") ||
+		!strings.Contains(gateW.Limitation, "This Site page cannot close gates or authorize protected actions") {
+		t.Fatalf("gate-w-closeout limitation does not preserve docs-attributed bounded closeout/no-authority language: %q", gateW.Limitation)
+	}
+	if !strings.Contains(gateW.SourceURL, "05-external-committee-review-console-evidence-decision-v4.0.md") {
+		t.Fatalf("gate-w-closeout SourceURL = %q, want accepted evidence-decision doc", gateW.SourceURL)
 	}
 	if test001 := findOpsReviewItem(t, data, "test-001-yellow"); test001.EvidenceState != "pending" || test001.ResidualState != "open" {
 		t.Fatalf("test-001-yellow state = %s/%s, want pending/open", test001.EvidenceState, test001.ResidualState)
@@ -336,6 +376,31 @@ func TestOperatorReviewConsoleRouteRequiresWriteAuth(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusUnauthorized, w.Body.String())
 	}
+}
+
+func TestReadOnlyOpsRegistersReviewConsoleForNoDatabaseMode(t *testing.T) {
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyOps(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/ops/review-console", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"External Committee Review Console",
+		`data-review-console="read-only"`,
+		"Gate W was closed by the docs#186 evidence-decision accepting Site PR #90 evidence only for Event 13 Level 0 read-only review-console display evidence.",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("read-only review console body does not contain %q", want)
+		}
+	}
+	assertOpsReviewConsoleNoMutationControls(t, body)
 }
 
 func assertOpsReviewConsoleNoMutationControls(t *testing.T, body string) {
