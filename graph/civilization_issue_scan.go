@@ -402,11 +402,6 @@ func issueScanFallbackDeferredOrStale(issue OpsCivilizationIssueIntakeProjected)
 			strings.Contains(text, "stale") {
 			return true
 		}
-		if strings.Contains(text, "blocked") &&
-			!strings.Contains(text, "not blocked") &&
-			!strings.Contains(text, "unblocked") {
-			return true
-		}
 	}
 	return false
 }

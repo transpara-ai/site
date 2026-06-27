@@ -1059,6 +1059,32 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 					Readiness:         "intake captured; no PR-ready condition has been verified",
 					AuthorityBoundary: "read-only display scope; not blocked by protected actions",
 				},
+				{
+					Repo:              "transpara-ai/site",
+					Number:            171,
+					URL:               "https://github.com/transpara-ai/site/issues/171",
+					Title:             "PR-ready intake record with historical blocker prose",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/site",
+					TouchedSubstrate:  "site operator ui projection",
+					RiskClass:         "normal",
+					Readiness:         "ready:pr-ready now; previously blocked on scanner labels but unblocked after scope review",
+					AuthorityBoundary: "read-only display scope",
+				},
+				{
+					Repo:              "transpara-ai/hive",
+					Number:            88,
+					URL:               "https://github.com/transpara-ai/hive/issues/88",
+					Title:             "Protected-only intake record",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/hive",
+					TouchedSubstrate:  "hive authority boundary",
+					RiskClass:         "normal",
+					Readiness:         "intake captured; protected action boundary required",
+					AuthorityBoundary: "future protected action design only; no execution authority",
+				},
 			},
 		},
 	}
@@ -1071,8 +1097,8 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 		!strings.Contains(data.IssueScanKanban.Summary, "not runtime execution or agent-touch evidence") {
 		t.Fatalf("fallback summary does not carry non-runtime warning: %q", data.IssueScanKanban.Summary)
 	}
-	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 5 {
-		t.Fatalf("fallback card count = %d, want 5: %+v", got, data.IssueScanKanban)
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 7 {
+		t.Fatalf("fallback card count = %d, want 7: %+v", got, data.IssueScanKanban)
 	}
 
 	siteCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 166)
@@ -1112,6 +1138,15 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 	projectionOnlyCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 170)
 	if projectionOnlyCard == nil || projectionOnlyCard.CurrentState != "projection_only" || len(projectionOnlyCard.Blockers) != 0 {
 		t.Fatalf("site#170 fallback = %+v, want projection_only without blockers", projectionOnlyCard)
+	}
+	readyWithHistoryCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 171)
+	if readyWithHistoryCard == nil || readyWithHistoryCard.CurrentState != "ready_for_human" || len(readyWithHistoryCard.Blockers) != 0 {
+		t.Fatalf("site#171 fallback = %+v, want ready_for_human despite historical blocker prose", readyWithHistoryCard)
+	}
+	protectedOnlyCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/hive", 88)
+	if protectedOnlyCard == nil || protectedOnlyCard.CurrentState != "human_action" || len(protectedOnlyCard.Blockers) != 1 ||
+		protectedOnlyCard.Blockers[0].BlockerType != "protected_action" {
+		t.Fatalf("hive#88 fallback = %+v, want protected-only human_action blocker", protectedOnlyCard)
 	}
 	if !sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "ready_for_human") ||
 		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "human_action") ||
