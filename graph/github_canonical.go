@@ -400,7 +400,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-incomplete", displayPath, loadedAt, "scanner artifact missing autonomy frontier")
 		return
 	}
-	if reason := opsGitHubCanonicalScannerPayloadMismatch(data, payload); reason != "" {
+	if reason := opsGitHubCanonicalScannerPayloadMismatch(payload); reason != "" {
 		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-inconsistent", displayPath, loadedAt, reason)
 		return
 	}
@@ -543,12 +543,10 @@ func opsGitHubCanonicalScannerPayloadHasFrontier(payload opsGitHubCanonicalScann
 		len(frontier.BlockerRefs) > 0
 }
 
-func opsGitHubCanonicalScannerPayloadMismatch(_ *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload) string {
+func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerPayload) string {
 	frontier := payload.AutonomyFrontier
-	if snapshotAt, ok, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
+	if _, _, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
 		return "scanner artifact timestamp is invalid"
-	} else if ok && snapshotAt == "" {
-		return "scanner artifact timestamp is empty"
 	}
 	total := 0
 	gotByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
