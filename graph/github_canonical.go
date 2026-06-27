@@ -400,7 +400,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-incomplete", displayPath, loadedAt, "scanner artifact missing autonomy frontier")
 		return
 	}
-	if reason := opsGitHubCanonicalScannerPayloadMismatch(data, payload); reason != "" {
+	if reason := opsGitHubCanonicalScannerPayloadMismatch(payload); reason != "" {
 		rejectOpsGitHubCanonicalScannerArtifact(data, "artifact-inconsistent", displayPath, loadedAt, reason)
 		return
 	}
@@ -413,7 +413,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 	if snapshotAt := opsGitHubCanonicalScannerPayloadSnapshotAt(payload); snapshotAt != "" {
 		data.ScannerSnapshotAt = snapshotAt
 	}
-	data.ProjectionSource = "platform scanner JSON artifact verified against static projection; request render does not call GitHub, Hive, EventGraph, or runtime services"
+	data.ProjectionSource = "platform scanner JSON artifact verified for scanner errors and source/frontier totals; request render does not call GitHub, Hive, EventGraph, or runtime services"
 	data.ProjectionState = "typed projection-shaped Site contract; scanner frontier fields are populated from a read-only platform scanner artifact when configured"
 	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
 
@@ -432,7 +432,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 		data.SourceSummaries = summaries
 	}
 
-	if payload.AutonomyFrontier.Recommendation != "" || payload.AutonomyFrontier.TotalIssueCount > 0 {
+	if opsGitHubCanonicalScannerPayloadHasFrontier(payload) {
 		data.AutonomyFrontier.Recommendation = strings.TrimSpace(payload.AutonomyFrontier.Recommendation)
 		data.AutonomyFrontier.TotalIssueCount = payload.AutonomyFrontier.TotalIssueCount
 		data.AutonomyFrontier.CandidateBundleCount = payload.AutonomyFrontier.CandidateBundleCount
@@ -543,44 +543,16 @@ func opsGitHubCanonicalScannerPayloadHasFrontier(payload opsGitHubCanonicalScann
 		len(frontier.BlockerRefs) > 0
 }
 
-func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payload opsGitHubCanonicalScannerPayload) string {
+func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerPayload) string {
 	frontier := payload.AutonomyFrontier
-	static := data.AutonomyFrontier
-	if strings.TrimSpace(frontier.Recommendation) != static.Recommendation {
-		return "scanner artifact frontier does not match static projection: recommendation"
-	}
-	checks := []struct {
-		label string
-		got   int
-		want  int
-	}{
-		{"total_issue_count", frontier.TotalIssueCount, static.TotalIssueCount},
-		{"candidate_bundle_count", frontier.CandidateBundleCount, static.CandidateBundleCount},
-		{"candidate_singleton_count", frontier.CandidateSingletonCount, static.CandidateSingletonCount},
-		{"review_group_count", frontier.ReviewGroupCount, static.ReviewGroupCount},
-		{"singleton_count", frontier.SingletonCount, static.SingletonCount},
-		{"issue_shape_warning_count", frontier.IssueShapeWarningCount, static.IssueShapeWarningCount},
-		{"pr_ready_issue_count", frontier.PRReadyIssueCount, static.PRReadyIssueCount},
-		{"autonomous_pr_ready_issue_count", frontier.AutonomousPRReadyIssueCount, static.AutonomousPRReadyIssueCount},
-		{"needs_human_scope_issue_count", frontier.NeedsHumanScopeIssueCount, static.NeedsHumanScopeIssueCount},
-		{"protected_action_issue_count", frontier.ProtectedActionIssueCount, static.ProtectedActionIssueCount},
-		{"deferred_issue_count", frontier.DeferredIssueCount, static.DeferredIssueCount},
-	}
-	for _, check := range checks {
-		if check.got != check.want {
-			return "scanner artifact frontier does not match static projection: " + check.label
-		}
-	}
-	if strings.Join(sortedNonEmpty(frontier.BlockerRefs), "\n") != strings.Join(sortedNonEmpty(static.BlockerRefs), "\n") {
-		return "scanner artifact frontier does not match static projection: blocker_refs"
-	}
-	if snapshotAt, ok, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
+	if _, _, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
 		return "scanner artifact timestamp is invalid"
-	} else if ok && snapshotAt != data.ScannerSnapshotAt {
-		return "scanner artifact timestamp does not match static projection"
+	}
+	if opsGitHubCanonicalScannerPayloadFrontierHasNegativeCount(payload) {
+		return "scanner artifact autonomy frontier contains negative count"
 	}
 	total := 0
-	gotByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
+	gotByRepo := map[string]struct{}{}
 	for _, summary := range payload.SourceSummaries {
 		if summary.IssueCount < 0 {
 			return "scanner artifact source summaries contain negative issue count"
@@ -592,32 +564,35 @@ func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payl
 		if _, exists := gotByRepo[repo]; exists {
 			return "scanner artifact source summaries contain duplicate repo"
 		}
-		gotByRepo[repo] = OpsGitHubCanonicalSourceSummary{
-			Source:     strings.TrimSpace(summary.Source),
-			Kind:       strings.TrimSpace(summary.Kind),
-			Repo:       repo,
-			Labels:     sortedNonEmpty(summary.Labels),
-			IssueCount: summary.IssueCount,
-		}
+		gotByRepo[repo] = struct{}{}
 		total += summary.IssueCount
 	}
 	if total != frontier.TotalIssueCount {
 		return "scanner artifact source summary total does not match frontier total"
 	}
-	wantByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
-	for _, summary := range data.SourceSummaries {
-		wantByRepo[summary.Repo] = summary
-	}
-	if len(gotByRepo) != len(wantByRepo) {
-		return "scanner artifact source summaries do not match static projection"
-	}
-	for repo, want := range wantByRepo {
-		got := gotByRepo[repo]
-		if got.Source != want.Source || got.Kind != want.Kind || got.IssueCount != want.IssueCount || strings.Join(got.Labels, "\n") != strings.Join(want.Labels, "\n") {
-			return "scanner artifact source summaries do not match static projection"
+	return ""
+}
+
+func opsGitHubCanonicalScannerPayloadFrontierHasNegativeCount(payload opsGitHubCanonicalScannerPayload) bool {
+	frontier := payload.AutonomyFrontier
+	for _, count := range []int{
+		frontier.TotalIssueCount,
+		frontier.CandidateBundleCount,
+		frontier.CandidateSingletonCount,
+		frontier.ReviewGroupCount,
+		frontier.SingletonCount,
+		frontier.IssueShapeWarningCount,
+		frontier.PRReadyIssueCount,
+		frontier.AutonomousPRReadyIssueCount,
+		frontier.NeedsHumanScopeIssueCount,
+		frontier.ProtectedActionIssueCount,
+		frontier.DeferredIssueCount,
+	} {
+		if count < 0 {
+			return true
 		}
 	}
-	return ""
+	return false
 }
 
 func opsGitHubCanonicalAuthorityActionsFromScannerArtifact(actions []opsGitHubCanonicalScannerAuthorityAction) []OpsGitHubCanonicalAuthorityAction {
