@@ -441,7 +441,7 @@ func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T)
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
 
-	artifactPath := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), matchingGitHubCanonicalScannerArtifactJSON())
+	artifactPath := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), matchingGitHubCanonicalScannerArtifactJSONWithAuthorityActions())
 	t.Setenv(githubCanonicalScannerArtifactEnv, artifactPath)
 
 	h := NewHandlers(nil, nil, nil)
@@ -466,13 +466,22 @@ func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T)
 		"park-autonomy-no-pr-ready-work",
 		"live:transpara-ai/docs labels=cc:intake",
 		"read-only scanner evidence projection",
+		"Scanner artifact Gate S and Test 001 residual disposition",
+		"Human-scoped docs/process disposition from scanner artifact.",
+		"no docs#172 closure by inference",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/github-canonical artifact body does not contain %q", want)
 		}
 	}
-	if strings.Contains(body, "candidate-pr-work-available") {
-		t.Fatalf("GET /ops/github-canonical artifact body contains rejected candidate state")
+	for _, stale := range []string{
+		"candidate-pr-work-available",
+		"Production EventGraph and runtime wiring scope",
+		"Human-required value-allocation direction",
+	} {
+		if strings.Contains(body, stale) {
+			t.Fatalf("GET /ops/github-canonical artifact body contains stale static value %q", stale)
+		}
 	}
 	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
 }

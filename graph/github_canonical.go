@@ -339,16 +339,18 @@ type opsGitHubCanonicalScannerPayload struct {
 		DeferredIssueCount          int      `json:"deferred_issue_count"`
 		BlockerRefs                 []string `json:"blocker_refs"`
 	} `json:"autonomy_frontier"`
-	AuthorityActions []struct {
-		Label               string   `json:"label"`
-		State               string   `json:"state"`
-		BlockerRefs         []string `json:"blocker_refs"`
-		RequiredDecision    string   `json:"required_decision"`
-		Unlocks             string   `json:"unlocks"`
-		EvidenceExpectation string   `json:"evidence_expectation"`
-		ForbiddenActions    []string `json:"forbidden_actions"`
-	} `json:"authority_actions"`
-	Errors []string `json:"errors"`
+	AuthorityActions []opsGitHubCanonicalScannerAuthorityAction `json:"authority_actions"`
+	Errors           []string                                   `json:"errors"`
+}
+
+type opsGitHubCanonicalScannerAuthorityAction struct {
+	Label               string   `json:"label"`
+	State               string   `json:"state"`
+	BlockerRefs         []string `json:"blocker_refs"`
+	RequiredDecision    string   `json:"required_decision"`
+	Unlocks             string   `json:"unlocks"`
+	EvidenceExpectation string   `json:"evidence_expectation"`
+	ForbiddenActions    []string `json:"forbidden_actions"`
 }
 
 func readOpsGitHubCanonicalScannerArtifact(path string) (opsGitHubCanonicalScannerPayload, string, error) {
@@ -463,6 +465,10 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 			}}
 		}
 		data.Progress.EvidenceRefs = append(data.Progress.EvidenceRefs, fmt.Sprintf("scanner_artifact:%s loaded_at:%s", displayPath, loadedAt))
+	}
+
+	if actions := opsGitHubCanonicalAuthorityActionsFromScannerArtifact(payload.AuthorityActions); len(actions) > 0 {
+		data.AuthorityActions = actions
 	}
 }
 
@@ -612,6 +618,32 @@ func opsGitHubCanonicalScannerPayloadMismatch(data *OpsGitHubCanonicalData, payl
 		}
 	}
 	return ""
+}
+
+func opsGitHubCanonicalAuthorityActionsFromScannerArtifact(actions []opsGitHubCanonicalScannerAuthorityAction) []OpsGitHubCanonicalAuthorityAction {
+	out := make([]OpsGitHubCanonicalAuthorityAction, 0, len(actions))
+	for _, action := range actions {
+		mapped := OpsGitHubCanonicalAuthorityAction{
+			Label:               strings.TrimSpace(action.Label),
+			State:               strings.TrimSpace(action.State),
+			BlockerRefs:         sortedNonEmpty(action.BlockerRefs),
+			RequiredDecision:    strings.TrimSpace(action.RequiredDecision),
+			Unlocks:             strings.TrimSpace(action.Unlocks),
+			EvidenceExpectation: strings.TrimSpace(action.EvidenceExpectation),
+			ForbiddenActions:    sortedNonEmpty(action.ForbiddenActions),
+		}
+		if mapped.Label == "" &&
+			mapped.State == "" &&
+			len(mapped.BlockerRefs) == 0 &&
+			mapped.RequiredDecision == "" &&
+			mapped.Unlocks == "" &&
+			mapped.EvidenceExpectation == "" &&
+			len(mapped.ForbiddenActions) == 0 {
+			continue
+		}
+		out = append(out, mapped)
+	}
+	return out
 }
 
 func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
