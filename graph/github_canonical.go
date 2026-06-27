@@ -432,7 +432,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 		data.SourceSummaries = summaries
 	}
 
-	if payload.AutonomyFrontier.Recommendation != "" || payload.AutonomyFrontier.TotalIssueCount > 0 {
+	if opsGitHubCanonicalScannerPayloadHasFrontier(payload) {
 		data.AutonomyFrontier.Recommendation = strings.TrimSpace(payload.AutonomyFrontier.Recommendation)
 		data.AutonomyFrontier.TotalIssueCount = payload.AutonomyFrontier.TotalIssueCount
 		data.AutonomyFrontier.CandidateBundleCount = payload.AutonomyFrontier.CandidateBundleCount
@@ -549,7 +549,7 @@ func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerP
 		return "scanner artifact timestamp is invalid"
 	}
 	total := 0
-	gotByRepo := map[string]OpsGitHubCanonicalSourceSummary{}
+	gotByRepo := map[string]struct{}{}
 	for _, summary := range payload.SourceSummaries {
 		if summary.IssueCount < 0 {
 			return "scanner artifact source summaries contain negative issue count"
@@ -561,13 +561,7 @@ func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerP
 		if _, exists := gotByRepo[repo]; exists {
 			return "scanner artifact source summaries contain duplicate repo"
 		}
-		gotByRepo[repo] = OpsGitHubCanonicalSourceSummary{
-			Source:     strings.TrimSpace(summary.Source),
-			Kind:       strings.TrimSpace(summary.Kind),
-			Repo:       repo,
-			Labels:     sortedNonEmpty(summary.Labels),
-			IssueCount: summary.IssueCount,
-		}
+		gotByRepo[repo] = struct{}{}
 		total += summary.IssueCount
 	}
 	if total != frontier.TotalIssueCount {

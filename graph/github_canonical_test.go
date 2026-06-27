@@ -150,6 +150,44 @@ func TestOpsGitHubCanonicalScannerArtifactAcceptsRecommendationDifferentFromStat
 	}
 }
 
+func TestOpsGitHubCanonicalScannerArtifactAppliesFrontierWithOnlyBlockers(t *testing.T) {
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), `{
+		"source_summaries": [
+			{"source":"live:transpara-ai/docs labels=cc:intake","kind":"live","repo":"transpara-ai/docs","labels":["cc:intake"],"issue_count":0}
+		],
+		"autonomy_frontier": {
+			"recommendation":"",
+			"total_issue_count":0,
+			"candidate_bundle_count":0,
+			"candidate_singleton_count":0,
+			"review_group_count":0,
+			"singleton_count":0,
+			"issue_shape_warning_count":0,
+			"pr_ready_issue_count":0,
+			"autonomous_pr_ready_issue_count":0,
+			"needs_human_scope_issue_count":0,
+			"protected_action_issue_count":0,
+			"deferred_issue_count":0,
+			"blocker_refs":["transpara-ai/docs#172"]
+		}
+	}`)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if data.AutonomyFrontier.TotalIssueCount != 0 || len(data.AutonomyFrontier.BlockerRefs) != 1 || data.AutonomyFrontier.BlockerRefs[0] != "transpara-ai/docs#172" {
+		t.Fatalf("blocker-only frontier not applied: %+v", data.AutonomyFrontier)
+	}
+	if data.Progress.ParkedOpenIssueCount != 0 || len(data.Progress.ParkedGroups) != 1 || data.Progress.ParkedGroups[0].Count != 1 {
+		t.Fatalf("blocker-only progress not applied: %+v", data.Progress)
+	}
+	if !strings.Contains(data.Progress.Summary, "Configured scanner artifact reports 0 open intake issues") {
+		t.Fatalf("blocker-only progress summary not artifact-derived: %q", data.Progress.Summary)
+	}
+}
+
 func TestOpsGitHubCanonicalConsumesScannerArtifactAuthorityActions(t *testing.T) {
 	loadedAt := time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC)
 	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSONWithAuthorityActions(), `"source_summaries":`, `"scanner_snapshot_at":"2026-06-26T15:29:28Z","source_summaries":`, 1)
