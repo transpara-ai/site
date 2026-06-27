@@ -413,7 +413,7 @@ func applyOpsGitHubCanonicalScannerArtifact(data *OpsGitHubCanonicalData, payloa
 	if snapshotAt := opsGitHubCanonicalScannerPayloadSnapshotAt(payload); snapshotAt != "" {
 		data.ScannerSnapshotAt = snapshotAt
 	}
-	data.ProjectionSource = "platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services"
+	data.ProjectionSource = "platform scanner JSON artifact verified for scanner errors and source/frontier totals; request render does not call GitHub, Hive, EventGraph, or runtime services"
 	data.ProjectionState = "typed projection-shaped Site contract; scanner frontier fields are populated from a read-only platform scanner artifact when configured"
 	data.Boundaries = append(data.Boundaries, githubCanonicalScannerArtifactBound)
 
@@ -548,6 +548,9 @@ func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerP
 	if _, _, err := opsGitHubCanonicalScannerPayloadTimestamp(payload); err != nil {
 		return "scanner artifact timestamp is invalid"
 	}
+	if opsGitHubCanonicalScannerPayloadFrontierHasNegativeCount(payload) {
+		return "scanner artifact autonomy frontier contains negative count"
+	}
 	total := 0
 	gotByRepo := map[string]struct{}{}
 	for _, summary := range payload.SourceSummaries {
@@ -568,6 +571,28 @@ func opsGitHubCanonicalScannerPayloadMismatch(payload opsGitHubCanonicalScannerP
 		return "scanner artifact source summary total does not match frontier total"
 	}
 	return ""
+}
+
+func opsGitHubCanonicalScannerPayloadFrontierHasNegativeCount(payload opsGitHubCanonicalScannerPayload) bool {
+	frontier := payload.AutonomyFrontier
+	for _, count := range []int{
+		frontier.TotalIssueCount,
+		frontier.CandidateBundleCount,
+		frontier.CandidateSingletonCount,
+		frontier.ReviewGroupCount,
+		frontier.SingletonCount,
+		frontier.IssueShapeWarningCount,
+		frontier.PRReadyIssueCount,
+		frontier.AutonomousPRReadyIssueCount,
+		frontier.NeedsHumanScopeIssueCount,
+		frontier.ProtectedActionIssueCount,
+		frontier.DeferredIssueCount,
+	} {
+		if count < 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func opsGitHubCanonicalAuthorityActionsFromScannerArtifact(actions []opsGitHubCanonicalScannerAuthorityAction) []OpsGitHubCanonicalAuthorityAction {

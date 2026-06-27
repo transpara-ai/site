@@ -462,7 +462,7 @@ func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T)
 	for _, want := range []string{
 		"artifact-loaded",
 		"loaded_at 2026-06-26T16:10:00Z",
-		"platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services",
+		"platform scanner JSON artifact verified for scanner errors and source/frontier totals; request render does not call GitHub, Hive, EventGraph, or runtime services",
 		"Configured scanner artifact reports 3 open intake issues, 0 PR-ready issues, 0 candidate bundles, and 0 candidate singleton PRs",
 		"park-autonomy-no-pr-ready-work",
 		"live:transpara-ai/docs labels=cc:intake",

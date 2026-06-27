@@ -87,7 +87,7 @@ func TestOpsGitHubCanonicalConsumesScannerArtifact(t *testing.T) {
 	if data.ScannerSnapshotAt != githubCanonicalScannerSnapshotAt {
 		t.Fatalf("ScannerSnapshotAt = %q, want static scanner timestamp without artifact timestamp", data.ScannerSnapshotAt)
 	}
-	if data.ProjectionSource != "platform scanner JSON artifact verified for internal consistency; request render does not call GitHub, Hive, EventGraph, or runtime services" {
+	if data.ProjectionSource != "platform scanner JSON artifact verified for scanner errors and source/frontier totals; request render does not call GitHub, Hive, EventGraph, or runtime services" {
 		t.Fatalf("ProjectionSource = %q", data.ProjectionSource)
 	}
 	if !strings.Contains(data.Progress.Summary, "Configured scanner artifact reports 3 open intake issues, 0 PR-ready issues, 0 candidate bundles, and 0 candidate singleton PRs") {
@@ -369,6 +369,20 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsInvalidSourceSummaries(t *testi
 				t.Fatalf("invalid source artifact changed static projection: frontier=%+v progress=%+v", data.AutonomyFrontier, data.Progress)
 			}
 		})
+	}
+}
+
+func TestOpsGitHubCanonicalScannerArtifactRejectsNegativeFrontierCounts(t *testing.T) {
+	body := strings.Replace(matchingGitHubCanonicalScannerArtifactJSON(), `"candidate_singleton_count":0`, `"candidate_singleton_count":-1`, 1)
+	path := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 26, 16, 10, 0, 0, time.UTC), body)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 26, 16, 11, 0, 0, time.UTC), path)
+
+	if data.ScannerArtifact.Status != "artifact-inconsistent" || data.ScannerArtifact.Error != "scanner artifact autonomy frontier contains negative count" {
+		t.Fatalf("ScannerArtifact = %+v", data.ScannerArtifact)
+	}
+	if data.AutonomyFrontier.TotalIssueCount != 14 {
+		t.Fatalf("negative frontier count changed static fallback: %+v", data.AutonomyFrontier)
 	}
 }
 
