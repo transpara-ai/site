@@ -328,6 +328,48 @@ func TestOpsGitHubCanonicalConsumesScannerArtifactTest001Posture(t *testing.T) {
 	}
 }
 
+func TestOpsGitHubCanonicalConsumesScannerArtifactProductSupportTest001Posture(t *testing.T) {
+	path := writeGitHubCanonicalScannerArtifact(
+		t,
+		time.Date(2026, 6, 27, 16, 35, 0, 0, time.UTC),
+		matchingGitHubCanonicalScannerArtifactJSONWithProductSupportTest001Posture(),
+	)
+
+	data := buildOpsGitHubCanonicalDataWithScannerArtifact(time.Date(2026, 6, 27, 16, 36, 0, 0, time.UTC), path)
+	posture := data.Test001Posture
+
+	if data.ScannerArtifact.Status != "artifact-loaded" {
+		t.Fatalf("scanner artifact status = %+v, want loaded", data.ScannerArtifact)
+	}
+	if posture.State != "YELLOW" || posture.TrackerRef != "transpara-ai/operation#26" || posture.TrackerState != "open_required" {
+		t.Fatalf("artifact posture identity not preserved: %+v", posture)
+	}
+	if posture.ReplacementMonitoringState != githubCanonicalTest001ReplacementProductSupportTrackerOpen {
+		t.Fatalf("replacement monitoring state = %q, want product-support tracker-open state", posture.ReplacementMonitoringState)
+	}
+	for _, want := range []string{
+		"scanner artifact reports Site product-monitor support is recorded",
+		"operation#26 remains open",
+		"does not authorize Test 001 GREEN",
+		"Test 001 closure",
+	} {
+		if !strings.Contains(posture.ReplacementMonitoringSummary+posture.Boundary, want) {
+			t.Fatalf("posture safety text missing %q: %+v", want, posture)
+		}
+	}
+	for _, unwanted := range []string{
+		"scanner says Site product support is recorded",
+		"scanner supplied free text should not replace static display boundary",
+	} {
+		if strings.Contains(posture.ReplacementMonitoringSummary+posture.Boundary, unwanted) {
+			t.Fatalf("scanner free text leaked into posture safety text %q: %+v", unwanted, posture)
+		}
+	}
+	if len(posture.Rows) != 1 || posture.Rows[0].Classification != "STILL_UNAVAILABLE_YELLOW_KEEPING" {
+		t.Fatalf("artifact posture rows not consumed as YELLOW-keeping: %+v", posture.Rows)
+	}
+}
+
 func TestOpsGitHubCanonicalScannerArtifactRejectsNonYellowTest001Posture(t *testing.T) {
 	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}") + `,
 		"test_001_posture": {
@@ -415,6 +457,21 @@ func TestOpsGitHubCanonicalScannerArtifactRejectsClosureBearingTest001PostureFie
 				"tracker_ref": "transpara-ai/operation#26",
 				"tracker_state": "open_required",
 				"replacement_monitoring_state": "proven",
+				"rows": [
+					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
+				]
+			}`,
+			wantError: "non-closure boundary",
+		},
+		{
+			name: "unsupported product-support successor state",
+			postureJSON: `{
+				"available": true,
+				"status": "available",
+				"state": "YELLOW",
+				"tracker_ref": "transpara-ai/operation#26",
+				"tracker_state": "open_required",
+				"replacement_monitoring_state": "replaced_by_product_support",
 				"rows": [
 					{"evidence_category":"Exact live evidence","classification":"STILL_UNAVAILABLE_YELLOW_KEEPING"}
 				]
@@ -909,6 +966,32 @@ func matchingGitHubCanonicalScannerArtifactJSONWithEmptyAuthorityActions() strin
 	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}")
 	return body + `,
 		"authority_actions": []
+	}`
+}
+
+func matchingGitHubCanonicalScannerArtifactJSONWithProductSupportTest001Posture() string {
+	body := strings.TrimSuffix(strings.TrimSpace(matchingGitHubCanonicalScannerArtifactJSON()), "}")
+	return body + `,
+		"test_001_posture": {
+			"available": true,
+			"status": "available",
+			"state": "YELLOW",
+			"source_path": "/Transpara/transpara-ai/repos/operation/docs/operations/test-001-carried-evidence-matrix.md",
+			"source_ref": "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
+			"tracker_ref": "transpara-ai/operation#26",
+			"tracker_state": "open_required",
+			"replacement_monitoring_state": "product_support_recorded_tracker_still_open",
+			"replacement_monitoring_summary": "scanner says Site product support is recorded",
+			"boundary": "scanner supplied free text should not replace static display boundary",
+			"rows": [
+				{
+					"evidence_category": "Deployed Site routes, live visitor evidence, live feeder response, public correction proof, or production-backed telemetry.",
+					"classification": "STILL_UNAVAILABLE_YELLOW_KEEPING",
+					"current_cited_evidence": "site#177 and platform#39 record product/scanner support only.",
+					"current_consequence": "Test 001 remains YELLOW; operation#26 remains open."
+				}
+			]
+		}
 	}`
 }
 

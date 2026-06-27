@@ -488,6 +488,56 @@ func TestHandleOpsGitHubCanonicalConsumesConfiguredScannerArtifact(t *testing.T)
 	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
 }
 
+func TestHandleOpsGitHubCanonicalRendersProductSupportTest001PostureArtifact(t *testing.T) {
+	calledHive := false
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calledHive = true
+		http.Error(w, "unexpected hive call", http.StatusTeapot)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	artifactPath := writeGitHubCanonicalScannerArtifact(t, time.Date(2026, 6, 27, 16, 35, 0, 0, time.UTC), matchingGitHubCanonicalScannerArtifactJSONWithProductSupportTest001Posture())
+	t.Setenv(githubCanonicalScannerArtifactEnv, artifactPath)
+
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyOps(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/github-canonical?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/github-canonical: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	if calledHive {
+		t.Fatal("GET /ops/github-canonical called Hive while reading product-support scanner artifact")
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"artifact-loaded",
+		"product_support_recorded_tracker_still_open",
+		"scanner artifact reports Site product-monitor support is recorded",
+		"operation#26 remains open",
+		"does not authorize Test 001 GREEN",
+		"STILL_UNAVAILABLE_YELLOW_KEEPING",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/github-canonical product-support artifact body does not contain %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		"scanner says Site product support is recorded",
+		"scanner supplied free text should not replace static display boundary",
+	} {
+		if strings.Contains(body, unwanted) {
+			t.Fatalf("GET /ops/github-canonical product-support artifact body leaked scanner free text %q", unwanted)
+		}
+	}
+	assertNoCivilizationMutationControls(t, githubCanonicalSurface(t, body))
+}
+
 func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 	h, _, _ := testHandlers(t)
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

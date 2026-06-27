@@ -220,9 +220,12 @@ const (
 	githubCanonicalScannerArtifactBound = "Read-only platform scanner JSON artifact; Site reads the configured file only and does not call GitHub, Hive, EventGraph, or runtime services."
 	githubCanonicalScannerArtifactMax   = 1 << 20
 
-	githubCanonicalTest001PostureSourcePath = "test-001-carried-evidence-matrix.md"
-	githubCanonicalTest001PostureSummary    = "No qualifying replacement monitoring surface is proven by scanner projection alone. This Site display keeps unavailable YELLOW categories visible, but it does not close or replace operation#26 unless a later governed operation/docs decision accepts that disposition."
-	githubCanonicalTest001PostureBoundary   = "Read-only Test 001 posture display. This does not authorize Test 001 GREEN, Test 001 closure, incident closure, operation#26 closure, operation#35 closure, runtime execution, Hive wake or action APIs, EventGraph or Work writes, protected execution, deployment, service restart, settings or secrets changes, branch protection changes, residual-risk closure, value allocation, production go-live, public/live-reader evidence claims, or autonomy increase."
+	githubCanonicalTest001PostureSourcePath                       = "test-001-carried-evidence-matrix.md"
+	githubCanonicalTest001ReplacementNotProven                    = "not_proven_by_scanner_alone"
+	githubCanonicalTest001ReplacementProductSupportTrackerOpen    = "product_support_recorded_tracker_still_open"
+	githubCanonicalTest001PostureSummaryNotProven                 = "No qualifying replacement monitoring surface is proven by scanner projection alone. This Site display keeps unavailable YELLOW categories visible, but it does not close or replace operation#26 unless a later governed operation/docs decision accepts that disposition."
+	githubCanonicalTest001PostureSummaryProductSupportTrackerOpen = "The scanner artifact reports Site product-monitor support is recorded for the Test 001 carried-evidence posture, but operation#26 remains open while any carried-evidence category is unavailable. This does not authorize Test 001 GREEN, Test 001 closure, incident closure, or autonomy increase."
+	githubCanonicalTest001PostureBoundary                         = "Read-only Test 001 posture display. This does not authorize Test 001 GREEN, Test 001 closure, incident closure, operation#26 closure, operation#35 closure, runtime execution, Hive wake or action APIs, EventGraph or Work writes, protected execution, deployment, service restart, settings or secrets changes, branch protection changes, residual-risk closure, value allocation, production go-live, public/live-reader evidence claims, or autonomy increase."
 )
 
 func buildOpsGitHubCanonicalData(now time.Time) *OpsGitHubCanonicalData {
@@ -754,7 +757,7 @@ func opsGitHubCanonicalScannerTest001PostureMismatch(posture opsGitHubCanonicalS
 	if trackerState := strings.TrimSpace(posture.TrackerState); trackerState != "" && !strings.EqualFold(trackerState, "open_required") && !strings.EqualFold(trackerState, "open") {
 		return "scanner artifact Test 001 posture tracker state is outside the current open tracker boundary"
 	}
-	if monitoringState := strings.TrimSpace(posture.ReplacementMonitoringState); monitoringState != "" && monitoringState != "not_proven_by_scanner_alone" {
+	if monitoringState := opsGitHubCanonicalTest001ReplacementMonitoringState(posture.ReplacementMonitoringState); monitoringState == "" && strings.TrimSpace(posture.ReplacementMonitoringState) != "" {
 		return "scanner artifact Test 001 replacement monitoring state is outside the current non-closure boundary"
 	}
 	for _, row := range posture.Rows {
@@ -808,8 +811,8 @@ func opsGitHubCanonicalTest001PostureFromScannerArtifact(posture opsGitHubCanoni
 		SourceRef:                    strings.TrimSpace(posture.SourceRef),
 		TrackerRef:                   strings.TrimSpace(posture.TrackerRef),
 		TrackerState:                 opsGitHubCanonicalTest001TrackerState(posture.TrackerState),
-		ReplacementMonitoringState:   opsCivilizationValue(strings.TrimSpace(posture.ReplacementMonitoringState), "not_proven_by_scanner_alone"),
-		ReplacementMonitoringSummary: githubCanonicalTest001PostureSummary,
+		ReplacementMonitoringState:   opsGitHubCanonicalTest001ReplacementMonitoringState(posture.ReplacementMonitoringState),
+		ReplacementMonitoringSummary: opsGitHubCanonicalTest001ReplacementMonitoringSummary(posture.ReplacementMonitoringState),
 		Boundary:                     githubCanonicalTest001PostureBoundary,
 		Error:                        strings.TrimSpace(posture.Error),
 		ErrorKind:                    strings.TrimSpace(posture.ErrorKind),
@@ -840,6 +843,29 @@ func opsGitHubCanonicalTest001TrackerState(state string) string {
 		return "open"
 	}
 	return state
+}
+
+func opsGitHubCanonicalTest001ReplacementMonitoringState(state string) string {
+	state = strings.TrimSpace(state)
+	switch state {
+	case "":
+		return githubCanonicalTest001ReplacementNotProven
+	case githubCanonicalTest001ReplacementNotProven:
+		return githubCanonicalTest001ReplacementNotProven
+	case githubCanonicalTest001ReplacementProductSupportTrackerOpen:
+		return githubCanonicalTest001ReplacementProductSupportTrackerOpen
+	default:
+		return ""
+	}
+}
+
+func opsGitHubCanonicalTest001ReplacementMonitoringSummary(state string) string {
+	switch opsGitHubCanonicalTest001ReplacementMonitoringState(state) {
+	case githubCanonicalTest001ReplacementProductSupportTrackerOpen:
+		return githubCanonicalTest001PostureSummaryProductSupportTrackerOpen
+	default:
+		return githubCanonicalTest001PostureSummaryNotProven
+	}
 }
 
 func githubCanonicalAuthorityActions() []OpsGitHubCanonicalAuthorityAction {
@@ -955,8 +981,8 @@ func githubCanonicalTest001Posture() OpsGitHubCanonicalTest001Posture {
 		SourceRef:                    "transpara-ai/operation:docs/operations/test-001-carried-evidence-matrix.md",
 		TrackerRef:                   "transpara-ai/operation#26",
 		TrackerState:                 "open_required",
-		ReplacementMonitoringState:   "not_proven_by_scanner_alone",
-		ReplacementMonitoringSummary: githubCanonicalTest001PostureSummary,
+		ReplacementMonitoringState:   githubCanonicalTest001ReplacementNotProven,
+		ReplacementMonitoringSummary: githubCanonicalTest001PostureSummaryNotProven,
 		Boundary:                     githubCanonicalTest001PostureBoundary,
 		Rows: []OpsGitHubCanonicalTest001PostureRow{
 			{
