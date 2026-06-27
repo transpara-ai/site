@@ -989,6 +989,241 @@ func TestOpsCivilizationIssueScanKanbanRunLevelBlockerAttachesWithoutOrphan(t *t
 	}
 }
 
+func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectionEmpty(t *testing.T) {
+	projection := &OpsCivilizationAssemblyProjection{
+		IssueIntakeProjection: OpsCivilizationIssueIntakeProjection{
+			Issues: []OpsCivilizationIssueIntakeProjected{
+				{
+					Repo:              "transpara-ai/site",
+					Number:            166,
+					URL:               "https://github.com/transpara-ai/site/issues/166",
+					Title:             "Render paused issue-intake records in Civilization Kanban",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/site",
+					TouchedSubstrate:  "site operator ui projection for civilization issue-scan monitoring",
+					RiskClass:         "normal",
+					Readiness:         "ready:dbfdb101:pr-ready now for a bounded site-only read-only display implementation",
+					PRReadyWhen:       "PR-ready now for a bounded Site-only read-only display implementation.",
+					AuthorityBoundary: "display-only Site UI behavior; no runtime execution or protected action authority",
+					SourceRefs:        []string{"scanner:2026-06-27T08:23:51Z source:live:transpara-ai/site labels=cc:intake"},
+				},
+				{
+					Repo:              "transpara-ai/docs",
+					Number:            172,
+					URL:               "https://github.com/transpara-ai/docs/issues/172",
+					Title:             "Gate S closeout PR #171 approval artifact residual",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:protected-action", "cc:needs-human-scope"},
+					PrimaryRepo:       "transpara-ai/docs",
+					TouchedSubstrate:  "docs governance exact-head human approval evidence",
+					RiskClass:         "protected-action",
+					Readiness:         "needs-human-scope:74019752:no implementation pr is ready from this issue",
+					AuthorityBoundary: "human scope clarification required before any residual disposition",
+					SourceRefs:        []string{"scanner:2026-06-27T08:23:51Z source:live:transpara-ai/docs labels=cc:intake"},
+				},
+				{
+					Repo:             "transpara-ai/operation",
+					Number:           35,
+					URL:              "https://github.com/transpara-ai/operation/issues/35",
+					Title:            "Test 001 live evidence and incident tracker",
+					State:            "open",
+					Labels:           []string{"cc:intake", "cc:pr-deferred"},
+					PrimaryRepo:      "transpara-ai/operation",
+					TouchedSubstrate: "operation test 001 live evidence and incident tracker",
+					RiskClass:        "protected-action",
+					Readiness:        "pr-deferred:blocked until operation#26 live evidence exists",
+				},
+				{
+					Repo:             "transpara-ai/work",
+					Number:           64,
+					URL:              "https://github.com/transpara-ai/work/issues/64",
+					Title:            "Replay dry-run evidence after dependency refresh",
+					State:            "open",
+					Labels:           []string{"cc:intake", "cc:pr-deferred"},
+					PrimaryRepo:      "transpara-ai/work",
+					TouchedSubstrate: "work dry-run evidence",
+					RiskClass:        "normal",
+					Readiness:        "pr-deferred:stale target must be refreshed before PR work",
+				},
+				{
+					Repo:              "transpara-ai/site",
+					Number:            170,
+					URL:               "https://github.com/transpara-ai/site/issues/170",
+					Title:             "Ordinary intake record without ready or parked state",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/site",
+					TouchedSubstrate:  "site operator ui projection",
+					RiskClass:         "normal",
+					Readiness:         "intake captured; no PR-ready condition has been verified",
+					AuthorityBoundary: "read-only display scope; not blocked by protected actions",
+				},
+				{
+					Repo:              "transpara-ai/site",
+					Number:            171,
+					URL:               "https://github.com/transpara-ai/site/issues/171",
+					Title:             "PR-ready intake record with historical blocker prose",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:pr-ready", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/site",
+					TouchedSubstrate:  "site operator ui projection",
+					RiskClass:         "normal",
+					Readiness:         "ready:pr-ready now; previously blocked on scanner labels but unblocked after scope review",
+					AuthorityBoundary: "read-only display scope",
+				},
+				{
+					Repo:              "transpara-ai/hive",
+					Number:            88,
+					URL:               "https://github.com/transpara-ai/hive/issues/88",
+					Title:             "Protected-only intake record",
+					State:             "open",
+					Labels:            []string{"cc:intake", "cc:protected-action", "cc:civilization-presence"},
+					PrimaryRepo:       "transpara-ai/hive",
+					TouchedSubstrate:  "hive authority boundary",
+					RiskClass:         "normal",
+					Readiness:         "intake captured; protected action boundary required",
+					AuthorityBoundary: "future protected action design only; no execution authority",
+				},
+			},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+	if data.IssueScanKanban.Status != "intake fallback" {
+		t.Fatalf("kanban status = %q, want intake fallback", data.IssueScanKanban.Status)
+	}
+	if !strings.Contains(data.IssueScanKanban.Summary, "scanner issue-intake fallback") ||
+		!strings.Contains(data.IssueScanKanban.Summary, "not runtime execution or agent-touch evidence") {
+		t.Fatalf("fallback summary does not carry non-runtime warning: %q", data.IssueScanKanban.Summary)
+	}
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 7 {
+		t.Fatalf("fallback card count = %d, want 7: %+v", got, data.IssueScanKanban)
+	}
+
+	siteCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 166)
+	if siteCard == nil {
+		t.Fatalf("missing site#166 fallback card: %+v", data.IssueScanKanban)
+	}
+	if siteCard.CurrentState != "ready_for_human" || len(siteCard.Blockers) != 0 {
+		t.Fatalf("site#166 fallback state/blockers = %+v, want ready_for_human with no blockers", siteCard)
+	}
+	if siteCard.ProjectionSource != "scanner issue-intake fallback; not runtime execution or agent-touch evidence" {
+		t.Fatalf("site#166 projection source = %q", siteCard.ProjectionSource)
+	}
+	if len(siteCard.AssignedAgentIDs) != 0 || len(siteCard.TouchingAgentIDs) != 0 || siteCard.HasLineage || len(siteCard.EvidenceRefs) != 0 {
+		t.Fatalf("site#166 fallback leaked runtime fields: %+v", siteCard)
+	}
+	if !sliceContains(siteCard.Labels, "cc:pr-ready") || !strings.Contains(siteCard.Readiness, "pr-ready now") ||
+		siteCard.PRReadyWhen == "" || !sliceContains(siteCard.SourceRefs, "https://github.com/transpara-ai/site/issues/166") {
+		t.Fatalf("site#166 fallback did not preserve intake fields: %+v", siteCard)
+	}
+
+	docsCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/docs", 172)
+	if docsCard == nil || docsCard.CurrentState != "human_action" || len(docsCard.Blockers) != 2 {
+		t.Fatalf("docs#172 fallback = %+v, want human_action with protected and scope blockers", docsCard)
+	}
+	if docsCard.Blockers[0].BlockerType != "protected_action" || docsCard.Blockers[1].BlockerType != "needs_human_scope" {
+		t.Fatalf("docs#172 blocker ordering/types = %+v", docsCard.Blockers)
+	}
+
+	operationCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/operation", 35)
+	if operationCard == nil || operationCard.CurrentState != "human_action" {
+		t.Fatalf("operation#35 fallback = %+v, want protected human_action", operationCard)
+	}
+	workCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/work", 64)
+	if workCard == nil || workCard.CurrentState != "parked" || len(workCard.Blockers) != 1 || workCard.Blockers[0].BlockerType != "parked_issue_intake" {
+		t.Fatalf("work#64 fallback = %+v, want parked deferred/stale issue", workCard)
+	}
+	projectionOnlyCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 170)
+	if projectionOnlyCard == nil || projectionOnlyCard.CurrentState != "projection_only" || len(projectionOnlyCard.Blockers) != 0 {
+		t.Fatalf("site#170 fallback = %+v, want projection_only without blockers", projectionOnlyCard)
+	}
+	readyWithHistoryCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 171)
+	if readyWithHistoryCard == nil || readyWithHistoryCard.CurrentState != "ready_for_human" || len(readyWithHistoryCard.Blockers) != 0 {
+		t.Fatalf("site#171 fallback = %+v, want ready_for_human despite historical blocker prose", readyWithHistoryCard)
+	}
+	protectedOnlyCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/hive", 88)
+	if protectedOnlyCard == nil || protectedOnlyCard.CurrentState != "human_action" || len(protectedOnlyCard.Blockers) != 1 ||
+		protectedOnlyCard.Blockers[0].BlockerType != "protected_action" {
+		t.Fatalf("hive#88 fallback = %+v, want protected-only human_action blocker", protectedOnlyCard)
+	}
+	if !sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "ready_for_human") ||
+		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "human_action") ||
+		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "parked") ||
+		!sliceContains(issueScanKanbanColumnStates(data.IssueScanKanban), "projection_only") {
+		t.Fatalf("fallback columns = %+v, want ready_for_human, parked, human_action, and projection_only", data.IssueScanKanban.Columns)
+	}
+
+	var body strings.Builder
+	if err := opsCivilizationAssembly(data).Render(context.Background(), &body); err != nil {
+		t.Fatalf("render fallback civilization assembly: %v", err)
+	}
+	html := body.String()
+	for _, want := range []string{
+		"scanner issue-intake fallback; not runtime execution or agent-touch evidence",
+		"cc:pr-ready",
+		"PR-ready now for a bounded Site-only read-only display implementation.",
+		"none projected",
+		"do not queue runtime work from this fallback card",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("fallback render missing %q: %s", want, html)
+		}
+	}
+	assertNoCivilizationMutationControls(t, html)
+}
+
+func TestOpsCivilizationIssueScanKanbanTypedProjectionTakesPrecedenceOverIssueIntakeFallback(t *testing.T) {
+	projection := &OpsCivilizationAssemblyProjection{
+		IssueIntakeProjection: OpsCivilizationIssueIntakeProjection{
+			Issues: []OpsCivilizationIssueIntakeProjected{
+				{
+					Repo:        "transpara-ai/site",
+					Number:      166,
+					Labels:      []string{"cc:intake", "cc:pr-ready"},
+					Readiness:   "ready:site fallback would render only if typed records were absent",
+					PRReadyWhen: "fallback should not render",
+				},
+			},
+		},
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{
+				{
+					RunID:         "run_docs_172",
+					State:         "parked",
+					SelectedIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 172, Labels: []string{"cc:needs-human-scope"}},
+				},
+			},
+		},
+	}
+
+	data := buildOpsCivilizationAssemblyDataFromProjection(projection, time.Now().UTC())
+	if data.IssueScanKanban.Status != opsCivilizationFieldAvailable {
+		t.Fatalf("kanban status = %q, want available typed projection", data.IssueScanKanban.Status)
+	}
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 1 {
+		t.Fatalf("typed precedence card count = %d, want 1: %+v", got, data.IssueScanKanban)
+	}
+	if issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/site", 166) != nil {
+		t.Fatalf("intake fallback rendered despite typed issue-scan record: %+v", data.IssueScanKanban)
+	}
+	typedCard := issueScanKanbanCardByIssue(data.IssueScanKanban, "transpara-ai/docs", 172)
+	if typedCard == nil || typedCard.ProjectionSource != "typed issue-scan projection" {
+		t.Fatalf("typed card source = %+v", typedCard)
+	}
+}
+
+func TestOpsCivilizationIssueScanKanbanEmptyProjectionStaysNotProjected(t *testing.T) {
+	data := buildOpsCivilizationAssemblyDataFromProjection(&OpsCivilizationAssemblyProjection{}, time.Now().UTC())
+	if data.IssueScanKanban.Status != "not projected" {
+		t.Fatalf("empty kanban status = %q, want not projected", data.IssueScanKanban.Status)
+	}
+	if got := issueScanKanbanCardCount(data.IssueScanKanban); got != 0 {
+		t.Fatalf("empty kanban card count = %d, want 0", got)
+	}
+}
+
 func TestSortIssueScanCardsHasDeterministicTiebreakers(t *testing.T) {
 	cards := []OpsCivilizationIssueScanKanbanCard{
 		{RunID: "run", StageNumber: 1, StageID: "stage", CanonicalTaskID: "canonical", FactoryOrderID: "factory-b", TaskID: "task-b"},
@@ -2486,6 +2721,26 @@ func issueScanKanbanCardCount(kanban OpsCivilizationIssueScanKanban) int {
 		total += len(column.Cards)
 	}
 	return total
+}
+
+func issueScanKanbanCardByIssue(kanban OpsCivilizationIssueScanKanban, repo string, number int) *OpsCivilizationIssueScanKanbanCard {
+	for ci := range kanban.Columns {
+		for i := range kanban.Columns[ci].Cards {
+			card := &kanban.Columns[ci].Cards[i]
+			if card.SelectedIssue.Repo == repo && card.SelectedIssue.Number == number {
+				return card
+			}
+		}
+	}
+	return nil
+}
+
+func issueScanKanbanColumnStates(kanban OpsCivilizationIssueScanKanban) []string {
+	states := make([]string, 0, len(kanban.Columns))
+	for _, column := range kanban.Columns {
+		states = append(states, column.State)
+	}
+	return states
 }
 
 func assertNoCivilizationMutationControls(t *testing.T, surface string) {
