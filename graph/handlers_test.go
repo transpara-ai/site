@@ -51,6 +51,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 
 	for _, path := range []string{
 		"/ops",
+		"/ops/control",
 		"/ops/work",
 		"/ops/telemetry",
 		"/ops/observatory",

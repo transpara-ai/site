@@ -130,6 +130,38 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 	assertNoMutationControls(t, "/ops", body)
 }
 
+func TestNoDatabaseRoutesExposeReadOnlyOpsControlAlias(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/control", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/control without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Operations",
+		"site shell",
+		"Operator surfaces",
+		`href="/ops/civilization"`,
+		`href="/ops/hive/intake"`,
+		`href="/ops/evidence"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/control without DATABASE_URL body missing %q", want)
+		}
+	}
+	if strings.Contains(body, `href="/ops/control"`) {
+		t.Fatal("GET /ops/control without DATABASE_URL exposed /ops/control as canonical navigation")
+	}
+	assertNoMutationControls(t, "/ops/control", body)
+}
+
 func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
@@ -352,7 +384,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -392,7 +424,7 @@ func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical", "/ops/hive/intake"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical", "/ops/hive/intake"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
