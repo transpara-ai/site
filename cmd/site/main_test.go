@@ -104,12 +104,62 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 		"site shell",
 		"Operator surfaces",
 		"Civilization",
+		`href="/ops/telemetry"`,
+		`href="/ops/observatory"`,
+		`href="/ops/civilization"`,
+		`href="/ops/github-canonical"`,
+		`href="/ops/review-console"`,
+		`href="/ops/hive/intake"`,
+		`href="/ops/evidence"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops without DATABASE_URL body missing %q", want)
 		}
 	}
+	for _, forbidden := range []string{
+		`href="/ops/work"`,
+		`href="/ops/hive"`,
+		`href="/ops/decision"`,
+		`href="/ops/approvals"`,
+		`href="/ops/refinery"`,
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("GET /ops without DATABASE_URL body contains unavailable route link %q", forbidden)
+		}
+	}
 	assertNoMutationControls(t, "/ops", body)
+}
+
+func TestNoDatabaseRoutesExposeReadOnlyOpsControlAlias(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("home"))
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/control", nil)
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/control without DATABASE_URL status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Operations",
+		"site shell",
+		"Operator surfaces",
+		`href="/ops/civilization"`,
+		`href="/ops/hive/intake"`,
+		`href="/ops/evidence"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/control without DATABASE_URL body missing %q", want)
+		}
+	}
+	if strings.Contains(body, `href="/ops/control"`) {
+		t.Fatal("GET /ops/control without DATABASE_URL exposed /ops/control as canonical navigation")
+	}
+	assertNoMutationControls(t, "/ops/control", body)
 }
 
 func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
@@ -130,7 +180,7 @@ func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
 		`href="/ops/civilization"`,
 		`href="/ops/observatory"`,
 		`href="/ops/telemetry"`,
-		`href="/ops/civilization#issue-intake"`,
+		`href="/ops/hive/intake"`,
 		`href="/ops/github-canonical"`,
 		`href="/ops/civilization#issue-scan-kanban"`,
 		`href="/ops/github-canonical#test-001-posture"`,
@@ -240,6 +290,16 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 				"Read-only",
 			},
 		},
+		{
+			path: "/ops/hive/intake",
+			want: []string{
+				"Hive intake",
+				"Ingestion unavailable in this shell.",
+				"graph store unavailable",
+				"Run request queueing is unavailable",
+				"read-only degraded shell",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -257,6 +317,21 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 				}
 			}
 			assertNoMutationControls(t, tt.path, body)
+			if tt.path == "/ops/hive/intake" {
+				for _, forbidden := range []string{
+					`action="/ops/hive/intake/sources"`,
+					`action="/ops/hive/intake/launch"`,
+					`href="/ops/hive/runs"`,
+					`href="/ops/hive/agents"`,
+					`href="/ops/hive/resources"`,
+					"Add source",
+					"Queue Hive run request",
+				} {
+					if strings.Contains(body, forbidden) {
+						t.Fatalf("GET %s without DATABASE_URL exposed disabled ingestion control/link %q", tt.path, forbidden)
+					}
+				}
+			}
 		})
 	}
 }
@@ -309,7 +384,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/evidence"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -321,13 +396,35 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 	}
 }
 
+func TestNoDatabaseHiveIntakeMutationSubroutesUnavailable(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	for _, path := range []string{"/ops/hive/intake/sources", "/ops/hive/intake/launch"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, strings.NewReader("source_kind=text&content=x"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			mux.ServeHTTP(w, req)
+			if w.Code >= 200 && w.Code < 400 {
+				t.Fatalf("POST %s without DATABASE_URL status = %d, want non-success/non-redirect; headers: %v body: %s", path, w.Code, w.Header(), w.Body.String())
+			}
+			if location := w.Header().Get("Location"); location != "" {
+				t.Fatalf("POST %s without DATABASE_URL returned redirect Location %q", path, location)
+			}
+		})
+	}
+}
+
 func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical", "/ops/hive/intake"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)

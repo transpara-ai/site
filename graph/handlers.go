@@ -360,6 +360,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Operator shell — requires auth. Public Hive status stays under /hive*.
 	mux.Handle("GET /ops", h.writeWrap(h.handleOps))
+	mux.Handle("GET /ops/control", h.writeWrap(h.handleOps))
 	mux.Handle("GET /ops/work", h.writeWrap(h.handleOpsWork))
 	mux.Handle("GET /ops/telemetry", h.writeWrap(h.handleOpsTelemetry))
 	mux.Handle("GET /ops/observatory", h.writeWrap(h.handleOpsObservatory))
@@ -387,12 +388,14 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 // must only be mounted by the no-DATABASE_URL app branch.
 func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops", h.handleOps)
+	mux.HandleFunc("GET /ops/control", h.handleOps)
 	mux.HandleFunc("GET /ops/telemetry", h.handleOpsTelemetry)
 	mux.HandleFunc("GET /ops/observatory", h.handleOpsObservatory)
 	mux.HandleFunc("GET /ops/observatory/events", h.handleOpsObservatoryEvents)
 	mux.HandleFunc("GET /ops/civilization", h.handleOpsCivilization)
 	mux.HandleFunc("GET /ops/github-canonical", h.handleOpsGitHubCanonical)
 	mux.HandleFunc("GET /ops/review-console", h.handleOpsReviewConsole)
+	mux.HandleFunc("GET /ops/hive/intake", h.handleOpsHiveIntake)
 	mux.HandleFunc("GET /ops/evidence", h.handleOpsEvidence)
 }
 

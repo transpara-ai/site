@@ -72,7 +72,7 @@ func Home(stats HomeStats, p *profile.Profile) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = homeSurface("Ingestion", "Issue intake", "/ops/civilization#issue-intake", "read-only", "Source records, grouping inputs, scanner limits, and advisory boundaries.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = homeSurface("Ingestion", "Hive intake", "/ops/hive/intake", "store-aware", "Source records, graph-store availability, queued-run boundary, scanner limits, and advisory boundaries.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

@@ -45,7 +45,7 @@ templ Home(stats HomeStats, p *profile.Profile) {
 				@homeSurface("Control", "Civilization assembly", "/ops/civilization", "v4.0 projection", "Roles, gates, issue intake, Kanban, and non-authority boundaries.")
 				@homeSurface("Runtime", "Observatory", "/ops/observatory", "read-only", "Vitals, lifecycle timelines, causal traces, and explicit unavailable states.")
 				@homeSurface("Telemetry", "Pipeline telemetry", "/ops/telemetry", "native summary", "Agent activity, phase status, event stream health, and feeder errors.")
-				@homeSurface("Ingestion", "Issue intake", "/ops/civilization#issue-intake", "read-only", "Source records, grouping inputs, scanner limits, and advisory boundaries.")
+				@homeSurface("Ingestion", "Hive intake", "/ops/hive/intake", "store-aware", "Source records, graph-store availability, queued-run boundary, scanner limits, and advisory boundaries.")
 				@homeSurface("Scan", "GitHub canonical", "/ops/github-canonical", "scanner evidence", "Issue-canonical progress, parked blockers, warnings, and source-count posture.")
 				@homeSurface("Kanban", "Issue-scan board", "/ops/civilization#issue-scan-kanban", "projection only", "Run stages, blocker reasons, agent touch, evidence refs, and human action state.")
 				@homeSurface("Test 001", "Carried-evidence posture", "/ops/github-canonical#test-001-posture", "YELLOW/open", "Operation tracker state, unavailable evidence rows, and product-monitor support.")

@@ -104,6 +104,8 @@ type OpsHiveIntakeView struct {
 	AuthorityLevel  string
 	EstimatedBudget string
 	StorageStatus   string
+	ReadOnly        bool
+	ReadOnlyReason  string
 	Error           string
 	LaunchError     string
 	Sources         []OpsHiveSourceView
@@ -1125,13 +1127,57 @@ func (h *Handlers) handleOpsHiveIntake(w http.ResponseWriter, r *http.Request) {
 	shell.Profile = opsHiveProfileSlugFromRequest(r)
 	if h.store != nil {
 		shell.Intake = h.buildOpsHiveIntakeView(r)
+	} else {
+		shell.Intake = buildOpsHiveReadOnlyIntakeView()
+	}
+	description := "Site-owned intake shell for persisted source capture, interpretation, and launch readiness."
+	if shell.Intake.ReadOnly {
+		description = "Read-only degraded ingestion surface for source capture, interpretation, and launch-boundary status."
 	}
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Hive intake",
-		Description: "Site-owned intake shell for persisted source capture, interpretation, and launch readiness.",
+		Description: description,
 		Active:      "hive",
 		HiveShell:   shell,
 	})
+}
+
+func buildOpsHiveReadOnlyIntakeView() OpsHiveIntakeView {
+	return OpsHiveIntakeView{
+		Status:          "unavailable",
+		Confidence:      "not derived",
+		SuggestedMode:   "not derived",
+		AuthorityLevel:  "read-only degraded shell",
+		EstimatedBudget: "unavailable",
+		StorageStatus:   "graph store unavailable",
+		ReadOnly:        true,
+		ReadOnlyReason:  "Ingestion source capture and Hive launch queueing require the graph store and governed Hive write path. This no-DB shell renders the ingestion boundary only.",
+		Sources: []OpsHiveSourceView{
+			{
+				Kind:   "system",
+				Title:  "No persisted intake sources",
+				Detail: "DATABASE_URL is not configured, so Site cannot persist source records for this render.",
+				Status: "unavailable",
+			},
+		},
+		MissingFields: []OpsHiveMissingFieldView{
+			{Label: "Graph store", Detail: "Configure DATABASE_URL before source cards can be saved.", Status: "unavailable"},
+			{Label: "Hive launch write path", Detail: "Queueing a run request is disabled in the read-only shell.", Status: "unavailable"},
+			{Label: "Runtime evidence", Detail: "No runtime start or Hive wake is implied by this page.", Status: "boundary"},
+		},
+		Brief: OpsHiveBriefPreviewView{
+			Title:      "Ingestion unavailable",
+			Objective:  "Display the MFOF ingestion boundary without accepting source writes.",
+			Scope:      "Read-only Site operator shell; no persistence, queueing, runtime execution, or protected side effects.",
+			Acceptance: "Operators can see that ingestion is unavailable and where the boundary sits.",
+			Risks:      "Treating missing graph storage as successful ingestion would create a fake green light.",
+			Readiness:  "not ready until graph store and governed Hive launch path are configured",
+			Missing: []OpsHiveMissingFieldView{
+				{Label: "source persistence", Detail: "No graph store is configured.", Status: "unavailable"},
+				{Label: "launch authority", Detail: "Runtime start remains separately governed.", Status: "blocked"},
+			},
+		},
+	}
 }
 
 func (h *Handlers) handleOpsHiveIntakeSourceCreate(w http.ResponseWriter, r *http.Request) {
@@ -1440,12 +1486,12 @@ func (h *Handlers) handleOpsRefinery(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) renderOps(w http.ResponseWriter, r *http.Request, data OpsPageData) {
-	data.Surfaces = opsSurfaces(r)
+	data.Surfaces = opsSurfaces(h.store == nil)
 	OpsPage(data, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
-func opsSurfaces(r *http.Request) []OpsSurface {
-	return []OpsSurface{
+func opsSurfaces(readOnly bool) []OpsSurface {
+	surfaces := []OpsSurface{
 		{
 			ID:          "work",
 			Label:       "Work",
@@ -1510,6 +1556,15 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native summary",
 		},
 		{
+			ID:          "ingestion",
+			Label:       "Ingestion",
+			Description: "Source capture, brief readiness, missing input, and governed Hive launch boundary.",
+			Href:        "/ops/hive/intake",
+			Target:      "site graph store + Hive queued-run projection",
+			Owner:       "site shell, hive intake",
+			Status:      "store-aware",
+		},
+		{
 			ID:          "evidence",
 			Label:       "Evidence",
 			Description: "Read-only FactoryOrder evidence projection: timeline, gates, release, audit, failures, repairs, and provenance gaps.",
@@ -1546,6 +1601,25 @@ func opsSurfaces(r *http.Request) []OpsSurface {
 			Status:      "native FSM framed",
 		},
 	}
+	if !readOnly {
+		return surfaces
+	}
+	registeredReadOnly := map[string]bool{
+		"telemetry":        true,
+		"observatory":      true,
+		"civilization":     true,
+		"github-canonical": true,
+		"review-console":   true,
+		"ingestion":        true,
+		"evidence":         true,
+	}
+	filtered := make([]OpsSurface, 0, len(registeredReadOnly))
+	for _, surface := range surfaces {
+		if registeredReadOnly[surface.ID] {
+			filtered = append(filtered, surface)
+		}
+	}
+	return filtered
 }
 
 func opsHiveShellCards() []OpsHiveShellCard {

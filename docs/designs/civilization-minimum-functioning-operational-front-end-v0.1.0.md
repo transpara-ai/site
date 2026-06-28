@@ -3,7 +3,7 @@ doc_id: SITE-CIVILIZATION-MFOF-DESIGN-001
 title: Civilization Minimum Functioning Operational Front End
 doc_type: design
 status: proposal
-version: 0.1.0
+version: 0.1.1
 created: 2026-06-27
 updated: 2026-06-27
 owner: Michael Saucier
@@ -14,7 +14,7 @@ telemetry_precedent: transpara-ai/docs:designs/telemetry-mission-control-design-
 authority: design-only; no runtime, deploy, Test 001 GREEN, autonomy increase, or production EventGraph write
 ---
 
-<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-DESIGN-001 type=design version=0.1.0 status=proposal -->
+<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-DESIGN-001 type=design version=0.1.1 status=proposal -->
 
 # Civilization Minimum Functioning Operational Front End
 
