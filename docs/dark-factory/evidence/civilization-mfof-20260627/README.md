@@ -3,7 +3,7 @@ doc_id: SITE-CIVILIZATION-MFOF-EVIDENCE-20260627
 title: Civilization MFOF Design Evidence Index
 doc_type: evidence-index
 status: proposal
-version: 0.1.0
+version: 0.1.1
 created: 2026-06-27
 updated: 2026-06-27
 owner: Michael Saucier
@@ -13,12 +13,12 @@ canonical_arc: dark-factory/v4.0
 authority: evidence-index only; no runtime, deploy, Test 001 GREEN, autonomy increase, or production EventGraph write
 ---
 
-<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-EVIDENCE-20260627 type=evidence-index version=0.1.0 status=proposal -->
+<!-- transpara:artifact id=SITE-CIVILIZATION-MFOF-EVIDENCE-20260627 type=evidence-index version=0.1.1 status=proposal -->
 
 # Civilization MFOF Design Evidence Index
 
 This index records the source material used for
-`SITE-CIVILIZATION-MFOF-DESIGN-001` version `0.1.0`. It is a design evidence
+`SITE-CIVILIZATION-MFOF-DESIGN-001` version `0.1.1`. It is a design evidence
 index, not an authority packet and not implementation evidence.
 
 ## References
