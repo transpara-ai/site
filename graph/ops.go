@@ -43,6 +43,7 @@ type OpsPageData struct {
 	Hive            *OpsHiveData
 	HiveShell       *OpsHiveShellData
 	Evidence        *OpsEvidenceData
+	PublicProof     *OpsPublicProofData
 	Decision        *OpsDecisionData
 	Approvals       *OpsApprovalsData
 	Observatory     *OpsObservatoryData
@@ -675,6 +676,27 @@ type OpsEvidenceData struct {
 	RoleTimeline []OpsRoleTimelineRow
 }
 
+type OpsPublicProofData struct {
+	GeneratedAt    string
+	Source         string
+	Summary        string
+	Boundary       string
+	RequiredLabels []string
+	Records        []OpsPublicProofRecord
+}
+
+type OpsPublicProofRecord struct {
+	Category     string
+	State        string
+	Source       string
+	LastUpdate   string
+	Boundary     string
+	EvidenceRef  string
+	EvidenceHref string
+	Notes        string
+	Labels       []string
+}
+
 type OpsDecisionData struct {
 	AuthorizationSource string
 	CorrelationID       string
@@ -906,6 +928,15 @@ func (h *Handlers) handleOpsGitHubCanonical(w http.ResponseWriter, r *http.Reque
 		Description:     "Read-only migration progress for replacing markdown development arcs with GitHub issue-canonical work records.",
 		Active:          "github-canonical",
 		GitHubCanonical: buildOpsGitHubCanonicalDataWithScannerArtifact(time.Now().UTC(), os.Getenv(githubCanonicalScannerArtifactEnv)),
+	})
+}
+
+func (h *Handlers) handleOpsPublicProof(w http.ResponseWriter, r *http.Request) {
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Public Proof",
+		Description: "Display-only public-reader and public-correction evidence ledger. Site shows configured public refs and explicit unavailable states; it does not fetch private data or execute work.",
+		Active:      "public-proof",
+		PublicProof: buildOpsPublicProofData(time.Now().UTC()),
 	})
 }
 
@@ -1538,6 +1569,15 @@ func opsSurfaces(readOnly bool) []OpsSurface {
 			Status:      "partial cutover",
 		},
 		{
+			ID:          "public-proof",
+			Label:       "Public Proof",
+			Description: "Display-only public-reader and public-correction proof ledger with explicit unavailable, stale, fixture, and projection-only states.",
+			Href:        "/ops/public-proof",
+			Target:      "static Site public-proof evidence records",
+			Owner:       "site operator evidence surface",
+			Status:      "display only",
+		},
+		{
 			ID:          "review-console",
 			Label:       "Review Console",
 			Description: "External Committee decision evidence: exact-head approvals, residuals, authority packets, and gate closeout state.",
@@ -1609,6 +1649,7 @@ func opsSurfaces(readOnly bool) []OpsSurface {
 		"observatory":      true,
 		"civilization":     true,
 		"github-canonical": true,
+		"public-proof":     true,
 		"review-console":   true,
 		"ingestion":        true,
 		"evidence":         true,
@@ -1620,6 +1661,79 @@ func opsSurfaces(readOnly bool) []OpsSurface {
 		}
 	}
 	return filtered
+}
+
+func buildOpsPublicProofData(now time.Time) *OpsPublicProofData {
+	return &OpsPublicProofData{
+		GeneratedAt: formatOpsTime(now.Format(time.RFC3339)),
+		Source:      "static Site evidence records",
+		Summary:     "No live public-reader or public-correction proof is claimed here. Rows stay unavailable until an explicit public URL, GitHub reference, or Operation-approved public-proof reference is configured.",
+		Boundary:    "Display-only Site operator evidence/status surface. No deploy, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure, operation#26 closure, value allocation, residual-risk closure, autonomy increase, or private fetch.",
+		RequiredLabels: []string{
+			"unavailable",
+			"stale",
+			"fixture/local",
+			"projection-only",
+			"deployed-reference",
+			"live-reader-proof",
+			"public-correction-proof",
+		},
+		Records: []OpsPublicProofRecord{
+			{
+				Category:     "Site scope decision",
+				State:        "projection-only",
+				Source:       "GitHub issue authorization",
+				LastUpdate:   "2026-06-28 09:31:13",
+				Boundary:     "Authorizes this display route only; no proof, deploy, runtime, write, closure, or autonomy authority.",
+				EvidenceRef:  "transpara-ai/site#191 scope comment",
+				EvidenceHref: "https://github.com/transpara-ai/site/issues/191#issuecomment-4826247687",
+				Notes:        "Human scope decision permits /ops/public-proof with static/manual evidence records and required unavailable labels.",
+				Labels:       []string{"fixture/local", "projection-only"},
+			},
+			{
+				Category:    "Deployed public URL evidence",
+				State:       "unavailable",
+				Source:      "manual Site evidence record",
+				LastUpdate:  "not configured",
+				Boundary:    "May show only a labeled public URL evidence reference. Site performs no private fetch and no deploy.",
+				EvidenceRef: "no deployed public URL evidence ref configured",
+				Notes:       "When a public URL is approved, this row can show the URL as evidence only; it must not become a runtime health claim by implication.",
+				Labels:      []string{"unavailable", "deployed-reference"},
+			},
+			{
+				Category:     "Live-reader proof",
+				State:        "unavailable",
+				Source:       "Operation-approved public-proof reference required",
+				LastUpdate:   "not configured",
+				Boundary:     "Display permitted only when an explicit evidence ref exists; otherwise unavailable.",
+				EvidenceRef:  "transpara-ai/operation#45 pending",
+				EvidenceHref: "https://github.com/transpara-ai/operation/issues/45",
+				Notes:        "operation#45 remains the pending evidence path; this page does not close or satisfy it.",
+				Labels:       []string{"unavailable", "live-reader-proof"},
+			},
+			{
+				Category:     "Public-correction proof",
+				State:        "unavailable",
+				Source:       "Operation-approved public-proof reference required",
+				LastUpdate:   "not configured",
+				Boundary:     "Display permitted only when an explicit evidence ref exists; otherwise unavailable.",
+				EvidenceRef:  "transpara-ai/operation#45 pending",
+				EvidenceHref: "https://github.com/transpara-ai/operation/issues/45",
+				Notes:        "No correction proof is claimed and no residual-risk closure is implied.",
+				Labels:       []string{"unavailable", "public-correction-proof"},
+			},
+			{
+				Category:    "Telemetry precedent",
+				State:       "stale",
+				Source:      "historical design carry-forward",
+				LastUpdate:  "0.4.1 historical",
+				Boundary:    "Design precedent only; not current live proof and not a Civilization arc baseline.",
+				EvidenceRef: "docs/designs/telemetry-mission-control-design-v0.4.1.md",
+				Notes:       "Carries forward honest staleness and no-fake-green-light display posture only.",
+				Labels:      []string{"stale", "fixture/local"},
+			},
+		},
+	}
 }
 
 func opsHiveShellCards() []OpsHiveShellCard {
@@ -3227,6 +3341,21 @@ func opsHiveShellStatusClass(status string) string {
 		return "border-edge text-warm-faint bg-void/30"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
+	}
+}
+
+func opsPublicProofStateClass(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "unavailable":
+		return "border-red-300/40 text-red-300 bg-red-300/10"
+	case "stale":
+		return "border-amber-300/40 text-amber-300 bg-amber-300/10"
+	case "fixture/local", "projection-only":
+		return "border-edge text-warm-faint bg-void/30"
+	case "deployed-reference", "live-reader-proof", "public-correction-proof":
+		return "border-brand/40 text-brand bg-brand/10"
+	default:
+		return "border-edge text-warm-muted bg-void/30"
 	}
 }
 

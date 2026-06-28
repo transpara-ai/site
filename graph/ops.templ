@@ -69,6 +69,8 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 					} else {
 						@opsRoleTimeline(data.Evidence)
 					}
+				} else if data.PublicProof != nil {
+					@opsPublicProof(data.PublicProof)
 				} else if data.Decision != nil {
 					@opsDecisionSurface(data.Decision)
 				} else if data.Approvals != nil {
@@ -572,6 +574,77 @@ templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {
 					</div>
 				</div>
 			</section>
+		</section>
+	</section>
+}
+
+templ opsPublicProof(data *OpsPublicProofData) {
+	<section class="space-y-4" data-public-proof="display-only">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Public-reader and public-correction proof</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">{ data.Summary }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">display only</span>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-amber-300/40 text-amber-300 bg-amber-300/10 whitespace-nowrap">no fake green lights</span>
+				</div>
+			</header>
+			<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
+				<dt class="text-warm-faint">source</dt>
+				<dd class="text-warm-muted">{ data.Source }</dd>
+				<dt class="text-warm-faint">rendered_at</dt>
+				<dd class="text-warm-muted">{ data.GeneratedAt }</dd>
+				<dt class="text-warm-faint">boundary</dt>
+				<dd class="text-warm-faint leading-relaxed">{ data.Boundary }</dd>
+			</dl>
+			<div class="px-4 pb-4 flex flex-wrap gap-2">
+				for _, label := range data.RequiredLabels {
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(label) }>{ label }</span>
+				}
+			</div>
+		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Evidence records</h2>
+				<p class="text-xs text-warm-faint mt-1">Static/manual records show source, last update, boundary, and evidence reference without fetching private state.</p>
+			</header>
+			<div class="divide-y divide-edge" data-public-proof-records="display-only">
+				for _, record := range data.Records {
+					<article class="p-4 grid gap-3 lg:grid-cols-[15rem_1fr]">
+						<div class="space-y-2">
+							<div class="flex flex-wrap items-center gap-2">
+								<h3 class="text-sm font-medium text-warm break-words">{ record.Category }</h3>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(record.State) }>{ record.State }</span>
+							</div>
+							<div class="flex flex-wrap gap-1">
+								for _, label := range record.Labels {
+									<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(label) }>{ label }</span>
+								}
+							</div>
+						</div>
+						<dl class="grid gap-x-3 gap-y-2 text-xs sm:grid-cols-[7rem_1fr]">
+							<dt class="text-warm-faint">source</dt>
+							<dd class="text-warm-muted break-words">{ record.Source }</dd>
+							<dt class="text-warm-faint">last_update</dt>
+							<dd class="text-warm-muted break-all">{ record.LastUpdate }</dd>
+							<dt class="text-warm-faint">evidence_ref</dt>
+							<dd class="text-warm-muted break-all">
+								if record.EvidenceHref != "" {
+									<a href={ templ.SafeURL(record.EvidenceHref) } class="text-brand hover:underline" target="_blank" rel="noopener">{ record.EvidenceRef }</a>
+								} else {
+									<span>{ record.EvidenceRef }</span>
+								}
+							</dd>
+							<dt class="text-warm-faint">boundary</dt>
+							<dd class="text-warm-faint break-words leading-relaxed">{ record.Boundary }</dd>
+							<dt class="text-warm-faint">notes</dt>
+							<dd class="text-warm-muted break-words leading-relaxed">{ record.Notes }</dd>
+						</dl>
+					</article>
+				}
+			</div>
 		</section>
 	</section>
 }

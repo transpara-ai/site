@@ -51,6 +51,7 @@ templ Home(stats HomeStats, p *profile.Profile) {
 				@homeSurface("Test 001", "Carried-evidence posture", "/ops/github-canonical#test-001-posture", "YELLOW/open", "Operation tracker state, unavailable evidence rows, and product-monitor support.")
 				@homeSurface("Review", "Review and evidence", "/ops/review-console", "display only", "Exact-head approvals, authority packets, residuals, and gate closeout state.")
 				@homeSurface("Evidence", "Evidence packet", "/ops/evidence", "display only", "Proof packets, tests, decisions, and known failures without execution authority.")
+				@homeSurface("Public proof", "Reader/correction proof", "/ops/public-proof", "display only", "Public URL refs, live-reader proof, correction proof, and explicit unavailable states.")
 			</section>
 
 			if stats.Spaces > 0 || stats.Tasks > 0 || stats.AgentOps > 0 {
