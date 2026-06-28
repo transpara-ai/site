@@ -58,6 +58,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/observatory/events",
 		"/ops/civilization",
 		"/ops/github-canonical",
+		"/ops/public-proof",
 		"/ops/hive",
 		"/ops/evidence",
 		"/ops/decision",

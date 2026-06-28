@@ -1997,6 +1997,59 @@ func TestHandleOpsEvidenceUnconfiguredRendersEmptyState(t *testing.T) {
 	}
 }
 
+func TestHandleOpsPublicProofRendersDisplayOnlyEvidenceLedger(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/public-proof?profile=transpara", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /ops/public-proof: status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"Public Proof",
+		`data-public-proof="display-only"`,
+		"Public-reader and public-correction proof",
+		"no fake green lights",
+		"static Site evidence records",
+		"Site scope decision",
+		"Deployed public URL evidence",
+		"Live-reader proof",
+		"Public-correction proof",
+		"Telemetry precedent",
+		"transpara-ai/site#191 scope comment",
+		"https://github.com/transpara-ai/site/issues/191#issuecomment-4826247687",
+		"transpara-ai/operation#45 pending",
+		"docs/designs/telemetry-mission-control-design-v0.4.1.md",
+		"unavailable",
+		"stale",
+		"fixture/local",
+		"projection-only",
+		"deployed-reference",
+		"live-reader-proof",
+		"public-correction-proof",
+		"No live public-reader or public-correction proof is claimed here",
+		"No deploy, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("GET /ops/public-proof: body does not contain %q", want)
+		}
+	}
+	surfaceStart := strings.Index(body, `data-public-proof="display-only"`)
+	if surfaceStart < 0 {
+		t.Fatal("GET /ops/public-proof: missing display-only marker")
+	}
+	surface := body[surfaceStart:]
+	if end := strings.Index(surface, "</main>"); end >= 0 {
+		surface = surface[:end]
+	}
+	assertNoCivilizationMutationControls(t, surface)
+}
+
 func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

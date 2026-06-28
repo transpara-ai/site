@@ -108,6 +108,7 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 		`href="/ops/observatory"`,
 		`href="/ops/civilization"`,
 		`href="/ops/github-canonical"`,
+		`href="/ops/public-proof"`,
 		`href="/ops/review-console"`,
 		`href="/ops/hive/intake"`,
 		`href="/ops/evidence"`,
@@ -151,6 +152,7 @@ func TestNoDatabaseRoutesExposeReadOnlyOpsControlAlias(t *testing.T) {
 		`href="/ops/civilization"`,
 		`href="/ops/hive/intake"`,
 		`href="/ops/evidence"`,
+		`href="/ops/public-proof"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/control without DATABASE_URL body missing %q", want)
@@ -186,6 +188,7 @@ func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
 		`href="/ops/github-canonical#test-001-posture"`,
 		`href="/ops/review-console"`,
 		`href="/ops/evidence"`,
+		`href="/ops/public-proof"`,
 		"YELLOW/open",
 		"projection only",
 		"scanner evidence",
@@ -291,6 +294,22 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 			},
 		},
 		{
+			path: "/ops/public-proof",
+			want: []string{
+				"Public Proof",
+				`data-public-proof="display-only"`,
+				"Public-reader and public-correction proof",
+				"unavailable",
+				"stale",
+				"fixture/local",
+				"projection-only",
+				"deployed-reference",
+				"live-reader-proof",
+				"public-correction-proof",
+				"no fake green lights",
+			},
+		},
+		{
 			path: "/ops/hive/intake",
 			want: []string{
 				"Hive intake",
@@ -384,7 +403,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/public-proof", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -424,7 +443,7 @@ func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical", "/ops/hive/intake"} {
+	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/civilization", "/ops/github-canonical", "/ops/public-proof", "/ops/hive/intake"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
