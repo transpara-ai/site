@@ -19,7 +19,11 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 			<main class="flex-1 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10 w-full space-y-6">
 				<section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 					<div class="space-y-2 max-w-3xl">
-						<p class="text-xs font-medium text-brand uppercase tracking-widest">Operator shell</p>
+						if data.Active == "factory" {
+							<p class="text-xs font-medium text-brand uppercase tracking-widest">Factory workspace</p>
+						} else {
+							<p class="text-xs font-medium text-brand uppercase tracking-widest">Operator shell</p>
+						}
 						<h1 class="text-3xl md:text-4xl font-display font-normal text-warm">{ data.Title }</h1>
 						<p class="text-sm md:text-base text-warm-muted leading-relaxed">{ data.Description }</p>
 					</div>
@@ -27,29 +31,36 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 						My Work
 					</a>
 				</section>
-				<nav class="grid gap-3 md:grid-cols-3 lg:grid-cols-6" aria-label="Operator surfaces">
+				<nav class="grid gap-2 md:grid-cols-3" aria-label="Operator surfaces">
 					for _, surface := range data.Surfaces {
 						<a
 							href={ templ.SafeURL(surface.Href) }
-							class={ "group border rounded-lg p-4 transition-colors min-h-[9rem] flex flex-col",
+							class={ "group border rounded-md px-3 py-2 transition-colors flex items-center justify-between gap-3 min-h-[3.25rem]",
 								templ.KV("border-brand/40 bg-brand/10", surface.ID == data.Active),
 								templ.KV("border-edge bg-surface hover:border-brand/30 hover:bg-elevated/60", surface.ID != data.Active) }
 						>
-							<div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
-								<h2 class="min-w-0 text-base font-medium text-warm break-words group-hover:text-brand transition-colors">{ surface.Label }</h2>
-								<span class={ "shrink-0 text-[10px] px-2 py-1 rounded-full border whitespace-nowrap",
-									templ.KV("border-brand/30 text-brand bg-brand/10", surface.ID == data.Active),
-									templ.KV("border-edge text-warm-faint bg-void/30", surface.ID != data.Active) }
-								>
-									{ surface.Status }
-								</span>
+							<div class="min-w-0">
+								<h2 class="min-w-0 text-sm font-medium text-warm truncate group-hover:text-brand transition-colors">{ surface.Label }</h2>
+								<p class="text-[11px] text-warm-faint truncate">{ surface.Owner }</p>
 							</div>
-							<p class="text-xs text-warm-muted leading-relaxed mt-3 flex-1">{ surface.Description }</p>
-							<p class="text-[11px] text-warm-faint mt-3">{ surface.Owner }</p>
+							<span class={ "shrink-0 text-[10px] px-2 py-1 rounded-full border whitespace-nowrap",
+								templ.KV("border-brand/30 text-brand bg-brand/10", surface.ID == data.Active),
+								templ.KV("border-edge text-warm-faint bg-void/30", surface.ID != data.Active) }
+							>
+								{ surface.Status }
+							</span>
 						</a>
 					}
 				</nav>
-				if data.Civilization != nil {
+				if data.Overview != nil {
+					@opsOverview(data.Overview)
+				} else if data.Observation != nil {
+					@opsObservation(data.Observation)
+				} else if data.Control != nil {
+					@opsControl(data.Control)
+				} else if data.Factory != nil {
+					@opsFactory(data.Factory)
+				} else if data.Civilization != nil {
 					@opsCivilizationAssembly(data.Civilization)
 				} else if data.GitHubCanonical != nil {
 					@opsGitHubCanonical(data.GitHubCanonical)
@@ -118,6 +129,375 @@ templ OpsPage(data OpsPageData, user ViewUser, p *profile.Profile) {
 			@simpleFooter(p)
 		</body>
 	</html>
+}
+
+templ opsOverview(data *OpsOverviewData) {
+	<section class="space-y-4" data-ops-hub="three-path">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Civilization operating paths</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">{ data.Summary }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-sky-300/40 text-sky-200 bg-sky-300/10 whitespace-nowrap">rendered { data.GeneratedAt }</span>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">site shell</span>
+				</div>
+			</header>
+			<p class="px-4 py-3 text-xs text-warm-faint leading-relaxed">{ data.Boundary }</p>
+		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge">
+				<h2 class="text-sm font-medium text-warm">Evidence drilldowns</h2>
+				<p class="text-xs text-warm-faint mt-1">Detailed evidence pages remain available, but they are no longer the primary path.</p>
+			</header>
+			<div class="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+				for _, surface := range data.Drilldowns {
+					<a href={ templ.SafeURL(surface.Href) } class="border border-edge bg-void/20 rounded-md p-3 hover:border-brand/30 hover:bg-elevated/30 transition-colors min-h-[8rem]">
+						<div class="flex items-start justify-between gap-2">
+							<h3 class="text-sm font-medium text-warm break-words">{ surface.Label }</h3>
+							<span class="text-[10px] text-warm-faint whitespace-nowrap">{ surface.Status }</span>
+						</div>
+						<p class="text-xs text-warm-muted mt-2 leading-relaxed line-clamp-3">{ surface.Description }</p>
+					</a>
+				}
+			</div>
+		</section>
+	</section>
+}
+
+templ opsObservation(data *OpsObservationData) {
+	<section class="space-y-4" data-observation-boundary="display-only">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Civilization health and Factory motion</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">{ data.Source }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-sky-300/40 text-sky-200 bg-sky-300/10 whitespace-nowrap">rendered { data.GeneratedAt }</span>
+					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ data.Freshness }</span>
+				</div>
+			</header>
+			<p class="px-4 py-3 text-xs text-warm-faint leading-relaxed">{ data.Boundary }</p>
+		</section>
+		<section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-6" aria-label="High-level metrics">
+			for _, metric := range data.Metrics {
+				<article class="border border-edge bg-surface rounded-lg p-3 min-h-[9rem]">
+					<div class="flex items-start justify-between gap-2">
+						<h3 class="text-xs font-medium text-warm-faint uppercase tracking-widest">{ metric.Label }</h3>
+						<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(metric.State) }>{ metric.State }</span>
+					</div>
+					<p class="text-2xl font-display text-warm mt-3 tabular-nums">{ metric.Value }</p>
+					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ metric.Context }</p>
+					<p class="text-[11px] text-warm-faint mt-3 break-words">{ metric.Source } · { metric.UpdatedAt }</p>
+				</article>
+			}
+		</section>
+		<section class="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Live agents and actors</h2>
+					<p class="text-xs text-warm-faint mt-1">Rows are sorted by projected recency from available sources; unavailable remains visible.</p>
+				</header>
+				<div class="overflow-x-auto">
+					<table class="w-full min-w-[54rem] text-left text-xs">
+						<thead class="text-warm-faint border-b border-edge">
+							<tr>
+								<th class="py-2 px-3 font-medium">Role</th>
+								<th class="py-2 px-3 font-medium">State</th>
+								<th class="py-2 px-3 font-medium">Model</th>
+								<th class="py-2 px-3 font-medium">Activity</th>
+								<th class="py-2 px-3 font-medium">Source</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, row := range data.AgentRows {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-words">{ row.Role }<p class="text-[10px] text-warm-faint mt-1">{ row.LastSeen }</p></td>
+									<td class="py-2 px-3"><span class={ "inline-flex text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsAgentStateClass(row.State) }>{ row.State }</span></td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ row.Model }</td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ row.Activity }</td>
+									<td class="py-2 px-3 text-warm-faint break-words">{ row.Source } · { row.Boundary }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Factory flow</h2>
+					<p class="text-xs text-warm-faint mt-1">Counts are state labels, not authority to advance work.</p>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, stage := range data.FactoryStages {
+						<div class="px-4 py-3">
+							<div class="flex items-center justify-between gap-3">
+								<h3 class="text-sm font-medium text-warm">{ stage.Label }</h3>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(stage.State) }>{ stage.State }</span>
+							</div>
+							<div class="mt-3 flex items-center gap-3">
+								<div class="h-1.5 flex-1 bg-void/50 rounded-sm overflow-hidden">
+									<div class="h-full bg-brand/70" style={ fmt.Sprintf("width: %d%%", opsPercentForCount(stage.Count, 10)) }></div>
+								</div>
+								<span class="text-sm text-warm tabular-nums">{ fmt.Sprintf("%d", stage.Count) }</span>
+							</div>
+							<p class="text-[11px] text-warm-faint mt-2">{ stage.Source } · { stage.Boundary }</p>
+						</div>
+					}
+				</div>
+			</section>
+		</section>
+		<section class="grid gap-4 lg:grid-cols-2">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Runs and expenses by role</h2>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, row := range data.SpendRows {
+						<div class="px-4 py-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+							<div>
+								<h3 class="text-sm font-medium text-warm">{ row.Label }</h3>
+								<p class="text-xs text-warm-faint mt-1">{ row.Source }</p>
+							</div>
+							<div class="sm:text-right">
+								<p class="text-sm text-warm tabular-nums">{ row.Value }</p>
+								<p class="text-[11px] text-warm-faint">{ row.Limit } · { row.State }</p>
+							</div>
+						</div>
+					}
+				</div>
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Exceptions and blockers</h2>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, item := range data.Exceptions {
+						<article class="px-4 py-3">
+							<div class="flex items-start justify-between gap-3">
+								<h3 class="text-sm font-medium text-warm">{ item.Label }</h3>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(item.State) }>{ item.State }</span>
+							</div>
+							<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ item.Reason }</p>
+							<p class="text-[11px] text-warm-faint mt-2 break-all">{ item.EvidenceRef }</p>
+						</article>
+					}
+				</div>
+			</section>
+		</section>
+		<section class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-sm font-medium text-warm">Evidence refs</h2>
+			<p class="text-xs text-warm-faint mt-2 break-words">{ strings.Join(data.EvidenceRefs, " · ") }</p>
+		</section>
+	</section>
+}
+
+templ opsControl(data *OpsControlData) {
+	<section class="space-y-4" data-authority="queue-intent-only">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Queue-only control room</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">{ data.Boundary }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-sky-300/40 text-sky-200 bg-sky-300/10 whitespace-nowrap">rendered { data.GeneratedAt }</span>
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(data.StorageStatus) }>{ data.StorageStatus }</span>
+				</div>
+			</header>
+			if data.Confirmation != "" {
+				<p class="px-4 py-3 text-sm text-brand border-b border-edge">{ data.Confirmation }</p>
+			}
+			if data.Error != "" {
+				<p class="px-4 py-3 text-sm text-amber-300 border-b border-edge">{ data.Error }</p>
+			}
+		</section>
+		<section class="grid gap-4 xl:grid-cols-[1fr_1fr]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Control intents</h2>
+					<p class="text-xs text-warm-faint mt-1">Allowed verbs: Request, Queue, Draft, Propose, Review.</p>
+				</header>
+				<div class="grid gap-3 p-4">
+					for _, action := range data.Actions {
+						<article class="border border-edge bg-void/20 rounded-lg p-3">
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<h3 class="text-sm font-medium text-warm">{ action.Label }</h3>
+									<p class="text-xs text-warm-muted mt-1 leading-relaxed">{ action.Description }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(action.Status) }>{ action.Status }</span>
+							</div>
+							if data.ReadOnly {
+								<p class="mt-3 rounded-md border border-edge bg-void/30 px-3 py-2 text-xs text-warm-faint">{ action.ActionLabel } unavailable: graph store unavailable.</p>
+							} else {
+								<form method="post" action="/ops/control/intents" class="mt-3 grid gap-2">
+									<input type="hidden" name="intent_kind" value={ action.Kind }/>
+									<label class="grid gap-1">
+										<span class="text-[11px] text-warm-faint">Title</span>
+										<input name="title" required class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder={ action.Label }/>
+									</label>
+									<label class="grid gap-1">
+										<span class="text-[11px] text-warm-faint">Target</span>
+										<input name="target" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="role, agent, issue, or evidence ref"/>
+									</label>
+									<label class="grid gap-1">
+										<span class="text-[11px] text-warm-faint">Requested by</span>
+										<input name="requested_by" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="human operator"/>
+									</label>
+									<label class="grid gap-1">
+										<span class="text-[11px] text-warm-faint">Intent detail</span>
+										<textarea name="content" required rows="3" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder={ action.Placeholder }></textarea>
+									</label>
+									<button type="submit" class="inline-flex items-center justify-center rounded-md border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/20 transition-colors">{ action.ActionLabel }</button>
+								</form>
+							}
+						</article>
+					}
+				</div>
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Queued intent ledger</h2>
+					<p class="text-xs text-warm-faint mt-1">Rows are Site-local records and do not execute protected actions.</p>
+				</header>
+				<div class="divide-y divide-edge">
+					for _, intent := range data.Intents {
+						<article class="px-4 py-3">
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<h3 class="text-sm font-medium text-warm break-words">{ intent.Title }</h3>
+									<p class="text-[11px] text-warm-faint mt-1">{ intent.Kind } · { intent.CreatedAt }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(intent.Status) }>{ intent.Status }</span>
+							</div>
+							<dl class="grid gap-x-3 gap-y-1 mt-3 text-xs sm:grid-cols-[6.5rem_1fr]">
+								<dt class="text-warm-faint">target</dt><dd class="text-warm-muted break-words">{ opsValueOr(intent.Target, "none") }</dd>
+								<dt class="text-warm-faint">requested_by</dt><dd class="text-warm-muted break-words">{ opsValueOr(intent.RequestedBy, "none") }</dd>
+								<dt class="text-warm-faint">detail</dt><dd class="text-warm-faint break-words">{ intent.Detail }</dd>
+							</dl>
+						</article>
+					}
+				</div>
+			</section>
+		</section>
+		<section class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-sm font-medium text-warm">Evidence refs</h2>
+			<p class="text-xs text-warm-faint mt-2 break-words">{ strings.Join(data.EvidenceRefs, " · ") }</p>
+		</section>
+	</section>
+}
+
+templ opsFactory(data *OpsFactoryData) {
+	<section class="space-y-4" data-factory-boundary="artifact-intake-only">
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-base font-medium text-warm">Human Factory intake</h2>
+					<p class="text-sm text-warm-muted mt-2 leading-relaxed">{ data.Boundary }</p>
+				</div>
+				<div class="flex flex-wrap gap-2 md:justify-end">
+					<span class="text-[10px] px-2 py-1 rounded-full border border-sky-300/40 text-sky-200 bg-sky-300/10 whitespace-nowrap">rendered { data.GeneratedAt }</span>
+					<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(data.StorageStatus) }>{ data.StorageStatus }</span>
+				</div>
+			</header>
+			if data.Confirmation != "" {
+				<p class="px-4 py-3 text-sm text-brand border-b border-edge">{ data.Confirmation }</p>
+			}
+			if data.Error != "" {
+				<p class="px-4 py-3 text-sm text-amber-300 border-b border-edge">{ data.Error }</p>
+			}
+		</section>
+		<section class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Submit Markdown artifact</h2>
+					<p class="text-xs text-warm-faint mt-1">FactoryOrder conversion requires separate governed review.</p>
+				</header>
+				if data.ReadOnly {
+					<p class="p-4 text-sm text-warm-faint">Upload unavailable: graph store is not configured.</p>
+				} else {
+					<form method="post" action="/factory/artifacts" enctype="multipart/form-data" class="p-4 grid gap-3">
+						<label class="grid gap-1">
+							<span class="text-[11px] text-warm-faint">Submitter name</span>
+							<input name="submitter_name" required class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Human submitter"/>
+						</label>
+						<div class="grid gap-3 sm:grid-cols-2">
+							<label class="grid gap-1">
+								<span class="text-[11px] text-warm-faint">Email</span>
+								<input name="submitter_email" type="email" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="name@example.com"/>
+							</label>
+							<label class="grid gap-1">
+								<span class="text-[11px] text-warm-faint">Team</span>
+								<input name="submitter_org" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="team or org"/>
+							</label>
+						</div>
+						<label class="grid gap-1">
+							<span class="text-[11px] text-warm-faint">Title</span>
+							<input name="title" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Artifact title"/>
+						</label>
+						<label class="grid gap-1">
+							<span class="text-[11px] text-warm-faint">Markdown file</span>
+							<input name="artifact" required type="file" accept=".md,text/markdown,text/plain" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm file:mr-3 file:rounded-md file:border-0 file:bg-brand/10 file:px-3 file:py-1.5 file:text-brand"/>
+						</label>
+						<label class="grid gap-1">
+							<span class="text-[11px] text-warm-faint">Notes</span>
+							<textarea name="notes" rows="3" class="rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Context for governed review"></textarea>
+						</label>
+						<button type="submit" class="inline-flex items-center justify-center rounded-md border border-brand/40 bg-brand/10 px-3 py-2 text-xs text-brand hover:bg-brand/20 transition-colors">Submit artifact for governed FactoryOrder review</button>
+					</form>
+				}
+			</section>
+			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<header class="px-4 py-3 border-b border-edge">
+					<h2 class="text-sm font-medium text-warm">Factory in Motion</h2>
+					<p class="text-xs text-warm-faint mt-1">Read-only projection. Uploaded artifacts are not FactoryOrders.</p>
+				</header>
+				<form method="get" action="/factory" class="px-4 py-3 border-b border-edge flex flex-col gap-2 sm:flex-row">
+					<label class="sr-only" for="submitter-filter">Human submitter</label>
+					<input id="submitter-filter" name="submitter" value={ data.SubmitterQuery } class="min-w-0 flex-1 rounded-md border border-edge bg-void/40 px-3 py-2 text-sm text-warm placeholder:text-warm-faint" placeholder="Filter by human submitter"/>
+					<button type="submit" class="rounded-md border border-edge px-3 py-2 text-xs text-warm-muted hover:text-brand transition-colors">Review filter</button>
+				</form>
+				<div class="grid gap-3 p-4 sm:grid-cols-3">
+					for _, stage := range data.Stages {
+						<article class="border border-edge bg-void/20 rounded-md p-3">
+							<div class="flex items-start justify-between gap-2">
+								<h3 class="text-sm font-medium text-warm">{ stage.Label }</h3>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(stage.State) }>{ stage.State }</span>
+							</div>
+							<p class="text-2xl font-display text-warm mt-3 tabular-nums">{ fmt.Sprintf("%d", stage.Count) }</p>
+							<p class="text-[11px] text-warm-faint mt-2">{ stage.Boundary }</p>
+						</article>
+					}
+				</div>
+				<div class="divide-y divide-edge">
+					for _, submission := range data.Submissions {
+						<article class="px-4 py-3">
+							<div class="flex items-start justify-between gap-3">
+								<div>
+									<h3 class="text-sm font-medium text-warm break-words">{ submission.Title }</h3>
+									<p class="text-[11px] text-warm-faint mt-1">{ submission.Submitter } · { submission.CreatedAt }</p>
+								</div>
+								<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(submission.Status) }>{ submission.Status }</span>
+							</div>
+							<dl class="grid gap-x-3 gap-y-1 mt-3 text-xs sm:grid-cols-[6.5rem_1fr]">
+								<dt class="text-warm-faint">file</dt><dd class="text-warm-muted break-all">{ opsValueOr(submission.Filename, "none") }</dd>
+								<dt class="text-warm-faint">sha256</dt><dd class="text-warm-faint break-all">{ opsValueOr(submission.SHA256, "none") }</dd>
+								<dt class="text-warm-faint">notes</dt><dd class="text-warm-muted break-words">{ opsValueOr(submission.Notes, "none") }</dd>
+								<dt class="text-warm-faint">preview</dt><dd class="text-warm-faint break-words">{ submission.Preview }</dd>
+							</dl>
+						</article>
+					}
+				</div>
+			</section>
+		</section>
+		<section class="border border-edge bg-surface rounded-lg p-4">
+			<h2 class="text-sm font-medium text-warm">Evidence refs</h2>
+			<p class="text-xs text-warm-faint mt-2 break-words">{ strings.Join(data.EvidenceRefs, " · ") }</p>
+		</section>
+	</section>
 }
 
 templ opsGitHubCanonical(data *OpsGitHubCanonicalData) {

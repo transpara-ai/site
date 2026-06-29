@@ -25,33 +25,26 @@ templ Home(stats HomeStats, p *profile.Profile) {
 						Transpara-AI Civilization operations
 					</h1>
 					<p class="text-lg text-warm-muted max-w-2xl leading-relaxed">
-						A live surface for governed autonomous work: operator routes, runtime evidence, review posture, and the civilization assembly.
+						A task-first surface for observing Civilization state, queuing bounded control intent, and submitting human Factory artifacts.
 					</p>
 					<div class="flex flex-wrap gap-3 pt-2">
-						<a href="/ops/civilization" class="inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium">
-							Open civilization
+						<a href="/ops/observation" class="inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium">
+							Observation
 						</a>
-						<a href="/ops" class="inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted">
-							Ops console
+						<a href="/ops/control" class="inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted">
+							Control
 						</a>
-						<a href="/hive" class="inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted">
-							Hive status
+						<a href="/factory" class="inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted">
+							Human Factory
 						</a>
 					</div>
 				</div>
 			</section>
 
 			<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Civilization monitoring surfaces">
-				@homeSurface("Control", "Civilization assembly", "/ops/civilization", "v4.0 projection", "Roles, gates, issue intake, Kanban, and non-authority boundaries.")
-				@homeSurface("Runtime", "Observatory", "/ops/observatory", "read-only", "Vitals, lifecycle timelines, causal traces, and explicit unavailable states.")
-				@homeSurface("Telemetry", "Pipeline telemetry", "/ops/telemetry", "native summary", "Agent activity, phase status, event stream health, and feeder errors.")
-				@homeSurface("Ingestion", "Hive intake", "/ops/hive/intake", "store-aware", "Source records, graph-store availability, queued-run boundary, scanner limits, and advisory boundaries.")
-				@homeSurface("Scan", "GitHub canonical", "/ops/github-canonical", "scanner evidence", "Issue-canonical progress, parked blockers, warnings, and source-count posture.")
-				@homeSurface("Kanban", "Issue-scan board", "/ops/civilization#issue-scan-kanban", "projection only", "Run stages, blocker reasons, agent touch, evidence refs, and human action state.")
-				@homeSurface("Test 001", "Carried-evidence posture", "/ops/github-canonical#test-001-posture", "YELLOW/open", "Operation tracker state, unavailable evidence rows, and product-monitor support.")
-				@homeSurface("Review", "Review and evidence", "/ops/review-console", "display only", "Exact-head approvals, authority packets, residuals, and gate closeout state.")
-				@homeSurface("Evidence", "Evidence packet", "/ops/evidence", "display only", "Proof packets, tests, decisions, and known failures without execution authority.")
-				@homeSurface("Public proof", "Reader/correction proof", "/ops/public-proof", "display only", "Public URL refs, live-reader proof, correction proof, and explicit unavailable states.")
+				@homeSurface("Monitor", "Observation", "/ops/observation", "safe hybrid", "Civilization health, Factory statistics, live agents, spend, blockers, freshness, and evidence refs.")
+				@homeSurface("Admin", "Control", "/ops/control", "queue only", "Bounded model, budget, Council, and Civilization-evolution intent without protected execution.")
+				@homeSurface("Human", "Human Factory", "/factory", "artifact intake", "Markdown artifact submission, Factory-in-motion state, and filtering by human submitter.")
 			</section>
 
 			if stats.Spaces > 0 || stats.Tasks > 0 || stats.AgentOps > 0 {

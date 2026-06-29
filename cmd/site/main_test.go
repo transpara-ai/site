@@ -103,15 +103,14 @@ func TestNoDatabaseRoutesExposeReadOnlyOps(t *testing.T) {
 		"Operations",
 		"site shell",
 		"Operator surfaces",
-		"Civilization",
-		`href="/ops/telemetry"`,
-		`href="/ops/observatory"`,
+		"Observation",
+		"Control",
+		"Human Factory",
+		`href="/ops/observation"`,
+		`href="/ops/control"`,
+		`href="/factory"`,
+		"Evidence drilldowns",
 		`href="/ops/civilization"`,
-		`href="/ops/github-canonical"`,
-		`href="/ops/public-proof"`,
-		`href="/ops/review-console"`,
-		`href="/ops/hive/intake"`,
-		`href="/ops/evidence"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops without DATABASE_URL body missing %q", want)
@@ -146,20 +145,19 @@ func TestNoDatabaseRoutesExposeReadOnlyOpsControlAlias(t *testing.T) {
 	}
 	body := w.Body.String()
 	for _, want := range []string{
-		"Operations",
-		"site shell",
+		"Control",
+		"queue-intent-only",
+		"graph store unavailable",
 		"Operator surfaces",
-		`href="/ops/civilization"`,
-		`href="/ops/hive/intake"`,
-		`href="/ops/evidence"`,
-		`href="/ops/public-proof"`,
+		`href="/ops/observation"`,
+		`href="/ops/control"`,
+		`href="/factory"`,
+		"Request model change",
+		"unavailable: graph store unavailable",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/control without DATABASE_URL body missing %q", want)
 		}
-	}
-	if strings.Contains(body, `href="/ops/control"`) {
-		t.Fatal("GET /ops/control without DATABASE_URL exposed /ops/control as canonical navigation")
 	}
 	assertNoMutationControls(t, "/ops/control", body)
 }
@@ -179,20 +177,15 @@ func TestNoDatabaseHomeExposesMFOFMonitoringSurfaces(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		`aria-label="Civilization monitoring surfaces"`,
-		`href="/ops/civilization"`,
-		`href="/ops/observatory"`,
-		`href="/ops/telemetry"`,
-		`href="/ops/hive/intake"`,
-		`href="/ops/github-canonical"`,
-		`href="/ops/civilization#issue-scan-kanban"`,
-		`href="/ops/github-canonical#test-001-posture"`,
-		`href="/ops/review-console"`,
-		`href="/ops/evidence"`,
-		`href="/ops/public-proof"`,
-		"YELLOW/open",
-		"projection only",
-		"scanner evidence",
-		"read-only",
+		`href="/ops/observation"`,
+		`href="/ops/control"`,
+		`href="/factory"`,
+		"Observation",
+		"Control",
+		"Human Factory",
+		"safe hybrid",
+		"queue only",
+		"artifact intake",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET / without DATABASE_URL body missing %q", want)
@@ -250,6 +243,16 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 		want []string
 	}{
 		{
+			path: "/ops/observation",
+			want: []string{
+				"Observation",
+				"Civilization health and Factory motion",
+				"data-observation-boundary=\"display-only\"",
+				"unavailable",
+				"no fake green lights",
+			},
+		},
+		{
 			path: "/ops/telemetry",
 			want: []string{
 				"Telemetry",
@@ -280,7 +283,7 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 			path: "/ops/evidence",
 			want: []string{
 				"Evidence-surface guardrails",
-				"Read-only FactoryOrder evidence projection",
+				"Read-only projection surface",
 				"Operator shell",
 			},
 		},
@@ -307,6 +310,15 @@ func TestNoDatabaseRoutesExposeReadOnlyMonitoringSurfaces(t *testing.T) {
 				"live-reader-proof",
 				"public-correction-proof",
 				"no fake green lights",
+			},
+		},
+		{
+			path: "/factory",
+			want: []string{
+				"Human Factory",
+				"data-factory-boundary=\"artifact-intake-only\"",
+				"Upload unavailable",
+				"FactoryOrder conversion requires separate governed review",
 			},
 		},
 		{
@@ -403,7 +415,7 @@ func TestNoDatabaseOpsRejectsMutationMethod(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	for _, path := range []string{"/ops", "/ops/control", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/public-proof", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
+	for _, path := range []string{"/ops", "/ops/observation", "/ops/control", "/factory", "/ops/telemetry", "/ops/observatory", "/ops/observatory/events", "/ops/civilization", "/ops/github-canonical", "/ops/public-proof", "/ops/review-console", "/ops/hive/intake", "/ops/evidence"} {
 		t.Run(path, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, nil)
@@ -515,7 +527,7 @@ func TestNoDatabaseEvidenceToleratesUserContextWithoutStore(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		"Evidence-surface guardrails",
-		"Read-only FactoryOrder evidence projection",
+		"Read-only projection surface",
 		"Operator shell",
 	} {
 		if !strings.Contains(body, want) {

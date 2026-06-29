@@ -360,7 +360,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Operator shell — requires auth. Public Hive status stays under /hive*.
 	mux.Handle("GET /ops", h.writeWrap(h.handleOps))
-	mux.Handle("GET /ops/control", h.writeWrap(h.handleOps))
+	mux.Handle("GET /ops/observation", h.writeWrap(h.handleOpsObservation))
+	mux.Handle("GET /ops/control", h.writeWrap(h.handleOpsControl))
+	mux.Handle("POST /ops/control/intents", h.writeWrap(h.handleOpsControlIntentCreate))
 	mux.Handle("GET /ops/work", h.writeWrap(h.handleOpsWork))
 	mux.Handle("GET /ops/telemetry", h.writeWrap(h.handleOpsTelemetry))
 	mux.Handle("GET /ops/observatory", h.writeWrap(h.handleOpsObservatory))
@@ -382,6 +384,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/decision", h.writeWrap(h.handleOpsDecision))
 	mux.Handle("POST /ops/decision", h.writeWrap(h.handleOpsDecisionSubmit))
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
+	mux.Handle("GET /factory", h.readWrap(h.handleFactory))
+	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
@@ -389,7 +393,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 // must only be mounted by the no-DATABASE_URL app branch.
 func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops", h.handleOps)
-	mux.HandleFunc("GET /ops/control", h.handleOps)
+	mux.HandleFunc("GET /ops/observation", h.handleOpsObservation)
+	mux.HandleFunc("GET /ops/control", h.handleOpsControl)
 	mux.HandleFunc("GET /ops/telemetry", h.handleOpsTelemetry)
 	mux.HandleFunc("GET /ops/observatory", h.handleOpsObservatory)
 	mux.HandleFunc("GET /ops/observatory/events", h.handleOpsObservatoryEvents)
@@ -399,6 +404,13 @@ func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops/review-console", h.handleOpsReviewConsole)
 	mux.HandleFunc("GET /ops/hive/intake", h.handleOpsHiveIntake)
 	mux.HandleFunc("GET /ops/evidence", h.handleOpsEvidence)
+}
+
+// RegisterReadOnlyFactory adds the no-DB human Factory route. It is kept out
+// of RegisterReadOnlyOps because /factory is an artifact-intake surface, not an
+// ops read-only projection route.
+func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
+	mux.HandleFunc("GET /factory", h.handleFactory)
 }
 
 // ────────────────────────────────────────────────────────────────────

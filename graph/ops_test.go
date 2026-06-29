@@ -1,8 +1,12 @@
 package graph
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,6 +60,88 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	}
 	if len(got.PhaseGates) != 1 || got.PhaseGates[0].Status != "approved" {
 		t.Fatalf("PhaseGates = %#v, want approved gate", got.PhaseGates)
+	}
+}
+
+func TestOpsControlActionsUseQueueOnlyVocabulary(t *testing.T) {
+	for _, action := range opsControlActions() {
+		if action.ActionLabel == "" {
+			t.Fatalf("action %s has empty action label", action.Kind)
+		}
+		for _, value := range []string{action.ActionLabel, action.Label, action.Description} {
+			if opsControlContainsForbiddenVerb(value) {
+				t.Fatalf("control action %s contains forbidden execution vocabulary in %q", action.Kind, value)
+			}
+		}
+	}
+}
+
+func TestOpsControlIntentParamsRejectsForbiddenExecutionVocabulary(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "council_meeting")
+	form.Set("title", "Invoke Council")
+	form.Set("content", "Queue a review discussion.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if _, err := opsControlIntentParamsFromForm(req, "operator"); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted forbidden execution vocabulary")
+	}
+}
+
+func TestOpsFactorySubmissionParamsAcceptsMarkdownArtifact(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	_ = writer.WriteField("submitter_email", "ada@example.invalid")
+	_ = writer.WriteField("submitter_org", "Factory Test")
+	_ = writer.WriteField("title", "Artifact brief")
+	part, err := writer.CreateFormFile("artifact", "brief.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	content := []byte("# Brief\n\nConvert this into a governed FactoryOrder candidate.")
+	if _, err := part.Write(content); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	params, submitter, err := opsFactorySubmissionParamsFromRequest(req)
+	if err != nil {
+		t.Fatalf("opsFactorySubmissionParamsFromRequest: %v", err)
+	}
+	if params.Kind != "markdown_artifact" || params.Status != "submitted" || submitter != "Ada Operator" {
+		t.Fatalf("params = %#v submitter=%q, want markdown_artifact/submitted/Ada Operator", params, submitter)
+	}
+	sum := sha256.Sum256(content)
+	if !strings.Contains(params.Detail, hex.EncodeToString(sum[:])) {
+		t.Fatalf("params.Detail = %q, want sha256", params.Detail)
+	}
+}
+
+func TestOpsFactorySubmissionParamsRejectsNonMarkdownArtifact(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	part, err := writer.CreateFormFile("artifact", "brief.txt")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := part.Write([]byte("not markdown")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if _, _, err := opsFactorySubmissionParamsFromRequest(req); err == nil {
+		t.Fatal("opsFactorySubmissionParamsFromRequest accepted a non-Markdown artifact")
 	}
 }
 
