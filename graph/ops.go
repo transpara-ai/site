@@ -20,6 +20,19 @@ import (
 
 const opsHiveIntakeMaxContentBytes = 20000
 
+const (
+	opsPublicProofOperationRepo           = "transpara-ai/operation"
+	opsPublicProofOperationPacketCommit   = "7ab3929ff88d0b75c48d53a80e92db74ec523482"
+	opsPublicProofOperationPacketID       = "OPERATION-PUBLIC-PROOF-REFERENCE-2026-06-29"
+	opsPublicProofOperationPacketRepoPath = "docs/operations/public-proof-evidence/public-proof-reference-2026-06-29.md"
+	opsPublicProofOperationPacketPath     = opsPublicProofOperationRepo + "/" + opsPublicProofOperationPacketRepoPath
+)
+
+var (
+	opsPublicProofOperationPacketGeneratedAt = time.Date(2026, 6, 29, 8, 10, 49, 0, time.UTC)
+	opsPublicProofOperationPacketFreshUntil  = opsPublicProofOperationPacketGeneratedAt.Add(7 * 24 * time.Hour)
+)
+
 type OpsSurface struct {
 	ID          string
 	Label       string
@@ -677,12 +690,14 @@ type OpsEvidenceData struct {
 }
 
 type OpsPublicProofData struct {
-	GeneratedAt    string
-	Source         string
-	Summary        string
-	Boundary       string
-	RequiredLabels []string
-	Records        []OpsPublicProofRecord
+	GeneratedAt          string
+	ReferenceGeneratedAt string
+	ReferenceFreshUntil  string
+	Source               string
+	Summary              string
+	Boundary             string
+	RequiredLabels       []string
+	Records              []OpsPublicProofRecord
 }
 
 type OpsPublicProofRecord struct {
@@ -1664,21 +1679,41 @@ func opsSurfaces(readOnly bool) []OpsSurface {
 }
 
 func buildOpsPublicProofData(now time.Time) *OpsPublicProofData {
+	operationPacketState := opsPublicProofOperationPacketState(now)
+	operationPacketLabels := []string{"operation-reference", "projection-only"}
+	if operationPacketState == "stale" {
+		operationPacketLabels = append(operationPacketLabels, "stale")
+	}
+
 	return &OpsPublicProofData{
-		GeneratedAt: formatOpsTime(now.Format(time.RFC3339)),
-		Source:      "static Site evidence records",
-		Summary:     "No live public-reader or public-correction proof is claimed here. Rows stay unavailable until an explicit public URL, GitHub reference, or Operation-approved public-proof reference is configured.",
-		Boundary:    "Display-only Site operator evidence/status surface. No deploy, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure, operation#26 closure, value allocation, residual-risk closure, autonomy increase, or private fetch.",
+		GeneratedAt:          formatOpsTime(now.Format(time.RFC3339)),
+		ReferenceGeneratedAt: formatOpsTime(opsPublicProofOperationPacketGeneratedAt.Format(time.RFC3339)),
+		ReferenceFreshUntil:  formatOpsTime(opsPublicProofOperationPacketFreshUntil.Format(time.RFC3339)),
+		Source:               "Operation-approved public-proof evidence reference displayed from static Site records",
+		Summary:              "Site displays the Operation-owned public-proof reference selected for /ops/public-proof. It is not live deployed public-reader proof or public-correction proof; those rows stay unavailable until a later Operation packet cites explicit proof refs.",
+		Boundary:             "Display-only Site operator evidence/status surface. Site is not the source of truth. No deploy, private fetch, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure, operation#26 closure, operation#45 closure, value allocation, residual-risk closure, autonomy increase, or production go-live.",
 		RequiredLabels: []string{
 			"unavailable",
 			"stale",
 			"fixture/local",
 			"projection-only",
+			"operation-reference",
 			"deployed-reference",
 			"live-reader-proof",
 			"public-correction-proof",
 		},
 		Records: []OpsPublicProofRecord{
+			{
+				Category:     "Operation public-proof packet",
+				State:        operationPacketState,
+				Source:       "Operation-approved public-proof evidence reference",
+				LastUpdate:   formatOpsTime(opsPublicProofOperationPacketGeneratedAt.Format(time.RFC3339)),
+				Boundary:     "operation-reference; Site displays this packet but Operation remains source of truth.",
+				EvidenceRef:  opsPublicProofOperationPacketPath,
+				EvidenceHref: opsPublicProofOperationPacketURL(),
+				Notes:        "Packet " + opsPublicProofOperationPacketID + " has proof class operation-approved-public-proof-reference; fresh_until " + formatOpsTime(opsPublicProofOperationPacketFreshUntil.Format(time.RFC3339)) + "; not live deployed proof.",
+				Labels:       operationPacketLabels,
+			},
 			{
 				Category:     "Site scope decision",
 				State:        "projection-only",
@@ -1734,6 +1769,17 @@ func buildOpsPublicProofData(now time.Time) *OpsPublicProofData {
 			},
 		},
 	}
+}
+
+func opsPublicProofOperationPacketState(now time.Time) string {
+	if !now.UTC().Before(opsPublicProofOperationPacketFreshUntil) {
+		return "stale"
+	}
+	return "projection-only"
+}
+
+func opsPublicProofOperationPacketURL() string {
+	return "https://github.com/" + opsPublicProofOperationRepo + "/blob/" + opsPublicProofOperationPacketCommit + "/" + opsPublicProofOperationPacketRepoPath
 }
 
 func opsHiveShellCards() []OpsHiveShellCard {
@@ -3352,6 +3398,8 @@ func opsPublicProofStateClass(status string) string {
 		return "border-amber-300/40 text-amber-300 bg-amber-300/10"
 	case "fixture/local", "projection-only":
 		return "border-edge text-warm-faint bg-void/30"
+	case "operation-reference":
+		return "border-sky-300/40 text-sky-200 bg-sky-300/10"
 	case "deployed-reference", "live-reader-proof", "public-correction-proof":
 		return "border-brand/40 text-brand bg-brand/10"
 	default:
