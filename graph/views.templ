@@ -1774,6 +1774,9 @@ templ newTaskInline(spaceSlug string, agents []AgentPersona) {
 						for _, agent := range agents {
 							<option value={ agent.Name } selected?={ len(agents) > 0 && agent.Name == agents[0].Name }>{ agent.Display }</option>
 						}
+						if !agentOptionsContain(agents, "hive") {
+							<option value="hive">Hive runtime · legacy</option>
+						}
 					</select>
 				</div>
 			} else {
@@ -4661,6 +4664,9 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 												for _, agent := range agents {
 													<option value={ agent.Name }>{ agent.Display }</option>
 												}
+												if !agentOptionsContain(agents, "hive") {
+													<option value="hive">Hive runtime · legacy</option>
+												}
 											</select>
 											<button type="submit" class="px-3 py-1 bg-brand/10 text-brand border border-brand/20 rounded-md hover:bg-brand/20 transition-colors text-sm font-medium">Assign</button>
 										} else {
@@ -4789,6 +4795,9 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 										}
 										for _, agent := range agents {
 											<option value={ agent.Name } selected?={ node.Assignee == agent.Name }>{ agent.Display } · { agent.Status }</option>
+										}
+										if !agentOptionsContain(agents, "hive") && node.Assignee != "hive" {
+											<option value="hive">Hive runtime · legacy</option>
 										}
 									</select>
 								</div>

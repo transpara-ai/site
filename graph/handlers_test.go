@@ -78,6 +78,34 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 	}
 }
 
+func TestNewOperatorMutationRoutesRequireWriteAuth(t *testing.T) {
+	requireAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "auth required", http.StatusUnauthorized)
+		})
+	}
+	optionalAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Fatalf("route %s used optional auth wrapper; want required auth", r.URL.Path)
+		})
+	}
+	h := NewHandlers(nil, optionalAuth, requireAuth)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for _, path := range []string{"/ops/control/intents", "/factory/artifacts"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("title=x"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusUnauthorized, w.Body.String())
+			}
+		})
+	}
+}
+
 func TestHandleOpsCivilizationRendersReadOnlyAssembly(t *testing.T) {
 	h, _, _ := testHandlers(t)
 	t.Setenv("HIVE_OPS_API_BASE_URL", "")
@@ -4187,6 +4215,34 @@ func TestHandlerConveneOp(t *testing.T) {
 	}
 	if !tagSet[agentBID] {
 		t.Errorf("tags missing agent B ID %q; got %v", agentBID, tags)
+	}
+
+	form := url.Values{
+		"op":     {"convene"},
+		"title":  {"Which agent roles should review this?"},
+		"body":   {"Browser multi-select form payload."},
+		"agents": {agentAName, agentBName},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/app/convene-op-test/op", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("multi-select convene status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
+	}
+	result = map[string]any{}
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("decode multi-select response: %v", err)
+	}
+	node = result["node"].(map[string]any)
+	tags, _ = node["tags"].([]any)
+	tagSet = make(map[string]bool)
+	for _, tag := range tags {
+		tagSet[tag.(string)] = true
+	}
+	if !tagSet[agentAID] || !tagSet[agentBID] {
+		t.Fatalf("multi-select tags = %v, want %q and %q", tags, agentAID, agentBID)
 	}
 }
 

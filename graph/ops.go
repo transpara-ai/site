@@ -25,6 +25,7 @@ import (
 )
 
 const opsHiveIntakeMaxContentBytes = 20000
+const opsHiveLaunchableIntakeListLimit = 100
 
 const (
 	opsControlIntentSourceKind    = "control_intent"
@@ -2856,7 +2857,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		EstimatedBudget: "not estimated",
 		StorageStatus:   "persisted",
 	}
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
@@ -2876,7 +2877,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 }
 
 func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug string) (opsHiveRunLaunchPayload, CreateOpsHiveRunLaunchParams, error) {
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, fmt.Errorf("could not load persisted intake sources: %w", err)
 	}
@@ -2942,14 +2943,20 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 func opsHiveLaunchableIntakeSources(sources []OpsHiveIntakeSource) []OpsHiveIntakeSource {
 	out := make([]OpsHiveIntakeSource, 0, len(sources))
 	for _, source := range sources {
-		switch source.Kind {
-		case opsControlIntentSourceKind, opsMarkdownArtifactSourceKind:
-			continue
-		default:
+		if opsHiveLaunchableIntakeKind(source.Kind) {
 			out = append(out, source)
 		}
 	}
 	return out
+}
+
+func opsHiveLaunchableIntakeKind(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "url", "repo", "prd", "spec", "plan", "text":
+		return true
+	default:
+		return false
+	}
 }
 
 func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView {

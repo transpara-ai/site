@@ -68,7 +68,7 @@ func TestOpsControlActionsUseQueueOnlyVocabulary(t *testing.T) {
 		if action.ActionLabel == "" {
 			t.Fatalf("action %s has empty action label", action.Kind)
 		}
-		for _, value := range []string{action.ActionLabel, action.Label, action.Description} {
+		for _, value := range []string{action.ActionLabel, action.Label, action.Description, action.Placeholder, action.Status} {
 			if opsControlContainsForbiddenVerb(value) {
 				t.Fatalf("control action %s contains forbidden execution vocabulary in %q", action.Kind, value)
 			}
@@ -150,6 +150,7 @@ func TestOpsHiveLaunchableIntakeSourcesExcludesControlAndFactoryKinds(t *testing
 		{Kind: opsControlIntentSourceKind, Title: "Control intent"},
 		{Kind: opsMarkdownArtifactSourceKind, Title: "Human artifact"},
 		{Kind: "Text", Title: "Launchable source"},
+		{Kind: "draft_note", Title: "Unknown internal draft"},
 	})
 	if len(got) != 1 || got[0].Title != "Launchable source" {
 		t.Fatalf("launchable sources = %#v, want only ordinary intake source", got)
@@ -228,6 +229,57 @@ func TestHandleOpsControlAndFactoryRecordsDoNotEnterHiveLaunchIntake(t *testing.
 	}
 	if _, _, err := h.buildOpsHiveRunLaunchPayload(launchReq, "transpara-ai"); err == nil {
 		t.Fatal("buildOpsHiveRunLaunchPayload accepted internal control/factory records as launchable sources")
+	}
+}
+
+func TestNewOperatorMutationRoutesRejectCrossOriginPost(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+	factoryBody := &bytes.Buffer{}
+	factoryWriter := multipart.NewWriter(factoryBody)
+	_ = factoryWriter.WriteField("submitter_name", "Ada Operator")
+	_ = factoryWriter.WriteField("title", "Factory artifact")
+	factoryPart, err := factoryWriter.CreateFormFile("artifact", "factory.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := factoryPart.Write([]byte("# Factory artifact")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := factoryWriter.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name        string
+		path        string
+		body        io.Reader
+		contentType string
+	}{
+		{
+			name:        "control intent",
+			path:        "/ops/control/intents",
+			body:        strings.NewReader("intent_kind=model_policy&title=Reviewer+model&target=reviewer&content=Request+model+review"),
+			contentType: "application/x-www-form-urlencoded",
+		},
+		{
+			name:        "factory artifact",
+			path:        "/factory/artifacts",
+			body:        factoryBody,
+			contentType: factoryWriter.FormDataContentType(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://site.test"+tt.path, tt.body)
+			req.Header.Set("Content-Type", tt.contentType)
+			req.Header.Set("Origin", "https://evil.test")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusForbidden {
+				t.Fatalf("POST %s status = %d, want 403; body: %s", tt.path, w.Code, w.Body.String())
+			}
+		})
 	}
 }
 
