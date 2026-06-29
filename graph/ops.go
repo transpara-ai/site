@@ -2,23 +2,35 @@ package graph
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
+	sitepersonas "github.com/transpara-ai/site/graph/personas"
 	"github.com/transpara-ai/site/profile"
 )
 
 const opsHiveIntakeMaxContentBytes = 20000
+const opsHiveLaunchableIntakeListLimit = 100
+
+const (
+	opsControlIntentSourceKind    = "control_intent"
+	opsMarkdownArtifactSourceKind = "markdown_artifact"
+)
 
 const (
 	opsPublicProofOperationRepo           = "transpara-ai/operation"
@@ -60,9 +72,166 @@ type OpsPageData struct {
 	Decision        *OpsDecisionData
 	Approvals       *OpsApprovalsData
 	Observatory     *OpsObservatoryData
+	Overview        *OpsOverviewData
+	Observation     *OpsObservationData
+	Control         *OpsControlData
+	Factory         *OpsFactoryData
 	Civilization    *OpsCivilizationAssemblyData
 	GitHubCanonical *OpsGitHubCanonicalData
 	LegacyURL       string
+}
+
+type OpsOverviewData struct {
+	GeneratedAt string
+	Summary     string
+	Boundary    string
+	Primary     []OpsSurface
+	Drilldowns  []OpsSurface
+}
+
+type OpsObservationData struct {
+	GeneratedAt   string
+	Source        string
+	Freshness     string
+	Boundary      string
+	Metrics       []OpsObservationMetric
+	AgentRows     []OpsObservationAgentRow
+	FactoryStages []OpsObservationStage
+	SpendRows     []OpsObservationSpendRow
+	Exceptions    []OpsObservationException
+	EvidenceRefs  []string
+}
+
+type OpsObservationMetric struct {
+	Label     string
+	Value     string
+	Context   string
+	State     string
+	Source    string
+	UpdatedAt string
+}
+
+type OpsObservationAgentRow struct {
+	Role     string
+	State    string
+	Model    string
+	Activity string
+	LastSeen string
+	Source   string
+	Boundary string
+}
+
+type OpsObservationStage struct {
+	Label    string
+	Count    int
+	State    string
+	Source   string
+	Boundary string
+}
+
+type OpsObservationSpendRow struct {
+	Label  string
+	Value  string
+	Limit  string
+	State  string
+	Source string
+}
+
+type OpsObservationException struct {
+	Label       string
+	State       string
+	Reason      string
+	EvidenceRef string
+}
+
+type OpsControlData struct {
+	GeneratedAt   string
+	StorageStatus string
+	Boundary      string
+	ReadOnly      bool
+	Confirmation  string
+	Error         string
+	Actions       []OpsControlAction
+	ModelTargets  []OpsModelTargetOption
+	Intents       []OpsControlIntent
+	EvidenceRefs  []string
+}
+
+type OpsControlAction struct {
+	Kind          string
+	Label         string
+	ActionLabel   string
+	Description   string
+	Placeholder   string
+	Status        string
+	TargetCatalog bool
+}
+
+type OpsControlIntent struct {
+	ID          string
+	Kind        string
+	Title       string
+	Target      string
+	RequestedBy string
+	Status      string
+	CreatedAt   string
+	Detail      string
+}
+
+type OpsModelTargetOption struct {
+	Value  string
+	Label  string
+	Status string
+	Source string
+}
+
+type opsControlIntentMeta struct {
+	IntentKind  string `json:"intent_kind"`
+	RequestedBy string `json:"requested_by"`
+	Target      string `json:"target"`
+}
+
+type OpsFactoryData struct {
+	GeneratedAt    string
+	StorageStatus  string
+	Boundary       string
+	ReadOnly       bool
+	SubmitterQuery string
+	Confirmation   string
+	Error          string
+	Submissions    []OpsFactorySubmission
+	Stages         []OpsFactoryStage
+	EvidenceRefs   []string
+}
+
+type OpsFactorySubmission struct {
+	ID        string
+	Title     string
+	Submitter string
+	Email     string
+	Org       string
+	Filename  string
+	SHA256    string
+	Status    string
+	CreatedAt string
+	Notes     string
+	Preview   string
+}
+
+type OpsFactoryStage struct {
+	Label    string
+	Count    int
+	State    string
+	Boundary string
+}
+
+type opsFactorySubmissionMeta struct {
+	SubmitterName  string `json:"submitter_name"`
+	SubmitterEmail string `json:"submitter_email"`
+	SubmitterOrg   string `json:"submitter_org"`
+	Filename       string `json:"filename"`
+	SHA256         string `json:"sha256"`
+	Notes          string `json:"notes"`
 }
 
 type OpsHiveShellData struct {
@@ -921,10 +1090,120 @@ var hiveOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 var evidenceOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Operations",
-		Description: "Site-owned operator shell for work, telemetry, hive status, civilization assembly, evidence, and refinery review.",
+		Description: "Three entry points for Civilization work: observe state, queue bounded control intent, or submit human Factory artifacts.",
 		Active:      "overview",
+		Overview: &OpsOverviewData{
+			GeneratedAt: formatOpsTime(now.Format(time.RFC3339)),
+			Summary:     "Observation, Control, and Factory replace the old flat route index as the primary workflow surfaces. Detailed evidence pages remain available as drilldowns.",
+			Boundary:    "Site is the display/operator shell. EventGraph remains truth; Hive owns runtime/governance orchestration; Work owns work-item semantics; Docs owns canonical governance records.",
+			Primary:     opsSurfaces(h.store == nil),
+			Drilldowns:  opsDrilldownSurfaces(h.store == nil),
+		},
+	})
+}
+
+func (h *Handlers) handleOpsObservation(w http.ResponseWriter, r *http.Request) {
+	now := time.Now().UTC()
+	telemetry := fetchOpsTelemetry(r)
+	hive := h.fetchOpsHive(r)
+	civilization := buildOpsCivilizationAssemblyDataFromProjection(fetchOpsCivilizationProjection(r), now)
+	githubCanonical := buildOpsGitHubCanonicalDataWithScannerArtifact(now, os.Getenv(githubCanonicalScannerArtifactEnv))
+	var storeSources []OpsHiveIntakeSource
+	if h.store != nil {
+		storeSources, _ = h.store.ListOpsHiveIntakeSources(r.Context(), opsHiveProfileSlugFromRequest(r), 50)
+	}
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Observation",
+		Description: "High-level monitoring for Civilization health, Factory movement, live agents, spend, tokens, blockers, source freshness, and evidence refs.",
+		Active:      "observation",
+		Observation: buildOpsObservationData(now, telemetry, hive, civilization, githubCanonical, storeSources),
+	})
+}
+
+func (h *Handlers) handleOpsControl(w http.ResponseWriter, r *http.Request) {
+	h.renderOpsControl(w, r, "", "")
+}
+
+func (h *Handlers) handleOpsControlIntentCreate(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, "graph store is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	if err := requireOpsHiveSameOrigin(r); err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	hive := h.fetchOpsHive(r)
+	params, err := opsControlIntentParamsFromForm(r, h.userName(r), opsModelTargetValueSet(opsControlModelTargetOptions(hive)))
+	if err != nil {
+		h.renderOpsControl(w, r, "", err.Error())
+		return
+	}
+	if _, err := h.store.CreateOpsHiveIntakeSource(r.Context(), params); err != nil {
+		h.renderOpsControl(w, r, "", "could not queue control intent")
+		return
+	}
+	h.renderOpsControl(w, r, "Queued intent recorded. It remains pending human approval and does not execute protected actions.", "")
+}
+
+func (h *Handlers) renderOpsControl(w http.ResponseWriter, r *http.Request, confirmation, errMsg string) {
+	now := time.Now().UTC()
+	var sources []OpsHiveIntakeSource
+	if h.store != nil {
+		sources, _ = h.store.ListOpsHiveIntakeSources(r.Context(), opsHiveProfileSlugFromRequest(r), 50)
+	}
+	hive := h.fetchOpsHive(r)
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Control",
+		Description: "Bounded admin control room for queued model, budget, Council, and Civilization-evolution intent. Controls request or draft intent only.",
+		Active:      "control",
+		Control:     buildOpsControlData(now, h.store == nil, sources, hive, confirmation, errMsg),
+	})
+}
+
+func (h *Handlers) handleFactory(w http.ResponseWriter, r *http.Request) {
+	h.renderFactory(w, r, "", "")
+}
+
+func (h *Handlers) handleFactoryArtifactCreate(w http.ResponseWriter, r *http.Request) {
+	if h.store == nil {
+		http.Error(w, "graph store is not configured", http.StatusServiceUnavailable)
+		return
+	}
+	if err := requireOpsHiveSameOrigin(r); err != nil {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	params, err := opsFactorySubmissionParamsFromRequest(r)
+	if err != nil {
+		h.renderFactory(w, r, "", err.Error())
+		return
+	}
+	if _, err := h.store.CreateOpsHiveIntakeSource(r.Context(), params); err != nil {
+		h.renderFactory(w, r, "", "could not submit artifact for governed FactoryOrder review")
+		return
+	}
+	h.renderFactory(w, r, "Artifact submitted. FactoryOrder conversion requires separate governed review.", "")
+}
+
+func (h *Handlers) renderFactory(w http.ResponseWriter, r *http.Request, confirmation, errMsg string) {
+	now := time.Now().UTC()
+	var sources []OpsHiveIntakeSource
+	if h.store != nil {
+		sources, _ = h.store.ListOpsHiveIntakeSources(r.Context(), opsHiveProfileSlugFromRequest(r), 100)
+	}
+	h.renderOps(w, r, OpsPageData{
+		Title:       "Human Factory",
+		Description: "Non-admin workspace for Markdown artifact submission, Factory-in-motion review, and filtering by human submitter.",
+		Active:      "factory",
+		Factory:     buildOpsFactoryData(now, h.store == nil, sources, strings.TrimSpace(r.URL.Query().Get("submitter")), confirmation, errMsg),
 	})
 }
 
@@ -1537,33 +1816,54 @@ func (h *Handlers) renderOps(w http.ResponseWriter, r *http.Request, data OpsPag
 }
 
 func opsSurfaces(readOnly bool) []OpsSurface {
-	surfaces := []OpsSurface{
+	return []OpsSurface{
 		{
-			ID:          "work",
-			Label:       "Work",
-			Description: "Task queue, assignment, blockers, artifacts, and completion evidence.",
-			Href:        "/ops/work",
-			Target:      "work API /tasks",
-			Owner:       "site shell, work API",
-			Status:      "native summary",
+			ID:          "observation",
+			Label:       "Observation",
+			Description: "Civilization health, Factory statistics, live agents, spend, tokens, blockers, source freshness, and evidence refs.",
+			Href:        "/ops/observation",
+			Target:      "work telemetry, hive projection, Site evidence projections",
+			Owner:       "site display shell",
+			Status:      "safe hybrid",
 		},
 		{
+			ID:          "control",
+			Label:       "Control",
+			Description: "Queue model, budget, Council, and Civilization evolution intent without executing protected actions.",
+			Href:        "/ops/control",
+			Target:      "site-local queued intent records",
+			Owner:       "site intent shell",
+			Status:      "queue only",
+		},
+		{
+			ID:          "factory",
+			Label:       "Human Factory",
+			Description: "Submit Markdown artifacts for governed FactoryOrder review and view Factory-in-motion state by human submitter.",
+			Href:        "/factory",
+			Target:      "site-local artifact intake records",
+			Owner:       "site intake shell",
+			Status:      opsFactorySurfaceStatus(readOnly),
+		},
+	}
+}
+
+func opsFactorySurfaceStatus(readOnly bool) string {
+	if readOnly {
+		return "unavailable"
+	}
+	return "artifact intake"
+}
+
+func opsDrilldownSurfaces(readOnly bool) []OpsSurface {
+	surfaces := []OpsSurface{
+		{
 			ID:          "telemetry",
-			Label:       "Telemetry",
+			Label:       "Telemetry detail",
 			Description: "Agent status, phase activity, pipeline report, and event stream health.",
 			Href:        "/ops/telemetry",
 			Target:      "work API /telemetry/*",
 			Owner:       "site native UI, work telemetry",
 			Status:      "native summary",
-		},
-		{
-			ID:          "observatory",
-			Label:       "Observatory",
-			Description: "Civilization transparency: vitals, spend vs cap, agent lifecycle timelines, authority decisions, and causal traces.",
-			Href:        "/ops/observatory",
-			Target:      "work /telemetry/* + hive operator projection",
-			Owner:       "site read-only projection",
-			Status:      "read-only",
 		},
 		{
 			ID:          "civilization",
@@ -1676,6 +1976,726 @@ func opsSurfaces(readOnly bool) []OpsSurface {
 		}
 	}
 	return filtered
+}
+
+func buildOpsObservationData(now time.Time, telemetry *OpsTelemetryData, hive *OpsHiveData, civilization *OpsCivilizationAssemblyData, canonical *OpsGitHubCanonicalData, sources []OpsHiveIntakeSource) *OpsObservationData {
+	if civilization == nil {
+		civilization = &OpsCivilizationAssemblyData{
+			GeneratedAt:      "unavailable",
+			ProjectionStatus: "unavailable",
+		}
+	}
+	data := &OpsObservationData{
+		GeneratedAt: formatOpsTime(now.Format(time.RFC3339)),
+		Source:      "Safe hybrid: Work telemetry, Hive projection, Site typed projections, and Site-local intake records when configured.",
+		Freshness:   "current render; individual rows may be unavailable, stale, or projection-only",
+		Boundary:    "Observation is display only. It does not wake Hive, mutate Work, write EventGraph production state, deploy, close Test 001, or increase autonomy.",
+		EvidenceRefs: []string{
+			"site#195",
+			"docs/designs/civilization-minimum-functioning-operational-front-end-v0.1.0.md",
+			"docs/dark-factory/evidence/civilization-mfof-20260627/README.md",
+		},
+	}
+	data.Metrics = []OpsObservationMetric{
+		opsObservationMetric("Civilization health", opsObservationHealthValue(telemetry, hive, civilization), opsObservationHealthContext(telemetry, hive, civilization), opsObservationHealthState(telemetry, hive, civilization), "Site observation builder", data.GeneratedAt),
+		opsObservationMetric("Factory throughput", fmt.Sprintf("%d", len(civilization.FactoryOrders)), "projected FactoryOrder records", opsProjectionState(civilization.ProjectionStatus), "Civilization assembly projection", civilization.GeneratedAt),
+		opsObservationMetric("Live agents", fmt.Sprintf("%d", opsObservationLiveAgentCount(telemetry, hive)), "active or processing actors", opsObservationAgentState(telemetry, hive), "Work telemetry + Hive runtime evidence", opsObservationLatest(telemetry.GeneratedAt, hive.GeneratedAt)),
+		opsObservationMetric("Cycle cost", opsObservationCostValue(telemetry), "latest pipeline cycle", opsObservationPipelineState(telemetry), "Work pipeline report", opsObservationPipelineUpdated(telemetry)),
+		opsObservationMetric("Tokens", opsObservationTokenValue(telemetry), "input plus output when reported", opsObservationPipelineState(telemetry), "Work pipeline report", opsObservationPipelineUpdated(telemetry)),
+		opsObservationMetric("Open blockers", opsObservationBlockerValue(canonical), "parked or human-scope issue posture", opsProjectionState(canonical.ProjectionState), "GitHub canonical projection", canonical.GeneratedAt),
+	}
+	data.AgentRows = opsObservationAgentRows(telemetry, hive)
+	data.FactoryStages = opsObservationFactoryStages(sources, civilization)
+	data.SpendRows = opsObservationSpendRows(telemetry, hive)
+	data.Exceptions = opsObservationExceptions(telemetry, hive, canonical)
+	return data
+}
+
+func opsObservationMetric(label, value, context, state, source, updatedAt string) OpsObservationMetric {
+	return OpsObservationMetric{Label: label, Value: opsValueOr(value, "unavailable"), Context: context, State: opsValueOr(state, "unavailable"), Source: source, UpdatedAt: opsValueOr(updatedAt, "unavailable")}
+}
+
+func opsObservationHealthValue(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
+	if opsObservationTelemetryCurrent(t) && opsObservationHiveCurrent(h) && opsObservationCivilizationCurrent(c) {
+		return "current"
+	}
+	if opsObservationTelemetryCurrent(t) || opsObservationHiveCurrent(h) || opsObservationCivilizationDegraded(c) {
+		return "degraded"
+	}
+	return "unavailable"
+}
+
+func opsObservationHealthContext(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
+	if t != nil && t.Error != "" {
+		return "telemetry unavailable"
+	}
+	if h != nil && h.ProjectionError != "" {
+		return "Hive projection unavailable"
+	}
+	if !opsObservationCivilizationCurrent(c) {
+		state := opsProjectionState("")
+		if c != nil {
+			state = opsProjectionState(c.ProjectionStatus)
+		}
+		if state == "unavailable" {
+			return "Civilization projection unavailable"
+		}
+		return "Civilization projection " + state
+	}
+	return "sources checked"
+}
+
+func opsObservationHealthState(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
+	if opsObservationTelemetryCurrent(t) && opsObservationHiveCurrent(h) && opsObservationCivilizationCurrent(c) {
+		return "current"
+	}
+	if opsObservationTelemetryCurrent(t) || opsObservationHiveCurrent(h) || opsObservationCivilizationDegraded(c) {
+		return "degraded"
+	}
+	return "unavailable"
+}
+
+func opsObservationTelemetryCurrent(t *OpsTelemetryData) bool {
+	return t != nil && t.Error == ""
+}
+
+func opsObservationHiveCurrent(h *OpsHiveData) bool {
+	return h != nil && h.ProjectionError == ""
+}
+
+func opsObservationCivilizationCurrent(c *OpsCivilizationAssemblyData) bool {
+	if c == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(c.ProjectionStatus)) {
+	case "current", "available", "live", opsCivilizationProjectionStatusComplete:
+		return true
+	default:
+		return false
+	}
+}
+
+func opsObservationCivilizationDegraded(c *OpsCivilizationAssemblyData) bool {
+	if c == nil {
+		return false
+	}
+	state := opsProjectionState(c.ProjectionStatus)
+	return state != "" && state != "unavailable"
+}
+
+func opsProjectionState(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "", "missing", "unavailable":
+		return "unavailable"
+	case "current", "available", "live":
+		return "current"
+	default:
+		if strings.Contains(strings.ToLower(value), "projection") {
+			return "projection-only"
+		}
+		return strings.ToLower(value)
+	}
+}
+
+func opsObservationLiveAgentCount(t *OpsTelemetryData, h *OpsHiveData) int {
+	count := 0
+	if t != nil {
+		count = t.ActiveAgentCount
+		if t.ProcessingAgentCount > count {
+			count = t.ProcessingAgentCount
+		}
+	}
+	if h != nil && h.RuntimeEvidence.AgentEvents.ObservedActive > count {
+		count = h.RuntimeEvidence.AgentEvents.ObservedActive
+	}
+	return count
+}
+
+func opsObservationAgentState(t *OpsTelemetryData, h *OpsHiveData) string {
+	if opsObservationLiveAgentCount(t, h) > 0 {
+		return "current"
+	}
+	if t != nil && t.Error == "" {
+		return "current zero"
+	}
+	if h != nil && h.ProjectionError == "" {
+		return "projection-only"
+	}
+	return "unavailable"
+}
+
+func opsObservationCostValue(t *OpsTelemetryData) string {
+	if t == nil || t.Pipeline == nil {
+		return "unavailable"
+	}
+	return fmt.Sprintf("$%.4f", t.Pipeline.TotalCostUSD)
+}
+
+func opsObservationTokenValue(t *OpsTelemetryData) string {
+	if t == nil || t.Pipeline == nil {
+		return "unavailable"
+	}
+	return fmt.Sprintf("%d", t.Pipeline.TotalTokens)
+}
+
+func opsObservationPipelineState(t *OpsTelemetryData) string {
+	if t == nil || t.Pipeline == nil {
+		return "unavailable"
+	}
+	if t.Pipeline.Status == "" {
+		return "projection-only"
+	}
+	return strings.ToLower(t.Pipeline.Status)
+}
+
+func opsObservationPipelineUpdated(t *OpsTelemetryData) string {
+	if t == nil || t.Pipeline == nil {
+		return "unavailable"
+	}
+	return formatOpsTime(t.Pipeline.UpdatedAt)
+}
+
+func opsObservationLatest(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return "unavailable"
+}
+
+func opsObservationBlockerValue(c *OpsGitHubCanonicalData) string {
+	if c == nil {
+		return "unavailable"
+	}
+	return fmt.Sprintf("%d", c.Progress.ParkedOpenIssueCount+c.AutonomyFrontier.NeedsHumanScopeIssueCount+c.AutonomyFrontier.ProtectedActionIssueCount)
+}
+
+func opsObservationAgentRows(t *OpsTelemetryData, h *OpsHiveData) []OpsObservationAgentRow {
+	rows := []OpsObservationAgentRow{}
+	if t != nil {
+		for _, agent := range t.RecentAgents {
+			rows = append(rows, OpsObservationAgentRow{
+				Role:     opsValueOr(agent.Role, "agent"),
+				State:    opsValueOr(agent.State, "unavailable"),
+				Model:    opsValueOr(agent.Model, "model unavailable"),
+				Activity: opsValueOr(agent.LastMessage, "no recent message"),
+				LastSeen: opsValueOr(t.GeneratedAt, "unavailable"),
+				Source:   "Work telemetry",
+				Boundary: "display only",
+			})
+		}
+	}
+	if len(rows) < 6 && h != nil {
+		for _, agent := range h.RuntimeEvidence.AgentEvents.ActiveAgents {
+			rows = append(rows, OpsObservationAgentRow{
+				Role:     opsValueOr(agent.Role, agent.ActorID),
+				State:    "projection-only",
+				Model:    opsValueOr(agent.Model, "model unavailable"),
+				Activity: opsValueOr(agent.Name, "runtime evidence projected"),
+				LastSeen: formatOpsTime(agent.SpawnedAt),
+				Source:   "Hive runtime evidence",
+				Boundary: "projection-only",
+			})
+			if len(rows) >= 6 {
+				break
+			}
+		}
+	}
+	if len(rows) == 0 {
+		rows = append(rows, OpsObservationAgentRow{
+			Role:     "No live agents projected",
+			State:    "unavailable",
+			Model:    "unavailable",
+			Activity: "No telemetry or runtime source returned active agents for this render.",
+			LastSeen: "unavailable",
+			Source:   "Site observation fallback",
+			Boundary: "no fake green lights",
+		})
+	}
+	return rows
+}
+
+func opsObservationFactoryStages(sources []OpsHiveIntakeSource, c *OpsCivilizationAssemblyData) []OpsObservationStage {
+	submitted := 0
+	for _, source := range sources {
+		if source.Kind == opsMarkdownArtifactSourceKind {
+			submitted++
+		}
+	}
+	return []OpsObservationStage{
+		{Label: "Submitted artifact", Count: submitted, State: opsCountState(submitted, "current zero"), Source: "Site-local artifact intake", Boundary: "artifact intake only"},
+		{Label: "FactoryOrder candidate", Count: 0, State: "unavailable", Source: "governed review process", Boundary: "conversion requires separate review"},
+		{Label: "Confirmed FactoryOrder", Count: len(c.FactoryOrders), State: opsProjectionState(c.ProjectionStatus), Source: "Civilization assembly projection", Boundary: "display only"},
+	}
+}
+
+func opsCountState(count int, zeroState string) string {
+	if count > 0 {
+		return "current"
+	}
+	return zeroState
+}
+
+func opsObservationSpendRows(t *OpsTelemetryData, h *OpsHiveData) []OpsObservationSpendRow {
+	rows := []OpsObservationSpendRow{
+		{Label: "Pipeline cost", Value: opsObservationCostValue(t), Limit: "cycle cap not projected", State: opsObservationPipelineState(t), Source: "Work pipeline report"},
+		{Label: "Pipeline tokens", Value: opsObservationTokenValue(t), Limit: "token cap not projected", State: opsObservationPipelineState(t), Source: "Work pipeline report"},
+	}
+	if h != nil && h.RuntimeEvidence.LastQueuedRunRequest != nil {
+		maxCost := "not projected"
+		if h.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD != nil {
+			maxCost = fmt.Sprintf("$%.2f", *h.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxCostUSD)
+		}
+		maxIterations := "iterations not projected"
+		if h.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxIterations != nil {
+			maxIterations = fmt.Sprintf("%d iterations", *h.RuntimeEvidence.LastQueuedRunRequest.BudgetMaxIterations)
+		}
+		rows = append(rows, OpsObservationSpendRow{
+			Label:  "Queued run budget",
+			Value:  maxCost,
+			Limit:  maxIterations,
+			State:  "projection-only",
+			Source: "Hive queued-run projection",
+		})
+	}
+	return rows
+}
+
+func opsObservationExceptions(t *OpsTelemetryData, h *OpsHiveData, c *OpsGitHubCanonicalData) []OpsObservationException {
+	exceptions := []OpsObservationException{}
+	if t != nil && t.Error != "" {
+		exceptions = append(exceptions, OpsObservationException{Label: "Telemetry", State: "unavailable", Reason: t.Error, EvidenceRef: t.WorkURL})
+	}
+	if t != nil && t.PipelineError != "" {
+		exceptions = append(exceptions, OpsObservationException{Label: "Pipeline report", State: "unavailable", Reason: t.PipelineError, EvidenceRef: t.PipelineURL})
+	}
+	if h != nil && h.ProjectionError != "" {
+		exceptions = append(exceptions, OpsObservationException{Label: "Hive projection", State: "unavailable", Reason: h.ProjectionError, EvidenceRef: h.ProjectionSource})
+	}
+	if c != nil && c.ScannerArtifact.Error != "" {
+		exceptions = append(exceptions, OpsObservationException{Label: "Issue scanner", State: "degraded", Reason: c.ScannerArtifact.Error, EvidenceRef: c.ScannerArtifact.Path})
+	}
+	if len(exceptions) == 0 {
+		exceptions = append(exceptions, OpsObservationException{Label: "Exception queue", State: "current zero", Reason: "No source errors projected for this render.", EvidenceRef: "Site render"})
+	}
+	return exceptions
+}
+
+func buildOpsControlData(now time.Time, readOnly bool, sources []OpsHiveIntakeSource, hive *OpsHiveData, confirmation, errMsg string) *OpsControlData {
+	status := "persisted"
+	if readOnly {
+		status = "graph store unavailable"
+	}
+	modelTargets := opsControlModelTargetOptions(hive)
+	return &OpsControlData{
+		GeneratedAt:   formatOpsTime(now.Format(time.RFC3339)),
+		StorageStatus: status,
+		Boundary:      "Queue-intent-only Site surface. No model policy, budget, Council, Hive, EventGraph, Work, deploy, approval, merge, or autonomy side effect is performed here.",
+		ReadOnly:      readOnly,
+		Confirmation:  confirmation,
+		Error:         errMsg,
+		Actions:       opsControlActions(),
+		ModelTargets:  modelTargets,
+		Intents:       opsControlIntentsFromSources(sources),
+		EvidenceRefs:  []string{"site#195", "CFADA packet 20260629T120717Z-site195-cfada"},
+	}
+}
+
+func opsControlActions() []OpsControlAction {
+	return []OpsControlAction{
+		{Kind: "model_policy", Label: "Role or agent model policy", ActionLabel: "Request model change", Description: "Queue a proposed role or agent model change for human review.", Placeholder: "Model: gpt-5; reason: reduce review latency.", Status: "Pending human approval", TargetCatalog: true},
+		{Kind: "budget_policy", Label: "Budget policy", ActionLabel: "Propose budget change", Description: "Queue a proposed spend, iteration, or token cap change for a role or agent.", Placeholder: "Max cycle cost: $10; token cap: 180k; reason: bounded exploration.", Status: "Pending human approval", TargetCatalog: true},
+		{Kind: "council_agenda", Label: "Council agenda", ActionLabel: "Draft agenda update", Description: "Draft the next Council agenda for review without convening agents.", Placeholder: "Agenda: review issue-canonical cutover blockers and MFOF evidence.", Status: "Queued"},
+		{Kind: "council_meeting", Label: "Ad-hoc Council meeting", ActionLabel: "Queue Council Meeting request", Description: "Queue a Council Meeting request for a primary role or agent. No agents are contacted by this form.", Placeholder: "Topic: evaluate FactoryOrder candidate acceptance criteria.", Status: "Pending human approval", TargetCatalog: true},
+		{Kind: "evolution_action", Label: "Civilization evolution action", ActionLabel: "Propose evolution action", Description: "Queue a proposed next action for governed Civilization development.", Placeholder: "Action: split runtime authority wiring into Site/Hive/EventGraph child issues.", Status: "Blocked: protected action required"},
+	}
+}
+
+func opsControlModelTargetOptions(hive *OpsHiveData) []OpsModelTargetOption {
+	return opsModelTargetOptionsFromHive(hive)
+}
+
+func opsHiveModelTargetOptions(selection OpsHiveModelSelection) []OpsModelTargetOption {
+	return opsModelTargetOptionsFromHive(&OpsHiveData{ModelSelection: selection})
+}
+
+func opsModelTargetOptionsFromHive(hive *OpsHiveData) []OpsModelTargetOption {
+	options := []OpsModelTargetOption{}
+	index := map[string]int{}
+	add := func(value, status, source string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		key := strings.ToLower(value)
+		if i, ok := index[key]; ok {
+			if options[i].Status == "" && status != "" {
+				options[i].Status = status
+			}
+			if source != "" && !strings.Contains(options[i].Source, source) {
+				if options[i].Source == "" {
+					options[i].Source = source
+				} else {
+					options[i].Source += "; " + source
+				}
+			}
+			return
+		}
+		index[key] = len(options)
+		options = append(options, OpsModelTargetOption{
+			Value:  value,
+			Label:  opsModelTargetLabel(value),
+			Status: status,
+			Source: source,
+		})
+	}
+
+	for _, role := range opsCanonicalRoles {
+		if strings.Contains(role, "human") || strings.Contains(role, "draft PR") {
+			continue
+		}
+		add(role, "canonical", "civic role catalog")
+	}
+	personaNames := make([]string, 0, len(sitepersonas.HiveStatus))
+	for name, status := range sitepersonas.HiveStatus {
+		if status == "absorbed" || status == "retired" {
+			continue
+		}
+		personaNames = append(personaNames, name)
+	}
+	sort.Strings(personaNames)
+	for _, name := range personaNames {
+		add(name, sitepersonas.HiveStatus[name], "Hive persona catalog")
+	}
+	if hive != nil {
+		for _, item := range hive.ModelSelection.Assignments {
+			status := "projected assignment"
+			if item.CanOperate {
+				status = "projected assignment; can operate"
+			}
+			add(item.Role, status, "Hive model-selection projection")
+		}
+		for _, item := range hive.Lifecycle {
+			add(item.Role, opsValueOr(item.LifecycleStatus, "projected lifecycle"), "Hive lifecycle projection")
+			add(item.ActorID, opsValueOr(item.LifecycleStatus, "projected agent"), "Hive lifecycle agent")
+		}
+	}
+	sort.SliceStable(options, func(i, j int) bool {
+		return strings.ToLower(options[i].Value) < strings.ToLower(options[j].Value)
+	})
+	return options
+}
+
+func opsModelTargetLabel(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "unknown"
+	}
+	return strings.ReplaceAll(value, "-", " ")
+}
+
+func opsModelTargetValueSet(options []OpsModelTargetOption) map[string]bool {
+	set := make(map[string]bool, len(options))
+	for _, option := range options {
+		value := strings.ToLower(strings.TrimSpace(option.Value))
+		if value != "" {
+			set[value] = true
+		}
+	}
+	return set
+}
+
+func opsControlIntentsFromSources(sources []OpsHiveIntakeSource) []OpsControlIntent {
+	intents := []OpsControlIntent{}
+	for _, source := range sources {
+		if source.Kind != opsControlIntentSourceKind {
+			continue
+		}
+		meta := opsParseControlIntentDetail(source.Detail)
+		intents = append(intents, OpsControlIntent{
+			ID:          source.ID,
+			Kind:        meta.IntentKind,
+			Title:       source.Title,
+			Target:      meta.Target,
+			RequestedBy: meta.RequestedBy,
+			Status:      opsValueOr(source.Status, "Queued"),
+			CreatedAt:   source.CreatedAt.Format("2006-01-02 15:04"),
+			Detail:      source.Content,
+		})
+	}
+	if len(intents) == 0 {
+		intents = append(intents, OpsControlIntent{
+			Kind:        "none",
+			Title:       "No queued control intents",
+			Target:      "none",
+			RequestedBy: "none",
+			Status:      "Queued",
+			CreatedAt:   "unavailable",
+			Detail:      "Create a request to record queue-only control intent.",
+		})
+	}
+	return intents
+}
+
+func opsParseControlIntentDetail(detail string) opsControlIntentMeta {
+	var meta opsControlIntentMeta
+	if err := json.Unmarshal([]byte(detail), &meta); err == nil {
+		return meta
+	}
+	values := map[string]string{}
+	for _, part := range strings.Split(detail, ";") {
+		k, v, ok := strings.Cut(part, "=")
+		if ok {
+			values[strings.TrimSpace(k)] = strings.TrimSpace(v)
+		}
+	}
+	return opsControlIntentMeta{
+		IntentKind:  values["intent_kind"],
+		RequestedBy: values["requested_by"],
+		Target:      values["target"],
+	}
+}
+
+func opsControlIntentParamsFromForm(r *http.Request, fallbackRequester string, allowedModelTargets map[string]bool) (CreateOpsHiveIntakeSourceParams, error) {
+	kind := strings.TrimSpace(r.FormValue("intent_kind"))
+	title := strings.TrimSpace(r.FormValue("title"))
+	target := strings.TrimSpace(r.FormValue("target"))
+	requestedBy := strings.TrimSpace(r.FormValue("requested_by"))
+	body := strings.TrimSpace(r.FormValue("content"))
+	if requestedBy == "" {
+		requestedBy = fallbackRequester
+	}
+	if !opsControlIntentKindAllowed(kind) {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("unsupported control intent kind")
+	}
+	if title == "" {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("intent title is required")
+	}
+	if body == "" {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("intent detail is required")
+	}
+	if opsControlIntentKindUsesModelTarget(kind) {
+		if target == "" {
+			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
+		}
+		if !allowedModelTargets[strings.ToLower(target)] {
+			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
+		}
+	}
+	if len(body) > opsHiveIntakeMaxContentBytes {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("intent detail must be %d bytes or less", opsHiveIntakeMaxContentBytes)
+	}
+	if opsControlContainsForbiddenVerb(title) || opsControlContainsForbiddenVerb(target) || opsControlContainsForbiddenVerb(requestedBy) || opsControlContainsForbiddenVerb(body) {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("control intent uses forbidden execution vocabulary")
+	}
+	detail, err := json.Marshal(opsControlIntentMeta{IntentKind: kind, RequestedBy: requestedBy, Target: target})
+	if err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("could not encode control intent metadata: %w", err)
+	}
+	return CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: opsHiveProfileSlugFromRequest(r),
+		Kind:        opsControlIntentSourceKind,
+		Title:       truncateOpsHiveIntakeTitle(title),
+		Detail:      string(detail),
+		Content:     body,
+		Status:      "Queued",
+	}, nil
+}
+
+func opsControlIntentKindAllowed(kind string) bool {
+	switch kind {
+	case "model_policy", "budget_policy", "council_agenda", "council_meeting", "evolution_action":
+		return true
+	default:
+		return false
+	}
+}
+
+func opsControlIntentKindUsesModelTarget(kind string) bool {
+	switch kind {
+	case "model_policy", "budget_policy", "council_meeting":
+		return true
+	default:
+		return false
+	}
+}
+
+func opsControlContainsForbiddenVerb(value string) bool {
+	lower := strings.ToLower(value)
+	forbidden := map[string]bool{
+		"invoke":  true,
+		"set":     true,
+		"execute": true,
+		"start":   true,
+		"launch":  true,
+		"deploy":  true,
+		"write":   true,
+		"trigger": true,
+		"approve": true,
+		"merge":   true,
+	}
+	for _, token := range strings.FieldsFunc(lower, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		if forbidden[token] {
+			return true
+		}
+	}
+	return false
+}
+
+func buildOpsFactoryData(now time.Time, readOnly bool, sources []OpsHiveIntakeSource, submitterQuery, confirmation, errMsg string) *OpsFactoryData {
+	submissions := opsFactorySubmissionsFromSources(sources, submitterQuery)
+	return &OpsFactoryData{
+		GeneratedAt:    formatOpsTime(now.Format(time.RFC3339)),
+		StorageStatus:  opsFactoryStorageStatus(readOnly),
+		Boundary:       "Artifact-intake-only Site surface. Submitted Markdown is not a FactoryOrder. Conversion requires a separate governed review process.",
+		ReadOnly:       readOnly,
+		SubmitterQuery: submitterQuery,
+		Confirmation:   confirmation,
+		Error:          errMsg,
+		Submissions:    submissions,
+		Stages:         opsFactoryStages(submissions),
+		EvidenceRefs:   []string{"site#195", "MFOF design v0.1.1"},
+	}
+}
+
+func opsFactoryStorageStatus(readOnly bool) string {
+	if readOnly {
+		return "graph store unavailable"
+	}
+	return "persisted"
+}
+
+func opsFactorySubmissionsFromSources(sources []OpsHiveIntakeSource, submitterQuery string) []OpsFactorySubmission {
+	query := strings.ToLower(strings.TrimSpace(submitterQuery))
+	out := []OpsFactorySubmission{}
+	for _, source := range sources {
+		if source.Kind != opsMarkdownArtifactSourceKind {
+			continue
+		}
+		meta := opsParseFactorySubmissionMeta(source.Detail)
+		submitter := opsValueOr(meta.SubmitterName, "unknown submitter")
+		if query != "" {
+			haystack := strings.ToLower(submitter + " " + meta.SubmitterEmail + " " + meta.SubmitterOrg)
+			if !strings.Contains(haystack, query) {
+				continue
+			}
+		}
+		out = append(out, OpsFactorySubmission{
+			ID:        source.ID,
+			Title:     source.Title,
+			Submitter: submitter,
+			Email:     meta.SubmitterEmail,
+			Org:       meta.SubmitterOrg,
+			Filename:  meta.Filename,
+			SHA256:    meta.SHA256,
+			Status:    opsValueOr(source.Status, "submitted"),
+			CreatedAt: source.CreatedAt.Format("2006-01-02 15:04"),
+			Notes:     meta.Notes,
+			Preview:   opsHiveBriefExcerpt(source.Content, 220),
+		})
+	}
+	if len(out) == 0 {
+		out = append(out, OpsFactorySubmission{
+			Title:     "No submitted artifacts",
+			Submitter: opsValueOr(submitterQuery, "all submitters"),
+			Status:    "unavailable",
+			CreatedAt: "unavailable",
+			Preview:   "No Markdown artifacts match the current filter.",
+		})
+	}
+	return out
+}
+
+func opsParseFactorySubmissionMeta(detail string) opsFactorySubmissionMeta {
+	var meta opsFactorySubmissionMeta
+	_ = json.Unmarshal([]byte(detail), &meta)
+	return meta
+}
+
+func opsFactoryStages(submissions []OpsFactorySubmission) []OpsFactoryStage {
+	submitted := 0
+	for _, submission := range submissions {
+		if submission.ID != "" && strings.EqualFold(submission.Status, "submitted") {
+			submitted++
+		}
+	}
+	return []OpsFactoryStage{
+		{Label: "Submitted artifact", Count: submitted, State: opsCountState(submitted, "current zero"), Boundary: "Site artifact intake only"},
+		{Label: "FactoryOrder candidate", Count: 0, State: "unavailable", Boundary: "requires governed review"},
+		{Label: "Confirmed FactoryOrder", Count: 0, State: "unavailable", Boundary: "not created by upload"},
+	}
+}
+
+func opsFactorySubmissionParamsFromRequest(r *http.Request) (CreateOpsHiveIntakeSourceParams, error) {
+	if err := r.ParseMultipartForm(int64(opsHiveIntakeMaxContentBytes + 8192)); err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("multipart Markdown upload is required")
+	}
+	submitterName := strings.TrimSpace(r.FormValue("submitter_name"))
+	submitterEmail := strings.TrimSpace(r.FormValue("submitter_email"))
+	submitterOrg := strings.TrimSpace(r.FormValue("submitter_org"))
+	title := strings.TrimSpace(r.FormValue("title"))
+	notes := strings.TrimSpace(r.FormValue("notes"))
+	if submitterName == "" {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("submitter name is required")
+	}
+	file, header, err := r.FormFile("artifact")
+	if err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("Markdown artifact file is required")
+	}
+	defer file.Close()
+	content, filename, hash, err := opsReadMarkdownArtifact(file, header)
+	if err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, err
+	}
+	if title == "" {
+		title = strings.TrimSuffix(filename, filepath.Ext(filename))
+	}
+	meta := opsFactorySubmissionMeta{
+		SubmitterName:  submitterName,
+		SubmitterEmail: submitterEmail,
+		SubmitterOrg:   submitterOrg,
+		Filename:       filename,
+		SHA256:         hash,
+		Notes:          notes,
+	}
+	detail, err := json.Marshal(meta)
+	if err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("could not encode artifact metadata: %w", err)
+	}
+	return CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: opsHiveProfileSlugFromRequest(r),
+		Kind:        opsMarkdownArtifactSourceKind,
+		Title:       truncateOpsHiveIntakeTitle(title),
+		Detail:      string(detail),
+		Content:     content,
+		Status:      "submitted",
+	}, nil
+}
+
+func opsReadMarkdownArtifact(file multipart.File, header *multipart.FileHeader) (string, string, string, error) {
+	filename := "artifact.md"
+	if header != nil && strings.TrimSpace(header.Filename) != "" {
+		filename = filepath.Base(header.Filename)
+	}
+	if !strings.EqualFold(filepath.Ext(filename), ".md") {
+		return "", "", "", errors.New("artifact filename must end in .md")
+	}
+	limited := io.LimitReader(file, int64(opsHiveIntakeMaxContentBytes+1))
+	body, err := io.ReadAll(limited)
+	if err != nil {
+		return "", "", "", errors.New("could not read Markdown artifact")
+	}
+	if len(body) == 0 {
+		return "", "", "", errors.New("Markdown artifact is empty")
+	}
+	if len(body) > opsHiveIntakeMaxContentBytes {
+		return "", "", "", fmt.Errorf("Markdown artifact must be %d bytes or less", opsHiveIntakeMaxContentBytes)
+	}
+	sum := sha256.Sum256(body)
+	return string(body), filename, hex.EncodeToString(sum[:]), nil
 }
 
 func buildOpsPublicProofData(now time.Time) *OpsPublicProofData {
@@ -1875,7 +2895,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		EstimatedBudget: "not estimated",
 		StorageStatus:   "persisted",
 	}
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	sources, err := h.store.ListLaunchableOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
@@ -1895,7 +2915,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 }
 
 func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug string) (opsHiveRunLaunchPayload, CreateOpsHiveRunLaunchParams, error) {
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, 25)
+	sources, err := h.store.ListLaunchableOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, fmt.Errorf("could not load persisted intake sources: %w", err)
 	}
@@ -1956,6 +2976,25 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 		BudgetMaxCostUSD:    maxCost,
 	}
 	return payload, storeParams, nil
+}
+
+func opsHiveLaunchableIntakeSources(sources []OpsHiveIntakeSource) []OpsHiveIntakeSource {
+	out := make([]OpsHiveIntakeSource, 0, len(sources))
+	for _, source := range sources {
+		if opsHiveLaunchableIntakeKind(source.Kind) {
+			out = append(out, source)
+		}
+	}
+	return out
+}
+
+func opsHiveLaunchableIntakeKind(kind string) bool {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "url", "repo", "prd", "spec", "plan", "text":
+		return true
+	default:
+		return false
+	}
 }
 
 func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView {
@@ -3408,16 +4447,35 @@ func opsPublicProofStateClass(status string) string {
 }
 
 func opsAgentStateClass(state string) string {
-	switch strings.ToLower(state) {
+	switch strings.ToLower(strings.TrimSpace(state)) {
 	case "processing":
 		return "border-sky-400/30 text-sky-300 bg-sky-400/10"
-	case "idle":
+	case "idle", "projection-only":
 		return "border-edge text-warm-faint bg-void/30"
-	case "error", "failed":
+	case "degraded", "stale":
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	case "error", "failed", "unavailable", "missing":
 		return "border-red-400/30 text-red-300 bg-red-400/10"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
 	}
+}
+
+func opsPercentForCount(count, maxCount int) int {
+	if count <= 0 {
+		return 0
+	}
+	if maxCount <= 0 {
+		return 100
+	}
+	percent := count * 100 / maxCount
+	if percent < 8 {
+		return 8
+	}
+	if percent > 100 {
+		return 100
+	}
+	return percent
 }
 
 func legacyWorkURL(base, path string) string {

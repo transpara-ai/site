@@ -56,47 +56,19 @@ func Home(stats HomeStats, p *profile.Profile) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><section class=\"py-14 md:py-20 border-b border-edge\"><div class=\"space-y-6 max-w-3xl\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Command surface</p><h1 class=\"font-display text-4xl md:text-6xl font-semibold leading-tight text-warm\">Transpara-AI Civilization operations</h1><p class=\"text-lg text-warm-muted max-w-2xl leading-relaxed\">A live surface for governed autonomous work: operator routes, runtime evidence, review posture, and the civilization assembly.</p><div class=\"flex flex-wrap gap-3 pt-2\"><a href=\"/ops/civilization\" class=\"inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium\">Open civilization</a> <a href=\"/ops\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Ops console</a> <a href=\"/hive\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Hive status</a></div></div></section><section class=\"grid gap-4 md:grid-cols-2 xl:grid-cols-3\" aria-label=\"Civilization monitoring surfaces\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"space-y-12\"><section class=\"py-14 md:py-20 border-b border-edge\"><div class=\"space-y-6 max-w-3xl\"><p class=\"text-xs uppercase tracking-widest text-warm-faint\">Command surface</p><h1 class=\"font-display text-4xl md:text-6xl font-semibold leading-tight text-warm\">Transpara-AI Civilization operations</h1><p class=\"text-lg text-warm-muted max-w-2xl leading-relaxed\">A task-first surface for observing Civilization state, queuing bounded control intent, and submitting human Factory artifacts.</p><div class=\"flex flex-wrap gap-3 pt-2\"><a href=\"/ops/observation\" class=\"inline-block px-5 py-3 bg-brand text-void rounded-md hover:bg-brand-dark transition-colors font-medium\">Observation</a> <a href=\"/ops/control\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Control</a> <a href=\"/factory\" class=\"inline-block px-5 py-3 border border-edge-strong rounded-md hover:border-brand hover:text-brand transition-colors font-medium text-warm-muted\">Human Factory</a></div></div></section><section class=\"grid gap-4 md:grid-cols-2 xl:grid-cols-3\" aria-label=\"Civilization monitoring surfaces\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = homeSurface("Control", "Civilization assembly", "/ops/civilization", "v4.0 projection", "Roles, gates, issue intake, Kanban, and non-authority boundaries.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = homeSurface("Monitor", "Observation", "/ops/observation", "safe hybrid", "Civilization health, Factory statistics, live agents, spend, blockers, freshness, and evidence refs.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = homeSurface("Runtime", "Observatory", "/ops/observatory", "read-only", "Vitals, lifecycle timelines, causal traces, and explicit unavailable states.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = homeSurface("Admin", "Control", "/ops/control", "queue only", "Bounded model, budget, Council, and Civilization-evolution intent without protected execution.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = homeSurface("Telemetry", "Pipeline telemetry", "/ops/telemetry", "native summary", "Agent activity, phase status, event stream health, and feeder errors.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Ingestion", "Hive intake", "/ops/hive/intake", "store-aware", "Source records, graph-store availability, queued-run boundary, scanner limits, and advisory boundaries.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Scan", "GitHub canonical", "/ops/github-canonical", "scanner evidence", "Issue-canonical progress, parked blockers, warnings, and source-count posture.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Kanban", "Issue-scan board", "/ops/civilization#issue-scan-kanban", "projection only", "Run stages, blocker reasons, agent touch, evidence refs, and human action state.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Test 001", "Carried-evidence posture", "/ops/github-canonical#test-001-posture", "YELLOW/open", "Operation tracker state, unavailable evidence rows, and product-monitor support.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Review", "Review and evidence", "/ops/review-console", "display only", "Exact-head approvals, authority packets, residuals, and gate closeout state.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Evidence", "Evidence packet", "/ops/evidence", "display only", "Proof packets, tests, decisions, and known failures without execution authority.").Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = homeSurface("Public proof", "Reader/correction proof", "/ops/public-proof", "display only", "Public URL refs, live-reader proof, correction proof, and explicit unavailable states.").Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = homeSurface("Human", "Human Factory", "/factory", "artifact intake", "Markdown artifact submission, Factory-in-motion state, and filtering by human submitter.").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -172,7 +144,7 @@ func homeMetric(label string, value int) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 86, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 79, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -185,7 +157,7 @@ func homeMetric(label string, value int) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 87, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 80, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -227,7 +199,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var7 templ.SafeURL
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 92, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 85, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -240,7 +212,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(kicker)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 94, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 87, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -253,7 +225,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(status)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 95, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 88, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -266,7 +238,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 97, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 90, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -279,7 +251,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(detail)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 98, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 91, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -292,7 +264,7 @@ func homeSurface(kicker string, label string, href string, status string, detail
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(href)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 99, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/home.templ`, Line: 92, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

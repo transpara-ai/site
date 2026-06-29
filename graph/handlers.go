@@ -360,7 +360,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 
 	// Operator shell — requires auth. Public Hive status stays under /hive*.
 	mux.Handle("GET /ops", h.writeWrap(h.handleOps))
-	mux.Handle("GET /ops/control", h.writeWrap(h.handleOps))
+	mux.Handle("GET /ops/observation", h.writeWrap(h.handleOpsObservation))
+	mux.Handle("GET /ops/control", h.writeWrap(h.handleOpsControl))
+	mux.Handle("POST /ops/control/intents", h.writeWrap(h.handleOpsControlIntentCreate))
 	mux.Handle("GET /ops/work", h.writeWrap(h.handleOpsWork))
 	mux.Handle("GET /ops/telemetry", h.writeWrap(h.handleOpsTelemetry))
 	mux.Handle("GET /ops/observatory", h.writeWrap(h.handleOpsObservatory))
@@ -382,6 +384,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/decision", h.writeWrap(h.handleOpsDecision))
 	mux.Handle("POST /ops/decision", h.writeWrap(h.handleOpsDecisionSubmit))
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
+	mux.Handle("GET /factory", h.writeWrap(h.handleFactory))
+	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
@@ -389,7 +393,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 // must only be mounted by the no-DATABASE_URL app branch.
 func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops", h.handleOps)
-	mux.HandleFunc("GET /ops/control", h.handleOps)
+	mux.HandleFunc("GET /ops/observation", h.handleOpsObservation)
+	mux.HandleFunc("GET /ops/control", h.handleOpsControl)
 	mux.HandleFunc("GET /ops/telemetry", h.handleOpsTelemetry)
 	mux.HandleFunc("GET /ops/observatory", h.handleOpsObservatory)
 	mux.HandleFunc("GET /ops/observatory/events", h.handleOpsObservatoryEvents)
@@ -399,6 +404,13 @@ func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ops/review-console", h.handleOpsReviewConsole)
 	mux.HandleFunc("GET /ops/hive/intake", h.handleOpsHiveIntake)
 	mux.HandleFunc("GET /ops/evidence", h.handleOpsEvidence)
+}
+
+// RegisterReadOnlyFactory adds the no-DB human Factory route. It is kept out
+// of RegisterReadOnlyOps because /factory is an artifact-intake surface, not an
+// ops read-only projection route.
+func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
+	mux.HandleFunc("GET /factory", h.handleFactory)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -2116,7 +2128,8 @@ func (h *Handlers) handleCouncil(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CouncilListView(*space, spaces, sessions, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
+	agents, _ := h.store.ListAgentPersonas(r.Context())
+	CouncilListView(*space, spaces, sessions, h.viewUser(r), agents, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 func (h *Handlers) handleCouncilDetail(w http.ResponseWriter, r *http.Request) {
@@ -2405,8 +2418,9 @@ func (h *Handlers) handleNodeDetail(w http.ResponseWriter, r *http.Request) {
 	endorsed := uid != "" && h.store.HasEndorsed(r.Context(), uid, nodeID)
 	repostCounts := h.store.GetBulkRepostCounts(r.Context(), []string{nodeID})
 	reposted := uid != "" && h.store.HasReposted(r.Context(), uid, nodeID)
+	agents, _ := h.store.ListAgentPersonas(r.Context())
 
-	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks, endorseCount, endorsed, repostCounts[nodeID], reposted, profile.FromContext(r.Context())).Render(r.Context(), w)
+	NodeDetailView(*space, *node, children, ops, h.viewUser(r), isOwner, parents, dependencies, dependents, spaceTasks, agents, endorseCount, endorsed, repostCounts[nodeID], reposted, profile.FromContext(r.Context())).Render(r.Context(), w)
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -3740,19 +3754,22 @@ func (h *Handlers) handleOp(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "title required", http.StatusBadRequest)
 			return
 		}
-		// Resolve agent IDs from the agents field (comma-separated names or IDs).
+		// Resolve agent IDs from the agents field. Browser forms send one value per
+		// selected dropdown option; older clients may still send comma-separated text.
 		var agentIDs []string
-		if a := strings.TrimSpace(r.FormValue("agents")); a != "" {
-			for _, name := range strings.Split(a, ",") {
-				name = strings.TrimSpace(name)
-				if name == "" {
-					continue
+		for _, raw := range r.Form["agents"] {
+			if a := strings.TrimSpace(raw); a != "" {
+				for _, name := range strings.Split(a, ",") {
+					name = strings.TrimSpace(name)
+					if name == "" {
+						continue
+					}
+					if resolved := h.store.ResolveUserID(ctx, name); resolved != "" {
+						agentIDs = append(agentIDs, resolved)
+					}
+					// Unresolvable names are skipped — storing a display name where an ID
+					// is required violates invariant 11 (IDENTITY).
 				}
-				if resolved := h.store.ResolveUserID(ctx, name); resolved != "" {
-					agentIDs = append(agentIDs, resolved)
-				}
-				// Unresolvable names are skipped — storing a display name where an ID
-				// is required violates invariant 11 (IDENTITY).
 			}
 		}
 		node, err := h.store.CreateNode(ctx, CreateNodeParams{

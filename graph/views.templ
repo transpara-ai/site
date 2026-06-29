@@ -1705,7 +1705,7 @@ templ boardOnboarding(spaceSlug string, agents []AgentPersona) {
 								}
 							</select>
 						}
-						<input type="text" name="assignee" id="task-assignee" value={ agents[0].Name } class="hidden"/>
+						<input type="hidden" name="assignee" id="task-assignee" value={ agents[0].Name }/>
 					</div>
 				}
 				<div class="flex justify-end">
@@ -1774,11 +1774,13 @@ templ newTaskInline(spaceSlug string, agents []AgentPersona) {
 						for _, agent := range agents {
 							<option value={ agent.Name } selected?={ len(agents) > 0 && agent.Name == agents[0].Name }>{ agent.Display }</option>
 						}
+						if !agentOptionsContain(agents, "hive") {
+							<option value="hive">Hive runtime · legacy</option>
+						}
 					</select>
 				</div>
 			} else {
-				<input type="text" name="assignee" placeholder="Assign to..."
-					class="w-full text-sm px-2 py-1.5 bg-elevated border border-edge rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"/>
+				<p class="text-xs text-warm-faint">No agent assignees available.</p>
 			}
 			<div class="flex items-center gap-2">
 				<select name="priority" class="text-xs px-2 py-1 bg-elevated border border-edge rounded-md focus:outline-none focus:ring-2 focus:ring-brand text-warm-muted">
@@ -2834,7 +2836,7 @@ templ QuestionDetailView(space Space, spaces []Space, question Node, answers []N
 
 // ── Council lens ────────────────────────────────────────────────
 
-templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUser, p *profile.Profile) {
+templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUser, agents []AgentPersona, p *profile.Profile) {
 	@appLayout(space, spaces, "council", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-6">
 			<div class="flex items-center justify-between">
@@ -2856,9 +2858,16 @@ templ CouncilListView(space Space, spaces []Space, sessions []Node, user ViewUse
 						class="w-full bg-base border border-edge rounded-lg px-3 py-2 text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand resize-none"></textarea>
 				</div>
 				<div class="space-y-1">
-					<label class="block text-xs font-medium text-warm-muted">Agents <span class="text-warm-faint">(comma-separated names)</span></label>
-					<input type="text" name="agents" placeholder="philosopher, strategist, critic"
-						class="w-full bg-base border border-edge rounded-lg px-3 py-2 text-sm text-warm placeholder-warm-faint focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"/>
+					<label class="block text-xs font-medium text-warm-muted">Agents</label>
+					if len(agents) > 0 {
+						<select name="agents" multiple size="5" class="w-full bg-base border border-edge rounded-lg px-3 py-2 text-sm text-warm focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand">
+							for _, agent := range agents {
+								<option value={ agent.Name }>{ agent.Display } · { agent.Status }</option>
+							}
+						</select>
+					} else {
+						<p class="rounded-lg border border-edge bg-elevated px-3 py-2 text-sm text-warm-faint">No agent options available.</p>
+					}
 				</div>
 				<button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-brand text-base text-sm font-medium rounded-lg hover:bg-brand/90 transition-colors">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -4531,7 +4540,7 @@ templ proposalStateBadge(state string) {
 
 // ── Node detail ─────────────────────────────────────────────────
 
-templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node, endorseCount int, endorsed bool, repostCount int, reposted bool, p *profile.Profile) {
+templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user ViewUser, isOwner bool, parents []Node, dependencies []Node, dependents []Node, spaceTasks []Node, agents []AgentPersona, endorseCount int, endorsed bool, repostCount int, reposted bool, p *profile.Profile) {
 	@appLayout(space, []Space{space}, "", user, p) {
 		<div class="max-w-3xl mx-auto p-6 space-y-8">
 			<!-- Breadcrumb -->
@@ -4650,8 +4659,19 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 									<form method="POST" action={ templ.SafeURL(fmt.Sprintf("/app/%s/op", space.Slug)) } class="inline">
 										<input type="hidden" name="op" value="assign"/>
 										<input type="hidden" name="node_id" value={ node.ID }/>
-										<input type="hidden" name="assignee" value="hive"/>
-										<button type="submit" class="px-3 py-1 bg-brand/10 text-brand border border-brand/20 rounded-md hover:bg-brand/20 transition-colors text-sm font-medium">Assign to agent</button>
+										if len(agents) > 0 {
+											<select name="assignee" class="px-2 py-1 bg-elevated border border-brand/20 rounded-md text-sm text-brand focus:outline-none">
+												for _, agent := range agents {
+													<option value={ agent.Name }>{ agent.Display }</option>
+												}
+												if !agentOptionsContain(agents, "hive") {
+													<option value="hive">Hive runtime · legacy</option>
+												}
+											</select>
+											<button type="submit" class="px-3 py-1 bg-brand/10 text-brand border border-brand/20 rounded-md hover:bg-brand/20 transition-colors text-sm font-medium">Assign</button>
+										} else {
+											<span class="text-xs text-warm-faint">No agent options</span>
+										}
 									</form>
 								</div>
 							} else {
@@ -4768,7 +4788,18 @@ templ NodeDetailView(space Space, node Node, children []Node, ops []Op, user Vie
 								</div>
 								<div>
 									<label class="block text-xs font-medium text-warm-muted mb-1">Assignee</label>
-									<input type="text" name="assignee" value={ node.Assignee } class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm" placeholder="Unassigned"/>
+									<select name="assignee" class="w-full px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-sm text-warm">
+										<option value="" selected?={ node.Assignee == "" }>Unassigned</option>
+										if node.Assignee != "" && !agentOptionsContain(agents, node.Assignee) {
+											<option value={ node.Assignee } selected>Current: { node.Assignee }</option>
+										}
+										for _, agent := range agents {
+											<option value={ agent.Name } selected?={ node.Assignee == agent.Name }>{ agent.Display } · { agent.Status }</option>
+										}
+										if !agentOptionsContain(agents, "hive") && node.Assignee != "hive" {
+											<option value="hive">Hive runtime · legacy</option>
+										}
+									</select>
 								</div>
 							</div>
 						}
@@ -5090,7 +5121,7 @@ templ CommentItem(node Node) {
 
 // ── API Keys ─────────────────────────────────────────────────────
 
-templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
+templ APIKeysView(keys []ViewAPIKey, user ViewUser, agents []AgentPersona, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en" data-profile={ p.GetSlug() } style={ "--accent: " + p.GetAccentColor() }>
 		<head>
@@ -5113,19 +5144,19 @@ templ APIKeysView(keys []ViewAPIKey, user ViewUser, p *profile.Profile) {
 							<input
 								type="text"
 								name="name"
-								placeholder="Key name (e.g. hive-agent)"
+								placeholder="Key name"
 								class="flex-1 text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"
 							/>
 							<button type="submit" class="px-4 py-2 bg-brand text-void rounded-lg hover:bg-brand-dark transition-colors text-sm font-medium whitespace-nowrap">
 								Create Key
 							</button>
 						</div>
-						<input
-							type="text"
-							name="agent_name"
-							placeholder="Agent identity (optional — posts appear as this name)"
-							class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm placeholder-warm-faint"
-						/>
+						<select name="agent_name" class="w-full text-sm px-3 py-2 bg-elevated border border-edge rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent text-warm">
+							<option value="">No agent identity</option>
+							for _, agent := range agents {
+								<option value={ agent.Name }>{ agent.Display } · { agent.Status }</option>
+							}
+						</select>
 					</form>
 					<div id="key-result" class="mt-4"></div>
 				</div>
@@ -5472,6 +5503,15 @@ func personaOnlineStatus(p *AgentPersona) string {
 func containsStr(ss []string, s string) bool {
 	for _, v := range ss {
 		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func agentOptionsContain(agents []AgentPersona, name string) bool {
+	for _, agent := range agents {
+		if agent.Name == name {
 			return true
 		}
 	}

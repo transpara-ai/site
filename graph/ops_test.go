@@ -1,8 +1,13 @@
 package graph
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,6 +61,412 @@ func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	}
 	if len(got.PhaseGates) != 1 || got.PhaseGates[0].Status != "approved" {
 		t.Fatalf("PhaseGates = %#v, want approved gate", got.PhaseGates)
+	}
+}
+
+func TestOpsControlActionsUseQueueOnlyVocabulary(t *testing.T) {
+	for _, action := range opsControlActions() {
+		if action.ActionLabel == "" {
+			t.Fatalf("action %s has empty action label", action.Kind)
+		}
+		for _, value := range []string{action.ActionLabel, action.Label, action.Description, action.Placeholder, action.Status} {
+			if opsControlContainsForbiddenVerb(value) {
+				t.Fatalf("control action %s contains forbidden execution vocabulary in %q", action.Kind, value)
+			}
+		}
+	}
+}
+
+func TestBuildOpsObservationDataDoesNotMarkUnavailableCivilizationProjectionCurrent(t *testing.T) {
+	now := time.Date(2026, 6, 29, 14, 0, 0, 0, time.UTC)
+	telemetry := &OpsTelemetryData{GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339)}
+	hive := &OpsHiveData{GeneratedAt: now.Add(-2 * time.Minute).Format(time.RFC3339)}
+	canonical := &OpsGitHubCanonicalData{GeneratedAt: now.Format(time.RFC3339), ProjectionState: "available"}
+
+	for _, tt := range []struct {
+		name        string
+		projection  string
+		wantValue   string
+		wantState   string
+		wantContext string
+	}{
+		{
+			name:        "unavailable projection stays degraded",
+			projection:  opsCivilizationProjectionStatusUnavailable,
+			wantValue:   "degraded",
+			wantState:   "degraded",
+			wantContext: "Civilization projection unavailable",
+		},
+		{
+			name:        "complete projection is current",
+			projection:  opsCivilizationProjectionStatusComplete,
+			wantValue:   "current",
+			wantState:   "current",
+			wantContext: "sources checked",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			civilization := &OpsCivilizationAssemblyData{
+				GeneratedAt:      now.Add(-3 * time.Minute).Format(time.RFC3339),
+				ProjectionStatus: tt.projection,
+			}
+			data := buildOpsObservationData(now, telemetry, hive, civilization, canonical, nil)
+			var health *OpsObservationMetric
+			for i := range data.Metrics {
+				if data.Metrics[i].Label == "Civilization health" {
+					health = &data.Metrics[i]
+					break
+				}
+			}
+			if health == nil {
+				t.Fatalf("Civilization health metric missing: %#v", data.Metrics)
+			}
+			if health.Value != tt.wantValue || health.State != tt.wantState || health.Context != tt.wantContext {
+				t.Fatalf("health metric = value:%q state:%q context:%q, want value:%q state:%q context:%q", health.Value, health.State, health.Context, tt.wantValue, tt.wantState, tt.wantContext)
+			}
+		})
+	}
+}
+
+func TestOpsControlIntentParamsRejectsForbiddenExecutionVocabulary(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "council_meeting")
+	form.Set("title", "Invoke Council")
+	form.Set("content", "Queue a review discussion.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if _, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil))); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted forbidden execution vocabulary")
+	}
+}
+
+func TestOpsControlIntentParamsUsesWordBoundaryVocabularyGuard(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "model_policy")
+	form.Set("title", "Dataset reviewer budget request")
+	form.Set("target", "reviewer")
+	form.Set("requested_by", "operator")
+	form.Set("content", "Request a model change for the dataset reviewer.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil)))
+	if err != nil {
+		t.Fatalf("opsControlIntentParamsFromForm rejected safe text: %v", err)
+	}
+	var meta opsControlIntentMeta
+	if err := json.Unmarshal([]byte(params.Detail), &meta); err != nil {
+		t.Fatalf("control intent detail is not JSON: %v", err)
+	}
+	if meta.IntentKind != "model_policy" || meta.Target != "reviewer" || meta.RequestedBy != "operator" {
+		t.Fatalf("meta = %#v, want model_policy/reviewer/operator", meta)
+	}
+}
+
+func TestOpsControlIntentParamsRejectsFreeTextAgentRoleTarget(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "model_policy")
+	form.Set("title", "Dataset reviewer model request")
+	form.Set("target", "dataset-reviewer")
+	form.Set("requested_by", "operator")
+	form.Set("content", "Request a model change for the dataset reviewer.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if _, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil))); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted a model-policy target outside the agent/role dropdown catalog")
+	}
+	if _, err := opsControlIntentParamsFromForm(req, "operator", map[string]bool{}); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted model-policy target with an empty dropdown catalog")
+	}
+}
+
+func TestOpsControlModelTargetOptionsIncludeEmergentRoles(t *testing.T) {
+	options := opsControlModelTargetOptions(&OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{Assignments: []OpsHiveModelRoleAssignment{{Role: "runtime-specialist", CanOperate: true}}},
+		Lifecycle:      []OpsHiveLifecycle{{ActorID: "actor-runtime-specialist", Role: "runtime-specialist", LifecycleStatus: "planned"}},
+	})
+	values := opsModelTargetValueSet(options)
+	for _, want := range []string{"strategist", "reviewer", "designer", "legal", "runtime-specialist", "actor-runtime-specialist"} {
+		if !values[want] {
+			t.Fatalf("model target options missing %q in %#v", want, options)
+		}
+	}
+	for _, notAvailable := range []string{"scribe", "budget"} {
+		if values[notAvailable] {
+			t.Fatalf("model target options included unavailable role %q in %#v", notAvailable, options)
+		}
+	}
+}
+
+func TestOpsHiveLaunchableIntakeSourcesExcludesControlAndFactoryKinds(t *testing.T) {
+	got := opsHiveLaunchableIntakeSources([]OpsHiveIntakeSource{
+		{Kind: opsControlIntentSourceKind, Title: "Control intent"},
+		{Kind: opsMarkdownArtifactSourceKind, Title: "Human artifact"},
+		{Kind: "Text", Title: "Launchable source"},
+		{Kind: "draft_note", Title: "Unknown internal draft"},
+	})
+	if len(got) != 1 || got[0].Title != "Launchable source" {
+		t.Fatalf("launchable sources = %#v, want only ordinary intake source", got)
+	}
+}
+
+func TestOpsHiveClassifiedIntakeKindsAreLaunchable(t *testing.T) {
+	cases := []struct {
+		name    string
+		kind    string
+		title   string
+		content string
+	}{
+		{name: "url", kind: "url", content: "https://example.com/reference"},
+		{name: "repo", kind: "repo", content: "transpara-ai/site"},
+		{name: "prd", kind: "text", title: "Checkout PRD", content: "Acceptance criteria and requirements."},
+		{name: "spec", kind: "text", title: "API contract", content: "Schema and API contract."},
+		{name: "plan", kind: "text", title: "Milestone plan", content: "Roadmap and milestone plan."},
+		{name: "text", kind: "text", title: "Operator notes", content: "Plain source notes."},
+		{name: "unknown raw kind normalizes to text", kind: "draft_note", title: "Draft note", content: "Plain source notes."},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			values := url.Values{
+				"source_kind": {tt.kind},
+				"title":       {tt.title},
+				"content":     {tt.content},
+			}
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			params, err := opsHiveIntakeSourceParamsFromForm(req)
+			if err != nil {
+				t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+			}
+			if !opsHiveLaunchableIntakeKind(params.Kind) {
+				t.Fatalf("classified kind %q is not launchable", params.Kind)
+			}
+		})
+	}
+}
+
+func TestListLaunchableOpsHiveIntakeSourcesFiltersBeforeLimit(t *testing.T) {
+	_, store, _ := testHandlers(t)
+	profileSlug := fmt.Sprintf("launchable-limit-%d", time.Now().UnixNano())
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources WHERE profile_slug = $1`, profileSlug)
+	})
+
+	launchable, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: profileSlug,
+		Kind:        "Text",
+		Title:       "Launchable source",
+		Content:     "Issue brief and acceptance criteria.",
+		Status:      "parsed",
+	})
+	if err != nil {
+		t.Fatalf("create launchable source: %v", err)
+	}
+	if _, err := store.db.ExecContext(t.Context(), `UPDATE ops_hive_intake_sources SET created_at = $1 WHERE id = $2`, time.Now().Add(-time.Hour), launchable.ID); err != nil {
+		t.Fatalf("age launchable source: %v", err)
+	}
+	for i := 0; i < opsHiveLaunchableIntakeListLimit+5; i++ {
+		if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+			ProfileSlug: profileSlug,
+			Kind:        opsControlIntentSourceKind,
+			Title:       fmt.Sprintf("Internal control intent %03d", i),
+			Content:     "Site-local intent.",
+			Status:      "Queued",
+		}); err != nil {
+			t.Fatalf("create internal source %d: %v", i, err)
+		}
+	}
+
+	sources, err := store.ListLaunchableOpsHiveIntakeSources(t.Context(), profileSlug, 1)
+	if err != nil {
+		t.Fatalf("ListLaunchableOpsHiveIntakeSources: %v", err)
+	}
+	if len(sources) != 1 || sources[0].ID != launchable.ID {
+		t.Fatalf("launchable sources = %#v, want only aged launchable source despite newer internal rows", sources)
+	}
+}
+
+func TestHandleOpsControlAndFactoryRecordsDoNotEnterHiveLaunchIntake(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	if _, err := store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`); err != nil {
+		t.Fatalf("clear intake sources: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`)
+	})
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	controlForm := url.Values{}
+	controlForm.Set("intent_kind", "model_policy")
+	controlForm.Set("title", "Dataset reviewer model request")
+	controlForm.Set("target", "reviewer")
+	controlForm.Set("requested_by", "operator")
+	controlForm.Set("content", "Request a model change for the dataset reviewer.")
+	controlReq := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(controlForm.Encode()))
+	controlReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	controlResp := httptest.NewRecorder()
+	mux.ServeHTTP(controlResp, controlReq)
+	if controlResp.Code != http.StatusOK {
+		t.Fatalf("POST /ops/control/intents status = %d, want 200; body: %s", controlResp.Code, controlResp.Body.String())
+	}
+	if !strings.Contains(controlResp.Body.String(), "Queued intent recorded") {
+		t.Fatalf("control response missing queued confirmation: %s", controlResp.Body.String())
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	_ = writer.WriteField("title", "Factory artifact")
+	part, err := writer.CreateFormFile("artifact", "factory.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := part.Write([]byte("# Factory artifact\n\nHuman-submitted artifact.")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+	factoryReq := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	factoryReq.Header.Set("Content-Type", writer.FormDataContentType())
+	factoryResp := httptest.NewRecorder()
+	mux.ServeHTTP(factoryResp, factoryReq)
+	if factoryResp.Code != http.StatusOK {
+		t.Fatalf("POST /factory/artifacts status = %d, want 200; body: %s", factoryResp.Code, factoryResp.Body.String())
+	}
+	if !strings.Contains(factoryResp.Body.String(), "Artifact submitted. FactoryOrder conversion requires separate governed review.") {
+		t.Fatalf("factory response missing governed-review confirmation: %s", factoryResp.Body.String())
+	}
+
+	sources, err := store.ListOpsHiveIntakeSources(t.Context(), "transpara-ai", 25)
+	if err != nil {
+		t.Fatalf("ListOpsHiveIntakeSources: %v", err)
+	}
+	if len(sources) != 2 {
+		t.Fatalf("stored sources = %#v, want two Site-local records", sources)
+	}
+	intakeReq := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara-ai", nil)
+	intake := h.buildOpsHiveIntakeView(intakeReq)
+	if len(intake.Sources) != 0 {
+		t.Fatalf("Hive intake surfaced internal control/factory records: %#v", intake.Sources)
+	}
+	launchReq := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/launch?profile=transpara-ai", strings.NewReader("target_repos=transpara-ai/site&max_iterations=1&max_cost_usd=1"))
+	launchReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if err := launchReq.ParseForm(); err != nil {
+		t.Fatalf("ParseForm: %v", err)
+	}
+	if _, _, err := h.buildOpsHiveRunLaunchPayload(launchReq, "transpara-ai"); err == nil {
+		t.Fatal("buildOpsHiveRunLaunchPayload accepted internal control/factory records as launchable sources")
+	}
+}
+
+func TestNewOperatorMutationRoutesRejectCrossOriginPost(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	mux := http.NewServeMux()
+	h.Register(mux)
+	factoryBody := &bytes.Buffer{}
+	factoryWriter := multipart.NewWriter(factoryBody)
+	_ = factoryWriter.WriteField("submitter_name", "Ada Operator")
+	_ = factoryWriter.WriteField("title", "Factory artifact")
+	factoryPart, err := factoryWriter.CreateFormFile("artifact", "factory.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := factoryPart.Write([]byte("# Factory artifact")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := factoryWriter.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name        string
+		path        string
+		body        io.Reader
+		contentType string
+	}{
+		{
+			name:        "control intent",
+			path:        "/ops/control/intents",
+			body:        strings.NewReader("intent_kind=model_policy&title=Reviewer+model&target=reviewer&content=Request+model+review"),
+			contentType: "application/x-www-form-urlencoded",
+		},
+		{
+			name:        "factory artifact",
+			path:        "/factory/artifacts",
+			body:        factoryBody,
+			contentType: factoryWriter.FormDataContentType(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://site.test"+tt.path, tt.body)
+			req.Header.Set("Content-Type", tt.contentType)
+			req.Header.Set("Origin", "https://evil.test")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusForbidden {
+				t.Fatalf("POST %s status = %d, want 403; body: %s", tt.path, w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestOpsFactorySubmissionParamsAcceptsMarkdownArtifact(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	_ = writer.WriteField("submitter_email", "ada@example.invalid")
+	_ = writer.WriteField("submitter_org", "Factory Test")
+	_ = writer.WriteField("title", "Artifact brief")
+	part, err := writer.CreateFormFile("artifact", "brief.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	content := []byte("# Brief\n\nConvert this into a governed FactoryOrder candidate.")
+	if _, err := part.Write(content); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	params, err := opsFactorySubmissionParamsFromRequest(req)
+	if err != nil {
+		t.Fatalf("opsFactorySubmissionParamsFromRequest: %v", err)
+	}
+	if params.Kind != opsMarkdownArtifactSourceKind || params.Status != "submitted" {
+		t.Fatalf("params = %#v, want markdown_artifact/submitted", params)
+	}
+	sum := sha256.Sum256(content)
+	if !strings.Contains(params.Detail, hex.EncodeToString(sum[:])) {
+		t.Fatalf("params.Detail = %q, want sha256", params.Detail)
+	}
+}
+
+func TestOpsFactorySubmissionParamsRejectsNonMarkdownArtifact(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	part, err := writer.CreateFormFile("artifact", "brief.txt")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := part.Write([]byte("not markdown")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if _, err := opsFactorySubmissionParamsFromRequest(req); err == nil {
+		t.Fatal("opsFactorySubmissionParamsFromRequest accepted a non-Markdown artifact")
 	}
 }
 

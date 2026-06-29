@@ -51,6 +51,7 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 
 	for _, path := range []string{
 		"/ops",
+		"/ops/observation",
 		"/ops/control",
 		"/ops/work",
 		"/ops/telemetry",
@@ -63,10 +64,39 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/evidence",
 		"/ops/decision",
 		"/ops/refinery",
+		"/factory",
 		"/api/hive/site-ops?space=hive",
 	} {
 		t.Run(path, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusUnauthorized {
+				t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusUnauthorized, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestNewOperatorMutationRoutesRequireWriteAuth(t *testing.T) {
+	requireAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "auth required", http.StatusUnauthorized)
+		})
+	}
+	optionalAuth := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			t.Fatalf("route %s used optional auth wrapper; want required auth", r.URL.Path)
+		})
+	}
+	h := NewHandlers(nil, optionalAuth, requireAuth)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for _, path := range []string{"/ops/control/intents", "/factory/artifacts"} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("title=x"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, req)
 			if w.Code != http.StatusUnauthorized {
@@ -3122,6 +3152,27 @@ func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
 	if _, err := store.RecordOp(t.Context(), space.ID, node.ID, "Tester", "test-user-1", "intend", nil); err != nil {
 		t.Fatalf("record op: %v", err)
 	}
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: slug,
+		Kind:        opsControlIntentSourceKind,
+		Title:       "Sentinel control intent",
+		Content:     "SHOULD_NOT_SURFACE_CONTROL_INTENT",
+		Status:      "Queued",
+	}); err != nil {
+		t.Fatalf("create control intent intake source: %v", err)
+	}
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: slug,
+		Kind:        opsMarkdownArtifactSourceKind,
+		Title:       "Sentinel Factory artifact",
+		Content:     "SHOULD_NOT_SURFACE_FACTORY_ARTIFACT",
+		Status:      "submitted",
+	}); err != nil {
+		t.Fatalf("create Factory artifact intake source: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources WHERE profile_slug = $1`, slug)
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/hive/site-ops?space="+url.QueryEscape(slug), nil)
 	req.Header.Set("Accept", "application/json")
@@ -3130,6 +3181,11 @@ func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	for _, sentinel := range []string{"SHOULD_NOT_SURFACE_CONTROL_INTENT", "SHOULD_NOT_SURFACE_FACTORY_ARTIFACT"} {
+		if strings.Contains(w.Body.String(), sentinel) {
+			t.Fatalf("/api/hive/site-ops surfaced Site-local intake record %q: %s", sentinel, w.Body.String())
+		}
 	}
 
 	var result struct {
@@ -4185,6 +4241,34 @@ func TestHandlerConveneOp(t *testing.T) {
 	}
 	if !tagSet[agentBID] {
 		t.Errorf("tags missing agent B ID %q; got %v", agentBID, tags)
+	}
+
+	form := url.Values{
+		"op":     {"convene"},
+		"title":  {"Which agent roles should review this?"},
+		"body":   {"Browser multi-select form payload."},
+		"agents": {agentAName, agentBName},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/app/convene-op-test/op", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("multi-select convene status = %d, want %d; body: %s", w.Code, http.StatusCreated, w.Body.String())
+	}
+	result = map[string]any{}
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("decode multi-select response: %v", err)
+	}
+	node = result["node"].(map[string]any)
+	tags, _ = node["tags"].([]any)
+	tagSet = make(map[string]bool)
+	for _, tag := range tags {
+		tagSet[tag.(string)] = true
+	}
+	if !tagSet[agentAID] || !tagSet[agentBID] {
+		t.Fatalf("multi-select tags = %v, want %q and %q", tags, agentAID, agentBID)
 	}
 }
 

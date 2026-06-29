@@ -342,7 +342,11 @@ func main() {
 				if p == nil {
 					p = profile.Default()
 				}
-				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}, p).Render(r.Context(), w)
+				var agents []graph.AgentPersona
+				if graphStore != nil {
+					agents, _ = graphStore.ListAgentPersonas(r.Context())
+				}
+				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}, agents, p).Render(r.Context(), w)
 			}))
 
 			writeWrap = authService.RequireAuth
@@ -927,7 +931,9 @@ func main() {
 }
 
 func registerNoDatabaseRoutes(mux *http.ServeMux, handleHome http.HandlerFunc) {
-	graph.NewHandlers(nil, nil, nil).RegisterReadOnlyOps(mux)
+	h := graph.NewHandlers(nil, nil, nil)
+	h.RegisterReadOnlyOps(mux)
+	h.RegisterReadOnlyFactory(mux)
 	mux.HandleFunc("GET /{$}", handleHome)
 	mux.HandleFunc("GET /app", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "App requires DATABASE_URL", http.StatusServiceUnavailable)
