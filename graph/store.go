@@ -676,6 +676,35 @@ func (s *Store) ListOpsHiveIntakeSources(ctx context.Context, profileSlug string
 	return sources, rows.Err()
 }
 
+func (s *Store) ListLaunchableOpsHiveIntakeSources(ctx context.Context, profileSlug string, limit int) ([]OpsHiveIntakeSource, error) {
+	if profileSlug == "" {
+		profileSlug = opsHiveIntakeDefaultProfileSlug
+	}
+	if limit <= 0 {
+		limit = 25
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, profile_slug, kind, title, detail, content, status, created_at
+		 FROM ops_hive_intake_sources
+		 WHERE profile_slug = $1
+		   AND lower(kind) IN ('url', 'repo', 'prd', 'spec', 'plan', 'text')
+		 ORDER BY created_at DESC
+		 LIMIT $2`, profileSlug, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list launchable ops hive intake sources: %w", err)
+	}
+	defer rows.Close()
+	sources := []OpsHiveIntakeSource{}
+	for rows.Next() {
+		var source OpsHiveIntakeSource
+		if err := rows.Scan(&source.ID, &source.ProfileSlug, &source.Kind, &source.Title, &source.Detail, &source.Content, &source.Status, &source.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan launchable ops hive intake source: %w", err)
+		}
+		sources = append(sources, source)
+	}
+	return sources, rows.Err()
+}
+
 func (s *Store) CreateOpsHiveRunLaunch(ctx context.Context, p CreateOpsHiveRunLaunchParams) (*OpsHiveRunLaunch, error) {
 	launch := &OpsHiveRunLaunch{
 		ID:                  newID(),

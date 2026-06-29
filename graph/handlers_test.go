@@ -3152,6 +3152,27 @@ func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
 	if _, err := store.RecordOp(t.Context(), space.ID, node.ID, "Tester", "test-user-1", "intend", nil); err != nil {
 		t.Fatalf("record op: %v", err)
 	}
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: slug,
+		Kind:        opsControlIntentSourceKind,
+		Title:       "Sentinel control intent",
+		Content:     "SHOULD_NOT_SURFACE_CONTROL_INTENT",
+		Status:      "Queued",
+	}); err != nil {
+		t.Fatalf("create control intent intake source: %v", err)
+	}
+	if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: slug,
+		Kind:        opsMarkdownArtifactSourceKind,
+		Title:       "Sentinel Factory artifact",
+		Content:     "SHOULD_NOT_SURFACE_FACTORY_ARTIFACT",
+		Status:      "submitted",
+	}); err != nil {
+		t.Fatalf("create Factory artifact intake source: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources WHERE profile_slug = $1`, slug)
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/hive/site-ops?space="+url.QueryEscape(slug), nil)
 	req.Header.Set("Accept", "application/json")
@@ -3160,6 +3181,11 @@ func TestHandleHiveSiteOpsReturnsMarkdownIntake(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d; body: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+	for _, sentinel := range []string{"SHOULD_NOT_SURFACE_CONTROL_INTENT", "SHOULD_NOT_SURFACE_FACTORY_ARTIFACT"} {
+		if strings.Contains(w.Body.String(), sentinel) {
+			t.Fatalf("/api/hive/site-ops surfaced Site-local intake record %q: %s", sentinel, w.Body.String())
+		}
 	}
 
 	var result struct {

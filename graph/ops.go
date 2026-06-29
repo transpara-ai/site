@@ -2895,14 +2895,14 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		EstimatedBudget: "not estimated",
 		StorageStatus:   "persisted",
 	}
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
+	sources, err := h.store.ListLaunchableOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		view.Error = "Could not load persisted intake sources."
 		view.MissingFields = opsHiveIntakeMissingFields(nil)
 		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
 		return view
 	}
-	view.Sources = opsHiveIntakeSourceViews(opsHiveLaunchableIntakeSources(sources))
+	view.Sources = opsHiveIntakeSourceViews(sources)
 	view.MissingFields = opsHiveIntakeMissingFields(view.Sources)
 	if len(view.Sources) > 0 {
 		view.Confidence = fmt.Sprintf("%.2f", opsHiveIntakeConfidence(view.Sources))
@@ -2915,11 +2915,11 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 }
 
 func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug string) (opsHiveRunLaunchPayload, CreateOpsHiveRunLaunchParams, error) {
-	sources, err := h.store.ListOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
+	sources, err := h.store.ListLaunchableOpsHiveIntakeSources(r.Context(), profileSlug, opsHiveLaunchableIntakeListLimit)
 	if err != nil {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, fmt.Errorf("could not load persisted intake sources: %w", err)
 	}
-	sourceViews := opsHiveIntakeSourceViews(opsHiveLaunchableIntakeSources(sources))
+	sourceViews := opsHiveIntakeSourceViews(sources)
 	if len(sourceViews) == 0 {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, errors.New("add at least one intake source before queueing a Hive run")
 	}

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -243,6 +244,47 @@ func TestOpsHiveClassifiedIntakeKindsAreLaunchable(t *testing.T) {
 				t.Fatalf("classified kind %q is not launchable", params.Kind)
 			}
 		})
+	}
+}
+
+func TestListLaunchableOpsHiveIntakeSourcesFiltersBeforeLimit(t *testing.T) {
+	_, store, _ := testHandlers(t)
+	profileSlug := fmt.Sprintf("launchable-limit-%d", time.Now().UnixNano())
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources WHERE profile_slug = $1`, profileSlug)
+	})
+
+	launchable, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+		ProfileSlug: profileSlug,
+		Kind:        "Text",
+		Title:       "Launchable source",
+		Content:     "Issue brief and acceptance criteria.",
+		Status:      "parsed",
+	})
+	if err != nil {
+		t.Fatalf("create launchable source: %v", err)
+	}
+	if _, err := store.db.ExecContext(t.Context(), `UPDATE ops_hive_intake_sources SET created_at = $1 WHERE id = $2`, time.Now().Add(-time.Hour), launchable.ID); err != nil {
+		t.Fatalf("age launchable source: %v", err)
+	}
+	for i := 0; i < opsHiveLaunchableIntakeListLimit+5; i++ {
+		if _, err := store.CreateOpsHiveIntakeSource(t.Context(), CreateOpsHiveIntakeSourceParams{
+			ProfileSlug: profileSlug,
+			Kind:        opsControlIntentSourceKind,
+			Title:       fmt.Sprintf("Internal control intent %03d", i),
+			Content:     "Site-local intent.",
+			Status:      "Queued",
+		}); err != nil {
+			t.Fatalf("create internal source %d: %v", i, err)
+		}
+	}
+
+	sources, err := store.ListLaunchableOpsHiveIntakeSources(t.Context(), profileSlug, 1)
+	if err != nil {
+		t.Fatalf("ListLaunchableOpsHiveIntakeSources: %v", err)
+	}
+	if len(sources) != 1 || sources[0].ID != launchable.ID {
+		t.Fatalf("launchable sources = %#v, want only aged launchable source despite newer internal rows", sources)
 	}
 }
 
