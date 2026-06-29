@@ -2015,7 +2015,17 @@ func TestHandleOpsPublicProofRendersDisplayOnlyEvidenceLedger(t *testing.T) {
 		`data-public-proof="display-only"`,
 		"Public-reader and public-correction proof",
 		"no fake green lights",
-		"static Site evidence records",
+		"Operation-approved public-proof evidence reference displayed from static Site records",
+		"reference_generated_at",
+		"reference_fresh_until",
+		"Operation public-proof packet",
+		"OPERATION-PUBLIC-PROOF-REFERENCE-2026-06-29",
+		"operation-approved-public-proof-reference",
+		"operation-reference",
+		"2026-06-29 08:10:49",
+		"2026-07-06 08:10:49",
+		"transpara-ai/operation/docs/operations/public-proof-evidence/public-proof-reference-2026-06-29.md",
+		"https://github.com/transpara-ai/operation/blob/7ab3929ff88d0b75c48d53a80e92db74ec523482/docs/operations/public-proof-evidence/public-proof-reference-2026-06-29.md",
 		"Site scope decision",
 		"Deployed public URL evidence",
 		"Live-reader proof",
@@ -2032,8 +2042,9 @@ func TestHandleOpsPublicProofRendersDisplayOnlyEvidenceLedger(t *testing.T) {
 		"deployed-reference",
 		"live-reader-proof",
 		"public-correction-proof",
-		"No live public-reader or public-correction proof is claimed here",
-		"No deploy, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure",
+		"not live deployed public-reader proof or public-correction proof",
+		"No deploy, private fetch, runtime execution, EventGraph write, Hive wake, Test 001 GREEN or closure",
+		"operation#45 closure",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("GET /ops/public-proof: body does not contain %q", want)
@@ -2048,6 +2059,59 @@ func TestHandleOpsPublicProofRendersDisplayOnlyEvidenceLedger(t *testing.T) {
 		surface = surface[:end]
 	}
 	assertNoCivilizationMutationControls(t, surface)
+}
+
+func TestBuildOpsPublicProofDataMarksOperationPacketStaleAfterFreshUntil(t *testing.T) {
+	fresh := buildOpsPublicProofData(time.Date(2026, 7, 6, 8, 10, 48, 0, time.UTC))
+	freshRecord := findOpsPublicProofRecord(t, fresh, "Operation public-proof packet")
+	if freshRecord.State != "projection-only" {
+		t.Fatalf("fresh operation packet state = %q, want projection-only", freshRecord.State)
+	}
+	if !stringSliceContains(freshRecord.Labels, "operation-reference") {
+		t.Fatalf("fresh operation packet labels = %#v, want operation-reference", freshRecord.Labels)
+	}
+
+	stale := buildOpsPublicProofData(time.Date(2026, 7, 6, 8, 10, 49, 0, time.UTC))
+	staleRecord := findOpsPublicProofRecord(t, stale, "Operation public-proof packet")
+	if staleRecord.State != "stale" {
+		t.Fatalf("expired operation packet state = %q, want stale", staleRecord.State)
+	}
+	if !stringSliceContains(staleRecord.Labels, "stale") {
+		t.Fatalf("expired operation packet labels = %#v, want stale", staleRecord.Labels)
+	}
+}
+
+func TestBuildOpsPublicProofDataKeepsReaderAndCorrectionProofUnavailable(t *testing.T) {
+	data := buildOpsPublicProofData(time.Date(2026, 6, 29, 8, 30, 0, 0, time.UTC))
+	for _, category := range []string{"Live-reader proof", "Public-correction proof"} {
+		record := findOpsPublicProofRecord(t, data, category)
+		if record.State != "unavailable" {
+			t.Fatalf("%s state = %q, want unavailable", category, record.State)
+		}
+		if !stringSliceContains(record.Labels, "unavailable") {
+			t.Fatalf("%s labels = %#v, want unavailable", category, record.Labels)
+		}
+	}
+}
+
+func findOpsPublicProofRecord(t *testing.T, data *OpsPublicProofData, category string) OpsPublicProofRecord {
+	t.Helper()
+	for _, record := range data.Records {
+		if record.Category == category {
+			return record
+		}
+	}
+	t.Fatalf("missing public proof record category %q", category)
+	return OpsPublicProofRecord{}
+}
+
+func stringSliceContains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestHandleOpsEvidenceMissingProofOfWorkPacketIsNonFatal(t *testing.T) {
