@@ -2441,7 +2441,7 @@ func opsControlIntentParamsFromForm(r *http.Request, fallbackRequester string, a
 		if target == "" {
 			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
 		}
-		if len(allowedModelTargets) > 0 && !allowedModelTargets[strings.ToLower(target)] {
+		if !allowedModelTargets[strings.ToLower(target)] {
 			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
 		}
 	}

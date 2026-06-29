@@ -125,6 +125,9 @@ func TestOpsControlIntentParamsRejectsFreeTextAgentRoleTarget(t *testing.T) {
 	if _, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil))); err == nil {
 		t.Fatal("opsControlIntentParamsFromForm accepted a model-policy target outside the agent/role dropdown catalog")
 	}
+	if _, err := opsControlIntentParamsFromForm(req, "operator", map[string]bool{}); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted model-policy target with an empty dropdown catalog")
+	}
 }
 
 func TestOpsControlModelTargetOptionsIncludeEmergentRoles(t *testing.T) {
@@ -154,6 +157,41 @@ func TestOpsHiveLaunchableIntakeSourcesExcludesControlAndFactoryKinds(t *testing
 	})
 	if len(got) != 1 || got[0].Title != "Launchable source" {
 		t.Fatalf("launchable sources = %#v, want only ordinary intake source", got)
+	}
+}
+
+func TestOpsHiveClassifiedIntakeKindsAreLaunchable(t *testing.T) {
+	cases := []struct {
+		name    string
+		kind    string
+		title   string
+		content string
+	}{
+		{name: "url", kind: "url", content: "https://example.com/reference"},
+		{name: "repo", kind: "repo", content: "transpara-ai/site"},
+		{name: "prd", kind: "text", title: "Checkout PRD", content: "Acceptance criteria and requirements."},
+		{name: "spec", kind: "text", title: "API contract", content: "Schema and API contract."},
+		{name: "plan", kind: "text", title: "Milestone plan", content: "Roadmap and milestone plan."},
+		{name: "text", kind: "text", title: "Operator notes", content: "Plain source notes."},
+		{name: "unknown raw kind normalizes to text", kind: "draft_note", title: "Draft note", content: "Plain source notes."},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			values := url.Values{
+				"source_kind": {tt.kind},
+				"title":       {tt.title},
+				"content":     {tt.content},
+			}
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/sources", strings.NewReader(values.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			params, err := opsHiveIntakeSourceParamsFromForm(req)
+			if err != nil {
+				t.Fatalf("opsHiveIntakeSourceParamsFromForm: %v", err)
+			}
+			if !opsHiveLaunchableIntakeKind(params.Kind) {
+				t.Fatalf("classified kind %q is not launchable", params.Kind)
+			}
+		})
 	}
 }
 
