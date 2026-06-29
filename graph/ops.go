@@ -14,14 +14,22 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
+	sitepersonas "github.com/transpara-ai/site/graph/personas"
 	"github.com/transpara-ai/site/profile"
 )
 
 const opsHiveIntakeMaxContentBytes = 20000
+
+const (
+	opsControlIntentSourceKind    = "control_intent"
+	opsMarkdownArtifactSourceKind = "markdown_artifact"
+)
 
 const (
 	opsPublicProofOperationRepo           = "transpara-ai/operation"
@@ -143,17 +151,19 @@ type OpsControlData struct {
 	Confirmation  string
 	Error         string
 	Actions       []OpsControlAction
+	ModelTargets  []OpsModelTargetOption
 	Intents       []OpsControlIntent
 	EvidenceRefs  []string
 }
 
 type OpsControlAction struct {
-	Kind        string
-	Label       string
-	ActionLabel string
-	Description string
-	Placeholder string
-	Status      string
+	Kind          string
+	Label         string
+	ActionLabel   string
+	Description   string
+	Placeholder   string
+	Status        string
+	TargetCatalog bool
 }
 
 type OpsControlIntent struct {
@@ -165,6 +175,19 @@ type OpsControlIntent struct {
 	Status      string
 	CreatedAt   string
 	Detail      string
+}
+
+type OpsModelTargetOption struct {
+	Value  string
+	Label  string
+	Status string
+	Source string
+}
+
+type opsControlIntentMeta struct {
+	IntentKind  string `json:"intent_kind"`
+	RequestedBy string `json:"requested_by"`
+	Target      string `json:"target"`
 }
 
 type OpsFactoryData struct {
@@ -1116,7 +1139,8 @@ func (h *Handlers) handleOpsControlIntentCreate(w http.ResponseWriter, r *http.R
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	params, err := opsControlIntentParamsFromForm(r, h.userName(r))
+	hive := h.fetchOpsHive(r)
+	params, err := opsControlIntentParamsFromForm(r, h.userName(r), opsModelTargetValueSet(opsControlModelTargetOptions(hive)))
 	if err != nil {
 		h.renderOpsControl(w, r, "", err.Error())
 		return
@@ -1134,11 +1158,12 @@ func (h *Handlers) renderOpsControl(w http.ResponseWriter, r *http.Request, conf
 	if h.store != nil {
 		sources, _ = h.store.ListOpsHiveIntakeSources(r.Context(), opsHiveProfileSlugFromRequest(r), 50)
 	}
+	hive := h.fetchOpsHive(r)
 	h.renderOps(w, r, OpsPageData{
 		Title:       "Control",
 		Description: "Bounded admin control room for queued model, budget, Council, and Civilization-evolution intent. Controls request or draft intent only.",
 		Active:      "control",
-		Control:     buildOpsControlData(now, h.store == nil, sources, confirmation, errMsg),
+		Control:     buildOpsControlData(now, h.store == nil, sources, hive, confirmation, errMsg),
 	})
 }
 
@@ -1155,7 +1180,7 @@ func (h *Handlers) handleFactoryArtifactCreate(w http.ResponseWriter, r *http.Re
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	params, submitter, err := opsFactorySubmissionParamsFromRequest(r)
+	params, err := opsFactorySubmissionParamsFromRequest(r)
 	if err != nil {
 		h.renderFactory(w, r, "", err.Error())
 		return
@@ -1165,7 +1190,6 @@ func (h *Handlers) handleFactoryArtifactCreate(w http.ResponseWriter, r *http.Re
 		return
 	}
 	h.renderFactory(w, r, "Artifact submitted. FactoryOrder conversion requires separate governed review.", "")
-	_ = submitter
 }
 
 func (h *Handlers) renderFactory(w http.ResponseWriter, r *http.Request, confirmation, errMsg string) {
@@ -1954,6 +1978,12 @@ func opsDrilldownSurfaces(readOnly bool) []OpsSurface {
 }
 
 func buildOpsObservationData(now time.Time, telemetry *OpsTelemetryData, hive *OpsHiveData, civilization *OpsCivilizationAssemblyData, canonical *OpsGitHubCanonicalData, sources []OpsHiveIntakeSource) *OpsObservationData {
+	if civilization == nil {
+		civilization = &OpsCivilizationAssemblyData{
+			GeneratedAt:      "unavailable",
+			ProjectionStatus: "unavailable",
+		}
+	}
 	data := &OpsObservationData{
 		GeneratedAt: formatOpsTime(now.Format(time.RFC3339)),
 		Source:      "Safe hybrid: Work telemetry, Hive projection, Site typed projections, and Site-local intake records when configured.",
@@ -2150,7 +2180,7 @@ func opsObservationAgentRows(t *OpsTelemetryData, h *OpsHiveData) []OpsObservati
 func opsObservationFactoryStages(sources []OpsHiveIntakeSource, c *OpsCivilizationAssemblyData) []OpsObservationStage {
 	submitted := 0
 	for _, source := range sources {
-		if source.Kind == "markdown_artifact" {
+		if source.Kind == opsMarkdownArtifactSourceKind {
 			submitted++
 		}
 	}
@@ -2213,11 +2243,12 @@ func opsObservationExceptions(t *OpsTelemetryData, h *OpsHiveData, c *OpsGitHubC
 	return exceptions
 }
 
-func buildOpsControlData(now time.Time, readOnly bool, sources []OpsHiveIntakeSource, confirmation, errMsg string) *OpsControlData {
+func buildOpsControlData(now time.Time, readOnly bool, sources []OpsHiveIntakeSource, hive *OpsHiveData, confirmation, errMsg string) *OpsControlData {
 	status := "persisted"
 	if readOnly {
 		status = "graph store unavailable"
 	}
+	modelTargets := opsControlModelTargetOptions(hive)
 	return &OpsControlData{
 		GeneratedAt:   formatOpsTime(now.Format(time.RFC3339)),
 		StorageStatus: status,
@@ -2226,6 +2257,7 @@ func buildOpsControlData(now time.Time, readOnly bool, sources []OpsHiveIntakeSo
 		Confirmation:  confirmation,
 		Error:         errMsg,
 		Actions:       opsControlActions(),
+		ModelTargets:  modelTargets,
 		Intents:       opsControlIntentsFromSources(sources),
 		EvidenceRefs:  []string{"site#195", "CFADA packet 20260629T120717Z-site195-cfada"},
 	}
@@ -2233,27 +2265,121 @@ func buildOpsControlData(now time.Time, readOnly bool, sources []OpsHiveIntakeSo
 
 func opsControlActions() []OpsControlAction {
 	return []OpsControlAction{
-		{Kind: "model_policy", Label: "Role or agent model policy", ActionLabel: "Request model change", Description: "Queue a proposed role or agent model change for human review.", Placeholder: "Role: reviewer; model: gpt-5; reason: reduce review latency.", Status: "Pending human approval"},
-		{Kind: "budget_policy", Label: "Budget policy", ActionLabel: "Propose budget change", Description: "Queue a proposed spend, iteration, or token cap change.", Placeholder: "Role: builder; max cycle cost: $10; token cap: 180k.", Status: "Pending human approval"},
+		{Kind: "model_policy", Label: "Role or agent model policy", ActionLabel: "Request model change", Description: "Queue a proposed role or agent model change for human review.", Placeholder: "Model: gpt-5; reason: reduce review latency.", Status: "Pending human approval", TargetCatalog: true},
+		{Kind: "budget_policy", Label: "Budget policy", ActionLabel: "Propose budget change", Description: "Queue a proposed spend, iteration, or token cap change for a role or agent.", Placeholder: "Max cycle cost: $10; token cap: 180k; reason: bounded exploration.", Status: "Pending human approval", TargetCatalog: true},
 		{Kind: "council_agenda", Label: "Council agenda", ActionLabel: "Draft agenda update", Description: "Draft the next Council agenda for review without convening agents.", Placeholder: "Agenda: review issue-canonical cutover blockers and MFOF evidence.", Status: "Queued"},
-		{Kind: "council_meeting", Label: "Ad-hoc Council meeting", ActionLabel: "Queue Council Meeting request", Description: "Queue a Council Meeting request. No agents are contacted by this form.", Placeholder: "Topic: evaluate FactoryOrder candidate acceptance criteria.", Status: "Pending human approval"},
+		{Kind: "council_meeting", Label: "Ad-hoc Council meeting", ActionLabel: "Queue Council Meeting request", Description: "Queue a Council Meeting request for a primary role or agent. No agents are contacted by this form.", Placeholder: "Topic: evaluate FactoryOrder candidate acceptance criteria.", Status: "Pending human approval", TargetCatalog: true},
 		{Kind: "evolution_action", Label: "Civilization evolution action", ActionLabel: "Propose evolution action", Description: "Queue a proposed next action for governed Civilization development.", Placeholder: "Action: split runtime authority wiring into Site/Hive/EventGraph child issues.", Status: "Blocked: protected action required"},
 	}
+}
+
+func opsControlModelTargetOptions(hive *OpsHiveData) []OpsModelTargetOption {
+	return opsModelTargetOptionsFromHive(hive)
+}
+
+func opsHiveModelTargetOptions(selection OpsHiveModelSelection) []OpsModelTargetOption {
+	return opsModelTargetOptionsFromHive(&OpsHiveData{ModelSelection: selection})
+}
+
+func opsModelTargetOptionsFromHive(hive *OpsHiveData) []OpsModelTargetOption {
+	options := []OpsModelTargetOption{}
+	index := map[string]int{}
+	add := func(value, status, source string) {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return
+		}
+		key := strings.ToLower(value)
+		if i, ok := index[key]; ok {
+			if options[i].Status == "" && status != "" {
+				options[i].Status = status
+			}
+			if source != "" && !strings.Contains(options[i].Source, source) {
+				if options[i].Source == "" {
+					options[i].Source = source
+				} else {
+					options[i].Source += "; " + source
+				}
+			}
+			return
+		}
+		index[key] = len(options)
+		options = append(options, OpsModelTargetOption{
+			Value:  value,
+			Label:  opsModelTargetLabel(value),
+			Status: status,
+			Source: source,
+		})
+	}
+
+	for _, role := range opsCanonicalRoles {
+		if strings.Contains(role, "human") || strings.Contains(role, "draft PR") {
+			continue
+		}
+		add(role, "canonical", "civic role catalog")
+	}
+	personaNames := make([]string, 0, len(sitepersonas.HiveStatus))
+	for name, status := range sitepersonas.HiveStatus {
+		if status == "absorbed" || status == "retired" {
+			continue
+		}
+		personaNames = append(personaNames, name)
+	}
+	sort.Strings(personaNames)
+	for _, name := range personaNames {
+		add(name, sitepersonas.HiveStatus[name], "Hive persona catalog")
+	}
+	if hive != nil {
+		for _, item := range hive.ModelSelection.Assignments {
+			status := "projected assignment"
+			if item.CanOperate {
+				status = "projected assignment; can operate"
+			}
+			add(item.Role, status, "Hive model-selection projection")
+		}
+		for _, item := range hive.Lifecycle {
+			add(item.Role, opsValueOr(item.LifecycleStatus, "projected lifecycle"), "Hive lifecycle projection")
+			add(item.ActorID, opsValueOr(item.LifecycleStatus, "projected agent"), "Hive lifecycle agent")
+		}
+	}
+	sort.SliceStable(options, func(i, j int) bool {
+		return strings.ToLower(options[i].Value) < strings.ToLower(options[j].Value)
+	})
+	return options
+}
+
+func opsModelTargetLabel(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "unknown"
+	}
+	return strings.ReplaceAll(value, "-", " ")
+}
+
+func opsModelTargetValueSet(options []OpsModelTargetOption) map[string]bool {
+	set := make(map[string]bool, len(options))
+	for _, option := range options {
+		value := strings.ToLower(strings.TrimSpace(option.Value))
+		if value != "" {
+			set[value] = true
+		}
+	}
+	return set
 }
 
 func opsControlIntentsFromSources(sources []OpsHiveIntakeSource) []OpsControlIntent {
 	intents := []OpsControlIntent{}
 	for _, source := range sources {
-		if source.Kind != "control_intent" {
+		if source.Kind != opsControlIntentSourceKind {
 			continue
 		}
 		meta := opsParseControlIntentDetail(source.Detail)
 		intents = append(intents, OpsControlIntent{
 			ID:          source.ID,
-			Kind:        meta["intent_kind"],
+			Kind:        meta.IntentKind,
 			Title:       source.Title,
-			Target:      meta["target"],
-			RequestedBy: meta["requested_by"],
+			Target:      meta.Target,
+			RequestedBy: meta.RequestedBy,
 			Status:      opsValueOr(source.Status, "Queued"),
 			CreatedAt:   source.CreatedAt.Format("2006-01-02 15:04"),
 			Detail:      source.Content,
@@ -2273,7 +2399,11 @@ func opsControlIntentsFromSources(sources []OpsHiveIntakeSource) []OpsControlInt
 	return intents
 }
 
-func opsParseControlIntentDetail(detail string) map[string]string {
+func opsParseControlIntentDetail(detail string) opsControlIntentMeta {
+	var meta opsControlIntentMeta
+	if err := json.Unmarshal([]byte(detail), &meta); err == nil {
+		return meta
+	}
 	values := map[string]string{}
 	for _, part := range strings.Split(detail, ";") {
 		k, v, ok := strings.Cut(part, "=")
@@ -2281,10 +2411,14 @@ func opsParseControlIntentDetail(detail string) map[string]string {
 			values[strings.TrimSpace(k)] = strings.TrimSpace(v)
 		}
 	}
-	return values
+	return opsControlIntentMeta{
+		IntentKind:  values["intent_kind"],
+		RequestedBy: values["requested_by"],
+		Target:      values["target"],
+	}
 }
 
-func opsControlIntentParamsFromForm(r *http.Request, fallbackRequester string) (CreateOpsHiveIntakeSourceParams, error) {
+func opsControlIntentParamsFromForm(r *http.Request, fallbackRequester string, allowedModelTargets map[string]bool) (CreateOpsHiveIntakeSourceParams, error) {
 	kind := strings.TrimSpace(r.FormValue("intent_kind"))
 	title := strings.TrimSpace(r.FormValue("title"))
 	target := strings.TrimSpace(r.FormValue("target"))
@@ -2302,17 +2436,29 @@ func opsControlIntentParamsFromForm(r *http.Request, fallbackRequester string) (
 	if body == "" {
 		return CreateOpsHiveIntakeSourceParams{}, errors.New("intent detail is required")
 	}
+	if opsControlIntentKindUsesModelTarget(kind) {
+		if target == "" {
+			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
+		}
+		if len(allowedModelTargets) > 0 && !allowedModelTargets[strings.ToLower(target)] {
+			return CreateOpsHiveIntakeSourceParams{}, errors.New("target must be selected from available agents/roles")
+		}
+	}
 	if len(body) > opsHiveIntakeMaxContentBytes {
 		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("intent detail must be %d bytes or less", opsHiveIntakeMaxContentBytes)
 	}
-	if opsControlContainsForbiddenVerb(title) || opsControlContainsForbiddenVerb(body) {
+	if opsControlContainsForbiddenVerb(title) || opsControlContainsForbiddenVerb(target) || opsControlContainsForbiddenVerb(requestedBy) || opsControlContainsForbiddenVerb(body) {
 		return CreateOpsHiveIntakeSourceParams{}, errors.New("control intent uses forbidden execution vocabulary")
+	}
+	detail, err := json.Marshal(opsControlIntentMeta{IntentKind: kind, RequestedBy: requestedBy, Target: target})
+	if err != nil {
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("could not encode control intent metadata: %w", err)
 	}
 	return CreateOpsHiveIntakeSourceParams{
 		ProfileSlug: opsHiveProfileSlugFromRequest(r),
-		Kind:        "control_intent",
+		Kind:        opsControlIntentSourceKind,
 		Title:       truncateOpsHiveIntakeTitle(title),
-		Detail:      fmt.Sprintf("intent_kind=%s;requested_by=%s;target=%s", kind, requestedBy, target),
+		Detail:      string(detail),
 		Content:     body,
 		Status:      "Queued",
 	}, nil
@@ -2327,10 +2473,33 @@ func opsControlIntentKindAllowed(kind string) bool {
 	}
 }
 
+func opsControlIntentKindUsesModelTarget(kind string) bool {
+	switch kind {
+	case "model_policy", "budget_policy", "council_meeting":
+		return true
+	default:
+		return false
+	}
+}
+
 func opsControlContainsForbiddenVerb(value string) bool {
 	lower := strings.ToLower(value)
-	for _, word := range []string{"invoke", "set", "execute", "start", "launch", "deploy", "write", "trigger", "approve", "merge"} {
-		if strings.Contains(lower, word) {
+	forbidden := map[string]bool{
+		"invoke":  true,
+		"set":     true,
+		"execute": true,
+		"start":   true,
+		"launch":  true,
+		"deploy":  true,
+		"write":   true,
+		"trigger": true,
+		"approve": true,
+		"merge":   true,
+	}
+	for _, token := range strings.FieldsFunc(lower, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		if forbidden[token] {
 			return true
 		}
 	}
@@ -2364,7 +2533,7 @@ func opsFactorySubmissionsFromSources(sources []OpsHiveIntakeSource, submitterQu
 	query := strings.ToLower(strings.TrimSpace(submitterQuery))
 	out := []OpsFactorySubmission{}
 	for _, source := range sources {
-		if source.Kind != "markdown_artifact" {
+		if source.Kind != opsMarkdownArtifactSourceKind {
 			continue
 		}
 		meta := opsParseFactorySubmissionMeta(source.Detail)
@@ -2421,9 +2590,9 @@ func opsFactoryStages(submissions []OpsFactorySubmission) []OpsFactoryStage {
 	}
 }
 
-func opsFactorySubmissionParamsFromRequest(r *http.Request) (CreateOpsHiveIntakeSourceParams, string, error) {
+func opsFactorySubmissionParamsFromRequest(r *http.Request) (CreateOpsHiveIntakeSourceParams, error) {
 	if err := r.ParseMultipartForm(int64(opsHiveIntakeMaxContentBytes + 8192)); err != nil {
-		return CreateOpsHiveIntakeSourceParams{}, "", errors.New("multipart Markdown upload is required")
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("multipart Markdown upload is required")
 	}
 	submitterName := strings.TrimSpace(r.FormValue("submitter_name"))
 	submitterEmail := strings.TrimSpace(r.FormValue("submitter_email"))
@@ -2431,16 +2600,16 @@ func opsFactorySubmissionParamsFromRequest(r *http.Request) (CreateOpsHiveIntake
 	title := strings.TrimSpace(r.FormValue("title"))
 	notes := strings.TrimSpace(r.FormValue("notes"))
 	if submitterName == "" {
-		return CreateOpsHiveIntakeSourceParams{}, "", errors.New("submitter name is required")
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("submitter name is required")
 	}
 	file, header, err := r.FormFile("artifact")
 	if err != nil {
-		return CreateOpsHiveIntakeSourceParams{}, "", errors.New("Markdown artifact file is required")
+		return CreateOpsHiveIntakeSourceParams{}, errors.New("Markdown artifact file is required")
 	}
 	defer file.Close()
 	content, filename, hash, err := opsReadMarkdownArtifact(file, header)
 	if err != nil {
-		return CreateOpsHiveIntakeSourceParams{}, "", err
+		return CreateOpsHiveIntakeSourceParams{}, err
 	}
 	if title == "" {
 		title = strings.TrimSuffix(filename, filepath.Ext(filename))
@@ -2455,16 +2624,16 @@ func opsFactorySubmissionParamsFromRequest(r *http.Request) (CreateOpsHiveIntake
 	}
 	detail, err := json.Marshal(meta)
 	if err != nil {
-		return CreateOpsHiveIntakeSourceParams{}, "", fmt.Errorf("could not encode artifact metadata: %w", err)
+		return CreateOpsHiveIntakeSourceParams{}, fmt.Errorf("could not encode artifact metadata: %w", err)
 	}
 	return CreateOpsHiveIntakeSourceParams{
 		ProfileSlug: opsHiveProfileSlugFromRequest(r),
-		Kind:        "markdown_artifact",
+		Kind:        opsMarkdownArtifactSourceKind,
 		Title:       truncateOpsHiveIntakeTitle(title),
 		Detail:      string(detail),
 		Content:     content,
 		Status:      "submitted",
-	}, submitterName, nil
+	}, nil
 }
 
 func opsReadMarkdownArtifact(file multipart.File, header *multipart.FileHeader) (string, string, string, error) {
@@ -2694,7 +2863,7 @@ func (h *Handlers) buildOpsHiveIntakeView(r *http.Request) OpsHiveIntakeView {
 		view.Brief = opsHiveBriefPreview(nil, view.MissingFields, view.Status, view.SuggestedMode)
 		return view
 	}
-	view.Sources = opsHiveIntakeSourceViews(sources)
+	view.Sources = opsHiveIntakeSourceViews(opsHiveLaunchableIntakeSources(sources))
 	view.MissingFields = opsHiveIntakeMissingFields(view.Sources)
 	if len(view.Sources) > 0 {
 		view.Confidence = fmt.Sprintf("%.2f", opsHiveIntakeConfidence(view.Sources))
@@ -2711,7 +2880,7 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 	if err != nil {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, fmt.Errorf("could not load persisted intake sources: %w", err)
 	}
-	sourceViews := opsHiveIntakeSourceViews(sources)
+	sourceViews := opsHiveIntakeSourceViews(opsHiveLaunchableIntakeSources(sources))
 	if len(sourceViews) == 0 {
 		return opsHiveRunLaunchPayload{}, CreateOpsHiveRunLaunchParams{}, errors.New("add at least one intake source before queueing a Hive run")
 	}
@@ -2768,6 +2937,19 @@ func (h *Handlers) buildOpsHiveRunLaunchPayload(r *http.Request, profileSlug str
 		BudgetMaxCostUSD:    maxCost,
 	}
 	return payload, storeParams, nil
+}
+
+func opsHiveLaunchableIntakeSources(sources []OpsHiveIntakeSource) []OpsHiveIntakeSource {
+	out := make([]OpsHiveIntakeSource, 0, len(sources))
+	for _, source := range sources {
+		switch source.Kind {
+		case opsControlIntentSourceKind, opsMarkdownArtifactSourceKind:
+			continue
+		default:
+			out = append(out, source)
+		}
+	}
+	return out
 }
 
 func opsHiveIntakeSourceViews(sources []OpsHiveIntakeSource) []OpsHiveSourceView {
@@ -4232,14 +4414,14 @@ func opsAgentStateClass(state string) string {
 	}
 }
 
-func opsPercentForCount(count, cap int) int {
+func opsPercentForCount(count, maxCount int) int {
 	if count <= 0 {
 		return 0
 	}
-	if cap <= 0 {
+	if maxCount <= 0 {
 		return 100
 	}
-	percent := count * 100 / cap
+	percent := count * 100 / maxCount
 	if percent < 8 {
 		return 8
 	}

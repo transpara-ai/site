@@ -342,7 +342,11 @@ func main() {
 				if p == nil {
 					p = profile.Default()
 				}
-				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}, p).Render(r.Context(), w)
+				var agents []graph.AgentPersona
+				if graphStore != nil {
+					agents, _ = graphStore.ListAgentPersonas(r.Context())
+				}
+				graph.APIKeysView(viewKeys, graph.ViewUser{Name: user.Name, Picture: user.Picture}, agents, p).Render(r.Context(), w)
 			}))
 
 			writeWrap = authService.RequireAuth

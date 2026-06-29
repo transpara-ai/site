@@ -449,6 +449,28 @@ func TestNoDatabaseHiveIntakeMutationSubroutesUnavailable(t *testing.T) {
 	}
 }
 
+func TestNoDatabaseNewOperatorMutationSubroutesUnavailable(t *testing.T) {
+	mux := http.NewServeMux()
+	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	for _, path := range []string{"/ops/control/intents", "/factory/artifacts"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "http://site.test"+path, strings.NewReader("title=x"))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			mux.ServeHTTP(w, req)
+			if w.Code >= 200 && w.Code < 400 {
+				t.Fatalf("POST %s without DATABASE_URL status = %d, want non-success/non-redirect; headers: %v body: %s", path, w.Code, w.Header(), w.Body.String())
+			}
+			if location := w.Header().Get("Location"); location != "" {
+				t.Fatalf("POST %s without DATABASE_URL returned redirect Location %q", path, location)
+			}
+		})
+	}
+}
+
 func TestNoDatabaseReadOnlyOpsToleratesUserContextWithoutStore(t *testing.T) {
 	mux := http.NewServeMux()
 	registerNoDatabaseRoutes(mux, func(w http.ResponseWriter, r *http.Request) {

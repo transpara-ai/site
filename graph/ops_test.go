@@ -84,8 +84,150 @@ func TestOpsControlIntentParamsRejectsForbiddenExecutionVocabulary(t *testing.T)
 	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	if _, err := opsControlIntentParamsFromForm(req, "operator"); err == nil {
+	if _, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil))); err == nil {
 		t.Fatal("opsControlIntentParamsFromForm accepted forbidden execution vocabulary")
+	}
+}
+
+func TestOpsControlIntentParamsUsesWordBoundaryVocabularyGuard(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "model_policy")
+	form.Set("title", "Dataset reviewer budget request")
+	form.Set("target", "reviewer")
+	form.Set("requested_by", "operator")
+	form.Set("content", "Request a model change for the dataset reviewer.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	params, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil)))
+	if err != nil {
+		t.Fatalf("opsControlIntentParamsFromForm rejected safe text: %v", err)
+	}
+	var meta opsControlIntentMeta
+	if err := json.Unmarshal([]byte(params.Detail), &meta); err != nil {
+		t.Fatalf("control intent detail is not JSON: %v", err)
+	}
+	if meta.IntentKind != "model_policy" || meta.Target != "reviewer" || meta.RequestedBy != "operator" {
+		t.Fatalf("meta = %#v, want model_policy/reviewer/operator", meta)
+	}
+}
+
+func TestOpsControlIntentParamsRejectsFreeTextAgentRoleTarget(t *testing.T) {
+	form := url.Values{}
+	form.Set("intent_kind", "model_policy")
+	form.Set("title", "Dataset reviewer model request")
+	form.Set("target", "dataset-reviewer")
+	form.Set("requested_by", "operator")
+	form.Set("content", "Request a model change for the dataset reviewer.")
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if _, err := opsControlIntentParamsFromForm(req, "operator", opsModelTargetValueSet(opsControlModelTargetOptions(nil))); err == nil {
+		t.Fatal("opsControlIntentParamsFromForm accepted a model-policy target outside the agent/role dropdown catalog")
+	}
+}
+
+func TestOpsControlModelTargetOptionsIncludeEmergentRoles(t *testing.T) {
+	options := opsControlModelTargetOptions(&OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{Assignments: []OpsHiveModelRoleAssignment{{Role: "runtime-specialist", CanOperate: true}}},
+		Lifecycle:      []OpsHiveLifecycle{{ActorID: "actor-runtime-specialist", Role: "runtime-specialist", LifecycleStatus: "planned"}},
+	})
+	values := opsModelTargetValueSet(options)
+	for _, want := range []string{"strategist", "reviewer", "designer", "legal", "runtime-specialist", "actor-runtime-specialist"} {
+		if !values[want] {
+			t.Fatalf("model target options missing %q in %#v", want, options)
+		}
+	}
+	for _, notAvailable := range []string{"scribe", "budget"} {
+		if values[notAvailable] {
+			t.Fatalf("model target options included unavailable role %q in %#v", notAvailable, options)
+		}
+	}
+}
+
+func TestOpsHiveLaunchableIntakeSourcesExcludesControlAndFactoryKinds(t *testing.T) {
+	got := opsHiveLaunchableIntakeSources([]OpsHiveIntakeSource{
+		{Kind: opsControlIntentSourceKind, Title: "Control intent"},
+		{Kind: opsMarkdownArtifactSourceKind, Title: "Human artifact"},
+		{Kind: "Text", Title: "Launchable source"},
+	})
+	if len(got) != 1 || got[0].Title != "Launchable source" {
+		t.Fatalf("launchable sources = %#v, want only ordinary intake source", got)
+	}
+}
+
+func TestHandleOpsControlAndFactoryRecordsDoNotEnterHiveLaunchIntake(t *testing.T) {
+	h, store, _ := testHandlers(t)
+	if _, err := store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`); err != nil {
+		t.Fatalf("clear intake sources: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = store.db.ExecContext(t.Context(), `DELETE FROM ops_hive_intake_sources`)
+	})
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	controlForm := url.Values{}
+	controlForm.Set("intent_kind", "model_policy")
+	controlForm.Set("title", "Dataset reviewer model request")
+	controlForm.Set("target", "reviewer")
+	controlForm.Set("requested_by", "operator")
+	controlForm.Set("content", "Request a model change for the dataset reviewer.")
+	controlReq := httptest.NewRequest(http.MethodPost, "http://site.test/ops/control/intents", strings.NewReader(controlForm.Encode()))
+	controlReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	controlResp := httptest.NewRecorder()
+	mux.ServeHTTP(controlResp, controlReq)
+	if controlResp.Code != http.StatusOK {
+		t.Fatalf("POST /ops/control/intents status = %d, want 200; body: %s", controlResp.Code, controlResp.Body.String())
+	}
+	if !strings.Contains(controlResp.Body.String(), "Queued intent recorded") {
+		t.Fatalf("control response missing queued confirmation: %s", controlResp.Body.String())
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	_ = writer.WriteField("submitter_name", "Ada Operator")
+	_ = writer.WriteField("title", "Factory artifact")
+	part, err := writer.CreateFormFile("artifact", "factory.md")
+	if err != nil {
+		t.Fatalf("CreateFormFile: %v", err)
+	}
+	if _, err := part.Write([]byte("# Factory artifact\n\nHuman-submitted artifact.")); err != nil {
+		t.Fatalf("write multipart content: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("Close multipart writer: %v", err)
+	}
+	factoryReq := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
+	factoryReq.Header.Set("Content-Type", writer.FormDataContentType())
+	factoryResp := httptest.NewRecorder()
+	mux.ServeHTTP(factoryResp, factoryReq)
+	if factoryResp.Code != http.StatusOK {
+		t.Fatalf("POST /factory/artifacts status = %d, want 200; body: %s", factoryResp.Code, factoryResp.Body.String())
+	}
+	if !strings.Contains(factoryResp.Body.String(), "Artifact submitted. FactoryOrder conversion requires separate governed review.") {
+		t.Fatalf("factory response missing governed-review confirmation: %s", factoryResp.Body.String())
+	}
+
+	sources, err := store.ListOpsHiveIntakeSources(t.Context(), "transpara-ai", 25)
+	if err != nil {
+		t.Fatalf("ListOpsHiveIntakeSources: %v", err)
+	}
+	if len(sources) != 2 {
+		t.Fatalf("stored sources = %#v, want two Site-local records", sources)
+	}
+	intakeReq := httptest.NewRequest(http.MethodGet, "http://site.test/ops/hive/intake?profile=transpara-ai", nil)
+	intake := h.buildOpsHiveIntakeView(intakeReq)
+	if len(intake.Sources) != 0 {
+		t.Fatalf("Hive intake surfaced internal control/factory records: %#v", intake.Sources)
+	}
+	launchReq := httptest.NewRequest(http.MethodPost, "http://site.test/ops/hive/intake/launch?profile=transpara-ai", strings.NewReader("target_repos=transpara-ai/site&max_iterations=1&max_cost_usd=1"))
+	launchReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if err := launchReq.ParseForm(); err != nil {
+		t.Fatalf("ParseForm: %v", err)
+	}
+	if _, _, err := h.buildOpsHiveRunLaunchPayload(launchReq, "transpara-ai"); err == nil {
+		t.Fatal("buildOpsHiveRunLaunchPayload accepted internal control/factory records as launchable sources")
 	}
 }
 
@@ -110,12 +252,12 @@ func TestOpsFactorySubmissionParamsAcceptsMarkdownArtifact(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	params, submitter, err := opsFactorySubmissionParamsFromRequest(req)
+	params, err := opsFactorySubmissionParamsFromRequest(req)
 	if err != nil {
 		t.Fatalf("opsFactorySubmissionParamsFromRequest: %v", err)
 	}
-	if params.Kind != "markdown_artifact" || params.Status != "submitted" || submitter != "Ada Operator" {
-		t.Fatalf("params = %#v submitter=%q, want markdown_artifact/submitted/Ada Operator", params, submitter)
+	if params.Kind != opsMarkdownArtifactSourceKind || params.Status != "submitted" {
+		t.Fatalf("params = %#v, want markdown_artifact/submitted", params)
 	}
 	sum := sha256.Sum256(content)
 	if !strings.Contains(params.Detail, hex.EncodeToString(sum[:])) {
@@ -140,7 +282,7 @@ func TestOpsFactorySubmissionParamsRejectsNonMarkdownArtifact(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "http://site.test/factory/artifacts", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	if _, _, err := opsFactorySubmissionParamsFromRequest(req); err == nil {
+	if _, err := opsFactorySubmissionParamsFromRequest(req); err == nil {
 		t.Fatal("opsFactorySubmissionParamsFromRequest accepted a non-Markdown artifact")
 	}
 }

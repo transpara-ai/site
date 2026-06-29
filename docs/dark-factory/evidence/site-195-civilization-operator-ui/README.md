@@ -17,8 +17,13 @@ Civilization operator UI rebuild.
 
 ## Capture Context
 
-- Local server: `PORT=53210 ./site`
-- Store mode: no `DATABASE_URL`; screens render degraded/unavailable states
+- No-DB local server: `PORT=53210 ./site`
+- No-DB store mode: no `DATABASE_URL`; screens render degraded/unavailable states
+- DB-backed local server: `DATABASE_URL=postgres://site:site@localhost:5433/site?sslmode=disable PORT=53211 ./site`
+- DB-backed store mode: local Docker Postgres only; no deploy, runtime start, Hive wake, EventGraph production write, or service restart
+- `/ops/hive` model-selection evidence: local fixture projection at
+  `HIVE_OPS_API_BASE_URL=http://127.0.0.1:53212`; fixture-only JSON, no Hive
+  runtime, no external adapter, no protected action
 - Desktop viewport: `1440x1200`
 - Mobile viewport: `390x1200`
 - Browser: cached Playwright Chromium
@@ -28,12 +33,16 @@ Civilization operator UI rebuild.
 
 ## Screenshots
 
-| Route | Desktop | Mobile |
-| --- | --- | --- |
-| `/ops` | `ops-desktop.png` | `ops-mobile.png` |
-| `/ops/observation` | `observation-desktop.png` | `observation-mobile.png` |
-| `/ops/control` | `control-desktop.png` | `control-mobile.png` |
-| `/factory` | `factory-desktop.png` | `factory-mobile.png` |
+| Route | Mode | Desktop | Mobile |
+| --- | --- | --- | --- |
+| `/ops` | no DB | `ops-desktop.png` | `ops-mobile.png` |
+| `/ops` | DB-backed | `ops-db-desktop.png` | `ops-db-mobile.png` |
+| `/ops/observation` | no DB | `observation-desktop.png` | `observation-mobile.png` |
+| `/ops/control` | no DB | `control-desktop.png` | `control-mobile.png` |
+| `/ops/control` | DB-backed | `control-db-desktop.png` | `control-db-mobile.png` |
+| `/factory` | no DB | `factory-desktop.png` | `factory-mobile.png` |
+| `/factory` | DB-backed | `factory-db-desktop.png` | `factory-db-mobile.png` |
+| `/ops/hive` | DB-backed local fixture | `hive-model-selection-db-desktop.png` | `hive-model-selection-db-mobile.png` |
 
 ## Boundaries Checked
 
@@ -42,3 +51,10 @@ Civilization operator UI rebuild.
 - `/ops/control` renders queue-intent-only controls and disabled no-DB state.
 - `/factory` renders artifact-intake-only state and does not claim Markdown
   upload creates a FactoryOrder.
+- DB-backed control and Factory artifact records stay Site-local and are
+  excluded from Hive intake launch candidates by tests.
+- DB-backed `/factory` requires write-authorized access before exposing
+  submitted artifact rows.
+- Role/agent assignment controls render as dropdown selections for model policy,
+  budget policy, Council request targeting, Hive model policy, task assignment,
+  Council agent selection, and API key agent identity selection.
