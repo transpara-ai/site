@@ -76,6 +76,57 @@ func TestOpsControlActionsUseQueueOnlyVocabulary(t *testing.T) {
 	}
 }
 
+func TestBuildOpsObservationDataDoesNotMarkUnavailableCivilizationProjectionCurrent(t *testing.T) {
+	now := time.Date(2026, 6, 29, 14, 0, 0, 0, time.UTC)
+	telemetry := &OpsTelemetryData{GeneratedAt: now.Add(-time.Minute).Format(time.RFC3339)}
+	hive := &OpsHiveData{GeneratedAt: now.Add(-2 * time.Minute).Format(time.RFC3339)}
+	canonical := &OpsGitHubCanonicalData{GeneratedAt: now.Format(time.RFC3339), ProjectionState: "available"}
+
+	for _, tt := range []struct {
+		name        string
+		projection  string
+		wantValue   string
+		wantState   string
+		wantContext string
+	}{
+		{
+			name:        "unavailable projection stays degraded",
+			projection:  opsCivilizationProjectionStatusUnavailable,
+			wantValue:   "degraded",
+			wantState:   "degraded",
+			wantContext: "Civilization projection unavailable",
+		},
+		{
+			name:        "complete projection is current",
+			projection:  opsCivilizationProjectionStatusComplete,
+			wantValue:   "current",
+			wantState:   "current",
+			wantContext: "sources checked",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			civilization := &OpsCivilizationAssemblyData{
+				GeneratedAt:      now.Add(-3 * time.Minute).Format(time.RFC3339),
+				ProjectionStatus: tt.projection,
+			}
+			data := buildOpsObservationData(now, telemetry, hive, civilization, canonical, nil)
+			var health *OpsObservationMetric
+			for i := range data.Metrics {
+				if data.Metrics[i].Label == "Civilization health" {
+					health = &data.Metrics[i]
+					break
+				}
+			}
+			if health == nil {
+				t.Fatalf("Civilization health metric missing: %#v", data.Metrics)
+			}
+			if health.Value != tt.wantValue || health.State != tt.wantState || health.Context != tt.wantContext {
+				t.Fatalf("health metric = value:%q state:%q context:%q, want value:%q state:%q context:%q", health.Value, health.State, health.Context, tt.wantValue, tt.wantState, tt.wantContext)
+			}
+		})
+	}
+}
+
 func TestOpsControlIntentParamsRejectsForbiddenExecutionVocabulary(t *testing.T) {
 	form := url.Values{}
 	form.Set("intent_kind", "council_meeting")

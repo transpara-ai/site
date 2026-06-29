@@ -1997,7 +1997,7 @@ func buildOpsObservationData(now time.Time, telemetry *OpsTelemetryData, hive *O
 		},
 	}
 	data.Metrics = []OpsObservationMetric{
-		opsObservationMetric("Civilization health", opsObservationHealthValue(telemetry, hive, civilization), opsObservationHealthContext(telemetry, hive), opsObservationHealthState(telemetry, hive), "Site observation builder", data.GeneratedAt),
+		opsObservationMetric("Civilization health", opsObservationHealthValue(telemetry, hive, civilization), opsObservationHealthContext(telemetry, hive, civilization), opsObservationHealthState(telemetry, hive, civilization), "Site observation builder", data.GeneratedAt),
 		opsObservationMetric("Factory throughput", fmt.Sprintf("%d", len(civilization.FactoryOrders)), "projected FactoryOrder records", opsProjectionState(civilization.ProjectionStatus), "Civilization assembly projection", civilization.GeneratedAt),
 		opsObservationMetric("Live agents", fmt.Sprintf("%d", opsObservationLiveAgentCount(telemetry, hive)), "active or processing actors", opsObservationAgentState(telemetry, hive), "Work telemetry + Hive runtime evidence", opsObservationLatest(telemetry.GeneratedAt, hive.GeneratedAt)),
 		opsObservationMetric("Cycle cost", opsObservationCostValue(telemetry), "latest pipeline cycle", opsObservationPipelineState(telemetry), "Work pipeline report", opsObservationPipelineUpdated(telemetry)),
@@ -2016,33 +2016,71 @@ func opsObservationMetric(label, value, context, state, source, updatedAt string
 }
 
 func opsObservationHealthValue(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
-	if t != nil && t.Error == "" && h != nil && h.ProjectionError == "" && c != nil && strings.Contains(strings.ToLower(c.ProjectionStatus), "available") {
+	if opsObservationTelemetryCurrent(t) && opsObservationHiveCurrent(h) && opsObservationCivilizationCurrent(c) {
 		return "current"
 	}
-	if (t != nil && t.Error == "") || (h != nil && h.ProjectionError == "") || (c != nil && c.ProjectionStatus != "") {
+	if opsObservationTelemetryCurrent(t) || opsObservationHiveCurrent(h) || opsObservationCivilizationDegraded(c) {
 		return "degraded"
 	}
 	return "unavailable"
 }
 
-func opsObservationHealthContext(t *OpsTelemetryData, h *OpsHiveData) string {
+func opsObservationHealthContext(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
 	if t != nil && t.Error != "" {
 		return "telemetry unavailable"
 	}
 	if h != nil && h.ProjectionError != "" {
 		return "Hive projection unavailable"
 	}
+	if !opsObservationCivilizationCurrent(c) {
+		state := opsProjectionState("")
+		if c != nil {
+			state = opsProjectionState(c.ProjectionStatus)
+		}
+		if state == "unavailable" {
+			return "Civilization projection unavailable"
+		}
+		return "Civilization projection " + state
+	}
 	return "sources checked"
 }
 
-func opsObservationHealthState(t *OpsTelemetryData, h *OpsHiveData) string {
-	if t != nil && t.Error == "" && h != nil && h.ProjectionError == "" {
+func opsObservationHealthState(t *OpsTelemetryData, h *OpsHiveData, c *OpsCivilizationAssemblyData) string {
+	if opsObservationTelemetryCurrent(t) && opsObservationHiveCurrent(h) && opsObservationCivilizationCurrent(c) {
 		return "current"
 	}
-	if (t != nil && t.Error == "") || (h != nil && h.ProjectionError == "") {
+	if opsObservationTelemetryCurrent(t) || opsObservationHiveCurrent(h) || opsObservationCivilizationDegraded(c) {
 		return "degraded"
 	}
 	return "unavailable"
+}
+
+func opsObservationTelemetryCurrent(t *OpsTelemetryData) bool {
+	return t != nil && t.Error == ""
+}
+
+func opsObservationHiveCurrent(h *OpsHiveData) bool {
+	return h != nil && h.ProjectionError == ""
+}
+
+func opsObservationCivilizationCurrent(c *OpsCivilizationAssemblyData) bool {
+	if c == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(c.ProjectionStatus)) {
+	case "current", "available", "live", opsCivilizationProjectionStatusComplete:
+		return true
+	default:
+		return false
+	}
+}
+
+func opsObservationCivilizationDegraded(c *OpsCivilizationAssemblyData) bool {
+	if c == nil {
+		return false
+	}
+	state := opsProjectionState(c.ProjectionStatus)
+	return state != "" && state != "unavailable"
 }
 
 func opsProjectionState(value string) string {
@@ -4409,12 +4447,14 @@ func opsPublicProofStateClass(status string) string {
 }
 
 func opsAgentStateClass(state string) string {
-	switch strings.ToLower(state) {
+	switch strings.ToLower(strings.TrimSpace(state)) {
 	case "processing":
 		return "border-sky-400/30 text-sky-300 bg-sky-400/10"
-	case "idle":
+	case "idle", "projection-only":
 		return "border-edge text-warm-faint bg-void/30"
-	case "error", "failed":
+	case "degraded", "stale":
+		return "border-amber-400/30 text-amber-300 bg-amber-400/10"
+	case "error", "failed", "unavailable", "missing":
 		return "border-red-400/30 text-red-300 bg-red-400/10"
 	default:
 		return "border-brand/30 text-brand bg-brand/10"
