@@ -27,6 +27,7 @@ const (
 )
 
 const consoleStaleWindow = 30 * time.Second
+const consoleFutureSkew = 5 * time.Second
 
 type ConsoleHealthWall struct {
 	Freshness        ConsoleFreshness
@@ -110,7 +111,11 @@ func deriveFreshness(generatedAt string, fetchErr error, hasPartialErrors bool, 
 	if err != nil {
 		return FreshnessUnavailable
 	}
-	if now.Sub(ts) > staleWindow {
+	age := now.Sub(ts)
+	if age < -consoleFutureSkew {
+		return FreshnessUnavailable
+	}
+	if age > staleWindow {
 		return FreshnessStale
 	}
 	if hasPartialErrors {

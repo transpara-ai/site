@@ -20,10 +20,10 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					</div>
 				</header>
 				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
-					@consoleTab("health", "Health wall", "/console", data.Active)
-					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active)
-					@consoleTab("intake", "Intake", "/console/intake", data.Active)
-					@consoleTab("config", "Config", "/console/config", data.Active)
+					@consoleTab("health", "Health wall", "/console", data.Active, true)
+					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, false)
+					@consoleTab("intake", "Intake", "/console/intake", data.Active, false)
+					@consoleTab("config", "Config", "/console/config", data.Active, false)
 				</nav>
 				if data.Health != nil {
 					@consoleHealthWallFragment(*data.Health)
@@ -43,8 +43,10 @@ templ consoleHead(title string) {
 	</head>
 }
 
-templ consoleTab(id, label, href, active string) {
-	if id == active {
+templ consoleTab(id, label, href, active string, enabled bool) {
+	if !enabled {
+		<span class="px-3 py-2 text-warm-muted cursor-not-allowed opacity-60" aria-disabled="true" title="coming soon">{ label }</span>
+	} else if id == active {
 		<a href={ templ.SafeURL(href) } class="px-3 py-2 border-b-2 border-brand text-warm font-medium">{ label }</a>
 	} else {
 		<a href={ templ.SafeURL(href) } class="px-3 py-2 text-warm-muted hover:text-warm transition-colors">{ label }</a>

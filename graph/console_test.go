@@ -171,6 +171,8 @@ func TestDeriveFreshness(t *testing.T) {
 		{"older than window is stale", rfc(-90 * time.Second), nil, false, FreshnessStale},
 		{"fresh with partial errors is partial", rfc(-2 * time.Second), nil, true, FreshnessPartial},
 		{"fresh and clean is current", rfc(-2 * time.Second), nil, false, FreshnessCurrent},
+		{"far-future timestamp is unavailable", rfc(90 * time.Second), nil, false, FreshnessUnavailable},
+		{"slightly-future within skew is current", rfc(2 * time.Second), nil, false, FreshnessCurrent},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
