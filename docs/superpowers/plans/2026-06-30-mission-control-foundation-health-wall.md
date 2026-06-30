@@ -16,7 +16,7 @@
 - **Honest staleness is mandatory.** Missing/stale/partial/unavailable upstream data must render as an explicit state, never a healthy default. The permissive ("current") outcome is the explicitly-proven branch; the fall-through is `unavailable` (fail closed).
 - **No new charting/JS dependency** unless a visualization cannot be expressed with existing Templ/Tailwind/SVG (per MFOF-001).
 - **Run `templ generate` after every `.templ` edit.** Never edit `*_templ.go` by hand.
-- **Tests run without a database** for these read-only routes (use the `testHandlers` helper + `httptest.Server` upstream mock).
+- **Tests run without a database** for these read-only routes. Construct handlers with a nil store via `NewHandlers(nil, nil, passthroughWrap)` (the codebase's established no-DB pattern — see `graph/observatory_test.go:458` and `graph/ops_test.go:3380`; `viewUser` guards `h.store == nil`). Use a `newConsoleTestHandlers()` local helper (defined in Task 5) + `httptest.Server` to mock upstream. Do NOT use `testHandlers(t)` — it spins up Postgres via `testDB`.
 - **Go:** handle every error explicitly; table-driven tests; `*_test.go` in package `graph`.
 - **Commits:** conventional, lowercase imperative subject, no trailing period. Already on branch `feat/mission-control-console-design` (never commit to `main`).
 - **Build/verify commands:** `templ generate` · `go test -count=1 ./graph/...` · `go build ./cmd/site/` · `make verify`.
@@ -500,9 +500,20 @@ Wire the handler, register `/console` and `/console/health`, and prove the whole
 - [ ] **Step 1: Write the failing test**
 
 ```go
+// newConsoleTestHandlers builds Handlers with a nil store (no DB) and
+// pass-through auth wraps, matching the codebase's no-DB test pattern
+// (graph/observatory_test.go:458). The console read-only handlers never touch
+// the store; viewUser guards h.store == nil.
+func newConsoleTestHandlers() *Handlers {
+	passthrough := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { next.ServeHTTP(w, r) })
+	}
+	return NewHandlers(nil, passthrough, passthrough)
+}
+
 func TestHandleConsoleHealth(t *testing.T) {
 	t.Run("unavailable when upstream unset renders explicit state, not green", func(t *testing.T) {
-		h, _, _ := testHandlers(t)
+		h := newConsoleTestHandlers()
 		t.Setenv("HIVE_OPS_API_BASE_URL", "")
 
 		mux := http.NewServeMux()
@@ -522,7 +533,7 @@ func TestHandleConsoleHealth(t *testing.T) {
 	})
 
 	t.Run("renders agents from a live upstream", func(t *testing.T) {
-		h, _, _ := testHandlers(t)
+		h := newConsoleTestHandlers()
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path != "/api/hive/operator-projection" {
 				http.NotFound(w, r)
@@ -621,7 +632,7 @@ Make the wall self-refresh without a full page load, degrading honestly. Phase 1
 
 ```go
 func TestHandleConsoleHealthFragment(t *testing.T) {
-	h, _, _ := testHandlers(t)
+	h := newConsoleTestHandlers()
 	t.Setenv("HIVE_OPS_API_BASE_URL", "")
 
 	mux := http.NewServeMux()
