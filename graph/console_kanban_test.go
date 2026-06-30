@@ -372,3 +372,46 @@ func TestConsoleOrderDrawerUnknownIDIsHonest(t *testing.T) {
 		t.Error("unknown order must render an honest not-found/unavailable drawer, not a fabricated order")
 	}
 }
+
+func TestConsoleKanbanDrawerLivesOutsideThePolledFragment(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"tasks":[
+			{"id":"task_1","title":"Build civic-roles doc","status":"running",
+			 "assignee":"implementer","created_by":"michael","risk_class":"high",
+			 "created_at":"2026-06-29T12:00:00Z"}
+		]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	// Full page: must contain the drawer container (rendered once, as a sibling).
+	pageReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	pageW := httptest.NewRecorder()
+	mux.ServeHTTP(pageW, pageReq)
+	if pageW.Code != http.StatusOK {
+		t.Fatalf("page status = %d, want 200", pageW.Code)
+	}
+	if !strings.Contains(pageW.Body.String(), `id="console-kanban-drawer"`) {
+		t.Error("full page must render the drawer container once")
+	}
+
+	// Polled fragment: must NOT contain the drawer container, or the 10s poll would
+	// wipe an open drawer (it lives outside the polled #console-kanban element).
+	fragReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban/fragment", nil)
+	fragW := httptest.NewRecorder()
+	mux.ServeHTTP(fragW, fragReq)
+	if fragW.Code != http.StatusOK {
+		t.Fatalf("fragment status = %d, want 200", fragW.Code)
+	}
+	if strings.Contains(fragW.Body.String(), `id="console-kanban-drawer"`) {
+		t.Error("polled fragment must NOT contain the drawer container (it would be wiped every 10s)")
+	}
+}

@@ -30,6 +30,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				}
 				if data.Kanban != nil {
 					@consoleKanbanFragment(*data.Kanban)
+					<div id="console-kanban-drawer"></div>
 				}
 			</main>
 		</body>
@@ -97,7 +98,6 @@ templ consoleKanban(k ConsoleKanban) {
 				}
 			</div>
 		}
-		<div id="console-kanban-drawer"></div>
 	</div>
 }
 
