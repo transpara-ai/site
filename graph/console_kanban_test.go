@@ -2,9 +2,12 @@ package graph
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+	"time"
 )
 
 func TestFetchConsoleWorkDecodesTasks(t *testing.T) {
@@ -78,5 +81,110 @@ func TestOpsWorkTaskDecodesKanbanFields(t *testing.T) {
 	}
 	if task.CreatedAt != "2026-06-30T12:00:00Z" {
 		t.Errorf("CreatedAt = %q, want the RFC3339 string", task.CreatedAt)
+	}
+}
+
+func sampleKanbanTasks() []OpsWorkTask {
+	return []OpsWorkTask{
+		{ID: "t1", Title: "Alpha", Status: "running", Assignee: "implementer",
+			CreatedBy: "michael", RiskClass: "high", CreatedAt: "2026-06-29T12:00:00Z"},
+		{ID: "t2", Title: "Bravo", Status: "blocked", Assignee: "",
+			CreatedBy: "codex", RiskClass: "critical", CreatedAt: "2026-06-28T12:00:00Z"},
+		{ID: "t3", Title: "Charlie", Status: "running", Assignee: "implementer",
+			CreatedBy: "michael", RiskClass: "", CreatedAt: ""},
+	}
+}
+
+func columnKeys(k ConsoleKanban) []string {
+	keys := make([]string, 0, len(k.Columns))
+	for _, c := range k.Columns {
+		keys = append(keys, c.Key)
+	}
+	return keys
+}
+
+func TestBuildConsoleKanbanFetchErrorIsUnavailable(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	k := buildConsoleKanban(nil, fmt.Errorf("boom"), LensRisk, now)
+	if k.Freshness != FreshnessUnavailable {
+		t.Errorf("freshness = %q, want unavailable", k.Freshness)
+	}
+	if k.TotalCards != 0 || len(k.Columns) != 0 {
+		t.Errorf("want zero cards/columns on error, got %d cards %d cols", k.TotalCards, len(k.Columns))
+	}
+	if len(k.Notices) == 0 {
+		t.Error("want a notice explaining the unavailable state")
+	}
+}
+
+func TestBuildConsoleKanbanRiskLensOrderAndUnclassified(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	k := buildConsoleKanban(sampleKanbanTasks(), nil, LensRisk, now)
+	if k.Freshness != FreshnessCurrent {
+		t.Errorf("freshness = %q, want current on a clean fetch", k.Freshness)
+	}
+	// critical, high present; low/medium absent (omitted); unclassified (empty risk) last.
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"critical", "high", "unclassified"}) {
+		t.Errorf("risk columns = %v, want [critical high unclassified]", got)
+	}
+	if k.TotalCards != 3 {
+		t.Errorf("TotalCards = %d, want 3", k.TotalCards)
+	}
+}
+
+func TestBuildConsoleKanbanStatusLensOrder(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	k := buildConsoleKanban(sampleKanbanTasks(), nil, LensStatus, now)
+	// lifecycle order: running before blocked.
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"running", "blocked"}) {
+		t.Errorf("status columns = %v, want [running blocked]", got)
+	}
+}
+
+func TestBuildConsoleKanbanAgentLensUnassignedLast(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	k := buildConsoleKanban(sampleKanbanTasks(), nil, LensAgent, now)
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"implementer", "unassigned"}) {
+		t.Errorf("agent columns = %v, want [implementer unassigned]", got)
+	}
+}
+
+func TestBuildConsoleKanbanSourceLens(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	k := buildConsoleKanban(sampleKanbanTasks(), nil, LensSource, now)
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"codex", "michael"}) {
+		t.Errorf("source columns = %v, want [codex michael]", got)
+	}
+}
+
+func TestHumanizeAge(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		name, in, want string
+	}{
+		{"days", "2026-06-28T12:00:00Z", "2d"},
+		{"hours", "2026-06-30T09:00:00Z", "3h"},
+		{"minutes", "2026-06-30T11:30:00Z", "30m"},
+		{"empty", "", ""},
+		{"unparseable", "not-a-time", ""},
+		{"future", "2026-07-01T12:00:00Z", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := humanizeAge(now, c.in); got != c.want {
+				t.Errorf("humanizeAge(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
+	}
+}
+
+func TestParseLensDefaultsToRisk(t *testing.T) {
+	for _, raw := range []string{"", "bogus", "RISK?"} {
+		if got := parseLens(raw); got != LensRisk {
+			t.Errorf("parseLens(%q) = %q, want risk", raw, got)
+		}
+	}
+	if parseLens("status") != LensStatus {
+		t.Error("parseLens(status) should be status")
 	}
 }
