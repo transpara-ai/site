@@ -1,10 +1,76 @@
 package graph
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
+
+// newConsoleTestHandlers builds Handlers with a nil store (no DB) and
+// pass-through auth wraps, matching the codebase's no-DB test pattern
+// (graph/observatory_test.go:458). The console read-only handlers never touch
+// the store; viewUser guards h.store == nil.
+func newConsoleTestHandlers() *Handlers {
+	passthrough := func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { next.ServeHTTP(w, r) })
+	}
+	return NewHandlers(nil, passthrough, passthrough)
+}
+
+func TestHandleConsoleHealth(t *testing.T) {
+	t.Run("unavailable when upstream unset renders explicit state, not green", func(t *testing.T) {
+		h := newConsoleTestHandlers()
+		t.Setenv("HIVE_OPS_API_BASE_URL", "")
+
+		mux := http.NewServeMux()
+		h.Register(mux)
+
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		body := w.Body.String()
+		if !strings.Contains(body, "unavailable") {
+			t.Fatal("expected explicit unavailable state in body")
+		}
+	})
+
+	t.Run("renders agents from a live upstream", func(t *testing.T) {
+		h := newConsoleTestHandlers()
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/api/hive/operator-projection" {
+				http.NotFound(w, r)
+				return
+			}
+			proj := OpsHiveProjection{GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
+			proj.RuntimeEvidence.AgentEvents.ObservedActive = 1
+			proj.RuntimeEvidence.AgentEvents.ActiveAgents = []OpsHiveRuntimeAgent{{Name: "Guardian", Role: "guardian", Model: "sonnet-4-6"}}
+			json.NewEncoder(w).Encode(proj)
+		}))
+		defer srv.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+		mux := http.NewServeMux()
+		h.Register(mux)
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200", w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "Guardian") {
+			t.Fatal("expected agent name in rendered wall")
+		}
+	})
+}
 
 func TestBuildConsoleHealthWall(t *testing.T) {
 	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)

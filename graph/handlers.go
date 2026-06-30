@@ -386,6 +386,10 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
 	mux.Handle("GET /factory", h.writeWrap(h.handleFactory))
 	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
+
+	// Mission Control console — health wall.
+	mux.Handle("GET /console", h.writeWrap(h.handleConsoleHealth))
+	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
