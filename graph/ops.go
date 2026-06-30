@@ -503,18 +503,23 @@ type OpsWorkData struct {
 }
 
 type OpsWorkTask struct {
-	ID            string   `json:"id"`
-	Title         string   `json:"title"`
-	Description   string   `json:"description"`
-	Priority      string   `json:"priority"`
-	Workspace     string   `json:"workspace"`
-	Status        string   `json:"status"`
-	Assignee      string   `json:"assignee"`
-	Blocked       bool     `json:"blocked"`
-	ArtifactCount int      `json:"artifact_count"`
-	Waived        bool     `json:"waived"`
-	Ready         bool     `json:"ready"`
-	MissingGates  []string `json:"missing_gates"`
+	ID             string   `json:"id"`
+	Title          string   `json:"title"`
+	Description    string   `json:"description"`
+	Priority       string   `json:"priority"`
+	Workspace      string   `json:"workspace"`
+	Status         string   `json:"status"`
+	Assignee       string   `json:"assignee"`
+	Blocked        bool     `json:"blocked"`
+	ArtifactCount  int      `json:"artifact_count"`
+	Waived         bool     `json:"waived"`
+	Ready          bool     `json:"ready"`
+	MissingGates   []string `json:"missing_gates"`
+	CreatedBy      string   `json:"created_by,omitempty"`
+	RiskClass      string   `json:"risk_class,omitempty"`
+	Cell           string   `json:"cell,omitempty"`
+	FactoryOrderID string   `json:"factory_order_id,omitempty"`
+	CreatedAt      string   `json:"created_at,omitempty"`
 }
 
 type OpsPhaseGate struct {
