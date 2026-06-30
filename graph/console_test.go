@@ -183,3 +183,20 @@ func TestDeriveFreshness(t *testing.T) {
 		})
 	}
 }
+
+func TestConsoleReadOnlyRoutesNoDB(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyConsole(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "unavailable") {
+		t.Fatal("no-DB console must render explicit unavailable state")
+	}
+}
