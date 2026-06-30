@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"strconv"
+
 	"github.com/transpara-ai/site/assets"
 	"github.com/transpara-ai/site/profile"
 )
@@ -24,7 +26,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					@consoleTab("config", "Config", "/console/config", data.Active)
 				</nav>
 				if data.Health != nil {
-					<div id="console-health" data-console-surface="health"></div>
+					@consoleHealthWall(*data.Health)
 				}
 			</main>
 		</body>
@@ -60,4 +62,54 @@ templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
 		default:
 			<span class="inline-flex items-center gap-1 text-xs text-warm-muted">unavailable</span>
 	}
+}
+
+templ consoleHealthWall(w ConsoleHealthWall) {
+	<section class="space-y-4" data-console-surface="health">
+		<div class="flex items-center justify-between">
+			<h2 class="text-lg font-medium text-warm">Health wall</h2>
+			@consoleFreshnessBadge(w.Freshness, w.GeneratedAt)
+		</div>
+		if w.Freshness == FreshnessUnavailable {
+			<div class="border border-edge bg-surface rounded-lg p-4 text-sm text-warm-muted" data-state="unavailable">
+				<p class="font-medium text-warm">Live status unavailable</p>
+				for _, n := range w.Notices {
+					<p class="mt-1">{ n }</p>
+				}
+			</div>
+		} else {
+			<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Active agents</p>
+					<p class="text-2xl text-warm">{ strconv.Itoa(w.ActiveAgents) }</p>
+				</div>
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Needs you</p>
+					<p class="text-2xl text-warm">{ strconv.Itoa(w.PendingApprovals) }</p>
+					<p class="text-xs text-warm-muted">pending approvals</p>
+				</div>
+			</div>
+			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Agents</div>
+				if len(w.Agents) == 0 {
+					<div class="px-4 py-3 text-sm text-warm-muted">No active agents reported.</div>
+				} else {
+					for _, a := range w.Agents {
+						<div class="flex items-center gap-3 px-4 py-2 border-b border-edge last:border-0">
+							<span class="text-sm font-medium text-warm w-28 truncate">{ a.Name }</span>
+							<span class="text-xs text-warm-muted">{ a.Role }</span>
+							<span class="text-xs text-warm-muted ml-auto">{ a.Model }</span>
+						</div>
+					}
+				}
+			</div>
+			if len(w.Notices) > 0 {
+				<div class="border border-amber-500/40 bg-surface rounded-lg p-3 text-xs text-amber-300">
+					for _, n := range w.Notices {
+						<p>{ n }</p>
+					}
+				</div>
+			}
+		}
+	</section>
 }
