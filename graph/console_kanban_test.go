@@ -291,3 +291,61 @@ func TestConsoleKanbanUpstreamErrorIsHonest(t *testing.T) {
 		t.Error("expected an explicit unavailable state on upstream error")
 	}
 }
+
+func TestConsoleOrderDrawerShowsUnavailableForEffortAndPR(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"tasks":[
+			{"id":"task_1","title":"Build civic-roles doc","status":"running",
+			 "assignee":"implementer","created_by":"michael","risk_class":"high",
+			 "factory_order_id":"fo_42","created_at":"2026-06-29T12:00:00Z"}
+		]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban/order/task_1", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Build civic-roles doc") {
+		t.Error("drawer missing order title")
+	}
+	// effort + linked PR are genuinely not in any projection — must read "unavailable", never fabricated.
+	if strings.Count(body, "unavailable") < 2 {
+		t.Errorf("drawer must mark effort and linked-PR unavailable; body: %s", body)
+	}
+}
+
+func TestConsoleOrderDrawerUnknownIDIsHonest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"tasks":[]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban/order/nope", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "unavailable") && !strings.Contains(w.Body.String(), "not found") {
+		t.Error("unknown order must render an honest not-found/unavailable drawer, not a fabricated order")
+	}
+}

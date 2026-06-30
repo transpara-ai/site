@@ -114,6 +114,22 @@ func (h *Handlers) handleConsoleKanbanFragment(w http.ResponseWriter, r *http.Re
 	consoleKanbanFragment(k).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleConsoleKanbanOrder(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	res := fetchConsoleWork(r)
+	now := time.Now().UTC()
+	if res.Err == nil {
+		for _, t := range res.Tasks {
+			if t.ID == id {
+				consoleOrderDrawer(cardForTask(t, now), true).Render(r.Context(), w)
+				return
+			}
+		}
+	}
+	// Not found or upstream error: render an honest empty drawer, never a fabricated order.
+	consoleOrderDrawer(ConsoleOrderCard{ID: id}, false).Render(r.Context(), w)
+}
+
 // deriveFreshness maps upstream signals onto an explicit freshness state.
 // It fails closed: a fetch error, an empty or unparseable timestamp, or any
 // other ambiguity resolves to FreshnessUnavailable. Only a parseable,

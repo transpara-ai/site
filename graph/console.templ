@@ -144,6 +144,32 @@ templ consoleOrderCard(card ConsoleOrderCard) {
 	</button>
 }
 
+templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
+	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Order details">
+		<div class="flex items-center justify-between gap-2">
+			<h3 class="text-sm font-medium text-warm">Order details</h3>
+			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-kanban-drawer').innerHTML='';return false;">close</button>
+		</div>
+		if !found {
+			<p class="text-sm text-warm-muted">Order { card.ID } is unavailable (not found).</p>
+		} else {
+			<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-xs">
+				<dt class="text-warm-muted">Title</dt><dd class="text-warm">{ cardTitle(card) }</dd>
+				<dt class="text-warm-muted">Order</dt><dd class="font-mono text-warm">{ cardTag(card) }</dd>
+				<dt class="text-warm-muted">Submitter</dt><dd>{ orFallback(card.Submitter, "unknown") }</dd>
+				<dt class="text-warm-muted">Status</dt><dd>{ orFallback(card.Status, "unknown") }</dd>
+				<dt class="text-warm-muted">Agent</dt><dd>{ orFallback(card.Agent, "unassigned") }</dd>
+				<dt class="text-warm-muted">Risk</dt><dd>{ orFallback(card.Risk, "unclassified") }</dd>
+				<dt class="text-warm-muted">Cell</dt><dd>{ orFallback(card.Cell, "—") }</dd>
+				<dt class="text-warm-muted">Age</dt><dd>{ orFallback(card.AgeLabel, "—") }</dd>
+				<dt class="text-warm-muted">Effort to date</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+				<dt class="text-warm-muted">Predicted effort</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+				<dt class="text-warm-muted">Linked PR</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+			</dl>
+		}
+	</aside>
+}
+
 templ consoleHealthWallFragment(w ConsoleHealthWall) {
 	<div id="console-health" hx-get="/console/health/fragment" hx-trigger="every 5s" hx-swap="outerHTML">
 		@consoleHealthWall(w)
