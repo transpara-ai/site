@@ -386,6 +386,11 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /ops/refinery", h.writeWrap(h.handleOpsRefinery))
 	mux.Handle("GET /factory", h.writeWrap(h.handleFactory))
 	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
+
+	// Mission Control console — health wall.
+	mux.Handle("GET /console", h.writeWrap(h.handleConsoleHealth))
+	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
+	mux.Handle("GET /console/health/fragment", h.writeWrap(h.handleConsoleHealthFragment))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
@@ -411,6 +416,15 @@ func (h *Handlers) RegisterReadOnlyOps(mux *http.ServeMux) {
 // ops read-only projection route.
 func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
 	mux.HandleFunc("GET /factory", h.handleFactory)
+}
+
+// RegisterReadOnlyConsole adds the no-DB Mission Control console routes. The
+// console handlers tolerate a nil store and render an explicit unavailable
+// state when upstream projections are absent, so they are safe in offline mode.
+func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
+	mux.HandleFunc("GET /console", h.handleConsoleHealth)
+	mux.HandleFunc("GET /console/health", h.handleConsoleHealth)
+	mux.HandleFunc("GET /console/health/fragment", h.handleConsoleHealthFragment)
 }
 
 // ────────────────────────────────────────────────────────────────────

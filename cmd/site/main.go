@@ -934,6 +934,7 @@ func registerNoDatabaseRoutes(mux *http.ServeMux, handleHome http.HandlerFunc) {
 	h := graph.NewHandlers(nil, nil, nil)
 	h.RegisterReadOnlyOps(mux)
 	h.RegisterReadOnlyFactory(mux)
+	h.RegisterReadOnlyConsole(mux)
 	mux.HandleFunc("GET /{$}", handleHome)
 	mux.HandleFunc("GET /app", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "App requires DATABASE_URL", http.StatusServiceUnavailable)
