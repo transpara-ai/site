@@ -212,6 +212,42 @@ func fallbackLast(a, b, fallback string) bool {
 	return a < b
 }
 
+// cardTitle returns the human title, or an explicit placeholder when absent —
+// never a fabricated title.
+func cardTitle(card ConsoleOrderCard) string {
+	if strings.TrimSpace(card.Title) == "" {
+		return "(untitled)"
+	}
+	return card.Title
+}
+
+// cardTag is the compact identity chip: the factory order id when linked,
+// otherwise the task id.
+func cardTag(card ConsoleOrderCard) string {
+	if strings.TrimSpace(card.FactoryOrderID) != "" {
+		return card.FactoryOrderID
+	}
+	return card.ID
+}
+
+func orFallback(v, fallback string) string {
+	if strings.TrimSpace(v) == "" {
+		return fallback
+	}
+	return v
+}
+
+func columnCount(col ConsoleKanbanColumn) string {
+	return fmt.Sprintf("%d", len(col.Cards))
+}
+
+func noticeText(notices []string) string {
+	if len(notices) == 0 {
+		return "no upstream data"
+	}
+	return strings.Join(notices, "; ")
+}
+
 func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanLens, now time.Time) ConsoleKanban {
 	freshness := deriveFreshness(now.Format(time.RFC3339), fetchErr, false, now, consoleStaleWindow)
 	k := ConsoleKanban{

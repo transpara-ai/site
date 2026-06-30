@@ -21,12 +21,15 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				</header>
 				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
 					@consoleTab("health", "Health wall", "/console", data.Active, true)
-					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, false)
+					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
 					@consoleTab("intake", "Intake", "/console/intake", data.Active, false)
 					@consoleTab("config", "Config", "/console/config", data.Active, false)
 				</nav>
 				if data.Health != nil {
 					@consoleHealthWallFragment(*data.Health)
+				}
+				if data.Kanban != nil {
+					@consoleKanbanFragment(*data.Kanban)
 				}
 			</main>
 		</body>
@@ -64,6 +67,81 @@ templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
 		default:
 			<span class="inline-flex items-center gap-1 text-xs text-warm-muted">unavailable</span>
 	}
+}
+
+templ consoleKanbanFragment(k ConsoleKanban) {
+	<div id="console-kanban" hx-get={ "/console/kanban/fragment?lens=" + string(k.Lens) } hx-trigger="every 10s" hx-swap="outerHTML">
+		@consoleKanban(k)
+	</div>
+}
+
+templ consoleKanban(k ConsoleKanban) {
+	<div class="space-y-4">
+		<div class="flex items-center justify-between gap-3">
+			@consoleKanbanLensNav(k.Lens)
+			@consoleFreshnessBadge(k.Freshness, k.GeneratedAt)
+		</div>
+		if k.Freshness == FreshnessUnavailable {
+			<p class="text-sm text-warm-muted">unavailable — { noticeText(k.Notices) }</p>
+		} else if k.TotalCards == 0 {
+			<p class="text-sm text-warm-muted">No orders.</p>
+		} else {
+			<div class="flex gap-4 overflow-x-auto pb-2">
+				for _, col := range k.Columns {
+					<section class="min-w-[16rem] flex-shrink-0 space-y-2">
+						<h2 class="text-xs uppercase tracking-wide text-warm-muted">{ col.Label } · { columnCount(col) }</h2>
+						for _, card := range col.Cards {
+							@consoleOrderCard(card)
+						}
+					</section>
+				}
+			</div>
+		}
+		<div id="console-kanban-drawer"></div>
+	</div>
+}
+
+templ consoleKanbanLensNav(active ConsoleKanbanLens) {
+	<div class="flex gap-1 text-xs">
+		@consoleLensLink("risk", "Risk + aging", active)
+		@consoleLensLink("status", "Status", active)
+		@consoleLensLink("agent", "Agent", active)
+		@consoleLensLink("source", "Source", active)
+	</div>
+}
+
+templ consoleLensLink(lens, label string, active ConsoleKanbanLens) {
+	if ConsoleKanbanLens(lens) == active {
+		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } class="px-2 py-1 border-b-2 border-brand text-warm">{ label }</a>
+	} else {
+		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } class="px-2 py-1 text-warm-muted hover:text-warm transition-colors">{ label }</a>
+	}
+}
+
+templ consoleOrderCard(card ConsoleOrderCard) {
+	<button
+		type="button"
+		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
+		hx-get={ "/console/kanban/order/" + card.ID }
+		hx-target="#console-kanban-drawer"
+		hx-swap="innerHTML"
+	>
+		<div class="flex items-center justify-between gap-2">
+			<span class="text-sm text-warm font-medium">{ cardTitle(card) }</span>
+			<span class="text-[10px] text-warm-muted font-mono">{ cardTag(card) }</span>
+		</div>
+		<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-warm-muted">
+			<span>by { orFallback(card.Submitter, "unknown") }</span>
+			<span>{ orFallback(card.Status, "unknown") }</span>
+			<span>{ orFallback(card.Agent, "unassigned") }</span>
+			if card.Risk != "" {
+				<span>risk: { card.Risk }</span>
+			}
+			if card.AgeLabel != "" {
+				<span>{ card.AgeLabel }</span>
+			}
+		</div>
+	</button>
 }
 
 templ consoleHealthWallFragment(w ConsoleHealthWall) {

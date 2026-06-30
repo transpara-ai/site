@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -232,5 +233,61 @@ func TestBuildConsoleKanbanWithinColumnOldestFirst(t *testing.T) {
 	cards := k.Columns[0].Cards
 	if len(cards) != 2 || cards[0].ID != "older" || cards[1].ID != "newer" {
 		t.Errorf("within-column order = %v, want [older newer] (oldest-first)", []string{cards[0].ID, cards[1].ID})
+	}
+}
+
+func TestConsoleKanbanRendersOrderCards(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"tasks":[
+			{"id":"task_1","title":"Build civic-roles doc","status":"running",
+			 "assignee":"implementer","created_by":"michael","risk_class":"high",
+			 "cell":"cell_a","factory_order_id":"fo_42","created_at":"2026-06-29T12:00:00Z"}
+		]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Build civic-roles doc", "fo_42", "michael", "implementer", "high"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("kanban body missing %q", want)
+		}
+	}
+}
+
+func TestConsoleKanbanUpstreamErrorIsHonest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "down", http.StatusBadGateway)
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "unavailable") {
+		t.Error("expected an explicit unavailable state on upstream error")
 	}
 }

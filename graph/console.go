@@ -11,6 +11,7 @@ type ConsolePageData struct {
 	Title  string
 	Active string // health | kanban | intake | config
 	Health *ConsoleHealthWall
+	Kanban *ConsoleKanban
 }
 
 func (h *Handlers) renderConsole(w http.ResponseWriter, r *http.Request, data ConsolePageData) {
@@ -97,6 +98,20 @@ func (h *Handlers) handleConsoleHealthFragment(w http.ResponseWriter, r *http.Re
 	proj, err := fetchHiveOperatorProjection(r)
 	wall := buildConsoleHealthWall(proj, err, time.Now().UTC())
 	consoleHealthWallFragment(wall).Render(r.Context(), w)
+}
+
+func (h *Handlers) handleConsoleKanban(w http.ResponseWriter, r *http.Request) {
+	lens := parseLens(r.URL.Query().Get("lens"))
+	res := fetchConsoleWork(r)
+	k := buildConsoleKanban(res.Tasks, res.Err, lens, time.Now().UTC())
+	h.renderConsole(w, r, ConsolePageData{Title: "Kanban", Active: "kanban", Kanban: &k})
+}
+
+func (h *Handlers) handleConsoleKanbanFragment(w http.ResponseWriter, r *http.Request) {
+	lens := parseLens(r.URL.Query().Get("lens"))
+	res := fetchConsoleWork(r)
+	k := buildConsoleKanban(res.Tasks, res.Err, lens, time.Now().UTC())
+	consoleKanbanFragment(k).Render(r.Context(), w)
 }
 
 // deriveFreshness maps upstream signals onto an explicit freshness state.
