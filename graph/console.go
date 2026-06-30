@@ -13,6 +13,64 @@ const (
 
 const consoleStaleWindow = 30 * time.Second
 
+type ConsoleHealthWall struct {
+	Freshness        ConsoleFreshness
+	GeneratedAt      string
+	ActiveAgents     int
+	Agents           []ConsoleAgentRow
+	PendingApprovals int
+	Approvals        []ConsoleApproval
+	Notices          []string
+}
+
+type ConsoleAgentRow struct {
+	Name  string
+	Role  string
+	Model string
+}
+
+type ConsoleApproval struct {
+	RequestID string
+	Action    string
+	Target    string
+	Risk      string
+	CreatedAt string
+}
+
+// buildConsoleHealthWall maps the hive operator projection (or a fetch error)
+// into the Health Wall view-model. On any fetch failure it returns an
+// unavailable wall with a human-readable notice and no invented agents.
+func buildConsoleHealthWall(proj *OpsHiveProjection, fetchErr error, now time.Time) ConsoleHealthWall {
+	if fetchErr != nil || proj == nil {
+		reason := "operator projection unavailable"
+		if fetchErr != nil {
+			reason = fetchErr.Error()
+		}
+		return ConsoleHealthWall{Freshness: FreshnessUnavailable, Notices: []string{reason}}
+	}
+
+	wall := ConsoleHealthWall{
+		Freshness:    deriveFreshness(proj.GeneratedAt, nil, len(proj.Errors) > 0, now, consoleStaleWindow),
+		GeneratedAt:  proj.GeneratedAt,
+		ActiveAgents: proj.RuntimeEvidence.AgentEvents.ObservedActive,
+		Notices:      append([]string(nil), proj.Errors...),
+	}
+	for _, a := range proj.RuntimeEvidence.AgentEvents.ActiveAgents {
+		wall.Agents = append(wall.Agents, ConsoleAgentRow{Name: a.Name, Role: a.Role, Model: a.Model})
+	}
+	for _, ap := range proj.PendingApprovals {
+		wall.Approvals = append(wall.Approvals, ConsoleApproval{
+			RequestID: ap.RequestID,
+			Action:    ap.ActionName,
+			Target:    ap.Target,
+			Risk:      ap.RiskSummary,
+			CreatedAt: ap.CreatedAt,
+		})
+	}
+	wall.PendingApprovals = len(wall.Approvals)
+	return wall
+}
+
 // deriveFreshness maps upstream signals onto an explicit freshness state.
 // It fails closed: a fetch error, an empty or unparseable timestamp, or any
 // other ambiguity resolves to FreshnessUnavailable. Only a parseable,
