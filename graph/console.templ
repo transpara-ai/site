@@ -26,7 +26,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					@consoleTab("config", "Config", "/console/config", data.Active)
 				</nav>
 				if data.Health != nil {
-					@consoleHealthWall(*data.Health)
+					@consoleHealthWallFragment(*data.Health)
 				}
 			</main>
 		</body>
@@ -62,6 +62,12 @@ templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
 		default:
 			<span class="inline-flex items-center gap-1 text-xs text-warm-muted">unavailable</span>
 	}
+}
+
+templ consoleHealthWallFragment(w ConsoleHealthWall) {
+	<div id="console-health" hx-get="/console/health/fragment" hx-trigger="every 5s" hx-swap="outerHTML">
+		@consoleHealthWall(w)
+	</div>
 }
 
 templ consoleHealthWall(w ConsoleHealthWall) {

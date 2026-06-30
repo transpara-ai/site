@@ -130,6 +130,28 @@ func TestBuildConsoleHealthWall(t *testing.T) {
 	})
 }
 
+func TestHandleConsoleHealthFragment(t *testing.T) {
+	h := newConsoleTestHandlers()
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/health/fragment", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "<html") {
+		t.Fatal("fragment must not include the full page shell")
+	}
+	if !strings.Contains(body, "unavailable") {
+		t.Fatal("fragment must render honest staleness")
+	}
+}
+
 func TestDeriveFreshness(t *testing.T) {
 	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
 	rfc := func(d time.Duration) string { return now.Add(d).Format(time.RFC3339) }

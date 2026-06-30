@@ -92,6 +92,12 @@ func (h *Handlers) handleConsoleHealth(w http.ResponseWriter, r *http.Request) {
 	h.renderConsole(w, r, ConsolePageData{Title: "Health wall", Active: "health", Health: &wall})
 }
 
+func (h *Handlers) handleConsoleHealthFragment(w http.ResponseWriter, r *http.Request) {
+	proj, err := fetchHiveOperatorProjection(r)
+	wall := buildConsoleHealthWall(proj, err, time.Now().UTC())
+	consoleHealthWallFragment(wall).Render(r.Context(), w)
+}
+
 // deriveFreshness maps upstream signals onto an explicit freshness state.
 // It fails closed: a fetch error, an empty or unparseable timestamp, or any
 // other ambiguity resolves to FreshnessUnavailable. Only a parseable,

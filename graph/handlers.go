@@ -390,6 +390,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	// Mission Control console — health wall.
 	mux.Handle("GET /console", h.writeWrap(h.handleConsoleHealth))
 	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
+	mux.Handle("GET /console/health/fragment", h.writeWrap(h.handleConsoleHealthFragment))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
