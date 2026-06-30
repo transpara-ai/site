@@ -20,6 +20,9 @@ func TestBuildConsoleHealthWall(t *testing.T) {
 		if wall.ActiveAgents != 0 || len(wall.Agents) != 0 {
 			t.Fatal("unavailable wall must not invent agents")
 		}
+		if wall.PendingApprovals != 0 || len(wall.Approvals) != 0 {
+			t.Fatal("unavailable wall must not invent approvals")
+		}
 	})
 
 	t.Run("populated projection maps agents and approvals", func(t *testing.T) {
