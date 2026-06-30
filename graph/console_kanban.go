@@ -21,8 +21,8 @@ type consoleWorkResult struct {
 
 func fetchConsoleWork(r *http.Request) consoleWorkResult {
 	base := serverWorkAPIBaseURL()
-	url := legacyWorkURL(base, "/tasks")
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
+	tasksURL := legacyWorkURL(base, "/tasks")
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, tasksURL, nil)
 	if err != nil {
 		return consoleWorkResult{Err: err}
 	}

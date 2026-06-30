@@ -119,6 +119,7 @@ templ consoleLensLink(lens, label string, active ConsoleKanbanLens) {
 }
 
 templ consoleOrderCard(card ConsoleOrderCard) {
+	// hx-get uses a plain string (not templ.SafeURL): hx-* is an HTML attribute, so templ's attribute-escaping (ResolveAttributeValue->EscapeString) is the right protection; SafeURL is for href URL sinks.
 	<button
 		type="button"
 		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
