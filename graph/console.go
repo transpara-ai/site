@@ -1,6 +1,21 @@
 package graph
 
-import "time"
+import (
+	"net/http"
+	"time"
+
+	"github.com/transpara-ai/site/profile"
+)
+
+type ConsolePageData struct {
+	Title  string
+	Active string // health | kanban | intake | config
+	Health *ConsoleHealthWall
+}
+
+func (h *Handlers) renderConsole(w http.ResponseWriter, r *http.Request, data ConsolePageData) {
+	ConsolePage(data, h.viewUser(r), profile.FromContext(r.Context())).Render(r.Context(), w)
+}
 
 type ConsoleFreshness string
 

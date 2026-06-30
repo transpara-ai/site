@@ -1,0 +1,63 @@
+package graph
+
+import (
+	"github.com/transpara-ai/site/assets"
+	"github.com/transpara-ai/site/profile"
+)
+
+templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
+	<!DOCTYPE html>
+	<html lang="en">
+		@consoleHead(data.Title)
+		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
+			<main class="flex-1 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10 w-full space-y-6">
+				<header class="flex items-center justify-between gap-3">
+					<div>
+						<h1 class="text-2xl md:text-3xl font-display font-normal text-warm">Mission control</h1>
+						<p class="text-sm text-warm-muted">transpara-ai civilization</p>
+					</div>
+				</header>
+				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
+					@consoleTab("health", "Health wall", "/console", data.Active)
+					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active)
+					@consoleTab("intake", "Intake", "/console/intake", data.Active)
+					@consoleTab("config", "Config", "/console/config", data.Active)
+				</nav>
+				if data.Health != nil {
+					<div id="console-health" data-console-surface="health"></div>
+				}
+			</main>
+		</body>
+	</html>
+}
+
+templ consoleHead(title string) {
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1"/>
+		<title>{ title } — Mission control</title>
+		<link rel="stylesheet" href={ assets.CSSURL() }/>
+		<script src="/static/js/htmx.min.js"></script>
+	</head>
+}
+
+templ consoleTab(id, label, href, active string) {
+	if id == active {
+		<a href={ templ.SafeURL(href) } class="px-3 py-2 border-b-2 border-brand text-warm font-medium">{ label }</a>
+	} else {
+		<a href={ templ.SafeURL(href) } class="px-3 py-2 text-warm-muted hover:text-warm transition-colors">{ label }</a>
+	}
+}
+
+templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
+	switch f {
+		case FreshnessCurrent:
+			<span class="inline-flex items-center gap-1 text-xs text-emerald-300">live · { generatedAt }</span>
+		case FreshnessStale:
+			<span class="inline-flex items-center gap-1 text-xs text-amber-300">stale · last update { generatedAt }</span>
+		case FreshnessPartial:
+			<span class="inline-flex items-center gap-1 text-xs text-amber-300">partial · some sources degraded</span>
+		default:
+			<span class="inline-flex items-center gap-1 text-xs text-warm-muted">unavailable</span>
+	}
+}
