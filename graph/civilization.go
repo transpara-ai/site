@@ -54,8 +54,11 @@ type OpsCivilizationStatusRow struct {
 }
 
 type OpsCivilizationReferenceGroup struct {
-	Label string
-	Refs  []string
+	Label          string
+	Refs           []string
+	DisplayRefs    []string
+	HiddenRefCount int
+	TotalRefCount  int
 }
 
 type OpsCivilizationIssueReadiness struct {
@@ -639,7 +642,7 @@ func opsCivilizationStatusRows(projection *OpsCivilizationAssemblyProjection, st
 	add("schema version", opsCivilizationValue(projection.ProjectionSchemaVersion, "not projected"))
 	add("subject", opsCivilizationValue(projection.ProjectionSubject, "not projected"))
 	add("source state", opsCivilizationValue(projection.SourceEventGraphHeadOrStateVersion, "not projected"))
-	add("source events/window", opsCivilizationJoin(projection.SourceEventIDsOrQueryWindow, "not projected"))
+	add("source events/window", opsCivilizationJoinSummary(projection.SourceEventIDsOrQueryWindow, "not projected", 6))
 	add("projection generated", opsCivilizationTime(projection.GeneratedAt))
 	add("freshness", freshness)
 	add("derivation status", status)
@@ -674,6 +677,7 @@ func opsCivilizationReferenceGroups(projection *OpsCivilizationAssemblyProjectio
 		}
 		sort.Strings(refs)
 		group.Refs = refs
+		group.DisplayRefs, group.HiddenRefCount, group.TotalRefCount = opsCivilizationReferencePreview(refs, 10)
 		out = append(out, group)
 	}
 	return out
@@ -941,6 +945,31 @@ func opsCivilizationJoin(items []string, fallback string) string {
 		return fallback
 	}
 	return strings.Join(items, ", ")
+}
+
+func opsCivilizationJoinSummary(items []string, fallback string, limit int) string {
+	items = opsCivilizationNonEmpty(items)
+	if len(items) == 0 {
+		return fallback
+	}
+	sort.Strings(items)
+	if limit <= 0 || len(items) <= limit {
+		return strings.Join(items, ", ")
+	}
+	return fmt.Sprintf("%s, +%d more (%d total)", strings.Join(items[:limit], ", "), len(items)-limit, len(items))
+}
+
+func opsCivilizationReferencePreview(items []string, limit int) ([]string, int, int) {
+	items = opsCivilizationNonEmpty(items)
+	total := len(items)
+	if total == 0 {
+		return nil, 0, 0
+	}
+	sort.Strings(items)
+	if limit <= 0 || total <= limit {
+		return items, 0, total
+	}
+	return append([]string(nil), items[:limit]...), total - limit, total
 }
 
 func opsCivilizationNonEmpty(items []string) []string {

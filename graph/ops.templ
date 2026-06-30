@@ -194,6 +194,67 @@ templ opsObservation(data *OpsObservationData) {
 				</article>
 			}
 		</section>
+		<section class="border border-edge bg-surface rounded-lg overflow-hidden" data-level1-canary="display-only">
+			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+				<div>
+					<h2 class="text-sm font-medium text-warm">Level 1 canary</h2>
+					<p class="text-xs text-warm-muted mt-1 leading-relaxed">{ data.Canary.Summary }</p>
+					<p class="text-[11px] text-warm-faint mt-2 break-words">{ data.Canary.Source } · { data.Canary.UpdatedAt }</p>
+				</div>
+				<span class={ "text-[10px] px-2 py-1 rounded-full border whitespace-nowrap self-start", opsPublicProofStateClass(data.Canary.Status) }>{ data.Canary.Status }</span>
+			</header>
+			<div class="grid gap-0 border-b border-edge md:grid-cols-5">
+				<div class="px-4 py-3 border-b border-edge md:border-b-0 md:border-r">
+					<p class="text-[11px] text-warm-faint">Discovered</p>
+					<p class="text-xl text-warm tabular-nums mt-1">{ fmt.Sprintf("%d", data.Canary.DiscoveredIssueCount) }</p>
+				</div>
+				<div class="px-4 py-3 border-b border-edge md:border-b-0 md:border-r">
+					<p class="text-[11px] text-warm-faint">PR-ready</p>
+					<p class="text-xl text-warm tabular-nums mt-1">{ fmt.Sprintf("%d", data.Canary.PRReadyIssueCount) }</p>
+				</div>
+				<div class="px-4 py-3 border-b border-edge md:border-b-0 md:border-r">
+					<p class="text-[11px] text-warm-faint">Parked</p>
+					<p class="text-xl text-warm tabular-nums mt-1">{ fmt.Sprintf("%d", data.Canary.ParkedIssueCount) }</p>
+				</div>
+				<div class="px-4 py-3 border-b border-edge md:border-b-0 md:border-r">
+					<p class="text-[11px] text-warm-faint">Human action</p>
+					<p class="text-xl text-warm tabular-nums mt-1">{ fmt.Sprintf("%d", data.Canary.HumanActionCount) }</p>
+				</div>
+				<div class="px-4 py-3">
+					<p class="text-[11px] text-warm-faint">Protected</p>
+					<p class="text-xl text-warm tabular-nums mt-1">{ fmt.Sprintf("%d", data.Canary.ProtectedActionCount) }</p>
+				</div>
+			</div>
+			if len(data.Canary.Rows) == 0 {
+				<p class="px-4 py-4 text-sm text-warm-faint">No canary issue rows are projected.</p>
+			} else {
+				<div class="overflow-x-auto">
+					<table class="w-full min-w-[60rem] text-left text-xs">
+						<thead class="text-warm-faint border-b border-edge">
+							<tr>
+								<th class="py-2 px-3 font-medium">Issue</th>
+								<th class="py-2 px-3 font-medium">State</th>
+								<th class="py-2 px-3 font-medium">Blocker</th>
+								<th class="py-2 px-3 font-medium">Required action</th>
+								<th class="py-2 px-3 font-medium">Evidence</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, row := range data.Canary.Rows {
+								<tr class="border-b border-edge/50 align-top">
+									<td class="py-2 px-3 text-warm break-words">{ row.Issue }<p class="text-[10px] text-warm-faint mt-1">{ row.Title }</p></td>
+									<td class="py-2 px-3"><span class={ "inline-flex text-[10px] px-2 py-1 rounded-full border whitespace-nowrap", opsPublicProofStateClass(row.State) }>{ row.State }</span></td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ row.Blocker }</td>
+									<td class="py-2 px-3 text-warm-muted break-words">{ row.Action }</td>
+									<td class="py-2 px-3 text-warm-faint break-all">{ row.EvidenceRef }</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+			<p class="px-4 py-3 text-xs text-warm-faint leading-relaxed">{ data.Canary.Boundary }</p>
+		</section>
 		<section class="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
 			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
 				<header class="px-4 py-3 border-b border-edge">

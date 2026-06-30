@@ -2710,6 +2710,68 @@ func TestOpsCivilizationRouteIsGetOnly(t *testing.T) {
 	}
 }
 
+func TestOpsCivilizationReferenceSummariesPreserveFullRefs(t *testing.T) {
+	now := time.Date(2026, 6, 30, 10, 55, 0, 0, time.UTC)
+	sourceRefs := []string{
+		"evt-011", "evt-010", "evt-009", "evt-008", "evt-007", "evt-006",
+		"evt-005", "evt-004", "evt-003", "evt-002", "evt-001",
+	}
+	data := buildOpsCivilizationAssemblyDataFromProjection(&OpsCivilizationAssemblyProjection{
+		ProjectionID:                       "civ-proj-refs",
+		ProjectionSchemaVersion:            "1.4.0",
+		ProjectionSubject:                  "civilization_assembly",
+		GeneratedAt:                        now,
+		SourceEventGraphHeadOrStateVersion: "sha256:refs",
+		SourceEventIDsOrQueryWindow:        sourceRefs,
+		DerivationStatus:                   opsCivilizationProjectionStatusComplete,
+	}, now)
+
+	if got := statusRowValue(data, "source events/window"); got != "evt-001, evt-002, evt-003, evt-004, evt-005, evt-006, +5 more (11 total)" {
+		t.Fatalf("source events/window summary = %q", got)
+	}
+	var sourceGroup *OpsCivilizationReferenceGroup
+	for i := range data.ReferenceGroups {
+		if data.ReferenceGroups[i].Label == "source events/window" {
+			sourceGroup = &data.ReferenceGroups[i]
+			break
+		}
+	}
+	if sourceGroup == nil {
+		t.Fatalf("source events/window reference group missing: %#v", data.ReferenceGroups)
+	}
+	if len(sourceGroup.Refs) != 11 || len(sourceGroup.DisplayRefs) != 10 || sourceGroup.HiddenRefCount != 1 || sourceGroup.TotalRefCount != 11 {
+		t.Fatalf("reference group = refs:%d display:%d hidden:%d total:%d",
+			len(sourceGroup.Refs),
+			len(sourceGroup.DisplayRefs),
+			sourceGroup.HiddenRefCount,
+			sourceGroup.TotalRefCount,
+		)
+	}
+	if !sliceContains(sourceGroup.Refs, "evt-011") {
+		t.Fatalf("full refs lost evt-011: %#v", sourceGroup.Refs)
+	}
+	if sliceContains(sourceGroup.DisplayRefs, "evt-011") {
+		t.Fatalf("display refs should be preview-limited: %#v", sourceGroup.DisplayRefs)
+	}
+}
+
+func TestOpsCivilizationReferencePreviewEdgeCases(t *testing.T) {
+	if got := opsCivilizationJoinSummary(nil, "fallback", 6); got != "fallback" {
+		t.Fatalf("nil summary = %q, want fallback", got)
+	}
+	if got := opsCivilizationJoinSummary([]string{"b", "a"}, "fallback", 0); got != "a, b" {
+		t.Fatalf("zero-limit summary = %q, want full sorted list", got)
+	}
+	display, hidden, total := opsCivilizationReferencePreview([]string{"c", "", "a", "b"}, 2)
+	if strings.Join(display, ",") != "a,b" || hidden != 1 || total != 3 {
+		t.Fatalf("preview = display:%#v hidden:%d total:%d", display, hidden, total)
+	}
+	display, hidden, total = opsCivilizationReferencePreview([]string{"b", "a"}, 2)
+	if strings.Join(display, ",") != "a,b" || hidden != 0 || total != 2 {
+		t.Fatalf("exact-limit preview = display:%#v hidden:%d total:%d", display, hidden, total)
+	}
+}
+
 func statusRowValue(data *OpsCivilizationAssemblyData, label string) string {
 	for _, row := range data.StatusRows {
 		if row.Label == label {

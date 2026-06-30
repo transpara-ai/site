@@ -95,6 +95,7 @@ type OpsObservationData struct {
 	Freshness     string
 	Boundary      string
 	Metrics       []OpsObservationMetric
+	Canary        OpsObservationCanary
 	AgentRows     []OpsObservationAgentRow
 	FactoryStages []OpsObservationStage
 	SpendRows     []OpsObservationSpendRow
@@ -109,6 +110,29 @@ type OpsObservationMetric struct {
 	State     string
 	Source    string
 	UpdatedAt string
+}
+
+type OpsObservationCanary struct {
+	Status               string
+	Summary              string
+	Source               string
+	UpdatedAt            string
+	Boundary             string
+	DiscoveredIssueCount int
+	PRReadyIssueCount    int
+	ParkedIssueCount     int
+	HumanActionCount     int
+	ProtectedActionCount int
+	Rows                 []OpsObservationCanaryIssueRow
+}
+
+type OpsObservationCanaryIssueRow struct {
+	Issue       string
+	Title       string
+	State       string
+	Blocker     string
+	Action      string
+	EvidenceRef string
 }
 
 type OpsObservationAgentRow struct {
@@ -1087,6 +1111,7 @@ type opsPipelineReportResponse struct {
 }
 
 var hiveOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
+var civilizationOpsProjectionClient = &http.Client{Timeout: 8 * time.Second}
 var evidenceOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {
@@ -1999,11 +2024,12 @@ func buildOpsObservationData(now time.Time, telemetry *OpsTelemetryData, hive *O
 	data.Metrics = []OpsObservationMetric{
 		opsObservationMetric("Civilization health", opsObservationHealthValue(telemetry, hive, civilization), opsObservationHealthContext(telemetry, hive, civilization), opsObservationHealthState(telemetry, hive, civilization), "Site observation builder", data.GeneratedAt),
 		opsObservationMetric("Factory throughput", fmt.Sprintf("%d", len(civilization.FactoryOrders)), "projected FactoryOrder records", opsProjectionState(civilization.ProjectionStatus), "Civilization assembly projection", civilization.GeneratedAt),
-		opsObservationMetric("Live agents", fmt.Sprintf("%d", opsObservationLiveAgentCount(telemetry, hive)), "active or processing actors", opsObservationAgentState(telemetry, hive), "Work telemetry + Hive runtime evidence", opsObservationLatest(telemetry.GeneratedAt, hive.GeneratedAt)),
+		opsObservationMetric("Live agents", fmt.Sprintf("%d", opsObservationLiveAgentCount(telemetry, hive)), "active or processing actors", opsObservationAgentState(telemetry, hive), "Work telemetry + Hive runtime evidence", opsObservationLatest(opsObservationTelemetryGeneratedAt(telemetry), opsObservationHiveGeneratedAt(hive))),
 		opsObservationMetric("Cycle cost", opsObservationCostValue(telemetry), "latest pipeline cycle", opsObservationPipelineState(telemetry), "Work pipeline report", opsObservationPipelineUpdated(telemetry)),
 		opsObservationMetric("Tokens", opsObservationTokenValue(telemetry), "input plus output when reported", opsObservationPipelineState(telemetry), "Work pipeline report", opsObservationPipelineUpdated(telemetry)),
-		opsObservationMetric("Open blockers", opsObservationBlockerValue(canonical), "parked or human-scope issue posture", opsProjectionState(canonical.ProjectionState), "GitHub canonical projection", canonical.GeneratedAt),
+		opsObservationMetric("Open blockers", opsObservationBlockerValue(canonical), "parked or human-scope issue posture", opsProjectionState(opsObservationCanonicalProjectionState(canonical)), "GitHub canonical projection", opsObservationCanonicalGeneratedAt(canonical)),
 	}
+	data.Canary = opsObservationCanary(civilization)
 	data.AgentRows = opsObservationAgentRows(telemetry, hive)
 	data.FactoryStages = opsObservationFactoryStages(sources, civilization)
 	data.SpendRows = opsObservationSpendRows(telemetry, hive)
@@ -2059,8 +2085,22 @@ func opsObservationTelemetryCurrent(t *OpsTelemetryData) bool {
 	return t != nil && t.Error == ""
 }
 
+func opsObservationTelemetryGeneratedAt(t *OpsTelemetryData) string {
+	if t == nil {
+		return ""
+	}
+	return t.GeneratedAt
+}
+
 func opsObservationHiveCurrent(h *OpsHiveData) bool {
 	return h != nil && h.ProjectionError == ""
+}
+
+func opsObservationHiveGeneratedAt(h *OpsHiveData) string {
+	if h == nil {
+		return ""
+	}
+	return h.GeneratedAt
 }
 
 func opsObservationCivilizationCurrent(c *OpsCivilizationAssemblyData) bool {
@@ -2169,6 +2209,275 @@ func opsObservationBlockerValue(c *OpsGitHubCanonicalData) string {
 		return "unavailable"
 	}
 	return fmt.Sprintf("%d", c.Progress.ParkedOpenIssueCount+c.AutonomyFrontier.NeedsHumanScopeIssueCount+c.AutonomyFrontier.ProtectedActionIssueCount)
+}
+
+func opsObservationCanonicalProjectionState(c *OpsGitHubCanonicalData) string {
+	if c == nil {
+		return ""
+	}
+	return c.ProjectionState
+}
+
+func opsObservationCanonicalGeneratedAt(c *OpsGitHubCanonicalData) string {
+	if c == nil {
+		return "unavailable"
+	}
+	return c.GeneratedAt
+}
+
+func opsObservationCanary(c *OpsCivilizationAssemblyData) OpsObservationCanary {
+	canary := OpsObservationCanary{
+		Status:    "unavailable",
+		Summary:   "No Level 1 canary issue-discovery state is projected.",
+		Source:    "Civilization assembly projection",
+		UpdatedAt: "unavailable",
+		Boundary:  "Display-only canary summary. This does not authorize Hive wake, issue closure, PR merge, deploy, Test 001 GREEN, value allocation, or autonomy increase.",
+	}
+	if c == nil {
+		return canary
+	}
+	canary.UpdatedAt = opsValueOr(c.GeneratedAt, "unavailable")
+	canary.DiscoveredIssueCount = len(c.IssueIntake.Issues)
+	cards := opsObservationIssueScanCards(c.IssueScanKanban)
+	if canary.DiscoveredIssueCount == 0 {
+		canary.DiscoveredIssueCount = opsObservationDistinctIssueCount(cards)
+	}
+	if canary.DiscoveredIssueCount == 0 && len(cards) == 0 {
+		return canary
+	}
+
+	canary.Status = opsProjectionState(c.ProjectionStatus)
+	if canary.Status == "unavailable" && strings.TrimSpace(c.IssueScanKanban.Status) != "" {
+		canary.Status = opsCivilizationStatusValue(c.IssueScanKanban.Status)
+	}
+	aggregates := opsObservationCanaryAggregates(cards)
+	aggregateKeys := make([]string, 0, len(aggregates))
+	for key := range aggregates {
+		aggregateKeys = append(aggregateKeys, key)
+	}
+	sort.Strings(aggregateKeys)
+	for _, key := range aggregateKeys {
+		aggregate := aggregates[key]
+		switch aggregate.State {
+		case "pr_ready":
+			canary.PRReadyIssueCount++
+		case "human_action":
+			canary.ParkedIssueCount++
+			canary.HumanActionCount++
+		case "parked", "blocked":
+			canary.ParkedIssueCount++
+		}
+		if aggregate.HasProtectedAction {
+			canary.ProtectedActionCount++
+		}
+		canary.Rows = append(canary.Rows, aggregate.Row)
+	}
+	if len(canary.Rows) == 0 {
+		for _, issue := range c.IssueIntake.Issues {
+			row := OpsObservationCanaryIssueRow{
+				Issue:       opsObservationIssueLabel(issue.Repo, issue.Number),
+				Title:       opsValueOr(issue.Title, "title not projected"),
+				State:       opsValueOr(issue.Readiness, opsValueOr(issue.StateReason, "projected intake")),
+				Blocker:     opsValueOr(issue.RiskClass, "blocker not projected"),
+				Action:      opsValueOr(issue.PRReadyWhen, "Human must mark the issue PR-ready before execution."),
+				EvidenceRef: opsFirstNonEmpty(append(issue.SourceRefs, issue.URL)...),
+			}
+			canary.Rows = append(canary.Rows, row)
+			switch opsObservationCanaryStateClass(row.State, row.Blocker) {
+			case "pr_ready":
+				canary.PRReadyIssueCount++
+			case "human_action":
+				canary.ParkedIssueCount++
+				canary.HumanActionCount++
+			case "parked", "blocked":
+				canary.ParkedIssueCount++
+			}
+			if opsObservationCanaryProtectedBlocker(row.Blocker) {
+				canary.ProtectedActionCount++
+			}
+		}
+	}
+	sort.Slice(canary.Rows, func(i, j int) bool {
+		if canary.Rows[i].State != canary.Rows[j].State {
+			return canary.Rows[i].State < canary.Rows[j].State
+		}
+		return canary.Rows[i].Issue < canary.Rows[j].Issue
+	})
+	canary.Summary = fmt.Sprintf("%d issue(s) discovered: %d PR-ready, %d parked, %d awaiting human action.",
+		canary.DiscoveredIssueCount,
+		canary.PRReadyIssueCount,
+		canary.ParkedIssueCount,
+		canary.HumanActionCount,
+	)
+	return canary
+}
+
+type opsObservationCanaryAggregate struct {
+	Row                OpsObservationCanaryIssueRow
+	State              string
+	Priority           int
+	HasProtectedAction bool
+}
+
+func opsObservationCanaryAggregates(cards []OpsCivilizationIssueScanKanbanCard) map[string]opsObservationCanaryAggregate {
+	aggregates := map[string]opsObservationCanaryAggregate{}
+	for _, card := range cards {
+		key := opsObservationCanaryCardIssueKey(card)
+		if key == "" {
+			continue
+		}
+		row := opsObservationCanaryRow(card)
+		state := opsObservationCanaryStateClass(row.State, row.Blocker)
+		row.State = state
+		aggregate := opsObservationCanaryAggregate{
+			Row:                row,
+			State:              state,
+			Priority:           opsObservationCanaryStatePriority(state),
+			HasProtectedAction: opsObservationCanaryProtectedCard(card),
+		}
+		existing, ok := aggregates[key]
+		if ok {
+			aggregate.HasProtectedAction = aggregate.HasProtectedAction || existing.HasProtectedAction
+			if existing.Priority > aggregate.Priority {
+				existing.HasProtectedAction = aggregate.HasProtectedAction
+				aggregates[key] = existing
+				continue
+			}
+		}
+		aggregates[key] = aggregate
+	}
+	return aggregates
+}
+
+func opsObservationIssueScanCards(kanban OpsCivilizationIssueScanKanban) []OpsCivilizationIssueScanKanbanCard {
+	cards := []OpsCivilizationIssueScanKanbanCard{}
+	for _, column := range kanban.Columns {
+		for _, card := range column.Cards {
+			if strings.TrimSpace(card.CurrentState) == "" {
+				card.CurrentState = column.State
+			}
+			cards = append(cards, card)
+		}
+	}
+	return cards
+}
+
+func opsObservationDistinctIssueCount(cards []OpsCivilizationIssueScanKanbanCard) int {
+	seen := map[string]bool{}
+	for _, card := range cards {
+		ref := card.SelectedIssue
+		if strings.TrimSpace(ref.Repo) == "" || ref.Number == 0 {
+			ref = card.TargetIssue
+		}
+		key := opsObservationIssueLabel(ref.Repo, ref.Number)
+		if key != "issue not projected" {
+			seen[key] = true
+		}
+	}
+	return len(seen)
+}
+
+func opsObservationCanaryCardIssueKey(card OpsCivilizationIssueScanKanbanCard) string {
+	ref := card.SelectedIssue
+	if strings.TrimSpace(ref.Repo) == "" || ref.Number == 0 {
+		ref = card.TargetIssue
+	}
+	label := opsObservationIssueLabel(ref.Repo, ref.Number)
+	if label == "issue not projected" {
+		return ""
+	}
+	return label
+}
+
+func opsObservationCanaryRow(card OpsCivilizationIssueScanKanbanCard) OpsObservationCanaryIssueRow {
+	ref := card.SelectedIssue
+	if strings.TrimSpace(ref.Repo) == "" || ref.Number == 0 {
+		ref = card.TargetIssue
+	}
+	blocker := "none projected"
+	action := opsValueOr(card.CompletionGate, "no required action projected")
+	evidence := opsFirstNonEmpty(append(card.EvidenceRefs, card.SourceRefs...)...)
+	if len(card.Blockers) > 0 {
+		blocker = opsValueOr(card.Blockers[0].BlockerType, "blocker projected")
+		action = opsValueOr(card.Blockers[0].RequiredAction, action)
+		evidence = opsFirstNonEmpty(append(card.Blockers[0].EvidenceRefs, append(card.Blockers[0].SourceRefs, evidence)...)...)
+	}
+	return OpsObservationCanaryIssueRow{
+		Issue:       opsObservationIssueLabel(ref.Repo, ref.Number),
+		Title:       opsValueOr(ref.Title, "title not projected"),
+		State:       opsValueOr(card.CurrentState, "projected"),
+		Blocker:     blocker,
+		Action:      action,
+		EvidenceRef: opsValueOr(evidence, "evidence not projected"),
+	}
+}
+
+func opsObservationIssueLabel(repo string, number int) string {
+	repo = strings.TrimSpace(repo)
+	if repo == "" || number == 0 {
+		return "issue not projected"
+	}
+	return fmt.Sprintf("%s#%d", repo, number)
+}
+
+func opsObservationCanaryStateClass(state string, blocker string) string {
+	state = strings.ToLower(strings.TrimSpace(state))
+	blocker = strings.ToLower(strings.TrimSpace(blocker))
+	switch {
+	case opsObservationCanaryHumanActionBlocker(blocker), opsObservationCanaryProtectedBlocker(blocker), state == "human_action":
+		return "human_action"
+	case state == "blocked":
+		return "blocked"
+	case state == "parked":
+		return "parked"
+	case state == "pr_ready", state == "ready", state == "ready_for_pr":
+		return "pr_ready"
+	default:
+		return opsValueOr(state, "projected")
+	}
+}
+
+func opsObservationCanaryStatePriority(state string) int {
+	switch strings.ToLower(strings.TrimSpace(state)) {
+	case "human_action":
+		return 50
+	case "blocked":
+		return 40
+	case "parked":
+		return 30
+	case "pr_ready":
+		return 20
+	default:
+		return 10
+	}
+}
+
+func opsObservationCanaryProtectedCard(card OpsCivilizationIssueScanKanbanCard) bool {
+	for _, blocker := range card.Blockers {
+		if opsObservationCanaryProtectedBlocker(blocker.BlockerType) {
+			return true
+		}
+	}
+	return false
+}
+
+func opsObservationCanaryProtectedBlocker(blocker string) bool {
+	blocker = strings.ToLower(strings.TrimSpace(blocker))
+	return blocker == "protected_action" || strings.Contains(blocker, "protected")
+}
+
+func opsObservationCanaryHumanActionBlocker(blocker string) bool {
+	blocker = strings.ToLower(strings.TrimSpace(blocker))
+	return blocker == "needs_human_scope" || strings.Contains(blocker, "human")
+}
+
+func opsFirstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }
 
 func opsObservationAgentRows(t *OpsTelemetryData, h *OpsHiveData) []OpsObservationAgentRow {
@@ -3936,7 +4245,7 @@ func fetchOpsCivilizationProjection(r *http.Request) *OpsCivilizationAssemblyPro
 	if key := strings.TrimSpace(os.Getenv("HIVE_OPS_API_KEY")); key != "" {
 		req.Header.Set("Authorization", "Bearer "+key)
 	}
-	resp, err := hiveOpsProjectionClient.Do(req)
+	resp, err := civilizationOpsProjectionClient.Do(req)
 	if err != nil {
 		return failedOpsCivilizationProjection(err.Error())
 	}
