@@ -52,7 +52,9 @@ func TestHandleConsoleHealth(t *testing.T) {
 			proj := OpsHiveProjection{GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
 			proj.RuntimeEvidence.AgentEvents.ObservedActive = 1
 			proj.RuntimeEvidence.AgentEvents.ActiveAgents = []OpsHiveRuntimeAgent{{Name: "Guardian", Role: "guardian", Model: "sonnet-4-6"}}
-			json.NewEncoder(w).Encode(proj)
+			if err := json.NewEncoder(w).Encode(proj); err != nil {
+				t.Errorf("encode projection: %v", err)
+			}
 		}))
 		defer srv.Close()
 		t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
