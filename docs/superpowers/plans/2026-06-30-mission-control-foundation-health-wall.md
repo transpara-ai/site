@@ -346,7 +346,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					@consoleTab("config", "Config", "/console/config", data.Active)
 				</nav>
 				if data.Health != nil {
-					@consoleHealthWall(*data.Health)
+					<div id="console-health" data-console-surface="health"></div>
 				}
 			</main>
 		</body>
@@ -470,12 +470,24 @@ templ consoleHealthWall(w ConsoleHealthWall) {
 
 Add `"strconv"` to the `console.templ` import block.
 
-- [ ] **Step 2: Generate templ + build**
+- [ ] **Step 2: Wire the component into `ConsolePage`**
+
+Task 3 left a placeholder in `ConsolePage`'s health region. Replace it so the real component renders:
+
+```go
+				if data.Health != nil {
+					@consoleHealthWall(*data.Health)
+				}
+```
+
+(Replaces the `<div id="console-health" data-console-surface="health"></div>` placeholder from Task 3. Task 6 will later wrap this call in a polling fragment.)
+
+- [ ] **Step 3: Generate templ + build**
 
 Run: `templ generate && go build ./cmd/site/`
 Expected: builds clean.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add graph/console.templ graph/console_templ.go
