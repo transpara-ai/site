@@ -278,10 +278,31 @@ func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanL
 		col := byKey[key]
 		// Within a column, oldest-first surfaces the most-aging order at the top.
 		sort.SliceStable(col.Cards, func(i, j int) bool {
-			return col.Cards[i].CreatedAt < col.Cards[j].CreatedAt
+			ti, oki := parseCardTime(col.Cards[i].CreatedAt)
+			tj, okj := parseCardTime(col.Cards[j].CreatedAt)
+			if oki && okj {
+				return ti.Before(tj) // oldest-first among dated cards
+			}
+			if oki != okj {
+				return oki // a dated card sorts before an undated/invalid one
+			}
+			return false // both undated/invalid: stable order
 		})
 		k.Columns = append(k.Columns, *col)
 	}
 	k.TotalCards = len(tasks)
 	return k
+}
+
+// parseCardTime parses a card's CreatedAt; ok is false for empty/unparseable
+// values (the same cases humanizeAge hides), so the sort can place them last.
+func parseCardTime(createdAt string) (time.Time, bool) {
+	if strings.TrimSpace(createdAt) == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, createdAt)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }

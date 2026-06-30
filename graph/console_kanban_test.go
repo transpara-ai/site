@@ -236,6 +236,29 @@ func TestBuildConsoleKanbanWithinColumnOldestFirst(t *testing.T) {
 	}
 }
 
+func TestBuildConsoleKanbanWithinColumnUndatedSortsLast(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	tasks := []OpsWorkTask{
+		{ID: "undated", Title: "U", RiskClass: "high", CreatedAt: ""},
+		{ID: "newer", Title: "N", RiskClass: "high", CreatedAt: "2026-06-29T12:00:00Z"},
+		{ID: "older", Title: "O", RiskClass: "high", CreatedAt: "2026-06-27T12:00:00Z"},
+		{ID: "bad", Title: "B", RiskClass: "high", CreatedAt: "not-a-time"},
+	}
+	k := buildConsoleKanban(tasks, nil, LensRisk, now)
+	if len(k.Columns) != 1 {
+		t.Fatalf("got %d columns, want 1 (all high)", len(k.Columns))
+	}
+	got := []string{}
+	for _, c := range k.Columns[0].Cards {
+		got = append(got, c.ID)
+	}
+	// dated cards oldest-first, then undated/invalid last in stable input order.
+	want := []string{"older", "newer", "undated", "bad"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("within-column order = %v, want %v (undated/invalid last)", got, want)
+	}
+}
+
 func TestConsoleKanbanRendersOrderCards(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/tasks" {
