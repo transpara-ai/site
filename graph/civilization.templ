@@ -339,10 +339,13 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 					<div class="border border-edge bg-surface rounded-lg p-4">
 						<h2 class="text-sm font-medium text-warm">{ group.Label }</h2>
 						<ul class="mt-3 space-y-2">
-							for _, ref := range group.Refs {
+							for _, ref := range group.DisplayRefs {
 								<li class="text-xs text-warm-muted break-all">{ ref }</li>
 							}
 						</ul>
+						if group.HiddenRefCount > 0 {
+							<p class="mt-3 text-xs text-warm-faint">+{ fmt.Sprintf("%d", group.HiddenRefCount) } more refs ({ fmt.Sprintf("%d", group.TotalRefCount) } total)</p>
+						}
 					</div>
 				}
 			</section>

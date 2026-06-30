@@ -128,6 +128,143 @@ func TestBuildOpsObservationDataDoesNotMarkUnavailableCivilizationProjectionCurr
 	}
 }
 
+func TestBuildOpsObservationDataSummarizesLevel1Canary(t *testing.T) {
+	now := time.Date(2026, 6, 30, 10, 30, 0, 0, time.UTC)
+	civilization := &OpsCivilizationAssemblyData{
+		GeneratedAt:      now.Add(-time.Minute).Format(time.RFC3339),
+		ProjectionStatus: opsCivilizationProjectionStatusComplete,
+		IssueIntake: OpsCivilizationIssueIntake{
+			Issues: []OpsCivilizationIssueIntakeProjected{
+				{Repo: "transpara-ai/docs", Number: 226, Title: "Authorize live production EventGraph and runtime operation path"},
+				{Repo: "transpara-ai/operation", Number: 45, Title: "Produce deployed public proof"},
+			},
+		},
+		IssueScanKanban: OpsCivilizationIssueScanKanban{
+			Status: opsCivilizationFieldAvailable,
+			Columns: []OpsCivilizationIssueScanKanbanColumn{
+				{
+					State: "human_action",
+					Label: "Human Action",
+					Cards: []OpsCivilizationIssueScanKanbanCard{
+						{
+							CurrentState: "human_action",
+							SelectedIssue: OpsCivilizationIssueRef{
+								Repo:   "transpara-ai/docs",
+								Number: 226,
+								Title:  "Authorize live production EventGraph and runtime operation path",
+							},
+							Blockers: []OpsCivilizationIssueScanBlockerProjected{
+								{
+									BlockerType:    "protected_action",
+									RequiredAction: "human must authorize the protected-action boundary before Hive may continue",
+									EvidenceRefs:   []string{"019f17bf-f8cc-7a3f-a305-7d045eb7786b"},
+								},
+							},
+						},
+						{
+							CurrentState: "pr_ready",
+							SelectedIssue: OpsCivilizationIssueRef{
+								Repo:   "transpara-ai/operation",
+								Number: 45,
+								Title:  "Produce deployed public proof",
+							},
+							EvidenceRefs: []string{"github:transpara-ai/operation#45"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	data := buildOpsObservationData(now, nil, nil, civilization, &OpsGitHubCanonicalData{}, nil)
+	if data.Canary.DiscoveredIssueCount != 2 || data.Canary.PRReadyIssueCount != 1 || data.Canary.ParkedIssueCount != 1 || data.Canary.HumanActionCount != 1 || data.Canary.ProtectedActionCount != 1 {
+		t.Fatalf("canary counts = discovered:%d prReady:%d parked:%d human:%d protected:%d",
+			data.Canary.DiscoveredIssueCount,
+			data.Canary.PRReadyIssueCount,
+			data.Canary.ParkedIssueCount,
+			data.Canary.HumanActionCount,
+			data.Canary.ProtectedActionCount,
+		)
+	}
+	if len(data.Canary.Rows) != 2 {
+		t.Fatalf("canary rows = %d, want 2", len(data.Canary.Rows))
+	}
+	if data.Canary.Rows[0].EvidenceRef == "" || data.Canary.Boundary == "" || !strings.Contains(data.Canary.Summary, "2 issue(s) discovered") {
+		t.Fatalf("canary summary/evidence not populated: %#v", data.Canary)
+	}
+}
+
+func TestBuildOpsObservationDataDedupesLevel1CanaryIssueCards(t *testing.T) {
+	now := time.Date(2026, 6, 30, 10, 45, 0, 0, time.UTC)
+	civilization := &OpsCivilizationAssemblyData{
+		GeneratedAt:      now.Format(time.RFC3339),
+		ProjectionStatus: opsCivilizationProjectionStatusComplete,
+		IssueIntake: OpsCivilizationIssueIntake{
+			Issues: []OpsCivilizationIssueIntakeProjected{
+				{Repo: "transpara-ai/docs", Number: 226, Title: "Authorize live production EventGraph and runtime operation path"},
+			},
+		},
+		IssueScanKanban: OpsCivilizationIssueScanKanban{
+			Status: opsCivilizationFieldAvailable,
+			Columns: []OpsCivilizationIssueScanKanbanColumn{
+				{
+					State: "pr_ready",
+					Label: "PR-ready",
+					Cards: []OpsCivilizationIssueScanKanbanCard{
+						{
+							CurrentState: "pr_ready",
+							SelectedIssue: OpsCivilizationIssueRef{
+								Repo:   "transpara-ai/docs",
+								Number: 226,
+								Title:  "Authorize live production EventGraph and runtime operation path",
+							},
+							EvidenceRefs: []string{"github:transpara-ai/docs#226"},
+						},
+					},
+				},
+				{
+					State: "human_action",
+					Label: "Human Action",
+					Cards: []OpsCivilizationIssueScanKanbanCard{
+						{
+							CurrentState: "human_action",
+							SelectedIssue: OpsCivilizationIssueRef{
+								Repo:   "transpara-ai/docs",
+								Number: 226,
+								Title:  "Authorize live production EventGraph and runtime operation path",
+							},
+							Blockers: []OpsCivilizationIssueScanBlockerProjected{
+								{
+									BlockerType:    "protected_action",
+									RequiredAction: "human must authorize the protected-action boundary before Hive may continue",
+									EvidenceRefs:   []string{"eventgraph:parked-docs-226"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	data := buildOpsObservationData(now, nil, nil, civilization, &OpsGitHubCanonicalData{}, nil)
+	if data.Canary.DiscoveredIssueCount != 1 || data.Canary.PRReadyIssueCount != 0 || data.Canary.ParkedIssueCount != 1 || data.Canary.HumanActionCount != 1 || data.Canary.ProtectedActionCount != 1 {
+		t.Fatalf("deduped canary counts = discovered:%d prReady:%d parked:%d human:%d protected:%d",
+			data.Canary.DiscoveredIssueCount,
+			data.Canary.PRReadyIssueCount,
+			data.Canary.ParkedIssueCount,
+			data.Canary.HumanActionCount,
+			data.Canary.ProtectedActionCount,
+		)
+	}
+	if len(data.Canary.Rows) != 1 {
+		t.Fatalf("canary rows = %d, want 1: %#v", len(data.Canary.Rows), data.Canary.Rows)
+	}
+	if data.Canary.Rows[0].State != "human_action" || data.Canary.Rows[0].EvidenceRef != "eventgraph:parked-docs-226" {
+		t.Fatalf("canary row = %#v, want human_action protected evidence row", data.Canary.Rows[0])
+	}
+}
+
 func TestOpsControlIntentParamsRejectsForbiddenExecutionVocabulary(t *testing.T) {
 	form := url.Values{}
 	form.Set("intent_kind", "council_meeting")
