@@ -188,3 +188,49 @@ func TestParseLensDefaultsToRisk(t *testing.T) {
 		t.Error("parseLens(status) should be status")
 	}
 }
+
+func TestBuildConsoleKanbanStatusLensEmptyIsUnknownColumn(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	tasks := []OpsWorkTask{
+		{ID: "a", Title: "A", Status: "running", CreatedBy: "michael", CreatedAt: "2026-06-29T12:00:00Z"},
+		{ID: "b", Title: "B", Status: "", CreatedBy: "michael", CreatedAt: "2026-06-28T12:00:00Z"},
+	}
+	k := buildConsoleKanban(tasks, nil, LensStatus, now)
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"running", "unknown"}) {
+		t.Errorf("status columns = %v, want [running unknown]", got)
+	}
+	if k.TotalCards != 2 {
+		t.Errorf("TotalCards = %d, want 2 (no card dropped)", k.TotalCards)
+	}
+}
+
+func TestBuildConsoleKanbanSourceLensEmptyIsUnknownColumn(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	tasks := []OpsWorkTask{
+		{ID: "a", Title: "A", Status: "running", CreatedBy: "michael", CreatedAt: "2026-06-29T12:00:00Z"},
+		{ID: "b", Title: "B", Status: "running", CreatedBy: "", CreatedAt: "2026-06-28T12:00:00Z"},
+	}
+	k := buildConsoleKanban(tasks, nil, LensSource, now)
+	if got := columnKeys(k); !reflect.DeepEqual(got, []string{"michael", "unknown"}) {
+		t.Errorf("source columns = %v, want [michael unknown]", got)
+	}
+	if k.TotalCards != 2 {
+		t.Errorf("TotalCards = %d, want 2 (no card dropped)", k.TotalCards)
+	}
+}
+
+func TestBuildConsoleKanbanWithinColumnOldestFirst(t *testing.T) {
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	tasks := []OpsWorkTask{
+		{ID: "newer", Title: "Newer", RiskClass: "high", CreatedAt: "2026-06-29T12:00:00Z"},
+		{ID: "older", Title: "Older", RiskClass: "high", CreatedAt: "2026-06-27T12:00:00Z"},
+	}
+	k := buildConsoleKanban(tasks, nil, LensRisk, now)
+	if len(k.Columns) != 1 {
+		t.Fatalf("got %d columns, want 1 (both high)", len(k.Columns))
+	}
+	cards := k.Columns[0].Cards
+	if len(cards) != 2 || cards[0].ID != "older" || cards[1].ID != "newer" {
+		t.Errorf("within-column order = %v, want [older newer] (oldest-first)", []string{cards[0].ID, cards[1].ID})
+	}
+}
