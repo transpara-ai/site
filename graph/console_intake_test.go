@@ -133,6 +133,46 @@ func TestBuildConsoleIssueScanStaleTimestamp(t *testing.T) {
 	}
 }
 
+func TestBuildConsoleIssueScanDerivationStatusAllowlistFailsClosed(t *testing.T) {
+	now := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+	records := OpsCivilizationIssueScanProjection{
+		Runs: []OpsCivilizationIssueScanRunProjected{{
+			RunID:       "run_u",
+			TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 5},
+		}},
+	}
+	// Only complete/partial are usable; every other status — including a FRESH
+	// timestamp with real records — must fail closed. A denylist that only caught
+	// "failed" would render these as live/stale data.
+	for _, status := range []string{
+		opsCivilizationProjectionStatusUnavailable,
+		"some_future_status", // unknown enum value added later
+		"",                   // missing status
+		"COMPLETE-ish",       // near-miss must not slip through
+	} {
+		proj := &OpsCivilizationAssemblyProjection{
+			DerivationStatus:    status,
+			GeneratedAt:         now.Add(-5 * time.Second), // fresh — would be "current" if it leaked
+			IssueScanProjection: records,
+		}
+		if scan := buildConsoleIssueScan(proj, now); scan.Freshness != FreshnessUnavailable {
+			t.Errorf("derivation status %q: freshness = %q, want unavailable (fail closed)", status, scan.Freshness)
+		}
+	}
+
+	// Sanity: the allowlisted statuses still render as usable data.
+	for _, status := range []string{opsCivilizationProjectionStatusComplete, opsCivilizationProjectionStatusPartial} {
+		proj := &OpsCivilizationAssemblyProjection{
+			DerivationStatus:    status,
+			GeneratedAt:         now.Add(-5 * time.Second),
+			IssueScanProjection: records,
+		}
+		if scan := buildConsoleIssueScan(proj, now); scan.Freshness == FreshnessUnavailable {
+			t.Errorf("derivation status %q: unexpectedly unavailable; complete/partial must render", status)
+		}
+	}
+}
+
 func TestBuildConsoleIssueScanCurrentPassesBoardThrough(t *testing.T) {
 	now := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
 	proj := &OpsCivilizationAssemblyProjection{

@@ -107,37 +107,49 @@ type ConsoleIssueScan struct {
 // buildConsoleIssueScan maps the civilization assembly projection (or its
 // absence/failure) into the Intake view-model. It reuses the existing
 // opsCivilizationIssueScanKanban builder verbatim and derives honest staleness.
+//
+// Fail-closed by allowlist: only the explicitly-usable derivation statuses
+// (complete, partial) render as data. Every other value — failed, unavailable,
+// unknown, empty, or any status added to the enum later — resolves to
+// FreshnessUnavailable rather than falling through to usable/current data. A
+// denylist here would silently pass every status we forgot; the default denies.
 func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Time) ConsoleIssueScan {
 	board := opsCivilizationIssueScanKanban(proj) // nil-safe: returns an unavailable board
-	if proj == nil {
+	unavailable := func(notices []string) ConsoleIssueScan {
 		return ConsoleIssueScan{
 			Freshness: FreshnessUnavailable,
 			Status:    board.Status,
 			Summary:   board.Summary,
 			Board:     board,
-			Notices:   []string{"civilization projection unavailable to Site"},
+			Notices:   notices,
 		}
 	}
-	if strings.EqualFold(strings.TrimSpace(proj.DerivationStatus), opsCivilizationProjectionStatusFailed) {
-		return ConsoleIssueScan{
-			Freshness: FreshnessUnavailable,
-			Status:    board.Status,
-			Summary:   board.Summary,
-			Board:     board,
-			Notices:   append([]string(nil), proj.FailureReasons...),
+	if proj == nil {
+		return unavailable([]string{"civilization projection unavailable to Site"})
+	}
+	status := strings.ToLower(strings.TrimSpace(proj.DerivationStatus))
+	switch status {
+	case opsCivilizationProjectionStatusComplete, opsCivilizationProjectionStatusPartial:
+		// Usable — fall through to timestamp + freshness derivation below.
+	case opsCivilizationProjectionStatusFailed:
+		return unavailable(append([]string(nil), proj.FailureReasons...))
+	default:
+		// unavailable, unknown, empty, or any future enum value: deny.
+		notices := append([]string(nil), proj.FailureReasons...)
+		if len(notices) == 0 {
+			label := status
+			if label == "" {
+				label = "missing"
+			}
+			notices = []string{"projection derivation status not usable: " + label}
 		}
+		return unavailable(notices)
 	}
 	if proj.GeneratedAt.IsZero() {
-		return ConsoleIssueScan{
-			Freshness: FreshnessUnavailable,
-			Status:    board.Status,
-			Summary:   board.Summary,
-			Board:     board,
-			Notices:   []string{"projection missing generated_at timestamp"},
-		}
+		return unavailable([]string{"projection missing generated_at timestamp"})
 	}
 	generatedAt := proj.GeneratedAt.UTC().Format(time.RFC3339)
-	hasPartial := strings.EqualFold(strings.TrimSpace(proj.DerivationStatus), opsCivilizationProjectionStatusPartial)
+	hasPartial := status == opsCivilizationProjectionStatusPartial
 	return ConsoleIssueScan{
 		Freshness:   deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow),
 		GeneratedAt: generatedAt,
