@@ -2,16 +2,18 @@ package graph
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/transpara-ai/site/profile"
 )
 
 type ConsolePageData struct {
-	Title  string
-	Active string // health | kanban | intake | config
-	Health *ConsoleHealthWall
-	Kanban *ConsoleKanban
+	Title     string
+	Active    string // health | kanban | intake | config
+	Health    *ConsoleHealthWall
+	Kanban    *ConsoleKanban
+	IssueScan *ConsoleIssueScan
 }
 
 func (h *Handlers) renderConsole(w http.ResponseWriter, r *http.Request, data ConsolePageData) {
@@ -86,6 +88,62 @@ func buildConsoleHealthWall(proj *OpsHiveProjection, fetchErr error, now time.Ti
 	}
 	wall.PendingApprovals = len(wall.Approvals)
 	return wall
+}
+
+// ConsoleIssueScan is the Intake-tab view-model: the reused issue-scan kanban
+// board plus an explicit freshness state derived from the civilization
+// projection. It fails closed — a nil, failed, or timestamp-less projection is
+// rendered as unavailable with a human-readable notice and no invented cards.
+type ConsoleIssueScan struct {
+	Freshness   ConsoleFreshness
+	GeneratedAt string
+	Status      string
+	Summary     string
+	Board       OpsCivilizationIssueScanKanban
+	Notices     []string
+}
+
+// buildConsoleIssueScan maps the civilization assembly projection (or its
+// absence/failure) into the Intake view-model. It reuses the existing
+// opsCivilizationIssueScanKanban builder verbatim and derives honest staleness.
+func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Time) ConsoleIssueScan {
+	board := opsCivilizationIssueScanKanban(proj) // nil-safe: returns an unavailable board
+	if proj == nil {
+		return ConsoleIssueScan{
+			Freshness: FreshnessUnavailable,
+			Status:    board.Status,
+			Summary:   board.Summary,
+			Board:     board,
+			Notices:   []string{"civilization projection unavailable to Site"},
+		}
+	}
+	if strings.EqualFold(strings.TrimSpace(proj.DerivationStatus), opsCivilizationProjectionStatusFailed) {
+		return ConsoleIssueScan{
+			Freshness: FreshnessUnavailable,
+			Status:    board.Status,
+			Summary:   board.Summary,
+			Board:     board,
+			Notices:   append([]string(nil), proj.FailureReasons...),
+		}
+	}
+	if proj.GeneratedAt.IsZero() {
+		return ConsoleIssueScan{
+			Freshness: FreshnessUnavailable,
+			Status:    board.Status,
+			Summary:   board.Summary,
+			Board:     board,
+			Notices:   []string{"projection missing generated_at timestamp"},
+		}
+	}
+	generatedAt := proj.GeneratedAt.UTC().Format(time.RFC3339)
+	hasPartial := strings.EqualFold(strings.TrimSpace(proj.DerivationStatus), opsCivilizationProjectionStatusPartial)
+	return ConsoleIssueScan{
+		Freshness:   deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow),
+		GeneratedAt: generatedAt,
+		Status:      board.Status,
+		Summary:     board.Summary,
+		Board:       board,
+	}
 }
 
 func (h *Handlers) handleConsoleHealth(w http.ResponseWriter, r *http.Request) {
