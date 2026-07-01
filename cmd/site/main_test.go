@@ -73,7 +73,9 @@ func TestNoDatabaseRoutesExposeReadOnlyCivilization(t *testing.T) {
 	for _, want := range []string{
 		`data-civilization-assembly="read-only"`,
 		`id="issue-intake"`,
-		`id="issue-scan-kanban"`,
+		// Issue-scan board retired to Mission Control; /ops/civilization now renders a pointer.
+		`data-civilization-issue-scan-moved="console"`,
+		"/console/intake",
 		"Civilization Assembly",
 		"projection unavailable",
 		"this page has no execution authority",

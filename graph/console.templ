@@ -143,11 +143,11 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 }
 
 templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
-	// hx-get uses a plain string (not templ.SafeURL): hx-* is an HTML attribute, so templ's attribute-escaping (ResolveAttributeValue->EscapeString) is the right protection; SafeURL is for href URL sinks. Same precedent as consoleOrderCard.
+	// hx-get is an HTML attribute (templ's attribute-escaping via ResolveAttributeValue->EscapeString guards HTML injection; SafeURL is for href sinks). consoleIssueScanCardURL additionally query-escapes run/stage so ids with query metacharacters round-trip exactly to the handler's r.URL.Query().Get.
 	<button
 		type="button"
 		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
-		hx-get={ "/console/intake/card?run=" + card.RunID + "&stage=" + card.StageID }
+		hx-get={ consoleIssueScanCardURL(card) }
 		hx-target="#console-intake-drawer"
 		hx-swap="innerHTML"
 	>

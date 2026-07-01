@@ -6,10 +6,33 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestConsoleIssueScanCardURLRoundTripsMetacharacters(t *testing.T) {
+	// A projected run/stage id with query metacharacters must round-trip
+	// through the drawer URL exactly, or clicking the card opens the wrong
+	// (or not-found) drawer. This guards the query-escaping in the builder
+	// against the handler's r.URL.Query().Get decode.
+	card := OpsCivilizationIssueScanKanbanCard{
+		RunID:   "run+a&b#c=d",
+		StageID: "stage a/b&x",
+	}
+	u, err := url.Parse(consoleIssueScanCardURL(card))
+	if err != nil {
+		t.Fatalf("parse drawer url: %v", err)
+	}
+	q := u.Query()
+	if got := q.Get("run"); got != card.RunID {
+		t.Errorf("run round-trip = %q, want %q", got, card.RunID)
+	}
+	if got := q.Get("stage"); got != card.StageID {
+		t.Errorf("stage round-trip = %q, want %q", got, card.StageID)
+	}
+}
 
 func TestBuildConsoleIssueScanNilProjectionIsUnavailable(t *testing.T) {
 	scan := buildConsoleIssueScan(nil, time.Now().UTC())

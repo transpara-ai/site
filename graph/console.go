@@ -2,6 +2,7 @@ package graph
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -245,6 +246,15 @@ func consoleIssueScanCardBlocker(card OpsCivilizationIssueScanKanbanCard) string
 // ready-for-human state, so the board can state the no-merge boundary honestly.
 func consoleIssueScanCardReady(card OpsCivilizationIssueScanKanbanCard) bool {
 	return strings.EqualFold(strings.TrimSpace(card.CurrentState), "ready_for_human")
+}
+
+// consoleIssueScanCardURL builds the drawer hx-get URL for a card. RunID and
+// StageID are query-escaped so a projected id containing query metacharacters
+// (&, #, +, =) round-trips exactly through r.URL.Query().Get in the handler —
+// attribute escaping alone would prevent HTML injection but not this parameter
+// corruption, which would open the wrong (or not-found) drawer for a real card.
+func consoleIssueScanCardURL(card OpsCivilizationIssueScanKanbanCard) string {
+	return "/console/intake/card?run=" + url.QueryEscape(card.RunID) + "&stage=" + url.QueryEscape(card.StageID)
 }
 
 func (h *Handlers) handleConsoleKanbanOrder(w http.ResponseWriter, r *http.Request) {
