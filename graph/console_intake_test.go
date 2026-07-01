@@ -231,6 +231,49 @@ func TestConsoleIntakeRendersIssueScanBoard(t *testing.T) {
 	// dedicated card-render tests below, not here.
 }
 
+func TestConsoleIssueScanBoardHidesSummaryWhenUnavailable(t *testing.T) {
+	// A failed/unavailable scan still carries board.Summary (e.g. "No typed
+	// issue-scan projection records are present"). Rendering that above the
+	// unavailable notice is a comforting default — suppress it when unavailable.
+	scan := ConsoleIssueScan{
+		Freshness: FreshnessUnavailable,
+		Summary:   "No typed issue-scan projection records are present",
+		Notices:   []string{"hive civilization projection returned 503"},
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "No typed issue-scan projection records are present") {
+		t.Error("unavailable board must not render a comforting summary")
+	}
+	if !strings.Contains(out, "unavailable") || !strings.Contains(out, "503") {
+		t.Error("unavailable board must render the honest unavailable notice")
+	}
+}
+
+func TestConsoleIssueScanFragmentResetsDrawerOnlyWhenUnavailable(t *testing.T) {
+	// Unavailable poll must emit an out-of-band reset that clears an open drawer,
+	// so stale run details cannot survive the fail-closed board.
+	var unavail bytes.Buffer
+	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessUnavailable, Notices: []string{"down"}}).Render(context.Background(), &unavail); err != nil {
+		t.Fatalf("render unavailable: %v", err)
+	}
+	if !strings.Contains(unavail.String(), "hx-swap-oob") || !strings.Contains(unavail.String(), `id="console-intake-drawer"`) {
+		t.Error("unavailable poll must emit an out-of-band drawer reset")
+	}
+	// A usable poll must NOT emit a drawer element, or the poll would erase an
+	// open drawer (the Plan-2b regression). It swaps only #console-intake.
+	var ok bytes.Buffer
+	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessCurrent, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}).Render(context.Background(), &ok); err != nil {
+		t.Fatalf("render usable: %v", err)
+	}
+	if strings.Contains(ok.String(), "console-intake-drawer") {
+		t.Error("usable poll must not touch the drawer (would erase an open drawer)")
+	}
+}
+
 func TestConsoleIssueScanCardStatesNoMergeWhenReady(t *testing.T) {
 	card := OpsCivilizationIssueScanKanbanCard{
 		RunID:        "run_ready",

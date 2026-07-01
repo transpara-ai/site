@@ -34,7 +34,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					<div id="console-kanban-drawer"></div>
 				}
 				if data.IssueScan != nil {
-					@consoleIssueScanFragment(*data.IssueScan)
+					@consoleIssueScanSurface(*data.IssueScan)
 					<div id="console-intake-drawer"></div>
 				}
 			</main>
@@ -106,10 +106,23 @@ templ consoleKanban(k ConsoleKanban) {
 	</div>
 }
 
-templ consoleIssueScanFragment(s ConsoleIssueScan) {
+templ consoleIssueScanSurface(s ConsoleIssueScan) {
 	<div id="console-intake" hx-get="/console/intake/fragment" hx-trigger="every 10s" hx-swap="outerHTML">
 		@consoleIssueScan(s)
 	</div>
+}
+
+// consoleIssueScanFragment is the 10s poll response. It renders the board
+// surface and, ONLY when the surface is unavailable, an out-of-band reset that
+// clears any open details drawer — so a drawer opened while data was live
+// cannot keep displaying stale run details after the board fails closed. On a
+// usable poll no drawer element is emitted, so the poll swaps only #console-intake
+// and an open drawer is preserved (the Plan-2b poll-erasure fix).
+templ consoleIssueScanFragment(s ConsoleIssueScan) {
+	@consoleIssueScanSurface(s)
+	if s.Freshness == FreshnessUnavailable {
+		<div id="console-intake-drawer" hx-swap-oob="innerHTML"></div>
+	}
 }
 
 templ consoleIssueScan(s ConsoleIssueScan) {
@@ -117,7 +130,7 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 		<div class="flex items-center justify-between gap-3">
 			<div>
 				<h2 class="text-lg font-medium text-warm">Intake — issue-scan lifecycle</h2>
-				if s.Summary != "" {
+				if s.Summary != "" && s.Freshness != FreshnessUnavailable {
 					<p class="text-xs text-warm-muted mt-1">{ s.Summary }</p>
 				}
 			</div>
