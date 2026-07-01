@@ -238,3 +238,92 @@ func TestConsoleIntakeCardDrawerUnknownIsHonestNotFound(t *testing.T) {
 		t.Error("unknown card must render an honest not-found drawer")
 	}
 }
+
+// TestConsoleIntakeSurfaceEscapesHostileProjectionData is a characterization/
+// regression guard for the Intake surface (Build 1 relocation of the
+// issue-scan board to /console/intake). The old surface it replaced had
+// exhaustive XSS/escaping tests; this closes the gap for the new one. templ's
+// default `{ }` interpolation HTML-escapes everything, and this surface uses
+// no templ.Raw/SafeHTML, so hostile operator-visible projection strings must
+// come out escaped on both the board card and the run-details drawer.
+func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
+	const runID = "run_hostile"
+	const stageID = "stage_hostile"
+
+	proj := &OpsCivilizationAssemblyProjection{
+		DerivationStatus: "complete",
+		GeneratedAt:      time.Now().UTC().Add(-5 * time.Second),
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{{
+				RunID: runID,
+				TargetIssue: OpsCivilizationIssueRef{
+					Repo:   "transpara-ai/x",
+					Number: 900,
+					Title:  "<script>alert('title')</script>",
+				},
+			}},
+			Stages: []OpsCivilizationIssueScanStageProjected{{
+				RunID:             runID,
+				StageID:           stageID,
+				CurrentState:      "parked",
+				AuthorityBoundary: `<button onclick="x">auth</button>`,
+				AssignedAgentIDs:  []string{"<img src=x onerror=y>agent"},
+			}},
+			Blockers: []OpsCivilizationIssueScanBlockerProjected{{
+				RunID:          runID,
+				StageID:        stageID,
+				BlockerType:    `<form action="/hive">block</form>`,
+				RequiredAction: `<form action="/hive">block</form>`,
+			}},
+			Lineage: []OpsCivilizationIssueScanLineageProjected{{
+				RunID:         runID,
+				StageID:       stageID,
+				PrimaryTaskID: "<script>lineage()</script>",
+			}},
+		},
+	}
+
+	// Render the board.
+	scan := buildConsoleIssueScan(proj, time.Now().UTC())
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render board: %v", err)
+	}
+
+	// Render the drawer for the first card produced by the same projection.
+	board := opsCivilizationIssueScanKanban(proj)
+	if len(board.Columns) == 0 || len(board.Columns[0].Cards) == 0 {
+		t.Fatal("hostile fixture produced zero cards; fixture is wrong, not the surface")
+	}
+	card := board.Columns[0].Cards[0]
+	var buf2 bytes.Buffer
+	if err := consoleIssueScanDrawer(card, true).Render(context.Background(), &buf2); err != nil {
+		t.Fatalf("render drawer: %v", err)
+	}
+
+	boardOut := buf.String()
+	drawerOut := buf2.String()
+	combined := boardOut + drawerOut
+
+	// Match the raw hostile payloads verbatim, not bare tag prefixes: the
+	// surface's OWN chrome legitimately emits a real `<button ...>` element
+	// (the clickable card) and this must not be confused with a leaked
+	// hostile `<button onclick="x">`. Matching the exact injected string is
+	// unambiguous — it only appears if the surface failed to escape it.
+	rawHostile := []string{
+		`<script>alert('title')</script>`,
+		`<button onclick="x">auth</button>`,
+		`<form action="/hive">block</form>`,
+		"<img src=x onerror=y>agent",
+		"<script>lineage()</script>",
+	}
+	for _, raw := range rawHostile {
+		if strings.Contains(combined, raw) {
+			t.Errorf("hostile raw markup %q survived escaping in the intake surface; board+drawer output leaked unescaped projection data", raw)
+		}
+	}
+
+	if !strings.Contains(boardOut, "&lt;script") {
+		t.Error("expected escaped form \"&lt;script\" in board output; escaping did not occur (data may have vanished instead of being escaped)")
+	}
+}
