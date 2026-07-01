@@ -34,6 +34,38 @@ func TestConsoleIssueScanCardURLRoundTripsMetacharacters(t *testing.T) {
 	}
 }
 
+func TestConsoleIntakeCardDrawerHiddenWhenSurfaceUnavailable(t *testing.T) {
+	// A projection that passes validation and carries issue-scan records but has
+	// no generated_at is FreshnessUnavailable — the board hides its cards. The
+	// drawer endpoint must honor the same gate: a direct card request must NOT
+	// leak run details, or honest-staleness is one HTMX call away from bypass.
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"projection_schema_version":"1.0.0","projection_subject":"civilization_assembly","derivation_status":"complete","issue_scan_projection":{"runs":[{"run_id":"run_x","target_issue":{"repo":"transpara-ai/site","number":1}}],"stages":[{"run_id":"run_x","stage_id":"stg_x","current_state":"parked","assigned_agent_ids":["secret_agent"]}]}}`)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_x&stage=stg_x", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "not found") {
+		t.Error("drawer must render honest not-found when the surface is unavailable")
+	}
+	if strings.Contains(body, "secret_agent") {
+		t.Error("drawer leaked run details for an unavailable (timestamp-less) projection")
+	}
+}
+
 func TestBuildConsoleIssueScanNilProjectionIsUnavailable(t *testing.T) {
 	scan := buildConsoleIssueScan(nil, time.Now().UTC())
 	if scan.Freshness != FreshnessUnavailable {

@@ -188,16 +188,23 @@ func (h *Handlers) handleConsoleIntakeFragment(w http.ResponseWriter, r *http.Re
 func (h *Handlers) handleConsoleIntakeCard(w http.ResponseWriter, r *http.Request) {
 	run := strings.TrimSpace(r.URL.Query().Get("run"))
 	stage := strings.TrimSpace(r.URL.Query().Get("stage"))
-	board := opsCivilizationIssueScanKanban(fetchOpsCivilizationProjection(r))
-	for _, col := range board.Columns {
-		for _, card := range col.Cards {
-			if card.RunID == run && card.StageID == stage {
-				consoleIssueScanDrawer(card, true).Render(r.Context(), w)
-				return
+	// Honest-staleness, fail-closed: gate the drawer through the SAME freshness
+	// computation as the board (buildConsoleIssueScan). A failed / timestamp-less
+	// projection can still carry records; without this gate a direct card request
+	// would expose run details the board intentionally hides. When the surface is
+	// unavailable, the loop is skipped and the honest not-found drawer renders.
+	scan := buildConsoleIssueScan(fetchOpsCivilizationProjection(r), time.Now().UTC())
+	if scan.Freshness != FreshnessUnavailable {
+		for _, col := range scan.Board.Columns {
+			for _, card := range col.Cards {
+				if card.RunID == run && card.StageID == stage {
+					consoleIssueScanDrawer(card, true).Render(r.Context(), w)
+					return
+				}
 			}
 		}
 	}
-	// Not found or upstream error: honest empty drawer, never a fabricated run.
+	// Not found, upstream error, or unavailable surface: honest empty drawer, never a fabricated run.
 	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false).Render(r.Context(), w)
 }
 
