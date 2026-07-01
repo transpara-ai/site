@@ -227,15 +227,32 @@ func consoleIssueScanCardTitle(card OpsCivilizationIssueScanKanbanCard) string {
 }
 
 // consoleIssueScanCardAgents lists the possessing agents — assigned first, then
-// touching — or "unassigned" when the projection names none. Never invented.
+// any touching-only agents, deduplicated — or "unassigned" when the projection
+// names none. Both fields are surfaced so a stage worked by a touching-only
+// agent (e.g. blocker repair) is not hidden behind its assignee. Never invented.
 func consoleIssueScanCardAgents(card OpsCivilizationIssueScanKanbanCard) string {
-	if len(card.AssignedAgentIDs) > 0 {
-		return strings.Join(card.AssignedAgentIDs, ", ")
+	seen := map[string]bool{}
+	agents := make([]string, 0, len(card.AssignedAgentIDs)+len(card.TouchingAgentIDs))
+	for _, id := range card.AssignedAgentIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		agents = append(agents, id)
 	}
-	if len(card.TouchingAgentIDs) > 0 {
-		return strings.Join(card.TouchingAgentIDs, ", ")
+	for _, id := range card.TouchingAgentIDs {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		agents = append(agents, id)
 	}
-	return "unassigned"
+	if len(agents) == 0 {
+		return "unassigned"
+	}
+	return strings.Join(agents, ", ")
 }
 
 func consoleIssueScanCardBlocker(card OpsCivilizationIssueScanKanbanCard) string {

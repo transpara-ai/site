@@ -12,6 +12,25 @@ import (
 	"time"
 )
 
+func TestConsoleIssueScanCardAgentsCombinesAssignedAndTouching(t *testing.T) {
+	// Assigned + touching are both surfaced (deduped, assigned first) so a
+	// touching-only worker is not hidden behind the assignee; empty → unassigned.
+	card := OpsCivilizationIssueScanKanbanCard{
+		AssignedAgentIDs: []string{"agent_reviewer"},
+		TouchingAgentIDs: []string{"agent_blocker_repair", "agent_reviewer"},
+	}
+	if got := consoleIssueScanCardAgents(card); got != "agent_reviewer, agent_blocker_repair" {
+		t.Errorf("agents = %q, want assigned-first + touching-only, deduped", got)
+	}
+	if got := consoleIssueScanCardAgents(OpsCivilizationIssueScanKanbanCard{}); got != "unassigned" {
+		t.Errorf("no agents = %q, want unassigned", got)
+	}
+	touchingOnly := OpsCivilizationIssueScanKanbanCard{TouchingAgentIDs: []string{"agent_x"}}
+	if got := consoleIssueScanCardAgents(touchingOnly); got != "agent_x" {
+		t.Errorf("touching-only = %q, want agent_x", got)
+	}
+}
+
 func TestConsoleIssueScanCardURLRoundTripsMetacharacters(t *testing.T) {
 	// A projected run/stage id with query metacharacters must round-trip
 	// through the drawer URL exactly, or clicking the card opens the wrong
@@ -160,7 +179,9 @@ func TestConsoleIntakeRendersIssueScanBoard(t *testing.T) {
 	}
 	body := w.Body.String()
 	// Issue ref, a working agent, a stage, and a blocker from the fixture.
-	for _, want := range []string{"transpara-ai/docs#172", "agent_reviewer", "run_adversarial_review", "duplicate_chain"} {
+	// agent_blocker_repair is a TOUCHING-only agent on run_docs_172; asserting it
+	// proves the card surfaces touching agents, not just the assignee.
+	for _, want := range []string{"transpara-ai/docs#172", "agent_reviewer", "agent_blocker_repair", "run_adversarial_review", "duplicate_chain"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("intake board missing %q", want)
 		}
