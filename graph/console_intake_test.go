@@ -231,6 +231,52 @@ func TestConsoleIntakeRendersIssueScanBoard(t *testing.T) {
 	// dedicated card-render tests below, not here.
 }
 
+func TestConsoleIssueScanCardShowsProjectionSourceProvenance(t *testing.T) {
+	// A ready issue-intake FALLBACK card (projection-only, not runtime evidence)
+	// must surface its provenance so it cannot masquerade as a runtime lifecycle
+	// card just because CurrentState is ready_for_human.
+	fallback := OpsCivilizationIssueScanKanbanCard{
+		CurrentState:     "ready_for_human",
+		ProjectionSource: "scanner issue-intake fallback; not runtime execution or agent-touch evidence",
+		TargetIssue:      OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 9},
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScanCard(fallback).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "scanner issue-intake fallback") {
+		t.Error("card must surface ProjectionSource provenance so fallback cards are distinguishable from runtime cards")
+	}
+	if !strings.Contains(out, "not merged") {
+		t.Error("ready fallback card still shows the no-merge boundary (state is genuinely ready_for_human)")
+	}
+}
+
+func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
+	linked := OpsCivilizationIssueScanKanbanCard{
+		RunID:       "run_l",
+		TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 42, URL: "https://github.com/transpara-ai/site/issues/42"},
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScanDrawer(linked, true).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(buf.String(), `href="https://github.com/transpara-ai/site/issues/42"`) {
+		t.Errorf("drawer must link the projected issue URL; got: %s", buf.String())
+	}
+
+	// No projected URL → plain text label, no dangling empty anchor.
+	noURL := OpsCivilizationIssueScanKanbanCard{RunID: "r", TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 43}}
+	var buf2 bytes.Buffer
+	if err := consoleIssueScanDrawer(noURL, true).Render(context.Background(), &buf2); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf2.String(), "<a href") {
+		t.Error("drawer must not render an issue anchor when no URL is projected")
+	}
+}
+
 func TestConsoleIssueScanBoardHidesSummaryWhenUnavailable(t *testing.T) {
 	// A failed/unavailable scan still carries board.Summary (e.g. "No typed
 	// issue-scan projection records are present"). Rendering that above the
@@ -419,6 +465,7 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 					Repo:   "transpara-ai/x",
 					Number: 900,
 					Title:  "<script>alert('title')</script>",
+					URL:    "javascript:alert('url')", // drawer renders this as a link — must be sanitized
 				},
 			}},
 			Stages: []OpsCivilizationIssueScanStageProjected{{
@@ -475,6 +522,7 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 		`<form action="/hive">block</form>`,
 		"<img src=x onerror=y>agent",
 		"<script>lineage()</script>",
+		"javascript:alert('url')", // the drawer's issue-link href must be sanitized by templ.URL
 	}
 	for _, raw := range rawHostile {
 		if strings.Contains(combined, raw) {

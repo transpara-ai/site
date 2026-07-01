@@ -183,6 +183,13 @@ templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
 		if consoleIssueScanCardReady(card) {
 			<p class="text-xs text-emerald-300">ready for human — not merged</p>
 		}
+		if card.ProjectionSource != "" {
+			// Provenance: distinguishes runtime cards ("typed issue-scan projection")
+			// from issue-intake fallback cards ("scanner issue-intake fallback; not
+			// runtime execution or agent-touch evidence") so a ready fallback card
+			// cannot masquerade as a runtime lifecycle card.
+			<p class="text-[10px] text-warm-faint break-words">source: { card.ProjectionSource }</p>
+		}
 	</button>
 }
 
@@ -196,7 +203,15 @@ templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool
 			<p class="text-sm text-warm-muted">Run { opsCivilizationValue(card.RunID, "—") } stage { opsCivilizationValue(card.StageID, "—") } is unavailable (not found).</p>
 		} else {
 			<dl class="grid grid-cols-[9rem,1fr] gap-y-1 text-xs">
-				<dt class="text-warm-muted">Issue</dt><dd class="text-warm break-words">{ consoleIssueScanCardIssue(card) }</dd>
+				<dt class="text-warm-muted">Issue</dt>
+				<dd class="text-warm break-words">
+					if consoleIssueScanCardIssueURL(card) != "" {
+						// templ.URL sanitizes the projection-supplied URL (javascript:/data: → about:invalid); do NOT use SafeURL on untrusted input.
+						<a href={ templ.URL(consoleIssueScanCardIssueURL(card)) } class="text-brand hover:underline" target="_blank" rel="noreferrer">{ consoleIssueScanCardIssue(card) }</a>
+					} else {
+						{ consoleIssueScanCardIssue(card) }
+					}
+				</dd>
 				<dt class="text-warm-muted">Stage</dt><dd class="break-all">{ opsCivilizationValue(card.StageID, "—") }</dd>
 				<dt class="text-warm-muted">State</dt><dd>{ opsCivilizationValue(card.CurrentState, "—") }</dd>
 				<dt class="text-warm-muted">Assigned</dt><dd class="break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>

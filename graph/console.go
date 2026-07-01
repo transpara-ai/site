@@ -231,6 +231,17 @@ func consoleIssueScanCardIssue(card OpsCivilizationIssueScanKanbanCard) string {
 	return opsCivilizationIssueRefLabel(ref)
 }
 
+// consoleIssueScanCardIssueURL returns the projected issue URL for the same ref
+// consoleIssueScanCardIssue labels (target preferred, then selected), or "" when
+// none is projected. The template sanitizes it via templ.URL before use.
+func consoleIssueScanCardIssueURL(card OpsCivilizationIssueScanKanbanCard) string {
+	ref := card.TargetIssue
+	if ref.Repo == "" && ref.Number == 0 {
+		ref = card.SelectedIssue
+	}
+	return strings.TrimSpace(ref.URL)
+}
+
 func consoleIssueScanCardTitle(card OpsCivilizationIssueScanKanbanCard) string {
 	if card.TargetIssue.Title != "" {
 		return card.TargetIssue.Title
