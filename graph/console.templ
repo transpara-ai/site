@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/transpara-ai/site/assets"
@@ -22,7 +23,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
 					@consoleTab("health", "Health wall", "/console", data.Active, true)
 					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
-					@consoleTab("intake", "Intake", "/console/intake", data.Active, false)
+					@consoleTab("intake", "Intake", "/console/intake", data.Active, true)
 					@consoleTab("config", "Config", "/console/config", data.Active, false)
 				</nav>
 				if data.Health != nil {
@@ -31,6 +32,10 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				if data.Kanban != nil {
 					@consoleKanbanFragment(*data.Kanban)
 					<div id="console-kanban-drawer"></div>
+				}
+				if data.IssueScan != nil {
+					@consoleIssueScanSurface(*data.IssueScan)
+					<div id="console-intake-drawer"></div>
 				}
 			</main>
 		</body>
@@ -99,6 +104,148 @@ templ consoleKanban(k ConsoleKanban) {
 			</div>
 		}
 	</div>
+}
+
+templ consoleIssueScanSurface(s ConsoleIssueScan) {
+	<div id="console-intake" hx-get="/console/intake/fragment" hx-trigger="every 10s" hx-swap="outerHTML">
+		@consoleIssueScan(s)
+	</div>
+}
+
+// consoleIssueScanFragment is the 10s poll response. It renders the board
+// surface and, ONLY when the surface is unavailable, an out-of-band reset that
+// clears any open details drawer — so a drawer opened while data was live
+// cannot keep displaying stale run details after the board fails closed. On a
+// usable poll no drawer element is emitted, so the poll swaps only #console-intake
+// and an open drawer is preserved (the Plan-2b poll-erasure fix).
+templ consoleIssueScanFragment(s ConsoleIssueScan) {
+	@consoleIssueScanSurface(s)
+	if s.Freshness == FreshnessUnavailable {
+		<div id="console-intake-drawer" hx-swap-oob="innerHTML"></div>
+	}
+}
+
+templ consoleIssueScan(s ConsoleIssueScan) {
+	<section class="space-y-4" data-console-surface="intake">
+		<div class="flex items-center justify-between gap-3">
+			<div>
+				<h2 class="text-lg font-medium text-warm">Intake — issue-scan lifecycle</h2>
+				if s.Summary != "" && s.Freshness != FreshnessUnavailable {
+					<p class="text-xs text-warm-muted mt-1">{ s.Summary }</p>
+				}
+			</div>
+			@consoleFreshnessBadge(s.Freshness, s.GeneratedAt)
+		</div>
+		if s.Freshness == FreshnessUnavailable {
+			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(s.Notices) }</p>
+		} else if len(s.Board.Columns) == 0 {
+			<p class="text-sm text-warm-muted">No issue-scan runs projected.</p>
+		} else {
+			<div class="flex gap-4 overflow-x-auto pb-2">
+				for _, col := range s.Board.Columns {
+					<section class="min-w-[18rem] flex-shrink-0 space-y-2">
+						<h3 class="text-xs uppercase tracking-wide text-warm-muted">{ col.Label } · { strconv.Itoa(len(col.Cards)) }</h3>
+						for _, card := range col.Cards {
+							@consoleIssueScanCard(card)
+						}
+					</section>
+				}
+			</div>
+		}
+	</section>
+}
+
+templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
+	// hx-get is an HTML attribute (templ's attribute-escaping via ResolveAttributeValue->EscapeString guards HTML injection; SafeURL is for href sinks). consoleIssueScanCardURL additionally query-escapes run/stage so ids with query metacharacters round-trip exactly to the handler's r.URL.Query().Get.
+	<button
+		type="button"
+		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
+		hx-get={ consoleIssueScanCardURL(card) }
+		hx-target="#console-intake-drawer"
+		hx-swap="innerHTML"
+	>
+		<div class="flex items-center justify-between gap-2">
+			<span class="text-sm text-warm font-medium break-words">{ consoleIssueScanCardIssue(card) }</span>
+			if card.StageNumber > 0 {
+				<span class="text-[10px] text-warm-muted font-mono whitespace-nowrap">{ fmt.Sprintf("%d/%d", card.StageNumber, card.StageCount) }</span>
+			}
+		</div>
+		if consoleIssueScanCardTitle(card) != "" {
+			<p class="text-xs text-warm-muted break-words">{ consoleIssueScanCardTitle(card) }</p>
+		}
+		<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-warm-muted">
+			<span>stage: { opsCivilizationValue(card.StageID, "—") }</span>
+			<span>agents: { consoleIssueScanCardAgents(card) }</span>
+		</div>
+		if len(card.Blockers) > 0 {
+			<p class="text-xs text-amber-300 break-words">blocked: { consoleIssueScanCardBlocker(card) }</p>
+		}
+		if consoleIssueScanCardReady(card) {
+			<p class="text-xs text-emerald-300">ready for human — not merged</p>
+		}
+		if card.ProjectionSource != "" {
+			// Provenance: distinguishes runtime cards ("typed issue-scan projection")
+			// from issue-intake fallback cards ("scanner issue-intake fallback; not
+			// runtime execution or agent-touch evidence") so a ready fallback card
+			// cannot masquerade as a runtime lifecycle card.
+			<p class="text-[10px] text-warm-faint break-words">source: { card.ProjectionSource }</p>
+		}
+	</button>
+}
+
+templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool) {
+	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Issue-scan run details">
+		<div class="flex items-center justify-between gap-2">
+			<h3 class="text-sm font-medium text-warm">Run details</h3>
+			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-intake-drawer').innerHTML='';return false;">close</button>
+		</div>
+		if !found {
+			<p class="text-sm text-warm-muted">Run { opsCivilizationValue(card.RunID, "—") } stage { opsCivilizationValue(card.StageID, "—") } is unavailable (not found).</p>
+		} else {
+			<dl class="grid grid-cols-[9rem,1fr] gap-y-1 text-xs">
+				<dt class="text-warm-muted">Issue</dt>
+				<dd class="text-warm break-words">
+					if consoleIssueScanCardIssueURL(card) != "" {
+						// templ.URL sanitizes the projection-supplied URL (javascript:/data: → about:invalid); do NOT use SafeURL on untrusted input.
+						<a href={ templ.URL(consoleIssueScanCardIssueURL(card)) } class="text-brand hover:underline" target="_blank" rel="noreferrer">{ consoleIssueScanCardIssue(card) }</a>
+					} else {
+						{ consoleIssueScanCardIssue(card) }
+					}
+				</dd>
+				<dt class="text-warm-muted">Stage</dt><dd class="break-all">{ opsCivilizationValue(card.StageID, "—") }</dd>
+				<dt class="text-warm-muted">State</dt><dd>{ opsCivilizationValue(card.CurrentState, "—") }</dd>
+				<dt class="text-warm-muted">Assigned</dt><dd class="break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Touching</dt><dd class="break-all">{ opsCivilizationJoin(card.TouchingAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Authority</dt><dd class="break-words">{ opsCivilizationValue(card.AuthorityBoundary, "not projected") }</dd>
+				<dt class="text-warm-muted">Run</dt><dd class="break-all">{ opsCivilizationValue(card.RunID, "—") }</dd>
+				<dt class="text-warm-muted">Canonical task</dt><dd class="break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")) }</dd>
+			</dl>
+			if len(card.Blockers) > 0 {
+				<div class="border-t border-edge pt-3 space-y-2">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">blockers</p>
+					for _, b := range card.Blockers {
+						<div>
+							<p class="text-xs text-warm break-words">{ opsCivilizationEvidenceStatusValue(b.BlockerType, "blocker") }</p>
+							<p class="text-[10px] text-warm-muted break-words">{ opsCivilizationValue(b.RequiredAction, "action not projected") }</p>
+						</div>
+					}
+				</div>
+			}
+			if card.HasLineage {
+				<div class="border-t border-edge pt-3">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">lineage</p>
+					<p class="text-[10px] text-warm-muted break-all mt-1">primary { opsCivilizationValue(card.Lineage.PrimaryTaskID, "not projected") }</p>
+					<p class="text-[10px] text-warm-faint break-all mt-1">duplicates { opsCivilizationJoin(card.Lineage.DuplicateTaskIDs, "none") }</p>
+				</div>
+			}
+			if len(card.EvidenceRefs) > 0 {
+				<div class="border-t border-edge pt-3">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">evidence</p>
+					<p class="text-[10px] text-warm-muted break-all mt-1">{ opsCivilizationJoin(card.EvidenceRefs, "none projected") }</p>
+				</div>
+			}
+		}
+	</aside>
 }
 
 templ consoleKanbanLensNav(active ConsoleKanbanLens) {
