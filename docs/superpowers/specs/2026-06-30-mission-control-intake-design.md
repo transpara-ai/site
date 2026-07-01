@@ -1,97 +1,75 @@
-# Mission Control — Intake (Phase 1) Design
+# Mission Control — Intake Design (two channels)
 
 > doc_id: SITE-MISSION-CONTROL-INTAKE-001
 > realizes: the **Intake** surface (need #3) of SITE-MISSION-CONTROL-DESIGN-001
-> authority: design-only. No runtime, governed write, EventGraph write, or autonomy increase is authorized by this document. Phase-1 Intake performs **zero writes**.
-> status: **DRAFT for owner review** (authored solo by Claude while owner away; the key decisions below need an owner ✓ before a plan is written).
+> authority: design-only. No runtime, governed write, EventGraph write, or autonomy increase is authorized here. Both builds below are **read-only** on the console (zero writes).
+> status: **DRAFT — decisions settled with owner 2026-06-30; awaiting ✓ on the Build-1 retirement scope before writing the plan.**
 
 ## Purpose
 
-Build the **Intake** view at `/console/intake` on the merged Plan-1/Plan-2 console foundation: a human pastes a free-text request and reviews it as an editable, structured **factory-order draft** (title, risk, target repo, cell, definition-of-done checklist, acceptance criteria, expected-outputs inventory). The human is the requestor/owner throughout. In Phase 1 there is **no submit** — the governed write that seeds the order is deferred to Phase 2.
+Intake is the operator's view of **what is entering the factory**, in two channels:
 
-## The load-bearing finding (please read first)
+- **Channel A — human request.** A free-form/structured requirement is iterated (via a **managed structured flow** now; interactive AI assist later) into a well-formed factory-order draft. **Stops at a ready-to-submit draft** — the governed submit that seeds the order is deferred (separately authorized).
+- **Channel B — factory issue-scan.** The factory autonomously scans a list of repos, takes possession of GitHub issues, and drives each through its lifecycle. The console **surfaces** that (state, owner, working agents, blockers) — read-only.
 
-The parent design doc (D4 / §Intake) names the draft data source as `work.BuildFactoryOrderDevelopmentProposal` and describes "an agent (e.g. Strategist) structures the request into a FactoryOrder draft." Grounding against the code shows this **is not** a free-text → structure step:
+**Build order (owner-decided):** **Build 1 = Channel B** (fast: UI-only over a ready backend), **Build 2 = Channel A** (the compose wizard). Both live under the **Intake** tab.
 
-- `work.BuildFactoryOrderDevelopmentProposal` (`work/factory_order_proposal.go:186`) is a **pure assembler of already-structured input**. It *requires* non-empty `ChangedFileIntent`, `ValidationPlan`, and `AuthorityBoundary`, plus pre-minted `fo_/req_/ac_/tsk_` IDs, and returns a proof-of-work / audit proposal (`ProofOfWorkPacket`, `AuditReport`, changed-file intent, authority boundaries). It is a *downstream* "assemble the proof-of-work proposal for an already-designed change" tool — **not** an intake-triage structurer. It cannot take a paragraph of free text and propose a title + DoD + acceptance criteria.
-- **No work-server HTTP endpoint** exposes any free-text → draft structuring (the only task endpoints are CRUD on `/tasks`). So **Intake has no live upstream to consume** — unlike Health (operator-projection) and Kanban (`/tasks`).
-- The shape an editable order draft actually maps to is the simpler **`FactoryOrder` seed DTO** (`work/factory_order.go:39`): `Title, Intent, Cell, RiskClass, DefinitionOfDone, AcceptanceCriteria, TestPlan, ExpectedOutputs`. But its consumer `SeedFactoryOrder` **writes** (creates the seed task + readiness gates) — that is the Phase-2 governed submit.
+## Backend readiness verdict (read-only assessment, 2026-06-30)
 
-**Consequence:** an honest Phase-1 Intake **cannot show an AI-structured draft**, because no function or endpoint structures free text today. Fabricating one would violate the console's no-fabrication contract. Phase-1 Intake is therefore a **manual structured compose + live draft preview**, with the AI-assist *and* the submit both rendered as explicit, deferred seams.
+The issue-scan backend is **built end-to-end**; the console gap is **UI-only**. Evidence:
 
-This is the central thing for the owner to confirm or redirect (see Open Questions).
+- **Autonomy + repo list (WIRED).** `hive civilization daemon --issue-scan-interval <d> --issue-scan-repo … | --issue-scan-registry` autonomously polls GitHub across a repo list and queues the top-ranked `cc:pr-ready` issue as a factory run. Guardrails present: one-active guard, hard duration cap, kill-switch file, max-new-runs, per-stage `AuthorityLevelRequired`.
+- **Lifecycle + possession (WIRED).** 7-stage pipeline (research/design → CFADA=`debate_with_correct_civic_roles` → design-select → implement → CFAR=`run_adversarial_review` → drive-blockers → surface-ready-PR), possession/stage/working-agents recorded as **real EventGraph events**, no-merge enforced at the finalizer (`HumanApprovalRequired=true`, `NoMergeOrDeployClaim=true`).
+- **Read path (WIRED).** `GET /api/hive/civilization/assembly-projection` emits runs/stages/blockers/lineage with per-stage `CurrentState`, `AssignedAgentIDs`/`TouchingAgentIDs`, target issue, and evidence — from real events. Site already fetches (`fetchOpsCivilizationProjection`) and **renders an issue-scan Kanban** on the legacy `/ops/civilization` page via the `civilization_issue_scan.go` builder.
 
-## Decisions (made solo; rationale given — owner may override)
+**Calibration caveats (recorded, not blocking):**
+- "Autonomous" = the *scan + issue selection* is autonomous on a timer; driving a run through the stages to a ready PR *fully unattended* depends on the stage-runner flags being wired and the approval config (per-stage authority is Required by default; scanner mode can't combine with blanket auto-approve). The console **surfaces state**; it does not change this.
+- **One issue per run** by design (one-active guard) — not batch.
+- **No `IAR` stage** exists in code. Owner to clarify what IAR denotes so states are labeled correctly. *(open)*
 
-| # | Decision | Rationale |
-|---|----------|-----------|
-| DI-1 | **Phase-1 Intake = manual structured compose + draft preview. No AI structuring; no submit.** The human authors the structured fields; the system renders a live factory-order draft preview. | The only honest option given the finding above — there is no free-text structurer to call, and faking one breaks no-fabrication. |
-| DI-2 | **Draft model = the `FactoryOrder` seed shape** (site-side view-model mirroring `Title/RequestText(verbatim)/RiskClass/TargetRepo/Cell/DefinitionOfDone[]/AcceptanceCriteria[]/ExpectedOutputs[]`), **not** `BuildFactoryOrderDevelopmentProposal`. Site does **not** import the `work` package. | `FactoryOrder` is the intake-draft shape; the development-proposal is a downstream proof artifact. Keeping the view-model site-local preserves the read-only-consumer boundary and avoids embedding `work` domain logic in Site. |
-| DI-3 | **Requestor = the current operator** (`auth.User.Name` via `viewUser`), shown as owner; provenance line reads "structured by: **manual** — AI assist deferred." | D4: the human stays requestor/owner; the agent is credited subordinately. With no agent involved in Phase 1, provenance says so honestly. |
-| DI-4 | **Two-step HTMX flow, no persistence.** `GET /console/intake` renders Step-1 (free-text + optional title). An `hx-post` to `/console/intake/draft` returns the Step-2 editable review fragment (verbatim request + declared defaults + empty editable checklists + live preview + the two deferred seams). The draft is **not** saved server-side. | The compose→review→(deferred) UX is the vertical-slice proof. A POST that returns a *computed scaffold* is a pure read-shaped op (no EventGraph record, no state mutation), so it stays inside the read-only charter. No write ⇒ no persistence in Phase 1. |
-| DI-5 | **Both writes are explicit deferred seams, fail-safe framed.** "Approve & submit order" is a **disabled** control with the statement *"nothing runs; submit is a Phase-2 governed action."* "Structure with AI assist" is a **disabled** affordance labeled *"deferred — no structurer available yet."* | Fail-safe by default: the permissive outcome (an order entering the factory) is never reachable in Phase 1; the default is to show, not act. |
-| DI-6 | **No fabrication in the scaffold.** The verbatim request is preserved exactly; defaults (risk `low`, repo `transpara-ai/work`, cell `implementation`) are clearly labeled as editable defaults; DoD / acceptance / expected-outputs start as **empty editable lists** — never invented content. | The scaffold helps the human compose without asserting facts it doesn't have. |
-| DI-7 | **Enable the Intake nav tab** (`consoleTab("intake", …, true)`); add `Intake *ConsoleIntakeDraft` to `ConsolePageData`; mirror the Health/Kanban handler + route (both `Register` and `RegisterReadOnlyConsole`) + templ pattern. | Match surrounding code; one coherent console idiom. |
+## Build 1 — Channel B: console issue-scan surface (+ retire the /ops board)
 
-## Approaches considered
+**Zero backend changes. Reuses the existing data builder. Read-only.**
 
-- **A — Manual structured compose + preview (RECOMMENDED, DI-1).** Site-only, no LLM, no `work` import, no write. Ships the real intake UX and the factory-order draft shape; leaves two clean, explicit Phase-2 seams (AI-assist, submit). Honest by construction. *Cost:* the draft is not AI-assisted or saveable in Phase 1 — it is a compose-and-preview tool, the thinnest of the four Phase-1 views.
-- **B — Add a work-server "build draft" endpoint + site consumer (two-repo, like 2a/2b).** Would require a **new** free-text → structure function in `work` (heuristic or LLM); `BuildFactoryOrderDevelopmentProposal` does not fit (it needs structured input). Heavier, and an LLM structurer is arguably itself a Phase-2/agent concern. *Rejected for Phase 1* — it builds the deferred AI-assist seam now, out of slice.
-- **C — Site-side LLM structuring** via Site's `intelligence`/`mind` package. Makes "agent structures the request" real, but injects an LLM call (latency, cost, nondeterminism) into the read-only console, deviates from the doc's "draft ← work pure function" data-flow decision, and complicates the no-fabrication contract. *Rejected for Phase 1.*
+### Data
+- Fetch: `fetchOpsCivilizationProjection(r)` (already exists) → `OpsCivilizationAssemblyProjection`.
+- View-model: **reuse the existing `OpsCivilizationIssueScanKanban` builder** in `graph/civilization_issue_scan.go` (~631 LOC, already produces columns-by-state + per-stage cards with assigned/touching agents, blockers, lineage, target issue, evidence). Do **not** rewrite it.
+- Freshness: derive honest staleness from the projection's `GeneratedAt` (reuse the console `deriveFreshness` machine); a down/absent projection → explicit `unavailable`, never a comforting default.
 
-## Architecture (for Approach A)
+### View (under the Intake tab)
+- A **lifecycle board** of issue-scan runs: columns by run/stage state (queued · dispatched · running · blocked · parked · human_action · ready_for_human · superseded · completed · projection_only).
+- **Cards lead with the issue** (`repo#number` + title) and carry: current **stage**, **working agent(s)** (`AssignedAgentIDs`/`TouchingAgentIDs`), **blocker** (type + required action) when present, and the ready/no-merge state made explicit ("ready for human — not merged").
+- **Details drawer** (reuse the Plan-2b drawer pattern): stage lineage, evidence refs, authority boundary, target issue link. Possession facts (who took it, which agents) front-and-center — that's the operator's question for Channel B.
+- Honest-staleness + no-fabrication throughout (a parked/blocked run *looks* blocked; a missing field renders as explicit "unavailable", never invented).
 
-**View-model (site-local, no `work` import):**
-```
-ConsoleIntakeDraft {
-  Requestor       string      // current operator (owner)
-  StructuredBy    string      // "manual — AI assist deferred"
-  RequestText     string      // verbatim, never mutated
-  Title           string
-  TargetRepo      string      // default "transpara-ai/work" (editable)
-  RiskClass       string      // default "low"; one of low|medium|high|critical
-  Cell            string      // default "implementation"
-  DefinitionOfDone   []string // empty → editable checklist
-  AcceptanceCriteria []string
-  ExpectedOutputs    []string
-  SubmitDeferred  bool        // always true in Phase 1 (drives the disabled control + fail-safe note)
-  AIAssistDeferred bool       // always true in Phase 1
-  Notices         []string
-}
-```
-A small pure builder `buildConsoleIntakeDraft(requestText, requestor string) ConsoleIntakeDraft` applies the declared defaults and preserves the request verbatim. (No freshness state machine here — Intake consumes no live projection; the honest seams are the two deferred controls, not a staleness badge.)
+### Retirement of the legacy /ops board (owner: "replace as part of this build")
+Precise, minimal surgery — **retire the board, keep the builder**:
+- **Remove** the visual issue-scan sections from `graph/civilization.templ` on the `/ops/civilization` page: `#issue-scan-kanban` (line ~221), the "Queued issue-scan lifecycle" section (~521), and the issue-scan stage-evidence table (~544). Replace with a short pointer: *"Issue-scan moved to Mission Control → /console/intake."*
+- **Keep** `OpsCivilizationIssueScanKanban` + the `civilization_issue_scan.go` builder — it is **shared** with the observation/canary surface (`ops.go:2246-2460`) and now the console. Removing only the rendering, not the data, avoids breaking the canary.
+- `handleOpsCivilization` keeps its other sections (boundary, status, factory orders, issue readiness) — those aren't superseded yet (D1: retire `/ops/*` view-by-view).
 
-**Handlers / routes** (mirror Kanban):
-- `GET /console/intake` → Step-1 page (free-text + optional title; `hx-post` to the draft route).
-- `POST /console/intake/draft` → builds the view-model from the posted text and renders the Step-2 review **fragment** (editable form + live preview + the two disabled seams). Registered in **both** `Register` (via `writeWrap`) and `RegisterReadOnlyConsole`.
-- Enable the Intake tab in `console.templ`.
+### Wiring
+- Enable the Intake tab: `consoleTab("intake", …, true)` in `console.templ`.
+- `ConsolePageData` gains `IssueScan *ConsoleIssueScan` (or reuse the ops kanban type directly).
+- Routes `GET /console/intake` (+ `/console/intake/fragment` for HTMX refresh) in **both** `Register` (via `writeWrap`) and `RegisterReadOnlyConsole`; handler mirrors `handleConsoleKanban` (fetch → build → render).
 
-**Templ components:** `consoleIntake` (Step-1 form), `consoleIntakeDraft` (Step-2 review/preview), reusing the existing console shell, freshness vocabulary where relevant, and — if natural — the shared order card/drawer for the preview.
+### Tests (mirror console_kanban_test.go)
+- Handler/render: `GET /console/intake` with a mocked `assembly-projection` renders the scan board — asserts a card shows the issue ref, stage, a working agent, and (when present) a blocker; the ready state renders "not merged".
+- Honest-staleness: projection error/absent → `unavailable` state, zero fabricated cards.
+- Retirement: `/ops/civilization` no longer renders the issue-scan section and shows the pointer; the canary/observation path (`opsObservationIssueScanCards`) still builds (builder retained) — a regression guard.
+- Per MFOF-001: desktop + mobile screenshots of the console Intake board.
 
-**Honest-data application:** verbatim request preserved; no invented draft content; the two deferred writes are visibly disabled with fail-safe statements; if the request is empty, the draft step returns an honest "nothing to draft" rather than a hollow form.
+## Build 2 — Channel A: human-request compose wizard (summary; later)
 
-## Testing approach
+Carries the earlier decisions: a **managed structured flow** (guided, validated wizard → title, definition-of-done, acceptance criteria, expected outputs, risk, repo), **stop at a ready-to-submit draft** (no write), verbatim request preserved, requestor = current operator, **AI-assist deferred** (no free-text structurer exists today — `work.BuildFactoryOrderDevelopmentProposal` is a *proof-of-work assembler of structured input*, not a free-text structurer; confirmed in the assessment). Both the AI-assist and the governed submit render as explicit deferred seams. Detailed in its own plan when Build 1 lands.
 
-- `buildConsoleIntakeDraft` unit tests: verbatim request preserved exactly; declared defaults applied; empty request → honest empty result (no fabricated fields); risk default is a valid class.
-- Handler/render tests (mirror `console_kanban_test.go`): `GET /console/intake` renders the compose form; `POST /console/intake/draft` with sample text renders the review fragment containing the verbatim request, the requestor's name, and **both** deferred-seam statements ("Phase-2 governed action" + "AI assist deferred"); the submit control is rendered **disabled** (assert it is not an active form submit / governed POST).
-- Per MFOF-001: the implementation PR will include desktop + mobile screenshots of the Intake compose and review screens.
-
-## What this is explicitly NOT (Phase 1)
-
-- **No AI structuring** of the free text (deferred seam — needs an upstream structurer that does not exist yet).
-- **No submit / no governed write / no order seeded** (deferred to Phase 2 `SeedFactoryOrder` via a governed endpoint).
-- **No persistence** of the draft (no write ⇒ the draft lives only in the request/response).
-- **No `work` package import**; no LLM call; no EventGraph or Work/Hive/Agent state mutation.
-
-## Open Questions (need an owner decision)
-
-1. **Accept the manual-compose framing (Approach A) for Phase-1 Intake?** Given there is no free-text structurer to call, this is the only honest option without building new structuring logic. If you'd rather the AI-assist be real now, that's Approach B/C and a larger, separately-scoped effort (and arguably a Phase-2/agent concern). **Recommendation: A.**
-2. **Resequence?** Intake is the **thinnest** Phase-1 slice — no live upstream, and both writes deferred. **Config** (read-only role×model matrix) has a real upstream (`operator-projection.ModelSelection` + the `modelconfig` catalog) and may be the higher-value next build. Do you want **Config (Plan 4) before Intake**? **Recommendation: consider yes** — but I designed Intake first because that's what you pointed me at.
-3. **POST for a pure compute** inside the read-only console — comfortable with `POST /console/intake/draft` returning a computed scaffold (no write), or prefer a GET-with-text variant? **Recommendation: POST** (cleaner for a textarea; it is not a governed write).
+## Open items for owner
+1. **Confirm the Build-1 retirement scope:** remove the three visual issue-scan sections from `/ops/civilization` + pointer, **keep** the shared builder. (Recommended — minimal, non-breaking.)
+2. **IAR** — what does it denote in your lifecycle? (affects state labels on the board.)
+3. Anything you want on the **drawer** beyond lineage/evidence/authority-boundary/possession for Build 1.
 
 ## Precedent & evidence index
-
-- `SITE-MISSION-CONTROL-DESIGN-001` — parent console design (this realizes its Intake surface; **amends** its Intake data-source claim per the finding above).
-- `work/factory_order_proposal.go:186` `BuildFactoryOrderDevelopmentProposal` — pure proof-of-work assembler (requires structured input; not a free-text structurer).
-- `work/factory_order.go:39` `FactoryOrder` seed DTO + `SeedFactoryOrder` (the Phase-2 governed write).
-- Merged console foundation: `site/graph/console.go`, `console.templ`, `handlers.go` (Plan 1 #198, Plan 2 #199).
+- `SITE-MISSION-CONTROL-DESIGN-001` — parent console design (this realizes + refines its Intake surface).
+- Backend: `hive/cmd/hive/factory_issue_scan_scanner.go`, `hive/pkg/hive/issue_intake.go`, `issue_scan_*` (7-stage lifecycle), `civilization_assembly_projection.go`; `GET /api/hive/civilization/assembly-projection`.
+- Site read path (to port/retire): `graph/civilization_issue_scan.go` (builder, reuse), `graph/civilization.templ` §issue-scan (retire), `fetchOpsCivilizationProjection` (ops.go).
+- Merged console foundation: `graph/console.go`, `console.templ`, `handlers.go` (Plan 1 #198, Plan 2 #199).
