@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/transpara-ai/site/assets"
@@ -22,7 +23,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
 					@consoleTab("health", "Health wall", "/console", data.Active, true)
 					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
-					@consoleTab("intake", "Intake", "/console/intake", data.Active, false)
+					@consoleTab("intake", "Intake", "/console/intake", data.Active, true)
 					@consoleTab("config", "Config", "/console/config", data.Active, false)
 				</nav>
 				if data.Health != nil {
@@ -31,6 +32,10 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				if data.Kanban != nil {
 					@consoleKanbanFragment(*data.Kanban)
 					<div id="console-kanban-drawer"></div>
+				}
+				if data.IssueScan != nil {
+					@consoleIssueScanFragment(*data.IssueScan)
+					<div id="console-intake-drawer"></div>
 				}
 			</main>
 		</body>
@@ -97,6 +102,66 @@ templ consoleKanban(k ConsoleKanban) {
 					</section>
 				}
 			</div>
+		}
+	</div>
+}
+
+templ consoleIssueScanFragment(s ConsoleIssueScan) {
+	<div id="console-intake" hx-get="/console/intake/fragment" hx-trigger="every 10s" hx-swap="outerHTML">
+		@consoleIssueScan(s)
+	</div>
+}
+
+templ consoleIssueScan(s ConsoleIssueScan) {
+	<section class="space-y-4" data-console-surface="intake">
+		<div class="flex items-center justify-between gap-3">
+			<div>
+				<h2 class="text-lg font-medium text-warm">Intake — issue-scan lifecycle</h2>
+				if s.Summary != "" {
+					<p class="text-xs text-warm-muted mt-1">{ s.Summary }</p>
+				}
+			</div>
+			@consoleFreshnessBadge(s.Freshness, s.GeneratedAt)
+		</div>
+		if s.Freshness == FreshnessUnavailable {
+			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(s.Notices) }</p>
+		} else if len(s.Board.Columns) == 0 {
+			<p class="text-sm text-warm-muted">No issue-scan runs projected.</p>
+		} else {
+			<div class="flex gap-4 overflow-x-auto pb-2">
+				for _, col := range s.Board.Columns {
+					<section class="min-w-[18rem] flex-shrink-0 space-y-2">
+						<h3 class="text-xs uppercase tracking-wide text-warm-muted">{ col.Label } · { strconv.Itoa(len(col.Cards)) }</h3>
+						for _, card := range col.Cards {
+							@consoleIssueScanCard(card)
+						}
+					</section>
+				}
+			</div>
+		}
+	</section>
+}
+
+templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
+	<div class="w-full rounded border border-edge bg-surface/40 p-3 space-y-1">
+		<div class="flex items-center justify-between gap-2">
+			<span class="text-sm text-warm font-medium break-words">{ consoleIssueScanCardIssue(card) }</span>
+			if card.StageNumber > 0 {
+				<span class="text-[10px] text-warm-muted font-mono whitespace-nowrap">{ fmt.Sprintf("%d/%d", card.StageNumber, card.StageCount) }</span>
+			}
+		</div>
+		if consoleIssueScanCardTitle(card) != "" {
+			<p class="text-xs text-warm-muted break-words">{ consoleIssueScanCardTitle(card) }</p>
+		}
+		<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-warm-muted">
+			<span>stage: { opsCivilizationValue(card.StageID, "—") }</span>
+			<span>agents: { consoleIssueScanCardAgents(card) }</span>
+		</div>
+		if len(card.Blockers) > 0 {
+			<p class="text-xs text-amber-300 break-words">blocked: { consoleIssueScanCardBlocker(card) }</p>
+		}
+		if consoleIssueScanCardReady(card) {
+			<p class="text-xs text-emerald-300">ready for human — not merged</p>
 		}
 	</div>
 }

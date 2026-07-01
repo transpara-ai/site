@@ -172,6 +172,65 @@ func (h *Handlers) handleConsoleKanbanFragment(w http.ResponseWriter, r *http.Re
 	consoleKanbanFragment(k).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleConsoleIntake(w http.ResponseWriter, r *http.Request) {
+	proj := fetchOpsCivilizationProjection(r)
+	scan := buildConsoleIssueScan(proj, time.Now().UTC())
+	h.renderConsole(w, r, ConsolePageData{Title: "Intake", Active: "intake", IssueScan: &scan})
+}
+
+func (h *Handlers) handleConsoleIntakeFragment(w http.ResponseWriter, r *http.Request) {
+	proj := fetchOpsCivilizationProjection(r)
+	scan := buildConsoleIssueScan(proj, time.Now().UTC())
+	consoleIssueScanFragment(scan).Render(r.Context(), w)
+}
+
+// consoleIssueScanCardIssue renders the leading issue reference (repo#number,
+// falling back to URL/title) for an issue-scan card, preferring the target
+// issue and falling back to the selected candidate.
+func consoleIssueScanCardIssue(card OpsCivilizationIssueScanKanbanCard) string {
+	ref := card.TargetIssue
+	if ref.Repo == "" && ref.Number == 0 {
+		ref = card.SelectedIssue
+	}
+	return opsCivilizationIssueRefLabel(ref)
+}
+
+func consoleIssueScanCardTitle(card OpsCivilizationIssueScanKanbanCard) string {
+	if card.TargetIssue.Title != "" {
+		return card.TargetIssue.Title
+	}
+	return card.SelectedIssue.Title
+}
+
+// consoleIssueScanCardAgents lists the possessing agents — assigned first, then
+// touching — or "unassigned" when the projection names none. Never invented.
+func consoleIssueScanCardAgents(card OpsCivilizationIssueScanKanbanCard) string {
+	if len(card.AssignedAgentIDs) > 0 {
+		return strings.Join(card.AssignedAgentIDs, ", ")
+	}
+	if len(card.TouchingAgentIDs) > 0 {
+		return strings.Join(card.TouchingAgentIDs, ", ")
+	}
+	return "unassigned"
+}
+
+func consoleIssueScanCardBlocker(card OpsCivilizationIssueScanKanbanCard) string {
+	if len(card.Blockers) == 0 {
+		return ""
+	}
+	b := card.Blockers[0]
+	if b.RequiredAction != "" {
+		return b.BlockerType + " — " + b.RequiredAction
+	}
+	return b.BlockerType
+}
+
+// consoleIssueScanCardReady reports whether the card is in the terminal
+// ready-for-human state, so the board can state the no-merge boundary honestly.
+func consoleIssueScanCardReady(card OpsCivilizationIssueScanKanbanCard) bool {
+	return strings.EqualFold(strings.TrimSpace(card.CurrentState), "ready_for_human")
+}
+
 func (h *Handlers) handleConsoleKanbanOrder(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	res := fetchConsoleWork(r)
