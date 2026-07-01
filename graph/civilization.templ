@@ -218,120 +218,12 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 			</div>
 		</section>
-		<section id="issue-scan-kanban" class="border border-edge bg-surface rounded-lg overflow-hidden" data-civilization-issue-scan-kanban="read-only">
-			<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-				<div>
-					<h2 class="text-sm font-medium text-warm">Issue-scan Kanban</h2>
-					<p class="text-xs text-warm-faint mt-1">Typed projection state for runs, stages, blockers, agent touch, and human action.</p>
-					<p class="text-xs text-warm-muted mt-2 leading-relaxed">{ data.IssueScanKanban.Summary }</p>
-				</div>
-				<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ data.IssueScanKanban.Status }</span>
-			</header>
-			if len(data.IssueScanKanban.Columns) == 0 {
-				<p class="px-4 py-5 text-sm text-warm-faint">No typed issue-scan cards are projected.</p>
-			} else {
-				<div class="overflow-x-auto" data-civilization-wide-table="issue-scan-kanban">
-					<div class="grid gap-3 p-4 min-w-[76rem]" style={ fmt.Sprintf("grid-template-columns: repeat(%d, minmax(15rem, 1fr));", len(data.IssueScanKanban.Columns)) }>
-						for _, column := range data.IssueScanKanban.Columns {
-							<section class="border border-edge bg-void/20 rounded-md overflow-hidden min-h-[18rem]">
-								<header class="px-3 py-2 border-b border-edge flex items-center justify-between gap-2">
-									<h3 class="text-xs font-medium text-warm">{ column.Label }</h3>
-									<span class="text-[10px] text-warm-faint tabular-nums">{ fmt.Sprintf("%d", len(column.Cards)) }</span>
-								</header>
-								<div class="p-3 space-y-3">
-									for _, card := range column.Cards {
-										<article class="border border-edge bg-surface rounded-md p-3 min-h-[14rem]">
-											<div class="flex items-start justify-between gap-3">
-												<div class="min-w-0">
-													<p class="text-xs font-medium text-warm break-words">{ opsCivilizationValue(card.StageID, card.RunID) }</p>
-													<p class="text-[10px] text-warm-faint break-all">{ opsCivilizationIssueRefLabel(card.SelectedIssue) }</p>
-												</div>
-												if card.StageNumber > 0 {
-													<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap">{ fmt.Sprintf("%d/%d", card.StageNumber, card.StageCount) }</span>
-												}
-											</div>
-											<dl class="grid gap-x-2 gap-y-1 mt-3 text-[11px] grid-cols-[5.25rem_minmax(0,1fr)]">
-												if card.ProjectionSource != "" {
-													<dt class="text-warm-faint">source</dt>
-													<dd class="text-warm-muted break-words">{ card.ProjectionSource }</dd>
-												}
-												<dt class="text-warm-faint">run</dt>
-												<dd class="text-warm-muted break-all">{ opsCivilizationValue(card.RunID, "run not projected") }</dd>
-												<dt class="text-warm-faint">task</dt>
-												<dd class="text-warm-muted break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "task not projected")) }</dd>
-												if card.Readiness != "" {
-													<dt class="text-warm-faint">readiness</dt>
-													<dd class="text-warm-muted break-words">{ card.Readiness }</dd>
-												}
-												if card.PRReadyWhen != "" {
-													<dt class="text-warm-faint">PR-ready</dt>
-													<dd class="text-warm-muted break-words">{ card.PRReadyWhen }</dd>
-												}
-												<dt class="text-warm-faint">gate</dt>
-												<dd class="text-warm-muted break-words">{ opsCivilizationValue(card.CompletionGate, "gate not projected") }</dd>
-												<dt class="text-warm-faint">boundary</dt>
-												<dd class="text-warm-muted break-words">{ opsCivilizationValue(card.AuthorityBoundary, "boundary not projected") }</dd>
-												if len(card.Labels) > 0 {
-													<dt class="text-warm-faint">labels</dt>
-													<dd class="text-warm-muted break-words">{ opsCivilizationJoin(card.Labels, "none projected") }</dd>
-												}
-												<dt class="text-warm-faint">assigned</dt>
-												<dd class="text-warm-muted break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>
-												<dt class="text-warm-faint">touching</dt>
-												<dd class="text-warm-muted break-all">{ opsCivilizationJoin(card.TouchingAgentIDs, "none projected") }</dd>
-												<dt class="text-warm-faint">candidates</dt>
-												<dd class="text-warm-muted break-words">
-													if len(card.CandidateIssues) == 0 {
-														<span>none projected</span>
-													} else {
-														for i, issue := range card.CandidateIssues {
-															if i > 0 {
-																<span>, </span>
-															}
-															<span>{ opsCivilizationIssueRefLabel(issue) }</span>
-														}
-													}
-												</dd>
-												if len(card.SourceRefs) > 0 {
-													<dt class="text-warm-faint">sources</dt>
-													<dd class="text-warm-muted break-all">{ opsCivilizationJoin(card.SourceRefs, "none projected") }</dd>
-												}
-												if len(card.EvidenceRefs) > 0 {
-													<dt class="text-warm-faint">evidence</dt>
-													<dd class="text-warm-muted break-all">{ opsCivilizationJoin(card.EvidenceRefs, "none projected") }</dd>
-												}
-											</dl>
-											if len(card.Blockers) > 0 {
-												<div class="mt-3 border-t border-edge pt-3 space-y-2">
-													for _, blocker := range card.Blockers {
-														<div>
-															<p class="text-[11px] text-warm break-words">{ opsCivilizationEvidenceStatusValue(blocker.BlockerType, "blocker") }</p>
-															<p class="text-[10px] text-warm-muted break-words">{ opsCivilizationValue(blocker.RequiredAction, "action not projected") }</p>
-															if blocker.Reason != "" {
-																<p class="text-[10px] text-warm-faint break-words">{ blocker.Reason }</p>
-															}
-														</div>
-													}
-												</div>
-											}
-											if card.HasLineage {
-												<div class="mt-3 border-t border-edge pt-3">
-													<p class="text-[10px] text-warm-faint uppercase tracking-widest">lineage</p>
-													<p class="text-[10px] text-warm-muted break-all mt-1">primary { opsCivilizationValue(card.Lineage.PrimaryTaskID, "not projected") }</p>
-													<p class="text-[10px] text-warm-faint break-all mt-1">duplicates { opsCivilizationJoin(card.Lineage.DuplicateTaskIDs, "none") }</p>
-													if card.Lineage.DuplicateOf != "" {
-														<p class="text-[10px] text-warm-faint break-all mt-1">duplicate of { card.Lineage.DuplicateOf }</p>
-													}
-												</div>
-											}
-										</article>
-									}
-								</div>
-							</section>
-						}
-					</div>
-				</div>
-			}
+		<section class="border border-edge bg-surface rounded-lg p-4" data-civilization-issue-scan-moved="console">
+			<h2 class="text-sm font-medium text-warm">Issue-scan</h2>
+			<p class="text-xs text-warm-muted mt-1">
+				Issue-scan moved to Mission Control →
+				<a href="/console/intake" class="text-brand hover:underline">/console/intake</a>.
+			</p>
 		</section>
 		if len(data.ReferenceGroups) > 0 {
 			<section class="grid gap-3 md:grid-cols-2">
@@ -514,64 +406,6 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				</div>
 			}
 		</section>
-		if data.QueuedRunRequest != nil {
-			<section class="border border-edge bg-surface rounded-lg overflow-hidden">
-				<header class="px-4 py-3 border-b border-edge flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-					<div>
-						<h2 class="text-sm font-medium text-warm">Queued issue-scan lifecycle</h2>
-						<p class="text-xs text-warm-faint mt-1">Expected lifecycle from Hive queued run intent; not runtime completion proof.</p>
-						<p class="text-sm text-warm-muted mt-2 break-words">{ opsValueOr(data.QueuedRunRequest.Title, data.QueuedRunRequest.RunID) }</p>
-					</div>
-					<span class="text-[10px] px-2 py-1 rounded-full border border-edge text-warm-faint bg-void/30 whitespace-nowrap self-start">{ opsValueOr(data.QueuedRunRequest.Status, "queued") }</span>
-				</header>
-				<dl class="grid gap-x-3 gap-y-2 p-4 text-xs md:grid-cols-[10rem_1fr]">
-					<dt class="text-warm-faint">Run ID</dt>
-					<dd class="text-warm-muted break-all">{ data.QueuedRunRequest.RunID }</dd>
-					<dt class="text-warm-faint">Target repos</dt>
-					<dd class="text-warm-muted break-all">{ opsEvidenceJoin(data.QueuedRunRequest.TargetRepos) }</dd>
-					<dt class="text-warm-faint">Authority</dt>
-					<dd class="text-warm-muted">{ opsValueOr(data.QueuedRunRequest.AuthorityInitialLevel, "unknown") }</dd>
-					<dt class="text-warm-faint">Authority scope</dt>
-					<dd class="text-warm-muted break-words">{ opsValueOr(data.QueuedRunRequest.AuthorityScope, "not projected") }</dd>
-					<dt class="text-warm-faint">Budget</dt>
-					<dd class="text-warm-muted">{ opsHiveOptionalInt(data.QueuedRunRequest.BudgetMaxIterations, "?") } iter / { opsHiveOptionalFloatUSD(data.QueuedRunRequest.BudgetMaxCostUSD, "?") }</dd>
-					<dt class="text-warm-faint">Evidence kind</dt>
-					<dd class="text-warm-muted break-all">{ opsValueOr(data.QueuedRunRequest.EvidenceKind, "queued request") }</dd>
-				</dl>
-				<div class="px-4 pb-4">
-					@opsHiveQueuedRunLifecycle(data.QueuedRunRequest)
-				</div>
-				if len(data.IssueScanStageEvidence) > 0 {
-					<div class="border-t border-edge overflow-x-auto" data-civilization-wide-table="issue-scan-stage-evidence">
-						<table class="w-full min-w-[64rem] text-left text-xs">
-							<thead class="text-warm-faint border-b border-edge">
-								<tr>
-									<th class="py-2 px-3 font-medium min-w-[14rem]">Stage</th>
-									<th class="py-2 px-3 font-medium">Status</th>
-									<th class="py-2 px-3 font-medium">Artifact</th>
-									<th class="py-2 px-3 font-medium">Media type</th>
-									<th class="py-2 px-3 font-medium">Task</th>
-								</tr>
-							</thead>
-							<tbody>
-								for _, evidence := range data.IssueScanStageEvidence {
-									<tr class="border-b border-edge/50 align-top">
-										<td class="py-2 px-3 text-warm min-w-[14rem]">
-											<p class="break-words">{ opsCivilizationValue(evidence.StageName, evidence.StageID) }</p>
-											<p class="text-[10px] text-warm-faint break-all">{ evidence.StageID }</p>
-										</td>
-										<td class="py-2 px-3 text-warm-muted break-words">{ opsCivilizationValue(evidence.EvidenceStatus, "not projected") }</td>
-										<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(evidence.ArtifactID, "not projected") }</td>
-										<td class="py-2 px-3 text-warm-muted break-all">{ opsCivilizationValue(evidence.MediaType, "not projected") }</td>
-										<td class="py-2 px-3 text-warm-faint break-all">{ opsCivilizationValue(evidence.TaskRef, "not projected") }</td>
-									</tr>
-								}
-							</tbody>
-						</table>
-					</div>
-				}
-			</section>
-		}
 		<section class="border border-edge bg-surface rounded-lg p-4">
 			<div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between mb-4">
 				<div>

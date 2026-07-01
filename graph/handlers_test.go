@@ -639,34 +639,8 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"cc:aggregate-candidate",
 		"cc:civilization-presence",
 		"cc:protected-action",
-		"Issue-scan Kanban",
-		`data-civilization-issue-scan-kanban="read-only"`,
-		"3 run(s), 3 stage(s), 4 blocker(s), 1 lineage record(s) projected.",
-		"run_docs_172",
-		"run_site_115",
-		"run_docs_172_scope",
-		"transpara-ai/docs#172",
-		"transpara-ai/site#115",
-		"Parked",
-		"Human Action",
-		"Blocked",
-		"run_adversarial_review",
-		"surface_ready_for_human_result_pr",
 		"research_issue_and_repo_context",
-		"tsk_docs_172_run_adversarial_review",
-		"agent_reviewer",
-		"agent_blocker_repair",
-		"agent_guardian",
-		"duplicate chain",
-		"needs human scope",
 		"protected action",
-		"stale target",
-		"collapse duplicate canonical stage chain",
-		"human must clarify issue scope before runtime continues",
-		"human must authorize protected repo action",
-		"confirm target issue is still live",
-		"lineage",
-		"duplicates",
 		"fo_run_issue_scan_001",
 		"work_task_seeded",
 		"human_required_before_merge",
@@ -689,16 +663,12 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"issue_scan_execution_plan",
 		"evt_work_task_stage_artifact_001",
 		"issue_scan_lifecycle_stage_research_issue_and_repo_context",
-		"declared pending runtime evidence",
 		"runtime=stage completed runtime evidence recorded",
 		"artifact_runtime_research_001",
-		"stage declared pending runtime evidence",
 		"application/json",
 		`data-civilization-wide-table="factory-orders"`,
 		`data-civilization-wide-table="work-tasks"`,
 		`data-civilization-wide-table="work-artifacts"`,
-		`data-civilization-wide-table="issue-scan-stage-evidence"`,
-		`data-civilization-wide-table="issue-scan-kanban"`,
 		`data-civilization-wide-table="role-topology"`,
 		`w-full min-w-[72rem]`,
 		`w-full min-w-[96rem]`,
@@ -707,22 +677,11 @@ func TestHandleOpsCivilizationConsumesHiveProjection(t *testing.T) {
 		"test_run_001",
 		"gate_result_001",
 		"audit_report_001",
-		"Queued issue-scan lifecycle",
-		"not runtime completion proof",
-		"expected evidence, not runtime progress",
-		"expected not observed",
-		"Issue selection",
 		"scanner_order_first_candidate_v0.1",
 		"scanner_return_order",
 		"Resolve transpara-ai/hive#321",
 		"research_issue_and_repo_context",
 		"debate_with_correct_civic_roles",
-		"select_and_design_approach",
-		"implement_on_branch",
-		"run_adversarial_review",
-		"drive_blockers_to_zero",
-		"surface_ready_for_Human_result_PR",
-		"human_approval_boundary_check",
 		"EventGraph Civilization Assembly projection civ-runtime-001",
 	} {
 		if !strings.Contains(body, want) {
@@ -1248,23 +1207,16 @@ func TestOpsCivilizationIssueScanKanbanUsesIssueIntakeFallbackWhenTypedProjectio
 		t.Fatalf("fallback columns = %+v, want ready_for_human, parked, human_action, and projection_only", data.IssueScanKanban.Columns)
 	}
 
+	// Rendering of issue-scan kanban cards (ProjectionSource, Labels, PRReadyWhen,
+	// etc.) was retired from /ops/civilization in favor of /console/intake; the
+	// builder-level assertions above cover the fallback-derivation behavior this
+	// test exists for. The component must still render cleanly with no mutation
+	// controls leaking into the read-only surface.
 	var body strings.Builder
 	if err := opsCivilizationAssembly(data).Render(context.Background(), &body); err != nil {
 		t.Fatalf("render fallback civilization assembly: %v", err)
 	}
-	html := body.String()
-	for _, want := range []string{
-		"scanner issue-intake fallback; not runtime execution or agent-touch evidence",
-		"cc:pr-ready",
-		"PR-ready now for a bounded Site-only read-only display implementation.",
-		"none projected",
-		"do not queue runtime work from this fallback card",
-	} {
-		if !strings.Contains(html, want) {
-			t.Fatalf("fallback render missing %q: %s", want, html)
-		}
-	}
-	assertNoCivilizationMutationControls(t, html)
+	assertNoCivilizationMutationControls(t, body.String())
 }
 
 func TestOpsCivilizationIssueScanKanbanTypedProjectionTakesPrecedenceOverIssueIntakeFallback(t *testing.T) {
@@ -2591,14 +2543,21 @@ func TestOpsCivilizationProjectionRenderEscapesHostileReadOnlyData(t *testing.T)
 			t.Fatalf("rendered HTML does not include escaped hostile marker %q: %s", escaped, html)
 		}
 	}
-	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;queued issue", "transpara-ai/&lt;script&gt;site", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;issue summary&lt;/button&gt;", "transpara-ai/&lt;script&gt;issue&lt;/script&gt;#114", "transpara-ai/&lt;input name=&#34;repo&#34;&gt;", "&lt;form action=&#34;/substrate&#34;&gt;substrate&lt;/form&gt;", "&lt;input name=&#34;substrate-input&#34;&gt;", "&lt;form action=&#34;/risk-input&#34;&gt;risk input&lt;/form&gt;", "&lt;script&gt;unknownRisk()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;readiness input&lt;/button&gt;", "&lt;a hx-post=&#34;/authority&#34;&gt;authority&lt;/a&gt;", "&lt;form action=&#34;/scanner&#34;&gt;scanner boundary&lt;/form&gt;", "group_&lt;script&gt;alert(&#34;group&#34;)&lt;/script&gt;", "&lt;a hx-post=&#34;/group&#34;&gt;group recommendation&lt;/a&gt;", "&lt;form action=&#34;/blocker&#34;&gt;group blocker&lt;/form&gt;", "&lt;textarea&gt;output&lt;/textarea&gt;", "&lt;img src=x onerror=alert(1)&gt;", "kanban_run_&lt;script&gt;alert(&#34;kanban&#34;)&lt;/script&gt;", "kanban_task_&lt;input name=&#34;stage&#34;&gt;", "&lt;a hx-post=&#34;/wake&#34;&gt;gate&lt;/a&gt;", "&lt;form action=&#34;/hive&#34;&gt;boundary&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;agent&lt;/button&gt;", "&lt;script&gt;touch()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;clarify&lt;/button&gt;", "&lt;script&gt;reason()&lt;/script&gt;", "primary_&lt;script&gt;task&lt;/script&gt;", "dup_&lt;input name=&#34;dup&#34;&gt;", "&lt;form action=&#34;/canonical&#34;&gt;canonical&lt;/form&gt;"} {
+	for _, escaped := range []string{"task_&lt;script&gt;", "canonical_&lt;input name=&#34;task&#34;&gt;", "stage_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;task", "&lt;form action=&#34;/mutate&#34;&gt;cell", "&#34;&gt;&lt;img src=x onerror=alert(7)&gt;", "work task &lt;script&gt;seeded&lt;/script&gt;", "runtime &lt;script&gt;recorded&lt;/script&gt;", "runtime_ref_&lt;script&gt;alert(13)&lt;/script&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;depends", "&lt;textarea&gt;task output&lt;/textarea&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;task source", "&lt;input name=&#34;role&#34;&gt;", "role_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;role", "&lt;textarea&gt;role output&lt;/textarea&gt;", "&lt;form action=&#34;/merge&#34;&gt;role boundary&lt;/form&gt;", "&lt;select&gt;required evidence&lt;/select&gt;", "output_contract_&lt;script&gt;", "&lt;button onclick=&#34;x&#34;&gt;output role", "&lt;textarea&gt;output contract&lt;/textarea&gt;", "&lt;form action=&#34;/authority&#34;&gt;output boundary&lt;/form&gt;", "&lt;a hx-post=&#34;/gate&#34;&gt;output gate&lt;/a&gt;", "required &lt;script&gt;not observed&lt;/script&gt;", "artifact_&lt;script&gt;", "stage_artifact_&lt;script&gt;", "stage_&lt;script&gt;", "stage_task_&lt;form", "&lt;button onclick=&#34;x&#34;&gt;artifact", "&#34;&gt;&lt;img src=x onerror=alert(1)&gt;", "application/&lt;img src=x onerror=alert(4)&gt;", "&lt;a hx-post=&#34;/mutate&#34;&gt;artifact ref", "evt_&lt;script&gt;", "run_&lt;script&gt;", "source_&lt;script&gt;", "brief_&lt;script&gt;", "validation_&lt;script&gt;", "policy_&lt;script&gt;", "&lt;a hx-post=&#34;/select&#34;&gt;ranking&lt;/a&gt;", "&lt;input name=&#34;rank&#34;&gt;", "&lt;form action=&#34;/select&#34;&gt;rationale&lt;/form&gt;", "&lt;button onclick=&#34;x&#34;&gt;issue summary&lt;/button&gt;", "transpara-ai/&lt;script&gt;issue&lt;/script&gt;#114", "transpara-ai/&lt;input name=&#34;repo&#34;&gt;", "&lt;form action=&#34;/substrate&#34;&gt;substrate&lt;/form&gt;", "&lt;input name=&#34;substrate-input&#34;&gt;", "&lt;form action=&#34;/risk-input&#34;&gt;risk input&lt;/form&gt;", "&lt;script&gt;unknownRisk()&lt;/script&gt;", "&lt;button onclick=&#34;x&#34;&gt;readiness input&lt;/button&gt;", "&lt;a hx-post=&#34;/authority&#34;&gt;authority&lt;/a&gt;", "&lt;form action=&#34;/scanner&#34;&gt;scanner boundary&lt;/form&gt;", "group_&lt;script&gt;alert(&#34;group&#34;)&lt;/script&gt;", "&lt;a hx-post=&#34;/group&#34;&gt;group recommendation&lt;/a&gt;", "&lt;form action=&#34;/blocker&#34;&gt;group blocker&lt;/form&gt;", "&lt;img src=x onerror=alert(1)&gt;"} {
 		if !strings.Contains(html, escaped) {
 			t.Fatalf("rendered HTML does not include escaped queued lifecycle marker %q: %s", escaped, html)
 		}
 	}
+	// The retired issue-scan kanban section was replaced by a static, non-projection
+	// pointer link to /console/intake (see civilization.templ). Strip that fixed,
+	// non-hostile markup before the blanket raw-tag check below, which exists to
+	// prove hostile *projection data* never renders unescaped — not to forbid the
+	// static navigational anchors used throughout the read-only surfaces (see the
+	// identical pattern at observatory.templ's decision-surface pointer).
+	htmlWithoutStaticPointer := strings.Replace(html, `<a href="/console/intake" class="text-brand hover:underline">/console/intake</a>`, "", 1)
 	for _, raw := range []string{"<script", "<button", "<form", "<input", "<select", "<textarea", "<img", "<a "} {
-		if strings.Contains(html, raw) {
-			t.Fatalf("rendered HTML contains unescaped hostile tag %q: %s", raw, html)
+		if strings.Contains(htmlWithoutStaticPointer, raw) {
+			t.Fatalf("rendered HTML contains unescaped hostile tag %q: %s", raw, htmlWithoutStaticPointer)
 		}
 	}
 }
@@ -4925,4 +4884,56 @@ func TestHandlerGovernanceDelegation(t *testing.T) {
 			t.Errorf("vote after undelegate: status = %d, want %d; body: %s", w2.Code, http.StatusOK, w2.Body.String())
 		}
 	})
+}
+
+func TestHandleOpsCivilizationRetiresIssueScanBoard(t *testing.T) {
+	h, _, _ := testHandlers(t)
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "secret")
+
+	mux := http.NewServeMux()
+	h.Register(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/ops/civilization", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	// Retired: the three issue-scan render sections are gone.
+	for _, gone := range []string{
+		`data-civilization-issue-scan-kanban="read-only"`,
+		`data-civilization-wide-table="issue-scan-kanban"`,
+		`data-civilization-wide-table="issue-scan-stage-evidence"`,
+		"Queued issue-scan lifecycle",
+	} {
+		if strings.Contains(body, gone) {
+			t.Errorf("/ops/civilization still renders retired section marker %q", gone)
+		}
+	}
+	// Added: an explicit pointer to the console surface.
+	if !strings.Contains(body, "/console/intake") {
+		t.Error("/ops/civilization must point issue-scan to /console/intake")
+	}
+}
+
+func TestObservationCanaryStillBuildsAfterRetirement(t *testing.T) {
+	// Regression guard: the shared builder must remain wired to the canary path.
+	board := opsCivilizationIssueScanKanban(&OpsCivilizationAssemblyProjection{
+		IssueScanProjection: OpsCivilizationIssueScanProjection{
+			Runs: []OpsCivilizationIssueScanRunProjected{{
+				RunID:       "run_c",
+				TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 300},
+			}},
+		},
+	})
+	if cards := opsObservationIssueScanCards(board); len(cards) == 0 {
+		t.Fatal("observation/canary consumer must still build cards from the retained builder")
+	}
 }
