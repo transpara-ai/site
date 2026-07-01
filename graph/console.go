@@ -184,6 +184,22 @@ func (h *Handlers) handleConsoleIntakeFragment(w http.ResponseWriter, r *http.Re
 	consoleIssueScanFragment(scan).Render(r.Context(), w)
 }
 
+func (h *Handlers) handleConsoleIntakeCard(w http.ResponseWriter, r *http.Request) {
+	run := strings.TrimSpace(r.URL.Query().Get("run"))
+	stage := strings.TrimSpace(r.URL.Query().Get("stage"))
+	board := opsCivilizationIssueScanKanban(fetchOpsCivilizationProjection(r))
+	for _, col := range board.Columns {
+		for _, card := range col.Cards {
+			if card.RunID == run && card.StageID == stage {
+				consoleIssueScanDrawer(card, true).Render(r.Context(), w)
+				return
+			}
+		}
+	}
+	// Not found or upstream error: honest empty drawer, never a fabricated run.
+	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false).Render(r.Context(), w)
+}
+
 // consoleIssueScanCardIssue renders the leading issue reference (repo#number,
 // falling back to URL/title) for an issue-scan card, preferring the target
 // issue and falling back to the selected candidate.

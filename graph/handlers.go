@@ -396,6 +396,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /console/kanban/order/{id}", h.writeWrap(h.handleConsoleKanbanOrder))
 	mux.Handle("GET /console/intake", h.writeWrap(h.handleConsoleIntake))
 	mux.Handle("GET /console/intake/fragment", h.writeWrap(h.handleConsoleIntakeFragment))
+	mux.Handle("GET /console/intake/card", h.writeWrap(h.handleConsoleIntakeCard))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
@@ -435,6 +436,7 @@ func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
 	mux.HandleFunc("GET /console/kanban/order/{id}", h.handleConsoleKanbanOrder)
 	mux.HandleFunc("GET /console/intake", h.handleConsoleIntake)
 	mux.HandleFunc("GET /console/intake/fragment", h.handleConsoleIntakeFragment)
+	mux.HandleFunc("GET /console/intake/card", h.handleConsoleIntakeCard)
 }
 
 // ────────────────────────────────────────────────────────────────────

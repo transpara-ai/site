@@ -143,7 +143,14 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 }
 
 templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
-	<div class="w-full rounded border border-edge bg-surface/40 p-3 space-y-1">
+	// hx-get uses a plain string (not templ.SafeURL): hx-* is an HTML attribute, so templ's attribute-escaping (ResolveAttributeValue->EscapeString) is the right protection; SafeURL is for href URL sinks. Same precedent as consoleOrderCard.
+	<button
+		type="button"
+		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
+		hx-get={ "/console/intake/card?run=" + card.RunID + "&stage=" + card.StageID }
+		hx-target="#console-intake-drawer"
+		hx-swap="innerHTML"
+	>
 		<div class="flex items-center justify-between gap-2">
 			<span class="text-sm text-warm font-medium break-words">{ consoleIssueScanCardIssue(card) }</span>
 			if card.StageNumber > 0 {
@@ -163,7 +170,54 @@ templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
 		if consoleIssueScanCardReady(card) {
 			<p class="text-xs text-emerald-300">ready for human — not merged</p>
 		}
-	</div>
+	</button>
+}
+
+templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool) {
+	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Issue-scan run details">
+		<div class="flex items-center justify-between gap-2">
+			<h3 class="text-sm font-medium text-warm">Run details</h3>
+			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-intake-drawer').innerHTML='';return false;">close</button>
+		</div>
+		if !found {
+			<p class="text-sm text-warm-muted">Run { opsCivilizationValue(card.RunID, "—") } stage { opsCivilizationValue(card.StageID, "—") } is unavailable (not found).</p>
+		} else {
+			<dl class="grid grid-cols-[9rem,1fr] gap-y-1 text-xs">
+				<dt class="text-warm-muted">Issue</dt><dd class="text-warm break-words">{ consoleIssueScanCardIssue(card) }</dd>
+				<dt class="text-warm-muted">Stage</dt><dd class="break-all">{ opsCivilizationValue(card.StageID, "—") }</dd>
+				<dt class="text-warm-muted">State</dt><dd>{ opsCivilizationValue(card.CurrentState, "—") }</dd>
+				<dt class="text-warm-muted">Assigned</dt><dd class="break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Touching</dt><dd class="break-all">{ opsCivilizationJoin(card.TouchingAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Authority</dt><dd class="break-words">{ opsCivilizationValue(card.AuthorityBoundary, "not projected") }</dd>
+				<dt class="text-warm-muted">Run</dt><dd class="break-all">{ opsCivilizationValue(card.RunID, "—") }</dd>
+				<dt class="text-warm-muted">Canonical task</dt><dd class="break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")) }</dd>
+			</dl>
+			if len(card.Blockers) > 0 {
+				<div class="border-t border-edge pt-3 space-y-2">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">blockers</p>
+					for _, b := range card.Blockers {
+						<div>
+							<p class="text-xs text-warm break-words">{ opsCivilizationEvidenceStatusValue(b.BlockerType, "blocker") }</p>
+							<p class="text-[10px] text-warm-muted break-words">{ opsCivilizationValue(b.RequiredAction, "action not projected") }</p>
+						</div>
+					}
+				</div>
+			}
+			if card.HasLineage {
+				<div class="border-t border-edge pt-3">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">lineage</p>
+					<p class="text-[10px] text-warm-muted break-all mt-1">primary { opsCivilizationValue(card.Lineage.PrimaryTaskID, "not projected") }</p>
+					<p class="text-[10px] text-warm-faint break-all mt-1">duplicates { opsCivilizationJoin(card.Lineage.DuplicateTaskIDs, "none") }</p>
+				</div>
+			}
+			if len(card.EvidenceRefs) > 0 {
+				<div class="border-t border-edge pt-3">
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">evidence</p>
+					<p class="text-[10px] text-warm-muted break-all mt-1">{ opsCivilizationJoin(card.EvidenceRefs, "none projected") }</p>
+				</div>
+			}
+		}
+	</aside>
 }
 
 templ consoleKanbanLensNav(active ConsoleKanbanLens) {
