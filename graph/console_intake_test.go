@@ -317,24 +317,71 @@ func TestConsoleIssueScanBoardHidesSummaryWhenUnavailable(t *testing.T) {
 	}
 }
 
-func TestConsoleIssueScanFragmentResetsDrawerOnlyWhenUnavailable(t *testing.T) {
-	// Unavailable poll must emit an out-of-band reset that clears an open drawer,
-	// so stale run details cannot survive the fail-closed board.
-	var unavail bytes.Buffer
-	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessUnavailable, Notices: []string{"down"}}).Render(context.Background(), &unavail); err != nil {
-		t.Fatalf("render unavailable: %v", err)
+func TestConsoleIssueScanFragmentResetsDrawerUnlessCurrent(t *testing.T) {
+	// The drawer can hold operator label-surgery commands (e.g. gh issue edit)
+	// that are only ever offered from a verified-current projection
+	// (buildConsoleIssueScan gates the unblock plan to FreshnessCurrent). So
+	// any poll that reports the projection is no longer verified-current must
+	// clear an open drawer, or a stale/partial/unavailable poll could leave a
+	// now-invalid command sitting in the DOM, copyable. This is a class fix
+	// over the whole freshness domain: allowlist the single proven-safe
+	// preserve branch (current) rather than denylist known-bad states, so an
+	// unrecognized/future freshness value clears the drawer too, never
+	// preserves it.
+	tests := []struct {
+		name          string
+		freshness     ConsoleFreshness
+		wantDrawerOOB bool
+	}{
+		{
+			name:          "current preserves the open drawer",
+			freshness:     FreshnessCurrent,
+			wantDrawerOOB: false,
+		},
+		{
+			name:          "stale clears the open drawer",
+			freshness:     FreshnessStale,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "partial clears the open drawer",
+			freshness:     FreshnessPartial,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "unavailable clears the open drawer",
+			freshness:     FreshnessUnavailable,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "unrecognized freshness value clears the open drawer",
+			freshness:     ConsoleFreshness("some-future-state"),
+			wantDrawerOOB: true,
+		},
 	}
-	if !strings.Contains(unavail.String(), "hx-swap-oob") || !strings.Contains(unavail.String(), `id="console-intake-drawer"`) {
-		t.Error("unavailable poll must emit an out-of-band drawer reset")
-	}
-	// A usable poll must NOT emit a drawer element, or the poll would erase an
-	// open drawer (the Plan-2b regression). It swaps only #console-intake.
-	var ok bytes.Buffer
-	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessCurrent, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}).Render(context.Background(), &ok); err != nil {
-		t.Fatalf("render usable: %v", err)
-	}
-	if strings.Contains(ok.String(), "console-intake-drawer") {
-		t.Error("usable poll must not touch the drawer (would erase an open drawer)")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scan := ConsoleIssueScan{Freshness: tt.freshness, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
+			if tt.freshness != FreshnessCurrent {
+				scan.Notices = []string{"down"}
+			}
+			var buf bytes.Buffer
+			if err := consoleIssueScanFragment(scan).Render(context.Background(), &buf); err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			out := buf.String()
+
+			// The board surface always renders regardless of freshness.
+			if !strings.Contains(out, `data-console-surface="intake"`) {
+				t.Error("fragment must always render the intake board surface")
+			}
+
+			hasDrawerOOB := strings.Contains(out, "hx-swap-oob") && strings.Contains(out, `id="console-intake-drawer"`)
+			if hasDrawerOOB != tt.wantDrawerOOB {
+				t.Errorf("freshness=%q: drawer OOB reset present=%v, want=%v", tt.freshness, hasDrawerOOB, tt.wantDrawerOOB)
+			}
+		})
 	}
 }
 

@@ -551,11 +551,17 @@ func consoleIssueScanSurface(s ConsoleIssueScan) templ.Component {
 }
 
 // consoleIssueScanFragment is the 10s poll response. It renders the board
-// surface and, ONLY when the surface is unavailable, an out-of-band reset that
-// clears any open details drawer — so a drawer opened while data was live
-// cannot keep displaying stale run details after the board fails closed. On a
-// usable poll no drawer element is emitted, so the poll swaps only #console-intake
-// and an open drawer is preserved (the Plan-2b poll-erasure fix).
+// surface and an out-of-band reset that clears any open details drawer
+// whenever the freshness is anything other than verified-current. The drawer
+// can hold operator label-surgery commands (e.g. gh issue edit) that are only
+// ever offered from a verified-current projection (see console.go's
+// FreshnessCurrent-only unblock gate); once the poll reports the projection
+// is no longer verified-current — stale, partial, unavailable, or any future
+// freshness value — those commands are no longer valid, so the drawer must be
+// cleared rather than left open with stale content. Only a poll that proves
+// the projection is current is allowed to preserve an open drawer; every
+// other outcome, known or not-yet-invented, clears it (allowlist, not
+// denylist, over the freshness domain).
 func consoleIssueScanFragment(s ConsoleIssueScan) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -581,7 +587,7 @@ func consoleIssueScanFragment(s ConsoleIssueScan) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if s.Freshness == FreshnessUnavailable {
+		if s.Freshness != FreshnessCurrent {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<div id=\"console-intake-drawer\" hx-swap-oob=\"innerHTML\"></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -624,7 +630,7 @@ func consoleIssueScan(s ConsoleIssueScan) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(s.Summary)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 141, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 147, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -655,7 +661,7 @@ func consoleIssueScan(s ConsoleIssueScan) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(noticeText(s.Notices))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 147, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 153, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -683,7 +689,7 @@ func consoleIssueScan(s ConsoleIssueScan) templ.Component {
 				var templ_7745c5c3_Var25 string
 				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(col.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 157, Col: 101}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 163, Col: 101}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 				if templ_7745c5c3_Err != nil {
@@ -696,7 +702,7 @@ func consoleIssueScan(s ConsoleIssueScan) templ.Component {
 				var templ_7745c5c3_Var26 string
 				templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(col.Cards)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 157, Col: 227}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 163, Col: 227}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 				if templ_7745c5c3_Err != nil {
@@ -758,7 +764,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(consoleIssueScanCardURL(card))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 173, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 179, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 		if templ_7745c5c3_Err != nil {
@@ -771,7 +777,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardIssue(card))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 178, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 184, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -789,7 +795,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d/%d", card.StageNumber, card.StageCount))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 180, Col: 131}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 186, Col: 131}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -812,7 +818,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardTitle(card))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 184, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 190, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -830,7 +836,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.StageID, "—"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 187, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 193, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -843,7 +849,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardAgents(card))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 188, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 194, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 		if templ_7745c5c3_Err != nil {
@@ -861,7 +867,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 			var templ_7745c5c3_Var34 string
 			templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardBlocker(card))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 191, Col: 93}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 197, Col: 93}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 			if templ_7745c5c3_Err != nil {
@@ -892,7 +898,7 @@ func consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) templ.Compone
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(card.ProjectionSource)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 204, Col: 85}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 210, Col: 85}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -944,7 +950,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.RunID, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 216, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 222, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -957,7 +963,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.StageID, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 216, Col: 135}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 222, Col: 135}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -980,7 +986,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var39 templ.SafeURL
 				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(consoleIssueScanCardIssueURL(card)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 223, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 229, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 				if templ_7745c5c3_Err != nil {
@@ -993,7 +999,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var40 string
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardIssue(card))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 223, Col: 165}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 229, Col: 165}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 				if templ_7745c5c3_Err != nil {
@@ -1007,7 +1013,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var41 string
 				templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(consoleIssueScanCardIssue(card))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 225, Col: 39}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 231, Col: 39}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 				if templ_7745c5c3_Err != nil {
@@ -1021,7 +1027,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.StageID, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 229, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 235, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -1034,7 +1040,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.CurrentState, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 231, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 237, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -1047,7 +1053,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(card.AssignedAgentIDs, "none projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 233, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 239, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -1060,7 +1066,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(card.TouchingAgentIDs, "none projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 235, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 241, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -1073,7 +1079,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var46 string
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.AuthorityBoundary, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 237, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 243, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -1086,7 +1092,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var47 string
 			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.RunID, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 239, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 245, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 			if templ_7745c5c3_Err != nil {
@@ -1099,7 +1105,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 			var templ_7745c5c3_Var48 string
 			templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 241, Col: 122}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 247, Col: 122}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 			if templ_7745c5c3_Err != nil {
@@ -1124,7 +1130,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 						var templ_7745c5c3_Var49 string
 						templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(chip.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 248, Col: 138}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 254, Col: 138}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 						if templ_7745c5c3_Err != nil {
@@ -1142,7 +1148,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 						var templ_7745c5c3_Var50 string
 						templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(chip.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 250, Col: 142}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 256, Col: 142}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 						if templ_7745c5c3_Err != nil {
@@ -1160,7 +1166,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 						var templ_7745c5c3_Var51 string
 						templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(chip.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 252, Col: 131}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 258, Col: 131}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 						if templ_7745c5c3_Err != nil {
@@ -1178,7 +1184,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 						var templ_7745c5c3_Var52 string
 						templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(chip.Label)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 254, Col: 62}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 260, Col: 62}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 						if templ_7745c5c3_Err != nil {
@@ -1212,7 +1218,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 					var templ_7745c5c3_Var53 string
 					templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(plan.ScopeCommand)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 264, Col: 164}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 270, Col: 164}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 					if templ_7745c5c3_Err != nil {
@@ -1237,7 +1243,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 					var templ_7745c5c3_Var54 string
 					templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinStringErrs(plan.ProtectedCommand)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 271, Col: 176}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 277, Col: 176}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 					if templ_7745c5c3_Err != nil {
@@ -1255,7 +1261,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var55 string
 				templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(plan.RescanCommand)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 274, Col: 164}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 280, Col: 164}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 				if templ_7745c5c3_Err != nil {
@@ -1283,7 +1289,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 					var templ_7745c5c3_Var56 string
 					templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationEvidenceStatusValue(b.BlockerType, "blocker"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 283, Col: 110}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 289, Col: 110}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 					if templ_7745c5c3_Err != nil {
@@ -1296,7 +1302,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 					var templ_7745c5c3_Var57 string
 					templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(b.RequiredAction, "action not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 284, Col: 122}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 290, Col: 122}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 					if templ_7745c5c3_Err != nil {
@@ -1324,7 +1330,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var58 string
 				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationValue(card.Lineage.PrimaryTaskID, "not projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 292, Col: 134}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 298, Col: 134}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 				if templ_7745c5c3_Err != nil {
@@ -1337,7 +1343,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var59 string
 				templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(card.Lineage.DuplicateTaskIDs, "none"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 293, Col: 130}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 299, Col: 130}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 				if templ_7745c5c3_Err != nil {
@@ -1360,7 +1366,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 				var templ_7745c5c3_Var60 string
 				templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(opsCivilizationJoin(card.EvidenceRefs, "none projected"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 299, Col: 117}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 305, Col: 117}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 				if templ_7745c5c3_Err != nil {
@@ -1458,7 +1464,7 @@ func consoleLensLink(lens, label string, active ConsoleKanbanLens) templ.Compone
 			var templ_7745c5c3_Var63 templ.SafeURL
 			templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/console/kanban?lens=" + lens))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 317, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 323, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 			if templ_7745c5c3_Err != nil {
@@ -1471,7 +1477,7 @@ func consoleLensLink(lens, label string, active ConsoleKanbanLens) templ.Compone
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 317, Col: 167}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 323, Col: 167}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1489,7 +1495,7 @@ func consoleLensLink(lens, label string, active ConsoleKanbanLens) templ.Compone
 			var templ_7745c5c3_Var65 templ.SafeURL
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/console/kanban?lens=" + lens))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 319, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 325, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1502,7 +1508,7 @@ func consoleLensLink(lens, label string, active ConsoleKanbanLens) templ.Compone
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 319, Col: 196}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 325, Col: 196}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {
@@ -1545,7 +1551,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var68 string
 		templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.ResolveAttributeValue("/console/kanban/order/" + card.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 328, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 334, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var68)
 		if templ_7745c5c3_Err != nil {
@@ -1558,7 +1564,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var69 string
 		templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(cardTitle(card))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 333, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 339, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 		if templ_7745c5c3_Err != nil {
@@ -1571,7 +1577,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var70 string
 		templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(cardTag(card))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 334, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 340, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 		if templ_7745c5c3_Err != nil {
@@ -1584,7 +1590,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var71 string
 		templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Submitter, "unknown"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 337, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 343, Col: 51}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 		if templ_7745c5c3_Err != nil {
@@ -1597,7 +1603,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var72 string
 		templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Status, "unknown"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 338, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 344, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 		if templ_7745c5c3_Err != nil {
@@ -1610,7 +1616,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 		var templ_7745c5c3_Var73 string
 		templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Agent, "unassigned"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 339, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 345, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 		if templ_7745c5c3_Err != nil {
@@ -1628,7 +1634,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 			var templ_7745c5c3_Var74 string
 			templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(card.Risk)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 341, Col: 27}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 347, Col: 27}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 			if templ_7745c5c3_Err != nil {
@@ -1647,7 +1653,7 @@ func consoleOrderCard(card ConsoleOrderCard) templ.Component {
 			var templ_7745c5c3_Var75 string
 			templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(card.AgeLabel)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 344, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 350, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 			if templ_7745c5c3_Err != nil {
@@ -1699,7 +1705,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var77 string
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs(card.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 357, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 363, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 			if templ_7745c5c3_Err != nil {
@@ -1717,7 +1723,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(cardTitle(card))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 361, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 367, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 			if templ_7745c5c3_Err != nil {
@@ -1730,7 +1736,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var79 string
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(cardTag(card))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 363, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 369, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 			if templ_7745c5c3_Err != nil {
@@ -1743,7 +1749,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var80 string
 			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Submitter, "unknown"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 365, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 371, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 			if templ_7745c5c3_Err != nil {
@@ -1756,7 +1762,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var81 string
 			templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Status, "unknown"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 367, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 373, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var81))
 			if templ_7745c5c3_Err != nil {
@@ -1769,7 +1775,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var82 string
 			templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Agent, "unassigned"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 369, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 375, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 			if templ_7745c5c3_Err != nil {
@@ -1782,7 +1788,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var83 string
 			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Risk, "unclassified"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 371, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 377, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var83))
 			if templ_7745c5c3_Err != nil {
@@ -1795,7 +1801,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var84 string
 			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.Cell, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 373, Col: 38}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 379, Col: 38}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
@@ -1808,7 +1814,7 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 			var templ_7745c5c3_Var85 string
 			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(card.AgeLabel, "—"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 375, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 381, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 			if templ_7745c5c3_Err != nil {
@@ -1910,7 +1916,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 				var templ_7745c5c3_Var88 string
 				templ_7745c5c3_Var88, templ_7745c5c3_Err = templ.JoinStringErrs(n)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 403, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 409, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var88))
 				if templ_7745c5c3_Err != nil {
@@ -1933,7 +1939,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 			var templ_7745c5c3_Var89 string
 			templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(w.ActiveAgents))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 410, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 416, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 			if templ_7745c5c3_Err != nil {
@@ -1946,7 +1952,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 			var templ_7745c5c3_Var90 string
 			templ_7745c5c3_Var90, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(w.PendingApprovals))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 414, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 420, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var90))
 			if templ_7745c5c3_Err != nil {
@@ -1970,7 +1976,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 					var templ_7745c5c3_Var91 string
 					templ_7745c5c3_Var91, templ_7745c5c3_Err = templ.JoinStringErrs(a.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 425, Col: 73}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 431, Col: 73}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var91))
 					if templ_7745c5c3_Err != nil {
@@ -1983,7 +1989,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 					var templ_7745c5c3_Var92 string
 					templ_7745c5c3_Var92, templ_7745c5c3_Err = templ.JoinStringErrs(a.Role)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 426, Col: 53}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 432, Col: 53}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var92))
 					if templ_7745c5c3_Err != nil {
@@ -1996,7 +2002,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 					var templ_7745c5c3_Var93 string
 					templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(a.Model)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 427, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 433, Col: 62}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
 					if templ_7745c5c3_Err != nil {
@@ -2025,7 +2031,7 @@ func consoleHealthWall(w ConsoleHealthWall) templ.Component {
 					var templ_7745c5c3_Var94 string
 					templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs(n)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 435, Col: 12}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 441, Col: 12}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
 					if templ_7745c5c3_Err != nil {
@@ -2132,7 +2138,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 			var templ_7745c5c3_Var97 string
 			templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(noticeText(c.Notices))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 463, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 469, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
 			if templ_7745c5c3_Err != nil {
@@ -2156,7 +2162,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var98 string
 					templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(n)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 468, Col: 12}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 474, Col: 12}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
 					if templ_7745c5c3_Err != nil {
@@ -2179,7 +2185,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 			var templ_7745c5c3_Var99 string
 			templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(c.Selection.Models)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 475, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 481, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 			if templ_7745c5c3_Err != nil {
@@ -2192,7 +2198,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 			var templ_7745c5c3_Var100 string
 			templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(c.Selection.Assignments)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 479, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 485, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 			if templ_7745c5c3_Err != nil {
@@ -2205,7 +2211,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 			var templ_7745c5c3_Var101 string
 			templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.JoinStringErrs(consoleConfigGlobalMode(c.Selection))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 483, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 489, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var101))
 			if templ_7745c5c3_Err != nil {
@@ -2218,7 +2224,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 			var templ_7745c5c3_Var102 string
 			templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(c.Selection.CatalogSource, "not projected"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 487, Col: 105}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 493, Col: 105}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var102))
 			if templ_7745c5c3_Err != nil {
@@ -2242,7 +2248,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var103 string
 					templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(item.Role, "role not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 498, Col: 111}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 504, Col: 111}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 					if templ_7745c5c3_Err != nil {
@@ -2255,7 +2261,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var104 string
 					templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.JoinStringErrs(consoleConfigAssignmentModel(item))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 499, Col: 96}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 505, Col: 96}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var104))
 					if templ_7745c5c3_Err != nil {
@@ -2268,7 +2274,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var105 string
 					templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinStringErrs(consoleConfigAssignmentProvider(item))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 500, Col: 85}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 506, Col: 85}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var105))
 					if templ_7745c5c3_Err != nil {
@@ -2281,7 +2287,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var106 string
 					templ_7745c5c3_Var106, templ_7745c5c3_Err = templ.JoinStringErrs(consoleConfigAssignmentMode(c.Selection, item))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 501, Col: 102}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 507, Col: 102}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var106))
 					if templ_7745c5c3_Err != nil {
@@ -2299,7 +2305,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 						var templ_7745c5c3_Var107 string
 						templ_7745c5c3_Var107, templ_7745c5c3_Err = templ.JoinStringErrs(item.Error)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 504, Col: 71}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 510, Col: 71}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var107))
 						if templ_7745c5c3_Err != nil {
@@ -2334,7 +2340,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var108 string
 					templ_7745c5c3_Var108, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(m.ID, "id not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 517, Col: 97}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 523, Col: 97}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var108))
 					if templ_7745c5c3_Err != nil {
@@ -2347,7 +2353,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var109 string
 					templ_7745c5c3_Var109, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(m.Provider, "provider not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 518, Col: 95}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 524, Col: 95}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var109))
 					if templ_7745c5c3_Err != nil {
@@ -2360,7 +2366,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var110 string
 					templ_7745c5c3_Var110, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(m.AuthMode, "auth not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 519, Col: 91}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 525, Col: 91}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var110))
 					if templ_7745c5c3_Err != nil {
@@ -2373,7 +2379,7 @@ func consoleConfig(c ConsoleConfig) templ.Component {
 					var templ_7745c5c3_Var111 string
 					templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinStringErrs(orFallback(m.Tier, "tier not projected"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 520, Col: 87}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 526, Col: 87}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var111))
 					if templ_7745c5c3_Err != nil {
