@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -264,5 +266,124 @@ func TestConsoleConfigRoutesInReadOnlyRegistrar(t *testing.T) {
 		if !strings.Contains(w.Body.String(), "unavailable") {
 			t.Errorf("%s: no-DB console must render explicit unavailable state", path)
 		}
+	}
+}
+
+func TestConsoleConfigRendersNoWriteControls(t *testing.T) {
+	// READ-ONLY BOUNDARY: the config surface must carry zero write affordances,
+	// even fully populated. The governed write (POST /ops/hive/model-policy)
+	// lives on /ops and must not leak here in any form.
+	srv := newConfigHiveServer(t)
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	for _, forbidden := range []string{
+		"<form", "hx-post", "hx-put", "hx-delete", "hx-patch",
+		"<input", "<select", "<textarea", "<button",
+		"/ops/hive/model-policy",
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Errorf("read-only config surface must not render %q", forbidden)
+		}
+	}
+}
+
+func TestConsoleConfigWriteRouteNotRegistered(t *testing.T) {
+	// Belt and braces: no POST route may answer under /console/config in either
+	// registrar. ServeMux returns 405 for a method-mismatched pattern — the
+	// requirement is only that a POST can never succeed.
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	for name, register := range map[string]func(h *Handlers, mux *http.ServeMux){
+		"Register":                func(h *Handlers, mux *http.ServeMux) { h.Register(mux) },
+		"RegisterReadOnlyConsole": func(h *Handlers, mux *http.ServeMux) { h.RegisterReadOnlyConsole(mux) },
+	} {
+		h := NewHandlers(nil, nil, nil)
+		if name == "Register" {
+			h = newConsoleTestHandlers()
+		}
+		mux := http.NewServeMux()
+		register(h, mux)
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/console/config", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code == http.StatusOK {
+			t.Errorf("%s: POST /console/config answered 200; write path must not exist", name)
+		}
+	}
+}
+
+func TestConsoleConfigSurfaceEscapesHostileProjectionData(t *testing.T) {
+	// templ's default { } interpolation HTML-escapes everything and this surface
+	// uses no templ.Raw/SafeHTML — hostile operator-visible projection strings
+	// must come out escaped. Mirrors the intake surface guard.
+	hostile := OpsHiveModelSelection{
+		Source:        "hive-operator-projection",
+		CatalogSource: `<script>catalog()</script>`,
+		Models: []OpsHiveModelCatalogEntry{
+			{ID: `<script>alert('model')</script>`, Provider: `<img src=x onerror=y>prov`, AuthMode: "subscription", Tier: "judgment"},
+		},
+		Assignments: []OpsHiveModelRoleAssignment{
+			{Role: `<button onclick="x">role</button>`, Model: "m", Error: `<form action="/hive">err</form>`},
+		},
+		Errors: []string{`<script>selerr()</script>`},
+	}
+	cfg := buildConsoleConfig(&OpsHiveProjection{
+		GeneratedAt:    time.Now().UTC().Format(time.RFC3339),
+		ModelSelection: hostile,
+	}, nil, time.Now().UTC())
+
+	var buf bytes.Buffer
+	if err := consoleConfig(cfg).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+
+	for _, raw := range []string{
+		`<script>alert('model')</script>`,
+		`<script>catalog()</script>`,
+		`<script>selerr()</script>`,
+		`<button onclick="x">role</button>`,
+		`<form action="/hive">err</form>`,
+		"<img src=x onerror=y>prov",
+	} {
+		if strings.Contains(out, raw) {
+			t.Errorf("hostile raw markup %q survived escaping in the config surface", raw)
+		}
+	}
+	if !strings.Contains(out, "&lt;script") {
+		t.Error("expected escaped form \"&lt;script\" in output; escaping did not occur (data may have vanished instead of being escaped)")
+	}
+}
+
+func TestConsoleConfigSourceOnlySelectionRendersHonestEmptyStates(t *testing.T) {
+	// A selection with Source set but no models/assignments is usable (the
+	// allowlist admits it) — the surface must render explicit empty states,
+	// not blank tables and not fabricated rows.
+	cfg := buildConsoleConfig(&OpsHiveProjection{
+		GeneratedAt:    time.Now().UTC().Format(time.RFC3339),
+		ModelSelection: OpsHiveModelSelection{Source: "hive-operator-projection"},
+	}, nil, time.Now().UTC())
+	if cfg.Freshness != FreshnessCurrent {
+		t.Fatalf("freshness = %q, want current for source-only selection", cfg.Freshness)
+	}
+	var buf bytes.Buffer
+	if err := consoleConfig(cfg).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "No role assignments projected.") {
+		t.Error("empty assignments must render the explicit empty state")
+	}
+	if !strings.Contains(out, "No catalog models projected.") {
+		t.Error("empty catalog must render the explicit empty state")
 	}
 }
