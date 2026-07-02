@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -413,5 +415,51 @@ func TestConsoleKanbanDrawerLivesOutsideThePolledFragment(t *testing.T) {
 	}
 	if strings.Contains(fragW.Body.String(), `id="console-kanban-drawer"`) {
 		t.Error("polled fragment must NOT contain the drawer container (it would be wiped every 10s)")
+	}
+}
+
+func TestConsoleKanbanEmptyStateExplainsFlowAndLinksIntake(t *testing.T) {
+	// Zero tasks, clean fetch (no error) — freshness stays current, not
+	// unavailable, and the empty state must teach where orders come from.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(`{"tasks":[]}`))
+	}))
+	defer srv.Close()
+	t.Setenv("WORK_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"No factory orders yet.", "cc:pr-ready", `href="/console/intake"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("empty kanban body missing %q; body: %s", want, body)
+		}
+	}
+}
+
+func TestConsoleKanbanUnavailableStateHasNoIntakeLink(t *testing.T) {
+	// Render the kanban surface fragment directly (not the full page) with
+	// FreshnessUnavailable so the nav tab's own /console/intake href can't
+	// false-positive the assertion.
+	k := ConsoleKanban{Freshness: FreshnessUnavailable, Notices: []string{"upstream unreachable"}}
+	var buf bytes.Buffer
+	if err := consoleKanban(k).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf.String(), `href="/console/intake"`) {
+		t.Error("unavailable kanban must not render the intake deep link")
 	}
 }

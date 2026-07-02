@@ -93,7 +93,11 @@ templ consoleKanban(k ConsoleKanban) {
 		if k.Freshness == FreshnessUnavailable {
 			<p class="text-sm text-warm-muted">unavailable — { noticeText(k.Notices) }</p>
 		} else if k.TotalCards == 0 {
-			<p class="text-sm text-warm-muted">No orders.</p>
+			<div class="border border-edge bg-surface rounded-lg p-6 space-y-2" data-state="empty">
+				<p class="text-sm font-medium text-warm">No factory orders yet.</p>
+				<p class="text-sm text-warm-muted">Work enters the factory at Intake: issues labeled <span class="font-mono text-[11px]">cc:pr-ready</span> are admitted by the issue scanner and become orders tracked here.</p>
+				<a href="/console/intake" class="inline-block text-sm text-brand hover:underline">Go to Intake →</a>
+			</div>
 		} else {
 			<div class="flex gap-4 overflow-x-auto pb-2">
 				for _, col := range k.Columns {
@@ -142,7 +146,10 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 		if s.Freshness == FreshnessUnavailable {
 			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(s.Notices) }</p>
 		} else if len(s.Board.Columns) == 0 {
-			<p class="text-sm text-warm-muted">No issue-scan runs projected.</p>
+			<div class="border border-edge bg-surface rounded-lg p-6 space-y-2" data-state="empty">
+				<p class="text-sm font-medium text-warm">No issue-scan runs projected.</p>
+				<p class="text-sm text-warm-muted">Runs appear after a scan cycle: one-shot <span class="font-mono text-[11px]">hive factory scan-issues</span>, or the scan daemon on its interval. Issues need the <span class="font-mono text-[11px]">cc:pr-ready</span> label to be admitted.</p>
+			</div>
 		} else {
 			<div class="flex gap-4 overflow-x-auto pb-2">
 				for _, col := range s.Board.Columns {
@@ -218,13 +225,20 @@ templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool
 						{ consoleIssueScanCardIssue(card) }
 					}
 				</dd>
-				<dt class="text-warm-muted">Stage</dt><dd class="break-all">{ opsCivilizationValue(card.StageID, "—") }</dd>
-				<dt class="text-warm-muted">State</dt><dd>{ opsCivilizationValue(card.CurrentState, "—") }</dd>
-				<dt class="text-warm-muted">Assigned</dt><dd class="break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>
-				<dt class="text-warm-muted">Touching</dt><dd class="break-all">{ opsCivilizationJoin(card.TouchingAgentIDs, "none projected") }</dd>
-				<dt class="text-warm-muted">Authority</dt><dd class="break-words">{ opsCivilizationValue(card.AuthorityBoundary, "not projected") }</dd>
-				<dt class="text-warm-muted">Run</dt><dd class="break-all">{ opsCivilizationValue(card.RunID, "—") }</dd>
-				<dt class="text-warm-muted">Canonical task</dt><dd class="break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")) }</dd>
+				<dt class="text-warm-muted">Stage</dt>
+				<dd class="break-all">{ opsCivilizationValue(card.StageID, "—") }</dd>
+				<dt class="text-warm-muted">State</dt>
+				<dd>{ opsCivilizationValue(card.CurrentState, "—") }</dd>
+				<dt class="text-warm-muted">Assigned</dt>
+				<dd class="break-all">{ opsCivilizationJoin(card.AssignedAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Touching</dt>
+				<dd class="break-all">{ opsCivilizationJoin(card.TouchingAgentIDs, "none projected") }</dd>
+				<dt class="text-warm-muted">Authority</dt>
+				<dd class="break-words">{ opsCivilizationValue(card.AuthorityBoundary, "not projected") }</dd>
+				<dt class="text-warm-muted">Run</dt>
+				<dd class="break-all">{ opsCivilizationValue(card.RunID, "—") }</dd>
+				<dt class="text-warm-muted">Canonical task</dt>
+				<dd class="break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")) }</dd>
 			</dl>
 			if chips := consoleIssueScanRefChips(card); len(chips) > 0 {
 				<div class="flex flex-wrap gap-1 pt-1">
@@ -343,17 +357,28 @@ templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
 			<p class="text-sm text-warm-muted">Order { card.ID } is unavailable (not found).</p>
 		} else {
 			<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-xs">
-				<dt class="text-warm-muted">Title</dt><dd class="text-warm">{ cardTitle(card) }</dd>
-				<dt class="text-warm-muted">Order</dt><dd class="font-mono text-warm">{ cardTag(card) }</dd>
-				<dt class="text-warm-muted">Submitter</dt><dd>{ orFallback(card.Submitter, "unknown") }</dd>
-				<dt class="text-warm-muted">Status</dt><dd>{ orFallback(card.Status, "unknown") }</dd>
-				<dt class="text-warm-muted">Agent</dt><dd>{ orFallback(card.Agent, "unassigned") }</dd>
-				<dt class="text-warm-muted">Risk</dt><dd>{ orFallback(card.Risk, "unclassified") }</dd>
-				<dt class="text-warm-muted">Cell</dt><dd>{ orFallback(card.Cell, "—") }</dd>
-				<dt class="text-warm-muted">Age</dt><dd>{ orFallback(card.AgeLabel, "—") }</dd>
-				<dt class="text-warm-muted">Effort to date</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
-				<dt class="text-warm-muted">Predicted effort</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
-				<dt class="text-warm-muted">Linked PR</dt><dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+				<dt class="text-warm-muted">Title</dt>
+				<dd class="text-warm">{ cardTitle(card) }</dd>
+				<dt class="text-warm-muted">Order</dt>
+				<dd class="font-mono text-warm">{ cardTag(card) }</dd>
+				<dt class="text-warm-muted">Submitter</dt>
+				<dd>{ orFallback(card.Submitter, "unknown") }</dd>
+				<dt class="text-warm-muted">Status</dt>
+				<dd>{ orFallback(card.Status, "unknown") }</dd>
+				<dt class="text-warm-muted">Agent</dt>
+				<dd>{ orFallback(card.Agent, "unassigned") }</dd>
+				<dt class="text-warm-muted">Risk</dt>
+				<dd>{ orFallback(card.Risk, "unclassified") }</dd>
+				<dt class="text-warm-muted">Cell</dt>
+				<dd>{ orFallback(card.Cell, "—") }</dd>
+				<dt class="text-warm-muted">Age</dt>
+				<dd>{ orFallback(card.AgeLabel, "—") }</dd>
+				<dt class="text-warm-muted">Effort to date</dt>
+				<dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+				<dt class="text-warm-muted">Predicted effort</dt>
+				<dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
+				<dt class="text-warm-muted">Linked PR</dt>
+				<dd class="text-warm-muted italic">unavailable — not yet in any projection</dd>
 			</dl>
 		}
 	</aside>
@@ -393,7 +418,7 @@ templ consoleHealthWall(w ConsoleHealthWall) {
 			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
 				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Agents</div>
 				if len(w.Agents) == 0 {
-					<div class="px-4 py-3 text-sm text-warm-muted">No active agents reported.</div>
+					<div class="px-4 py-3 text-sm text-warm-muted">No active agents. Agents report here while a civilization run is in flight; between runs an empty roster is the honest state.</div>
 				} else {
 					for _, a := range w.Agents {
 						<div class="flex items-center gap-3 px-4 py-2 border-b border-edge last:border-0">
@@ -414,7 +439,6 @@ templ consoleHealthWall(w ConsoleHealthWall) {
 		}
 	</section>
 }
-
 
 templ consoleConfigFragment(c ConsoleConfig) {
 	<div id="console-config" hx-get="/console/config/fragment" hx-trigger="every 10s" hx-swap="outerHTML">
@@ -466,7 +490,7 @@ templ consoleConfig(c ConsoleConfig) {
 			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
 				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Role → model routing</div>
 				if len(c.Selection.Assignments) == 0 {
-					<div class="px-4 py-3 text-sm text-warm-muted">No role assignments projected.</div>
+					<div class="px-4 py-3 text-sm text-warm-muted">No role assignments projected. Role routing appears once the hive projects its model-selection policy.</div>
 				} else {
 					for _, item := range c.Selection.Assignments {
 						<div class="px-4 py-2 border-b border-edge last:border-0">
@@ -486,7 +510,7 @@ templ consoleConfig(c ConsoleConfig) {
 			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
 				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Model catalog</div>
 				if len(c.Selection.Models) == 0 {
-					<div class="px-4 py-3 text-sm text-warm-muted">No catalog models projected.</div>
+					<div class="px-4 py-3 text-sm text-warm-muted">No catalog models projected. The catalog is hive-owned (<span class="font-mono text-[11px]">HIVE_OPS_CATALOG</span>) and hot-reloaded.</div>
 				} else {
 					for _, m := range c.Selection.Models {
 						<div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 border-b border-edge last:border-0">

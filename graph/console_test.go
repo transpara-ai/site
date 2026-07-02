@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -130,6 +132,28 @@ func TestBuildConsoleHealthWall(t *testing.T) {
 			t.Fatalf("freshness = %q, want partial", wall.Freshness)
 		}
 	})
+}
+
+func TestConsoleHealthEmptyRosterIsPurposeful(t *testing.T) {
+	// Fresh projection, zero agents — a genuinely usable-but-empty roster
+	// (between civilization runs). The empty state must say why, not just
+	// shrug with "reported."
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	proj := &OpsHiveProjection{GeneratedAt: now.Add(-2 * time.Second).Format(time.RFC3339)}
+	wall := buildConsoleHealthWall(proj, nil, now)
+	if wall.Freshness != FreshnessCurrent {
+		t.Fatalf("freshness = %q, want current for a fresh, empty roster", wall.Freshness)
+	}
+	var buf bytes.Buffer
+	if err := consoleHealthWall(wall).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"No active agents.", "civilization run"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("empty health body missing %q; body: %s", want, out)
+		}
+	}
 }
 
 func TestHandleConsoleHealthFragment(t *testing.T) {

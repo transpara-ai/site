@@ -3,6 +3,7 @@ package graph
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -649,6 +650,50 @@ func TestConsoleIntakeDrawerSplitsProtectedCommand(t *testing.T) {
 	} {
 		if strings.Contains(body, forbid) {
 			t.Errorf("protected removal folded into another command: %q", forbid)
+		}
+	}
+}
+
+func TestConsoleIntakeEmptyStateExplainsScanCycle(t *testing.T) {
+	// A complete, fresh projection with zero issue-scan AND zero issue-intake
+	// records is a genuinely usable-but-empty board (verified via
+	// issueScanKanbanFromIssueIntakeFallback: with no issue_intake_projection
+	// issues either, it returns zero columns rather than fabricating fallback
+	// cards). The empty state must teach how runs get here.
+	emptyProjection := fmt.Sprintf(`{
+		"projection_schema_version": "1.0.0",
+		"projection_subject": "civilization_assembly",
+		"derivation_status": "complete",
+		"generated_at": %q,
+		"issue_scan_projection": {}
+	}`, time.Now().UTC().Format(time.RFC3339))
+
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/civilization/assembly-projection" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, emptyProjection)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"No issue-scan runs projected.", "hive factory scan-issues", "cc:pr-ready"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("empty intake body missing %q; body: %s", want, body)
 		}
 	}
 }
