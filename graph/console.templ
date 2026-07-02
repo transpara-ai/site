@@ -183,6 +183,9 @@ templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
 		if len(card.Blockers) > 0 {
 			<p class="text-xs text-amber-300 break-words">blocked: { consoleIssueScanCardBlocker(card) }</p>
 		}
+		if card.UnblockAvailable {
+			<p class="text-[10px] text-brand">unblock available — open for the exact commands</p>
+		}
 		if consoleIssueScanCardReady(card) {
 			<p class="text-xs text-emerald-300">ready for human — not merged</p>
 		}
@@ -196,7 +199,7 @@ templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
 	</button>
 }
 
-templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool) {
+templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool, plan consoleUnblockPlan, planOK bool) {
 	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Issue-scan run details">
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="text-sm font-medium text-warm">Run details</h3>
@@ -223,6 +226,41 @@ templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool
 				<dt class="text-warm-muted">Run</dt><dd class="break-all">{ opsCivilizationValue(card.RunID, "—") }</dd>
 				<dt class="text-warm-muted">Canonical task</dt><dd class="break-all">{ opsCivilizationValue(card.CanonicalTaskID, opsCivilizationValue(card.TaskID, "not projected")) }</dd>
 			</dl>
+			if chips := consoleIssueScanRefChips(card); len(chips) > 0 {
+				<div class="flex flex-wrap gap-1 pt-1">
+					for _, chip := range chips {
+						switch chip.Kind {
+							case "deny":
+								<span class="inline-flex items-center rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">{ chip.Label }</span>
+							case "ready":
+								<span class="inline-flex items-center rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] text-emerald-300">{ chip.Label }</span>
+							case "cc":
+								<span class="inline-flex items-center rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-muted">{ chip.Label }</span>
+							default:
+								<span class="text-[10px] text-warm-muted">{ chip.Label }</span>
+						}
+					}
+				</div>
+			}
+			if planOK {
+				<div class="border-t border-edge pt-3 space-y-2" data-console-unblock>
+					<p class="text-[10px] text-warm-faint uppercase tracking-widest">unblock</p>
+					if plan.ScopeCommand != "" {
+						<p class="text-xs text-warm-secondary break-words">Relabel the target issue to admit it. Hive reads labels only — it never edits them; this action is yours:</p>
+						<pre class="bg-elevated border border-edge rounded p-2 overflow-x-auto"><code class="text-[11px] font-mono text-warm-secondary select-all">{ plan.ScopeCommand }</code></pre>
+					}
+					if plan.ScopeCommand != "" && plan.ProtectedCommand != "" {
+						<p class="text-xs text-warm-muted break-words">The scope command alone does not admit the issue — the protected-action boundary below must be separately authorized.</p>
+					}
+					if plan.ProtectedCommand != "" {
+						<p class="text-xs text-amber-300 break-words">This second command clears a protected-action boundary — run it only if you authorize the protected action:</p>
+						<pre class="bg-elevated border border-amber-500/40 rounded p-2 overflow-x-auto"><code class="text-[11px] font-mono text-warm-secondary select-all">{ plan.ProtectedCommand }</code></pre>
+					}
+					<p class="text-xs text-warm-secondary break-words"><span class="text-warm font-medium">A parked run is terminal.</span> Fixing labels does not resume this run — the parked event is final and idempotent. After relabeling, a fresh scan cycle re-queues the issue: run the command below (add <span class="font-mono">--dispatch</span> to also launch the queued run as a factory order), or wait for the scan daemon&apos;s next interval.</p>
+					<pre class="bg-elevated border border-edge rounded p-2 overflow-x-auto"><code class="text-[11px] font-mono text-warm-secondary select-all">{ plan.RescanCommand }</code></pre>
+					<p class="text-[10px] text-warm-muted">Replace YOUR_NAME with the requesting human. Daemon alternative: <span class="font-mono">hive factory daemon --issue-scan-interval 15m</span></p>
+				</div>
+			}
 			if len(card.Blockers) > 0 {
 				<div class="border-t border-edge pt-3 space-y-2">
 					<p class="text-[10px] text-warm-faint uppercase tracking-widest">blockers</p>

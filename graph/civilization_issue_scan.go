@@ -114,6 +114,11 @@ type OpsCivilizationIssueScanKanbanCard struct {
 	HasLineage        bool
 	SourceRefs        []string
 	EvidenceRefs      []string
+
+	// UnblockAvailable is a Site console display derivation (set only by
+	// buildConsoleIssueScan): true when the fail-closed unblock gate offers
+	// operator commands for this card. Never projected; zero-value on /ops.
+	UnblockAvailable bool
 }
 
 func opsCivilizationIssueScanKanban(projection *OpsCivilizationAssemblyProjection) OpsCivilizationIssueScanKanban {

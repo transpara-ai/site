@@ -151,6 +151,13 @@ func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Tim
 	}
 	generatedAt := proj.GeneratedAt.UTC().Format(time.RFC3339)
 	hasPartial := status == opsCivilizationProjectionStatusPartial
+	runBlockerTypes := consoleIssueScanRunBlockerTypes(board)
+	for ci := range board.Columns {
+		for i := range board.Columns[ci].Cards {
+			_, ok := consoleIssueScanUnblockPlan(board.Columns[ci].Cards[i], runBlockerTypes)
+			board.Columns[ci].Cards[i].UnblockAvailable = ok
+		}
+	}
 	return ConsoleIssueScan{
 		Freshness:   deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow),
 		GeneratedAt: generatedAt,
@@ -208,17 +215,19 @@ func (h *Handlers) handleConsoleIntakeCard(w http.ResponseWriter, r *http.Reques
 	// unavailable, the loop is skipped and the honest not-found drawer renders.
 	scan := buildConsoleIssueScan(fetchOpsCivilizationProjection(r), time.Now().UTC())
 	if scan.Freshness != FreshnessUnavailable {
+		runBlockerTypes := consoleIssueScanRunBlockerTypes(scan.Board)
 		for _, col := range scan.Board.Columns {
 			for _, card := range col.Cards {
 				if card.RunID == run && card.StageID == stage {
-					consoleIssueScanDrawer(card, true).Render(r.Context(), w)
+					plan, planOK := consoleIssueScanUnblockPlan(card, runBlockerTypes)
+					consoleIssueScanDrawer(card, true, plan, planOK).Render(r.Context(), w)
 					return
 				}
 			}
 		}
 	}
 	// Not found, upstream error, or unavailable surface: honest empty drawer, never a fabricated run.
-	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false).Render(r.Context(), w)
+	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false, consoleUnblockPlan{}, false).Render(r.Context(), w)
 }
 
 // consoleIssueScanCardIssue renders the leading issue reference (repo#number,

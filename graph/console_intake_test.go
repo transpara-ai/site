@@ -259,7 +259,7 @@ func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
 		TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 42, URL: "https://github.com/transpara-ai/site/issues/42"},
 	}
 	var buf bytes.Buffer
-	if err := consoleIssueScanDrawer(linked, true).Render(context.Background(), &buf); err != nil {
+	if err := consoleIssueScanDrawer(linked, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if !strings.Contains(buf.String(), `href="https://github.com/transpara-ai/site/issues/42"`) {
@@ -269,7 +269,7 @@ func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
 	// No projected URL → plain text label, no dangling empty anchor.
 	noURL := OpsCivilizationIssueScanKanbanCard{RunID: "r", TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 43}}
 	var buf2 bytes.Buffer
-	if err := consoleIssueScanDrawer(noURL, true).Render(context.Background(), &buf2); err != nil {
+	if err := consoleIssueScanDrawer(noURL, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf2); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if strings.Contains(buf2.String(), "<a href") {
@@ -503,7 +503,7 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 	}
 	card := board.Columns[0].Cards[0]
 	var buf2 bytes.Buffer
-	if err := consoleIssueScanDrawer(card, true).Render(context.Background(), &buf2); err != nil {
+	if err := consoleIssueScanDrawer(card, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf2); err != nil {
 		t.Fatalf("render drawer: %v", err)
 	}
 
@@ -532,5 +532,123 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 
 	if !strings.Contains(boardOut, "&lt;script") {
 		t.Error("expected escaped form \"&lt;script\" in board output; escaping did not occur (data may have vanished instead of being escaped)")
+	}
+}
+
+// End-to-end through the real handler + shared fixture: the cleanly
+// label-parked run offers the exact commands; terminal-run copy present.
+func TestConsoleIntakeDrawerRendersUnblockCommands(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"gh issue edit 172 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"A parked run is terminal.",
+		"hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
+		"--dispatch",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("drawer missing %q", want)
+		}
+	}
+	if strings.Contains(body, "protected-action boundary") {
+		t.Error("protected warning rendered though no protected label is on docs#172")
+	}
+}
+
+// End-to-end negative: run_site_115 has sibling blockers protected_action +
+// stale_target, so the gate must refuse — no command anywhere, projected
+// required action still shown.
+func TestConsoleIntakeDrawerNoCommandForNonLabelBlocker(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_site_115&stage=surface_ready_for_human_result_pr", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	body := w.Body.String()
+	if strings.Contains(body, "gh issue edit") {
+		t.Error("gate must refuse commands for a run with a sibling non-label blocker (stale_target)")
+	}
+	if !strings.Contains(body, "human must authorize protected repo action") {
+		t.Error("projected RequiredAction must still render when the gate refuses")
+	}
+}
+
+// Board hint appears exactly once with the shared fixture: only
+// run_docs_172_scope passes the gate (run_docs_172 = duplicate_chain,
+// run_site_115 = protected_action + stale_target siblings).
+func TestConsoleIntakeCardUnblockHint(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if got := strings.Count(w.Body.String(), "unblock available"); got != 1 {
+		t.Errorf("unblock hint count = %d, want exactly 1 (only run_docs_172_scope passes the gate)", got)
+	}
+}
+
+// Component-level: cc:protected-action renders as its own warned command,
+// never folded into the scope command.
+func TestConsoleIntakeDrawerSplitsProtectedCommand(t *testing.T) {
+	card := unblockCard("run-split", "needs_human_scope", []string{"cc:needs-human-scope", "cc:protected-action"})
+	plan, ok := consoleIssueScanUnblockPlan(card, consoleIssueScanRunBlockerTypes(boardWith(card)))
+	if !ok {
+		t.Fatal("expected plan for label-parked card")
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScanDrawer(card, true, plan, true).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	body := buf.String()
+	for _, want := range []string{
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:protected-action",
+		"run it only if you authorize the protected action",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("split drawer missing %q", want)
+		}
+	}
+	for _, forbid := range []string{
+		"--remove-label cc:needs-human-scope --remove-label cc:protected-action",
+		"--remove-label cc:protected-action --add-label",
+	} {
+		if strings.Contains(body, forbid) {
+			t.Errorf("protected removal folded into another command: %q", forbid)
+		}
 	}
 }
