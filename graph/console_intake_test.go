@@ -297,6 +297,209 @@ func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
 	}
 }
 
+// TestConsoleRecentRunsRailRendersChipsWithDrawerLinkAndPlainSpan asserts the
+// rail's two chip shapes: a linked entry (its (RunID, StageID) is on the
+// rendered board) renders as an <a> with the hx-get/hx-target/hx-swap drawer
+// wiring, while an unlinked entry renders as a plain <span> with no hx-get at
+// all — the rail must never fabricate a drawer target for a run the board
+// itself doesn't expose.
+func TestConsoleRecentRunsRailRendersChipsWithDrawerLinkAndPlainSpan(t *testing.T) {
+	scan := ConsoleIssueScan{
+		Freshness: FreshnessCurrent,
+		Board: OpsCivilizationIssueScanKanban{
+			Columns: []OpsCivilizationIssueScanKanbanColumn{
+				{Label: "Parked", Cards: []OpsCivilizationIssueScanKanbanCard{
+					{RunID: "run_linked", StageID: "stage_linked", TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 42}},
+				}},
+			},
+		},
+		RecentRuns: ConsoleRecentRuns{
+			Available: true,
+			Entries: []ConsoleRecentRunEntry{
+				{
+					RunID:      "run_linked",
+					StageID:    "stage_linked",
+					IssueLabel: "transpara-ai/site#42",
+					State:      "parked",
+					StyleKind:  "amber",
+					Age:        "5m ago",
+					Linked:     true,
+					DrawerURL:  consoleIssueScanCardURL(OpsCivilizationIssueScanKanbanCard{RunID: "run_linked", StageID: "stage_linked"}),
+				},
+				{
+					RunID:      "run_unlinked",
+					StageID:    "stage_unlinked",
+					IssueLabel: "transpara-ai/site#43",
+					State:      "queued",
+					StyleKind:  "neutral",
+					Linked:     false,
+				},
+			},
+		},
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "data-console-rail") {
+		t.Error("rail must render data-console-rail on its container when Available")
+	}
+	if !strings.Contains(out, "recent intakes") {
+		t.Error("rail must render the section header \"recent intakes\"")
+	}
+
+	// hx-get is an HTML attribute value; templ's attribute escaping renders
+	// "&" as "&amp;" (correct, browser-decodable HTML), so the query-string
+	// "&" between run/stage params must be matched in its escaped form.
+	linkedURL := strings.ReplaceAll(consoleIssueScanCardURL(OpsCivilizationIssueScanKanbanCard{RunID: "run_linked", StageID: "stage_linked"}), "&", "&amp;")
+	if !strings.Contains(out, `<a`) || !strings.Contains(out, `hx-get="`+linkedURL+`"`) {
+		t.Error("linked entry must render an <a> with hx-get set to its DrawerURL")
+	}
+	if !strings.Contains(out, `hx-target="#console-intake-drawer"`) {
+		t.Error("linked entry must target #console-intake-drawer")
+	}
+	if !strings.Contains(out, `hx-swap="innerHTML"`) {
+		t.Error("linked entry must hx-swap innerHTML")
+	}
+	if !strings.Contains(out, "transpara-ai/site#42") {
+		t.Error("linked chip must show its IssueLabel")
+	}
+	if !strings.Contains(out, "transpara-ai/site#43") {
+		t.Error("unlinked chip must show its IssueLabel")
+	}
+
+	// The unlinked entry must render as a <span>, not an <a>/hx-get, for its
+	// own chip. Scope the check to the rail region to avoid false negatives
+	// from the board's own <a> usage elsewhere on the surface.
+	railStart := strings.Index(out, "data-console-rail")
+	if railStart == -1 {
+		t.Fatal("rail marker not found; cannot scope unlinked-chip assertion")
+	}
+	// The board section (a sibling, not a descendant) follows the rail; bound
+	// the search to the rail's own chip strip using the section header as the
+	// left edge and the truncation-free single-rail assumption here (no
+	// truncation marker in this fixture).
+	railRegion := out[railStart:]
+	if boardIdx := strings.Index(railRegion, `data-console-surface`); boardIdx != -1 {
+		railRegion = railRegion[:boardIdx]
+	}
+	unlinkedURL := strings.ReplaceAll(consoleIssueScanCardURL(OpsCivilizationIssueScanKanbanCard{RunID: "run_unlinked", StageID: "stage_unlinked"}), "&", "&amp;")
+	if strings.Contains(railRegion, `hx-get="`+unlinkedURL+`"`) {
+		t.Error("unlinked entry must not render an hx-get drawer link")
+	}
+}
+
+// TestConsoleRecentRunsRailAbsentWhenUnavailableByteIdentical is the plan's
+// byte-equality guard: when RecentRuns.Available is false, the intake surface
+// must render byte-identical HTML to the same projection with the
+// RecentRuns section entirely absent (zero value) — i.e. the rail leaves
+// truly zero trace, not just a visually-empty container.
+func TestConsoleRecentRunsRailAbsentWhenUnavailableByteIdentical(t *testing.T) {
+	base := ConsoleIssueScan{
+		Freshness:   FreshnessCurrent,
+		GeneratedAt: "2026-07-02T09:00:00Z",
+		Summary:     "1 run(s) projected.",
+		Board: OpsCivilizationIssueScanKanban{
+			Columns: []OpsCivilizationIssueScanKanbanColumn{
+				{Label: "Parked", Cards: []OpsCivilizationIssueScanKanbanCard{
+					{RunID: "run_a", StageID: "stage_a", TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 1}},
+				}},
+			},
+		},
+	}
+
+	withRecentRunsZero := base
+	withRecentRunsZero.RecentRuns = ConsoleRecentRuns{}
+
+	withRecentRunsFalseButPopulated := base
+	withRecentRunsFalseButPopulated.RecentRuns = ConsoleRecentRuns{
+		Available: false,
+		// Entries populated despite Available=false must never surface: this
+		// only happens if a caller misuses the type, but the template itself
+		// must gate on Available, not on len(Entries).
+		Entries: []ConsoleRecentRunEntry{{RunID: "should_never_render", IssueLabel: "should-not-appear"}},
+	}
+
+	var bufZero, bufFalsePopulated bytes.Buffer
+	if err := consoleIssueScan(withRecentRunsZero).Render(context.Background(), &bufZero); err != nil {
+		t.Fatalf("render (zero RecentRuns): %v", err)
+	}
+	if err := consoleIssueScan(withRecentRunsFalseButPopulated).Render(context.Background(), &bufFalsePopulated); err != nil {
+		t.Fatalf("render (Available=false, populated Entries): %v", err)
+	}
+
+	if bufZero.String() != bufFalsePopulated.String() {
+		t.Fatal("intake surface must render byte-identical HTML whether RecentRuns is the zero value or Available=false with stray entries")
+	}
+	if strings.Contains(bufZero.String(), "data-console-rail") {
+		t.Error("data-console-rail must be ABSENT when RecentRuns.Available is false")
+	}
+	if strings.Contains(bufFalsePopulated.String(), "should-not-appear") {
+		t.Error("a stray populated entry under Available=false must never render")
+	}
+}
+
+// TestConsoleRecentRunsRailUnknownStateNeutralVerbatim mirrors the view-model
+// guard (TestBuildConsoleRecentRunsUnknownStateNeutralVerbatim) at the render
+// layer: an unknown/future state value must render escaped verbatim with the
+// neutral class, never substituted, hidden, or colored amber by a default.
+func TestConsoleRecentRunsRailUnknownStateNeutralVerbatim(t *testing.T) {
+	scan := ConsoleIssueScan{
+		Freshness: FreshnessCurrent,
+		RecentRuns: ConsoleRecentRuns{
+			Available: true,
+			Entries: []ConsoleRecentRunEntry{
+				{RunID: "run_x", IssueLabel: "transpara-ai/site#7", State: "ready_for_human", StyleKind: "neutral"},
+			},
+		},
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "ready_for_human") {
+		t.Error("unknown state must render verbatim, not substituted or hidden")
+	}
+	if !strings.Contains(out, "text-warm-muted") {
+		t.Error("unknown/neutral StyleKind must render with text-warm-muted, not an amber class")
+	}
+	if strings.Contains(out, "text-amber-300") {
+		t.Error("neutral StyleKind must never render the amber class")
+	}
+}
+
+// TestConsoleRecentRunsRailTruncatedMarker asserts the trailing "… truncated"
+// marker renders iff Truncated is set.
+func TestConsoleRecentRunsRailTruncatedMarker(t *testing.T) {
+	truncated := ConsoleIssueScan{
+		Freshness: FreshnessCurrent,
+		RecentRuns: ConsoleRecentRuns{
+			Available: true,
+			Truncated: true,
+			Entries:   []ConsoleRecentRunEntry{{RunID: "run_x", IssueLabel: "transpara-ai/site#7", State: "queued", StyleKind: "neutral"}},
+		},
+	}
+	notTruncated := truncated
+	notTruncated.RecentRuns.Truncated = false
+
+	var bufT, bufN bytes.Buffer
+	if err := consoleIssueScan(truncated).Render(context.Background(), &bufT); err != nil {
+		t.Fatalf("render truncated: %v", err)
+	}
+	if err := consoleIssueScan(notTruncated).Render(context.Background(), &bufN); err != nil {
+		t.Fatalf("render not truncated: %v", err)
+	}
+	if !strings.Contains(bufT.String(), "truncated") {
+		t.Error("Truncated=true must render the truncation marker")
+	}
+	if strings.Contains(bufN.String(), "truncated") {
+		t.Error("Truncated=false must NOT render the truncation marker")
+	}
+}
+
 func TestConsoleIssueScanBoardHidesSummaryWhenUnavailable(t *testing.T) {
 	// A failed/unavailable scan still carries board.Summary (e.g. "No typed
 	// issue-scan projection records are present"). Rendering that above the
@@ -554,9 +757,20 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 				PrimaryTaskID: "<script>lineage()</script>",
 			}},
 		},
+		RecentIssueScanRuns: OpsCivilizationRecentIssueScanRuns{
+			Status: "available",
+			Runs: []OpsCivilizationRecentIssueScanRun{{
+				RunID:       runID,
+				StageID:     stageID,
+				Repo:        `<svg onload=alert('repo')>x/y</svg>`,
+				IssueNumber: 900,
+				IssueTitle:  "<script>alert('rail-title')</script>",
+				State:       `<img src=x onerror=alert('rail-state')>`,
+			}},
+		},
 	}
 
-	// Render the board.
+	// Render the board (which includes the recent-intakes rail).
 	scan := buildConsoleIssueScan(proj, time.Now().UTC())
 	var buf bytes.Buffer
 	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
@@ -590,6 +804,9 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 		"<img src=x onerror=y>agent",
 		"<script>lineage()</script>",
 		"javascript:alert('url')", // the drawer's issue-link href must be sanitized by templ.URL
+		`<svg onload=alert('repo')>x/y</svg>`,
+		"<script>alert('rail-title')</script>",
+		"<img src=x onerror=alert('rail-state')>",
 	}
 	for _, raw := range rawHostile {
 		if strings.Contains(combined, raw) {
@@ -825,9 +1042,16 @@ func TestConsoleIntakeEmptyStateExplainsScanCycle(t *testing.T) {
 // and the drawer close button are legitimately type="button" and are NOT
 // asserted absent — only form/hx-write/submit/write-route markers are.
 func TestConsoleIntakeSurfaceRendersNoWriteControls(t *testing.T) {
+	// Splice in an available recent_issue_scan_runs section (schema 1.6.0) so
+	// the rail actually renders for this fixture — otherwise this test could
+	// pass vacuously without ever exercising the rail's own markup for write
+	// affordances.
+	railSection := `{"status": "available", "runs": [{"run_id": "run_docs_172_scope", "stage_id": "select_and_design_approach", "repo": "transpara-ai/docs", "issue_number": 172, "state": "parked", "last_event_at": "2026-06-23T09:29:00Z"}]}`
+	fixtureWithRail := spliceRecentIssueScanRunsSection(t, freshHiveCivilizationAssemblyProjectionFixture(), railSection)
+
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+		_, _ = io.WriteString(w, fixtureWithRail)
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
@@ -858,6 +1082,14 @@ func TestConsoleIntakeSurfaceRendersNoWriteControls(t *testing.T) {
 	// no-write-controls assertion below isn't vacuous (nothing to leak).
 	if !strings.Contains(bodies["drawer"], "gh issue edit 172 --repo transpara-ai/docs") {
 		t.Fatal("drawer fixture must render the unblock command, or this test proves nothing")
+	}
+	// Sanity: the rail itself actually rendered on the page/fragment, so the
+	// no-write-controls assertion below actually exercises rail markup.
+	if !strings.Contains(bodies["page"], "data-console-rail") {
+		t.Fatal("page fixture must render the recent-intakes rail, or this test proves nothing about rail write-controls")
+	}
+	if !strings.Contains(bodies["fragment"], "data-console-rail") {
+		t.Fatal("fragment fixture must render the recent-intakes rail, or this test proves nothing about rail write-controls")
 	}
 
 	for name, body := range bodies {

@@ -125,18 +125,15 @@ type ConsoleRecentRuns struct {
 // board), via consoleIssueScanCardURL mechanics, so the rail never fabricates
 // a drawer target.
 type ConsoleRecentRunEntry struct {
-	RunID          string
-	StageID        string
-	IssueLabel     string
-	IssueURL       string
-	State          string
-	StyleKind      string
-	Age            string
-	DrawerURL      string
-	Linked         bool
-	FactoryOrderID string
-	BlockerType    string
-	RequiredAction string
+	RunID      string
+	StageID    string
+	IssueLabel string
+	IssueURL   string
+	State      string
+	StyleKind  string
+	Age        string
+	DrawerURL  string
+	Linked     bool
 }
 
 // consoleRecentRunAmberStates is the allowlist of states that render amber.
@@ -196,17 +193,14 @@ func buildConsoleRecentRuns(proj *OpsCivilizationAssemblyProjection, board OpsCi
 	for _, run := range section.Runs {
 		linked := onBoard[runStageKey(run.RunID, run.StageID)]
 		entry := ConsoleRecentRunEntry{
-			RunID:          run.RunID,
-			StageID:        run.StageID,
-			IssueLabel:     opsCivilizationIssueRefLabel(OpsCivilizationIssueRef{Repo: run.Repo, Number: run.IssueNumber, URL: run.IssueURL, Title: run.IssueTitle}),
-			IssueURL:       run.IssueURL,
-			State:          run.State,
-			StyleKind:      consoleRecentRunStyleKind(run.State),
-			Age:            consoleRecentRunAge(now, run.LastEventAt),
-			Linked:         linked,
-			FactoryOrderID: run.FactoryOrderID,
-			BlockerType:    run.BlockerType,
-			RequiredAction: run.RequiredAction,
+			RunID:      run.RunID,
+			StageID:    run.StageID,
+			IssueLabel: opsCivilizationIssueRefLabel(OpsCivilizationIssueRef{Repo: run.Repo, Number: run.IssueNumber, URL: run.IssueURL, Title: run.IssueTitle}),
+			IssueURL:   run.IssueURL,
+			State:      run.State,
+			StyleKind:  consoleRecentRunStyleKind(run.State),
+			Age:        consoleRecentRunAge(now, run.LastEventAt),
+			Linked:     linked,
 		}
 		if linked {
 			entry.DrawerURL = consoleIssueScanCardURL(OpsCivilizationIssueScanKanbanCard{RunID: run.RunID, StageID: run.StageID})
