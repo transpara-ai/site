@@ -890,9 +890,15 @@ func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
 	return mode
 }
 
+// obsHiveProjectionModelModeProvenance is a render-boundary accessor
+// (ops.templ prints its return directly), so it routes through
+// obsModeProvenanceDisplay for class-consistency with every other provenance
+// render site. Provably a no-op today — the global state function's
+// vocabulary cannot produce the invalid-projection sentinel — but it closes
+// the class so a future global sentinel could never leak to the surface.
 func obsHiveProjectionModelModeProvenance(selection OpsHiveModelSelection) string {
 	_, provenance, _ := obsHiveProjectionModelModeState(selection)
-	return provenance
+	return obsModeProvenanceDisplay(provenance)
 }
 
 func obsHiveProjectionModelModeState(selection OpsHiveModelSelection) (string, string, string) {

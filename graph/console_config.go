@@ -85,9 +85,13 @@ func consoleConfigAssignmentMode(sel OpsHiveModelSelection, item OpsHiveModelRol
 	return mode + " · " + obsModeProvenanceDisplay(provenance)
 }
 
+// consoleConfigGlobalMode is a render boundary (console.templ prints its
+// return directly), so provenance routes through obsModeProvenanceDisplay for
+// class-consistency. A no-op today — the global vocabulary cannot produce the
+// invalid-projection sentinel — but the class stays closed.
 func consoleConfigGlobalMode(sel OpsHiveModelSelection) string {
 	mode, provenance, _ := obsHiveProjectionModelModeState(sel)
-	return mode + " · " + provenance
+	return mode + " · " + obsModeProvenanceDisplay(provenance)
 }
 
 func (h *Handlers) handleConsoleConfig(w http.ResponseWriter, r *http.Request) {
