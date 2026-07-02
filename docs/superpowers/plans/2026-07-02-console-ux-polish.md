@@ -4,7 +4,7 @@
 
 **Goal:** Make the four `/console` tabs operator-grade: actionable intake blocker cards (exact `gh` label commands behind a fail-closed gate), purposeful empty states, and one coherent visual language.
 
-**Architecture:** All changes live in `graph/console*` in transpara-ai/site. A new pure derivation (`graph/console_unblock.go`) computes an unblock plan from projected data only, gated by a whole-board run-level allowlist with per-blocker label-evidence binding, split by authority class (scope vs protected-action commands). Templates render the plan as selectable text (zero write affordances). Spec: `docs/designs/console-ux-polish-design-v0.1.0.md` (internal v0.3.0, CFADA rounds 1-2 resolved) + issue https://github.com/transpara-ai/site/issues/202.
+**Architecture:** All changes live in `graph/console*` in transpara-ai/site. A new pure derivation (`graph/console_unblock.go`) computes an unblock plan from projected data only, gated by a whole-board run-level allowlist with per-blocker label-evidence binding, split by authority class (scope vs protected-action commands). Templates render the plan as selectable text (zero write affordances). Spec: `docs/designs/console-ux-polish-design-v0.1.0.md` (internal v0.4.0, CFADA PASS after rounds 1-3 resolved + round-4 confirmation) + issue https://github.com/transpara-ai/site/issues/202.
 
 **Tech Stack:** Go, templ (run `templ generate` after ANY `.templ` edit; commit generated `*_templ.go`), Tailwind v4 semantic tokens, HTMX (existing patterns only).
 
