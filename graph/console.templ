@@ -131,6 +131,15 @@ templ consoleIssueScanSurface(s ConsoleIssueScan) {
 // the projection is current is allowed to preserve an open drawer; every
 // other outcome, known or not-yet-invented, clears it (allowlist, not
 // denylist, over the freshness domain).
+//
+// This handles the downgrade case (current → not-current). It does NOT cover
+// current-to-current drift: a later poll can still report FreshnessCurrent
+// while the underlying labels/blockers changed (another operator edited
+// labels between polls), which would leave a stale command copyable in an
+// already-open drawer since the drawer lives outside this fragment's swap
+// target (#console-intake-drawer is a sibling of #console-intake, not a
+// child). That case is covered by the drawer's own self-refresh — see
+// consoleIssueScanDrawer's doc comment.
 templ consoleIssueScanFragment(s ConsoleIssueScan) {
 	@consoleIssueScanSurface(s)
 	if s.Freshness != FreshnessCurrent {
@@ -212,8 +221,36 @@ templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
 	</button>
 }
 
+// consoleIssueScanDrawer renders the run-details drawer and self-revalidates
+// every 10s (hx-get/hx-trigger/hx-swap on the <aside> root) so a command it
+// renders cannot go stale while the drawer stays open. Two mechanisms cover
+// the two ways the projection can move after the drawer opens:
+//   - Downgrade (current → not-current): consoleIssueScanFragment's OOB reset
+//     clears #console-intake-drawer on the board's own 10s poll.
+//   - Current-to-current drift (labels/blockers change but freshness stays
+//     FreshnessCurrent — e.g. another operator removes cc:needs-human-scope
+//     or adds cc:pr-deferred between polls): the OOB reset above never fires,
+//     since freshness didn't downgrade. This self-refresh closes that gap:
+//     every 10s the drawer re-requests its own card URL, which re-runs
+//     handleConsoleIntakeCard and re-derives the plan from the freshest
+//     projection through the same fail-closed gate
+//     (consoleIssueScanUnblockPlan). A command that's no longer corroborated
+//     by current labels disappears within one poll cycle; a run that
+//     disappears entirely renders the honest not-found drawer. RunID/StageID
+//     are populated on both the found and not-found paths (see
+//     handleConsoleIntakeCard), so consoleIssueScanCardURL is always valid
+//     here. Closing the drawer (below) removes this element from the DOM,
+//     which stops the polling — htmx does not poll a target no longer
+//     present in the document.
 templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool, plan consoleUnblockPlan, planOK bool) {
-	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Issue-scan run details">
+	<aside
+		class="rounded border border-edge bg-surface/60 p-4 space-y-3"
+		role="dialog"
+		aria-label="Issue-scan run details"
+		hx-get={ consoleIssueScanCardURL(card) }
+		hx-trigger="every 10s"
+		hx-swap="outerHTML"
+	>
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="text-sm font-medium text-warm">Run details</h3>
 			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-intake-drawer').innerHTML='';return false;">close</button>

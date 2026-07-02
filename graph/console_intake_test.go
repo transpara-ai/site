@@ -3,12 +3,14 @@ package graph
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -965,5 +967,151 @@ func TestConsoleIntakeUnblockGateRefusesHostileData(t *testing.T) {
 	}
 	if strings.Contains(strings.ToLower(combined), "unblock available") {
 		t.Error(`"unblock available" hint must be suppressed too — the gate refused, so UnblockAvailable must be false`)
+	}
+}
+
+// CFAR (cross-family, P2): the drawer lives outside #console-intake-drawer's
+// OOB-reset owner (consoleIssueScanFragment only resets on a freshness
+// downgrade), so a later poll that stays FreshnessCurrent but changes the
+// underlying labels/blockers left a stale command copyable. The fix is a
+// self-refreshing drawer: assert the rendered <aside> carries the exact
+// hx-get/hx-trigger/hx-swap attributes that make it re-request its own card
+// URL every 10s.
+func TestConsoleIntakeDrawerSelfRefreshes(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	// templ's attribute escaping (html.EscapeString) renders "&" as "&amp;" in
+	// HTML attribute values, so the query-escaped card URL's "&" between run=
+	// and stage= appears as "&amp;" in the served markup — assert on the
+	// actual encoding, not the raw URL string.
+	wantURL := `hx-get="/console/intake/card?run=run_docs_172_scope&amp;stage=select_and_design_approach"`
+	for _, want := range []string{
+		wantURL,
+		`hx-trigger="every 10s"`,
+		`hx-swap="outerHTML"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("drawer missing %q; body:\n%s", want, body)
+		}
+	}
+}
+
+// CFAR (cross-family, P2), proof of the fix's actual effect: a drawer opened
+// against a FreshnessCurrent projection renders a real gh command; once the
+// underlying label evidence changes (still FreshnessCurrent — no downgrade,
+// so the board's OOB reset never fires), a re-request of the SAME drawer URL
+// must re-derive the plan and drop the command, because the mismatch gate
+// (consoleIssueScanUnblockPlan) refuses a needs_human_scope blocker no longer
+// corroborated by cc:needs-human-scope or cc:pr-deferred. This is what the
+// drawer's 10s self-refresh (TestConsoleIntakeDrawerSelfRefreshes) actually
+// buys operationally.
+func TestConsoleIntakeDrawerRefreshDropsCommandWhenLabelsChange(t *testing.T) {
+	fresh := freshHiveCivilizationAssemblyProjectionFixture()
+
+	// Scope the label-surgery precisely to the run_docs_172_scope run block:
+	// the same "cc:needs-human-scope" label string also appears verbatim in
+	// unrelated runs (e.g. run_docs_172's blockers), so a global replace
+	// across the whole fixture would corrupt data this test doesn't own.
+	// Isolate the run_docs_172_scope run object by its run_id anchor and its
+	// closing "source_refs" line, replace only within that slice, then splice
+	// it back — this guarantees every other run/blocker in the fixture is
+	// untouched.
+	const blockStart = `"run_id": "run_docs_172_scope",`
+	const blockEnd = `"source_refs": ["github:transpara-ai/docs#172"]`
+	startIdx := strings.Index(fresh, blockStart)
+	if startIdx == -1 {
+		t.Fatal("run_docs_172_scope run block not found in fixture; fixture format changed")
+	}
+	endIdx := strings.Index(fresh[startIdx:], blockEnd)
+	if endIdx == -1 {
+		t.Fatal("run_docs_172_scope run block close marker not found; fixture format changed")
+	}
+	endIdx += startIdx + len(blockEnd)
+	block := fresh[startIdx:endIdx]
+
+	const needsHumanScopeLabel = `"labels": ["cc:needs-human-scope"]`
+	wantOccurrences := strings.Count(block, needsHumanScopeLabel)
+	if wantOccurrences == 0 {
+		t.Fatal("run_docs_172_scope run block does not contain cc:needs-human-scope; fixture format changed")
+	}
+	modifiedBlock := strings.ReplaceAll(block, needsHumanScopeLabel, `"labels": ["cc:pr-ready"]`)
+	if modifiedBlock == block {
+		t.Fatal("label surgery made no change to the run_docs_172_scope block")
+	}
+	modifiedFixture := fresh[:startIdx] + modifiedBlock + fresh[endIdx:]
+
+	// Verify the surgery kept valid JSON and left the sibling run_docs_172
+	// blocker's identical label string alone.
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(modifiedFixture), &parsed); err != nil {
+		t.Fatalf("modified fixture is not valid JSON: %v", err)
+	}
+	if strings.Count(modifiedFixture, needsHumanScopeLabel) != strings.Count(fresh, needsHumanScopeLabel)-wantOccurrences {
+		t.Fatal("label surgery leaked outside the run_docs_172_scope block")
+	}
+
+	// Servable, swappable fixture: starts by serving the ORIGINAL fresh
+	// fixture (command present), then is swapped to serve the MODIFIED fresh
+	// fixture (label removed) before the second request — simulating another
+	// operator's label edit landing between two polls of the same open
+	// drawer.
+	var mu sync.Mutex
+	current := fresh
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		body := current
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, body)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	drawerURL := "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach"
+	get := func() string {
+		req := httptest.NewRequest(http.MethodGet, drawerURL, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d", w.Code)
+		}
+		return w.Body.String()
+	}
+
+	firstBody := get()
+	if !strings.Contains(firstBody, "gh issue edit") {
+		t.Fatal("first request must render the unblock command, or this test proves nothing about the refresh")
+	}
+
+	mu.Lock()
+	current = modifiedFixture
+	mu.Unlock()
+
+	secondBody := get()
+	if strings.Contains(secondBody, "gh issue edit") {
+		t.Error("refreshed drawer still rendered a gh command after cc:needs-human-scope was removed — mismatch gate must refuse (blocker needs_human_scope without corroborating label)")
+	}
+	if !strings.Contains(secondBody, "human must clarify issue scope before runtime continues") {
+		t.Error("refreshed drawer must still render the projected required action honestly, even when the gate refuses a command")
 	}
 }
