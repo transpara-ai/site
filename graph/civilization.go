@@ -96,6 +96,7 @@ type OpsCivilizationAssemblyProjection struct {
 	QueuedRunRequest                   *OpsHiveQueuedRunRequest                  `json:"queued_run_request,omitempty"`
 	IssueIntakeProjection              OpsCivilizationIssueIntakeProjection      `json:"issue_intake_projection,omitempty"`
 	IssueScanProjection                OpsCivilizationIssueScanProjection        `json:"issue_scan_projection,omitempty"`
+	RecentIssueScanRuns                OpsCivilizationRecentIssueScanRuns        `json:"recent_issue_scan_runs,omitempty"`
 	SiteConsumerStatus                 OpsCivilizationAssemblyFieldStatus        `json:"site_consumer_status"`
 	OpenGateSummary                    []OpsCivilizationAssemblyGateSummary      `json:"open_gate_summary"`
 	ResidualRiskSummary                []OpsCivilizationAssemblyResidualRisk     `json:"residual_risk_summary"`
