@@ -15,6 +15,7 @@ type ConsolePageData struct {
 	Health    *ConsoleHealthWall
 	Kanban    *ConsoleKanban
 	IssueScan *ConsoleIssueScan
+	Config    *ConsoleConfig
 }
 
 func (h *Handlers) renderConsole(w http.ResponseWriter, r *http.Request, data ConsolePageData) {
