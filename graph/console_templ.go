@@ -1297,7 +1297,7 @@ func consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool,
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<p class=\"text-xs text-warm-secondary break-words\"><span class=\"text-warm font-medium\">A parked run is terminal.</span> Fixing labels does not resume this run — the parked event is final and idempotent. After relabeling, a fresh scan cycle re-queues the issue: run the command below (add <span class=\"font-mono\">--dispatch</span> to also launch the queued run as a factory order), or wait for the scan daemon&apos;s next interval.</p><pre class=\"bg-elevated border border-edge rounded p-2 overflow-x-auto\"><code class=\"text-[11px] font-mono text-warm-secondary select-all\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 109, "<p class=\"text-xs text-warm-secondary break-words\"><span class=\"text-warm font-medium\">A parked run is terminal.</span> Fixing labels does not resume this run — the parked event is final and idempotent. After relabeling, a fresh scan cycle is needed: the command below scans this repo&apos;s whole PR-ready pool and the scanner selects one candidate, which is not guaranteed to be this issue (add <span class=\"font-mono\">--dispatch</span> to also launch the queued run as a factory order); or wait for the scan daemon&apos;s next interval.</p><pre class=\"bg-elevated border border-edge rounded p-2 overflow-x-auto\"><code class=\"text-[11px] font-mono text-warm-secondary select-all\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

@@ -1,8 +1,8 @@
 # Console UX Polish — Design Packet
 
 - **doc_id:** SITE-CONSOLE-UX-POLISH-DESIGN-001
-- **version:** v0.7.0 (CFADA rounds 1-3 + CFAR rounds 1-3 resolved)
-- **status:** CFADA-clean pending round-4 confirmation; building under TDD
+- **version:** v0.8.0 (CFADA rounds 1-3 + CFAR rounds 1-4 resolved)
+- **status:** built; CFADA PASS (4 rounds); CFAR loop on PR #203 in progress
 - **issue:** https://github.com/transpara-ai/site/issues/202
 - **base:** site main @ b68e214
 - **scope:** `graph/console*` only (+ committed generated `*_templ.go`); zero backend changes; console stays a read-only projection surface.
@@ -57,7 +57,9 @@ Rationale: hive owns label semantics and never mutates labels itself (`pkg/hive/
 
 Exact copy (drawer):
 
-> **A parked run is terminal.** Fixing labels does not resume this run — the parked event is final and idempotent. After relabeling, a fresh scan cycle re-queues the issue: run the command below, or wait for the scan daemon's next interval.
+> **A parked run is terminal.** Fixing labels does not resume this run — the parked event is final and idempotent. After relabeling, a fresh scan cycle is needed: the command below scans this repo's whole PR-ready pool and the scanner selects one candidate, which is not guaranteed to be this issue; or wait for the scan daemon's next interval.
+
+(CFAR round 4: the copy must not promise issue-specific re-queueing — `hive factory scan-issues` has no single-issue enqueue; it filters the repo's PR-ready candidates and queues one selected run, `cmd/hive/factory_scan_issues.go:83-115`.)
 
 ### D4 — Purposeful empty states (rendered only when freshness ≠ unavailable)
 
@@ -160,3 +162,7 @@ Adversarial pass by the authoring session before CFADA:
 
 - **CFAR3-1 (open drawer survives current-to-current label drift):** CFAR round 2 closed the freshness-*downgrade* gap (current → stale/partial/unavailable), but `consoleIssueScanFragment`'s OOB reset only fires on a freshness change — it never fires when a later poll still reports `FreshnessCurrent` while the underlying labels/blockers changed (e.g. another operator removed `cc:needs-human-scope` or added `cc:pr-deferred` between polls). Because `#console-intake-drawer` lives outside the swapped `#console-intake` fragment, htmx preserved the old `gh issue edit` command even though the refreshed board would no longer generate that plan — leaving a stale label-surgery command copyable. Resolved by making the drawer self-revalidating rather than relying solely on the board's downgrade signal: `consoleIssueScanDrawer`'s root `<aside>` now carries `hx-get={ consoleIssueScanCardURL(card) } hx-trigger="every 10s" hx-swap="outerHTML"`. Every 10s the drawer re-requests its own card URL, which re-runs `handleConsoleIntakeCard` end to end and re-derives the plan from the freshest projection through the same fail-closed gate (`consoleIssueScanUnblockPlan`) used for the initial render — no parallel code path. `consoleIssueScanCardURL` was already valid on every drawer render (RunID/StageID are populated on both the found and not-found paths — the handler constructs the not-found card with them), so the attribute needed no new plumbing. Closing the drawer (`onclick` empties `#console-intake-drawer`'s `innerHTML`) removes the `<aside>` — and its `hx-trigger` — from the DOM, which stops the polling; htmx does not poll a target that is no longer present. The existing non-current OOB reset in `consoleIssueScanFragment` is unchanged (belt-and-braces): two independent mechanisms now cover the two ways the projection can move after the drawer opens — downgrade (current → not-current) clears the drawer via the board's OOB reset; current-to-current drift bounds staleness to one 10s poll cycle via the drawer's own self-revalidation through the same gate. Both templ doc comments were rewritten to cross-reference each other and state which mechanism covers which case.
   - Test coverage: `graph/console_intake_test.go` adds `TestConsoleIntakeDrawerSelfRefreshes` (asserts the drawer response for `run_docs_172_scope`/`select_and_design_approach` contains the exact `hx-get`/`hx-trigger`/`hx-swap` attributes, checking the actual HTML-attribute encoding of `&` as `&amp;` in the escaped card URL) and `TestConsoleIntakeDrawerRefreshDropsCommandWhenLabelsChange` (serves the fresh fixture, confirms the drawer renders `gh issue edit`; then serves a precisely-scoped, surgically modified fresh fixture where only `run_docs_172_scope`'s labels drop `cc:needs-human-scope` — verified via block-scoped string surgery plus a JSON-parse check so the sibling `run_docs_172` blocker's identical label string is provably untouched — and asserts the SAME drawer URL, requested again, now renders no `gh issue edit` while the projected required-action text still appears, proving the refresh actually re-derives rather than caching).
+
+### CFAR round 4 (codex) — 1 blocker → resolved in v0.8.0
+
+- **Rescan copy over-promised (P2):** the drawer said the scan "re-queues the issue", but `hive factory scan-issues` has no single-issue enqueue — it filters the repo's PR-ready candidates and queues one selected run, which may be a different issue. Copy corrected in D3/templ: the command scans the repo's whole PR-ready pool and the scanner's selection is not guaranteed to be this issue.
