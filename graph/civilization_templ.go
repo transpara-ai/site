@@ -1612,9 +1612,9 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var99 string
-		templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeProvenance)
+		templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(obsModeProvenanceDisplay(data.Civilization.GlobalModeProvenance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 418, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 418, Col: 153}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 		if templ_7745c5c3_Err != nil {
@@ -1817,9 +1817,9 @@ func opsCivilizationAssembly(data *OpsCivilizationAssemblyData) templ.Component 
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var113 string
-			templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.JoinStringErrs(row.ModelModeProvenance)
+			templ_7745c5c3_Var113, templ_7745c5c3_Err = templ.JoinStringErrs(obsModeProvenanceDisplay(row.ModelModeProvenance))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 465, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization.templ`, Line: 465, Col: 104}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var113))
 			if templ_7745c5c3_Err != nil {

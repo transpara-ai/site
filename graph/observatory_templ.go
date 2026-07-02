@@ -1021,9 +1021,9 @@ func obsCivilizationPanel(data *OpsObservatoryData) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var41 string
-		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(data.Civilization.GlobalModeProvenance)
+		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(obsModeProvenanceDisplay(data.Civilization.GlobalModeProvenance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/observatory.templ`, Line: 315, Col: 126}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/observatory.templ`, Line: 315, Col: 152}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -1226,9 +1226,9 @@ func obsCivilizationPanel(data *OpsObservatoryData) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var55 string
-			templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(row.ModelModeProvenance)
+			templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(obsModeProvenanceDisplay(row.ModelModeProvenance))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/observatory.templ`, Line: 362, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/observatory.templ`, Line: 362, Col: 103}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 			if templ_7745c5c3_Err != nil {

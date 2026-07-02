@@ -77,10 +77,12 @@ func consoleConfigAssignmentProvider(item OpsHiveModelRoleAssignment) string {
 
 // consoleConfigAssignmentMode renders "Mode · provenance" for a role card,
 // reusing the /ops observatory derivation verbatim so /console and /ops can
-// never disagree about why a role routes where it does.
+// never disagree about why a role routes where it does. This is a render
+// boundary: internal provenance sentinels (invalid projection) are mapped to
+// operator-visible copy.
 func consoleConfigAssignmentMode(sel OpsHiveModelSelection, item OpsHiveModelRoleAssignment) string {
 	mode, provenance := obsAssignmentModelModeState(sel, item)
-	return mode + " · " + provenance
+	return mode + " · " + obsModeProvenanceDisplay(provenance)
 }
 
 func consoleConfigGlobalMode(sel OpsHiveModelSelection) string {

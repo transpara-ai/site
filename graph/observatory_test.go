@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -523,6 +525,215 @@ func TestHandleOpsObservatoryEventsRejectsNonSSEUpstream(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "did not return text/event-stream") {
 		t.Fatalf("error body should name the fail-closed reason, got: %s", w.Body.String())
+	}
+}
+
+func TestObsCanonicalModelModeAllowlist(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want string
+	}{
+		// Existing legacy vocabulary stays recognized, byte-identical.
+		{"auto", "Auto"},
+		{"automatic", "Auto"},
+		{"manual", "Manual"},
+		{"pinned", "Manual"},
+		{" Manual ", "Manual"},
+		// Projected resolver vocabulary (hive selection_mode contract).
+		{"manual-explicit", "Manual"},
+		{"auto-tier", "Auto"},
+		{"system-default", "Auto"}, // a default IS automatic selection; the chip stays binary
+		{" MANUAL-EXPLICIT ", "Manual"},
+		{"Auto-Tier", "Auto"},
+		// Anything else non-empty stays unrecognized — never coerced to a mode.
+		{"", ""},
+		{"   ", ""},
+		{"explicit", ""},
+		{"default", ""},
+		{"manual_explicit", ""},
+		{"manual-explicit-v2", ""},
+		{"auto-tier-2", ""},
+		{"system-defaults", ""},
+		{"resolver-mode-v2", ""},
+		{"tier", ""},
+		{"unknown", ""},
+	}
+	for _, c := range cases {
+		if got := obsCanonicalModelMode(c.raw); got != c.want {
+			t.Errorf("obsCanonicalModelMode(%q) = %q, want %q", c.raw, got, c.want)
+		}
+	}
+}
+
+// TestObsAssignmentModelModeStateProjectedModeTable is the D4/D5 mode-state
+// table: the hive-projected selection_mode is evaluated first (valid →
+// explicit; present-but-invalid → fail closed with the sticky sentinel, no
+// legacy fallback, no inference); an absent field leaves every legacy
+// derivation byte-identical.
+func TestObsAssignmentModelModeStateProjectedModeTable(t *testing.T) {
+	cases := []struct {
+		name           string
+		selection      OpsHiveModelSelection
+		item           OpsHiveModelRoleAssignment
+		wantMode       string
+		wantProvenance string
+	}{
+		// --- selection_mode ABSENT: legacy chain byte-identical (old hive → new site pairing) ---
+		{"absent: override mode wins", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{OverrideMode: "manual"}, "Manual", "override"},
+		{"absent: effective mode is explicit", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{EffectiveMode: "auto"}, "Auto", "explicit"},
+		{"absent: policy event id is manual override", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{PolicyEventID: "ev-1"}, "Manual", "override"},
+		{"absent: policy event source is manual override", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{Source: "hive-model-policy-event"}, "Manual", "override"},
+		{"absent: selection strategy infers auto", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionStrategy: "balanced"}, "Auto", "inferred"},
+		{"absent: preferred tier infers auto", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{PreferredTier: "execution"}, "Auto", "inferred"},
+		{"absent: required capabilities infer auto", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{RequiredCapabilities: []string{"tools"}}, "Auto", "inferred"},
+		{"absent: global mode is default", OpsHiveModelSelection{GlobalMode: "manual"}, OpsHiveModelRoleAssignment{}, "Manual", "default"},
+		{"absent: global selection mode is default", OpsHiveModelSelection{SelectionMode: "auto"}, OpsHiveModelRoleAssignment{}, "Auto", "default"},
+		{"absent: model presence infers manual", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{Model: "claude-sonnet"}, "Manual", "inferred"},
+		{"absent: policy model presence infers manual", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{PolicyModel: "claude-opus"}, "Manual", "inferred"},
+		{"absent: nothing projected is unknown", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{}, "unknown", "not projected"},
+		// Whitespace-only is not a vocabulary claim: the whole derivation file
+		// treats whitespace as empty (obsFirstNonEmpty), so it degrades to the
+		// legacy chain exactly like an absent field.
+		{"whitespace-only selection mode degrades to legacy inference", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "   ", Model: "claude-sonnet"}, "Manual", "inferred"},
+
+		// --- legacy vocabulary arriving in selection_mode keeps rendering as today ---
+		{"legacy auto in selection_mode stays explicit", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "auto"}, "Auto", "explicit"},
+		{"legacy pinned in selection_mode stays explicit", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "pinned"}, "Manual", "explicit"},
+
+		// --- each projected vocabulary value → explicit provenance + the right chip ---
+		{"projected manual-explicit", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "manual-explicit"}, "Manual", "explicit"},
+		{"projected auto-tier", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "auto-tier"}, "Auto", "explicit"},
+		{"projected system-default", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "system-default"}, "Auto", "explicit"},
+
+		// --- conflicts: the projected resolver mode always precedes legacy site-side fields ---
+		{"projected mode wins over override mode", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "auto-tier", OverrideMode: "manual"}, "Auto", "explicit"},
+		{"projected mode wins over effective mode", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "manual-explicit", EffectiveMode: "auto", OverrideMode: "auto"}, "Manual", "explicit"},
+
+		// --- present-but-invalid fails closed BEFORE inference (CFADA1-2) ---
+		{"invalid with model present", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "resolver-mode-v2", Model: "claude-sonnet"}, "unknown", obsModeProvenanceInvalidProjection},
+		{"invalid with policy event present", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "resolver-mode-v2", PolicyEventID: "ev-1", Source: "hive-model-policy-event"}, "unknown", obsModeProvenanceInvalidProjection},
+		{"invalid cannot be masked by override mode", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "resolver-mode-v2", OverrideMode: "manual"}, "unknown", obsModeProvenanceInvalidProjection},
+		{"invalid ignores strategy and tier inference", OpsHiveModelSelection{}, OpsHiveModelRoleAssignment{SelectionMode: "made-up", SelectionStrategy: "balanced", PreferredTier: "judgment"}, "unknown", obsModeProvenanceInvalidProjection},
+		{"invalid ignores the projected global default", OpsHiveModelSelection{GlobalMode: "auto", Source: "hive"}, OpsHiveModelRoleAssignment{SelectionMode: "bogus"}, "unknown", obsModeProvenanceInvalidProjection},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mode, provenance := obsAssignmentModelModeState(c.selection, c.item)
+			if mode != c.wantMode || provenance != c.wantProvenance {
+				t.Fatalf("state = (%q, %q), want (%q, %q)", mode, provenance, c.wantMode, c.wantProvenance)
+			}
+		})
+	}
+}
+
+func TestObsModeProvenanceDisplayMapsSentinelOnly(t *testing.T) {
+	if got := obsModeProvenanceDisplay(obsModeProvenanceInvalidProjection); got != "not projected" {
+		t.Fatalf("sentinel must display as %q, got %q", "not projected", got)
+	}
+	for _, passthrough := range []string{"explicit", "override", "inferred", "default", "not projected", ""} {
+		if got := obsModeProvenanceDisplay(passthrough); got != passthrough {
+			t.Errorf("obsModeProvenanceDisplay(%q) = %q, want passthrough", passthrough, got)
+		}
+	}
+}
+
+// TestObsAssignmentModelModeRenderAccessorsMapSentinel guards the ops.templ
+// render boundary: the template prints these accessors directly, so the
+// internal invalid-projection sentinel must already be mapped to the
+// operator-visible "not projected" here.
+func TestObsAssignmentModelModeRenderAccessorsMapSentinel(t *testing.T) {
+	sel := OpsHiveModelSelection{Source: "hive", GlobalMode: "auto"}
+	item := OpsHiveModelRoleAssignment{Role: "guardian", Model: "claude-sonnet", SelectionMode: "resolver-mode-v2"}
+	if got := obsAssignmentModelMode(sel, item); got != "unknown" {
+		t.Fatalf("mode accessor = %q, want unknown", got)
+	}
+	if got := obsAssignmentModelModeProvenance(sel, item); got != "not projected" {
+		t.Fatalf("provenance accessor = %q, want %q (render boundary maps the sentinel)", got, "not projected")
+	}
+}
+
+// TestBuildObsCivilizationInvalidProjectedModeIsStickyThroughInheritance is
+// the CFADA2-1 end-to-end case: an assignment with an INVALID projected
+// selection_mode PLUS model/policy metadata, while a global mode IS projected,
+// must still render unknown · not projected through the full roster assembly.
+// Without the inheritance gate the roster loop would launder the invalid mode
+// into an inherited "Auto · default".
+func TestBuildObsCivilizationInvalidProjectedModeIsStickyThroughInheritance(t *testing.T) {
+	hive := &OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{
+			Source:     "hive",
+			GlobalMode: "auto", // global mode IS projected → the inheritance branch is armed
+			Assignments: []OpsHiveModelRoleAssignment{
+				{
+					Role:              "guardian",
+					Model:             "claude-sonnet", // model metadata present
+					PolicyModel:       "claude-opus",
+					PolicyEventID:     "ev-model", // policy metadata present
+					Source:            "hive-model-policy-event",
+					SelectionStrategy: "balanced",
+					SelectionMode:     "resolver-mode-v2", // present-but-invalid projected mode
+				},
+				{Role: "implementer", Model: "gpt-5.5", SelectionMode: "auto-tier"},
+			},
+		},
+	}
+	civ := buildObsCivilization(nil, hive)
+	if civ.GlobalModelMode != "Auto" || civ.GlobalModeProvenance != "explicit" {
+		t.Fatalf("precondition: global mode must be projected, got mode=%q provenance=%q", civ.GlobalModelMode, civ.GlobalModeProvenance)
+	}
+	byRole := map[string]ObsCivilizationRole{}
+	for _, row := range civ.Roster {
+		byRole[row.Role] = row
+	}
+	guardian, ok := byRole["guardian"]
+	if !ok {
+		t.Fatal("guardian row missing from roster")
+	}
+	if guardian.ModelMode != "unknown" {
+		t.Fatalf("invalid projected mode must stay unknown through roster assembly, got mode=%q provenance=%q", guardian.ModelMode, guardian.ModelModeProvenance)
+	}
+	if guardian.ModelModeProvenance != obsModeProvenanceInvalidProjection {
+		t.Fatalf("invalid projected mode must carry the sticky sentinel, got provenance=%q", guardian.ModelModeProvenance)
+	}
+	if got := obsModeProvenanceDisplay(guardian.ModelModeProvenance); got != "not projected" {
+		t.Fatalf("sentinel must display as not projected, got %q", got)
+	}
+	// A VALID projected vocabulary value renders explicit end-to-end.
+	implementer := byRole["implementer"]
+	if implementer.ModelMode != "Auto" || implementer.ModelModeProvenance != "explicit" {
+		t.Fatalf("valid projected mode must render explicit, got mode=%q provenance=%q", implementer.ModelMode, implementer.ModelModeProvenance)
+	}
+	// A genuinely-absent row keeps today's inherit behavior byte-identical.
+	planner := byRole["planner"]
+	if planner.ModelMode != "Auto" || planner.ModelModeProvenance != "default" {
+		t.Fatalf("unassigned bootstrap role must still inherit the projected global mode, got mode=%q provenance=%q", planner.ModelMode, planner.ModelModeProvenance)
+	}
+}
+
+// TestObsCivilizationPanelNeverPrintsInvalidProjectionSentinel guards the
+// observatory.templ render boundary: the internal sentinel stays internal;
+// the operator sees "not projected".
+func TestObsCivilizationPanelNeverPrintsInvalidProjectionSentinel(t *testing.T) {
+	hive := &OpsHiveData{
+		ModelSelection: OpsHiveModelSelection{
+			Source:     "hive",
+			GlobalMode: "auto",
+			Assignments: []OpsHiveModelRoleAssignment{
+				{Role: "guardian", Model: "claude-sonnet", SelectionMode: "resolver-mode-v2"},
+			},
+		},
+	}
+	data := &OpsObservatoryData{Civilization: buildObsCivilization(nil, hive)}
+	var buf bytes.Buffer
+	if err := obsCivilizationPanel(data).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if strings.Contains(out, obsModeProvenanceInvalidProjection) {
+		t.Fatalf("internal sentinel %q leaked to the rendered surface", obsModeProvenanceInvalidProjection)
+	}
+	if !strings.Contains(out, "not projected") {
+		t.Fatal("rendered surface must state not projected for the invalid mode")
 	}
 }
 
