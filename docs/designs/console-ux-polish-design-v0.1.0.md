@@ -1,8 +1,8 @@
 # Console UX Polish — Design Packet
 
 - **doc_id:** SITE-CONSOLE-UX-POLISH-DESIGN-001
-- **version:** v0.3.0 (CFADA rounds 1-2 resolved)
-- **status:** CFADA round 3
+- **version:** v0.4.0 (CFADA rounds 1-3 resolved)
+- **status:** CFADA-clean pending round-4 confirmation; building under TDD
 - **issue:** https://github.com/transpara-ai/site/issues/202
 - **base:** site main @ b68e214
 - **scope:** `graph/console*` only (+ committed generated `*_templ.go`); zero backend changes; console stays a read-only projection surface.
@@ -135,3 +135,10 @@ Adversarial pass by the authoring session before CFADA:
 - **CFADA2-2 (one-way evidence binding / protected-boundary overreach):** a run projecting only `not_pr_ready` while the ref carries `cc:protected-action` would have had its protected boundary cleared as a side-effect of one combined command. Resolved: command split by authority class — scope command vs. a separate protected-action command with mandatory authorization warning copy (rationale and rejected alternatives recorded in D2).
 - **CFADA2-3 (blank RunID fail-open):** aggregation under the empty key could alias unrelated cards. Resolved: non-empty-RunID precondition on the plan; index skips blank RunIDs.
 - Advisories adopted: issue's upstream-facts section reworded to shell-inert placeholders; "copy-paste correct" wording tightened (label commands exact; rescan requires replacing `YOUR_NAME`).
+
+### Round 3 (codex, 2026-07-02) — VERDICT: BLOCKERS (1) → resolved in v0.4.0
+
+- **CFADA3-1 (plan tests were skeletons):** the implementation plan's Task 2 render tests were comment-only and referenced nonexistent helpers — unexecutable evidence. Resolved: replaced with complete, executable tests driven by the existing shared fixture `hiveCivilizationAssemblyProjectionFixture` (`graph/handlers_test.go:1289`), which already encodes the adversarial scenarios (run_site_115 sibling `protected_action`+`stale_target`; run_docs_172 `duplicate_chain`; run_docs_172_scope cleanly label-parked), plus direct component-render tests for the split protected command.
+- Advisory 2 (round 3): codex explicitly accepted the split-command authority posture: "a separately warned protected-action removal command is an acceptable read-only authority posture for a human authority owner."
+- Advisory 3 adopted: when both commands render, copy states the scope command alone does not admit until the protected boundary is separately authorized.
+- Advisory 4 adopted: plan header provenance updated to the current packet version.

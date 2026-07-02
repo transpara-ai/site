@@ -4,7 +4,7 @@
 
 **Goal:** Make the four `/console` tabs operator-grade: actionable intake blocker cards (exact `gh` label commands behind a fail-closed gate), purposeful empty states, and one coherent visual language.
 
-**Architecture:** All changes live in `graph/console*` in transpara-ai/site. A new pure derivation (`graph/console_unblock.go`) computes an unblock plan from projected data only, gated by a whole-board run-level allowlist with per-blocker label-evidence binding. Templates render the plan as selectable text (zero write affordances). Spec: `docs/designs/console-ux-polish-design-v0.1.0.md` (v0.2.0, CFADA round 1 resolved) + issue https://github.com/transpara-ai/site/issues/202.
+**Architecture:** All changes live in `graph/console*` in transpara-ai/site. A new pure derivation (`graph/console_unblock.go`) computes an unblock plan from projected data only, gated by a whole-board run-level allowlist with per-blocker label-evidence binding, split by authority class (scope vs protected-action commands). Templates render the plan as selectable text (zero write affordances). Spec: `docs/designs/console-ux-polish-design-v0.1.0.md` (internal v0.3.0, CFADA rounds 1-2 resolved) + issue https://github.com/transpara-ai/site/issues/202.
 
 **Tech Stack:** Go, templ (run `templ generate` after ANY `.templ` edit; commit generated `*_templ.go`), Tailwind v4 semantic tokens, HTMX (existing patterns only).
 
@@ -445,68 +445,129 @@ git commit -m "feat(console): fail-closed unblock-plan derivation for intake blo
 - Consumes: `consoleIssueScanUnblockPlan`, `consoleIssueScanRunBlockerTypes`, `consoleUnblockPlan`, `consoleIssueScanRefChips` from Task 1.
 - Produces: `OpsCivilizationIssueScanKanbanCard.UnblockAvailable bool` (set ONLY in `buildConsoleIssueScan`; zero-value elsewhere so /ops surfaces are untouched); drawer signature becomes `consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool, plan consoleUnblockPlan, planOK bool)`.
 
-- [ ] **Step 1: Write the failing tests** (append to `graph/console_intake_test.go`; follow the existing test-fixture style in that file — it builds `OpsCivilizationAssemblyProjection` fixtures and renders via `httptest`; reuse its helpers where present)
+- [ ] **Step 1: Write the failing tests** (append to `graph/console_intake_test.go`). These are complete and executable. They lean on two existing assets: the shared JSON fixture `hiveCivilizationAssemblyProjectionFixture` (`graph/handlers_test.go:1289`), which ALREADY encodes the adversarial scenarios — `run_docs_172_scope` is cleanly label-parked (`needs_human_scope` blocker + `cc:needs-human-scope` label on target `transpara-ai/docs#172`), `run_site_115` carries sibling blockers `protected_action` + `stale_target`, `run_docs_172` carries `duplicate_chain` — and the direct component-render pattern (`consoleIssueScanDrawer(...).Render(context.Background(), &buf)`, see `TestConsoleIssueScanDrawerLinksProjectedIssueURL` at ~line 256). `boardWith`/`unblockCard` come from Task 1's `console_unblock_test.go`.
 
 ```go
-// A blocked card whose run is label-parked (deny label projected on the target
-// issue) must expose the exact unblock commands in the drawer, plus the
-// parked-run-is-terminal explanation — copy-paste correct, derived only from
-// projected data.
+// End-to-end through the real handler + shared fixture: the cleanly
+// label-parked run offers the exact commands; terminal-run copy present.
 func TestConsoleIntakeDrawerRendersUnblockCommands(t *testing.T) {
-	h := newConsoleTestHandlers(t)
-	proj := issueScanProjectionFixture(t) // reuse/extend the file's existing fixture builder
-	// ensure the fixture's blocked card has: RunID "run-ub", blocker
-	// needs_human_scope, target transpara-ai/docs#226 with labels
-	// ["cc:needs-human-scope"].
-	rec := renderConsoleIntakeCard(t, h, proj, "run-ub", "stage-ub") // existing drawer-render helper pattern
-	body := rec.Body.String()
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
 	for _, want := range []string{
-		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"gh issue edit 172 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
 		"A parked run is terminal.",
 		"hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
 		"--dispatch",
 	} {
 		if !strings.Contains(body, want) {
-			t.Errorf("drawer missing %q\nbody: %s", want, body)
+			t.Errorf("drawer missing %q", want)
 		}
 	}
-	// No protected label in this fixture: the warning copy must be absent.
 	if strings.Contains(body, "protected-action boundary") {
-		t.Error("protected warning rendered without a protected command")
+		t.Error("protected warning rendered though no protected label is on docs#172")
 	}
 }
 
-// When cc:protected-action is present the removal renders as its own warned
-// command, never folded into the scope command.
-func TestConsoleIntakeDrawerSplitsProtectedCommand(t *testing.T) {
-	// fixture card: blocker needs_human_scope, target transpara-ai/docs#226,
-	// labels ["cc:needs-human-scope", "cc:protected-action"].
-	// assert body contains BOTH:
-	//   "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready"
-	//   "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:protected-action"
-	// and the warning "run it only if you authorize the protected action"
-	// and does NOT contain "--remove-label cc:needs-human-scope --remove-label cc:protected-action"
-	// nor "--remove-label cc:protected-action --add-label" (no folding).
-}
-
-// A run with a non-label blocker must NOT offer commands anywhere — drawer
-// keeps the projected RequiredAction only.
+// End-to-end negative: run_site_115 has sibling blockers protected_action +
+// stale_target, so the gate must refuse — no command anywhere, projected
+// required action still shown.
 func TestConsoleIntakeDrawerNoCommandForNonLabelBlocker(t *testing.T) {
-	// fixture card: blocker stale_target, valid repo/number, deny label present
-	// (labels alone must not resurrect the command).
-	// assert body does NOT contain "gh issue edit" and DOES contain the
-	// projected required action text.
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_site_115&stage=surface_ready_for_human_result_pr", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	body := w.Body.String()
+	if strings.Contains(body, "gh issue edit") {
+		t.Error("gate must refuse commands for a run with a sibling non-label blocker (stale_target)")
+	}
+	if !strings.Contains(body, "human must authorize protected repo action") {
+		t.Error("projected RequiredAction must still render when the gate refuses")
+	}
 }
 
-// The board card shows the hint iff the plan gate passes.
+// Board hint appears exactly once with the shared fixture: only
+// run_docs_172_scope passes the gate (run_docs_172 = duplicate_chain,
+// run_site_115 = protected_action + stale_target siblings).
 func TestConsoleIntakeCardUnblockHint(t *testing.T) {
-	// render /console/intake with one label-parked card (gate passes) and one
-	// stale_target card (gate refuses).
-	// assert exactly one occurrence of "unblock available".
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if got := strings.Count(w.Body.String(), "unblock available"); got != 1 {
+		t.Errorf("unblock hint count = %d, want exactly 1 (only run_docs_172_scope passes the gate)", got)
+	}
+}
+
+// Component-level: cc:protected-action renders as its own warned command,
+// never folded into the scope command.
+func TestConsoleIntakeDrawerSplitsProtectedCommand(t *testing.T) {
+	card := unblockCard("run-split", "needs_human_scope", []string{"cc:needs-human-scope", "cc:protected-action"})
+	plan, ok := consoleIssueScanUnblockPlan(card, consoleIssueScanRunBlockerTypes(boardWith(card)))
+	if !ok {
+		t.Fatal("expected plan for label-parked card")
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScanDrawer(card, true, plan, true).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	body := buf.String()
+	for _, want := range []string{
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:protected-action",
+		"run it only if you authorize the protected action",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("split drawer missing %q", want)
+		}
+	}
+	for _, forbid := range []string{
+		"--remove-label cc:needs-human-scope --remove-label cc:protected-action",
+		"--remove-label cc:protected-action --add-label",
+	} {
+		if strings.Contains(body, forbid) {
+			t.Errorf("protected removal folded into another command: %q", forbid)
+		}
+	}
 }
 ```
 
-Write these as real tests against the file's actual fixture helpers (read the file first; `TestConsoleIntakeRendersIssueScanBoard` at ~line 197 and `TestConsoleIntakeCardDrawerRendersPossessionAndLineage` at ~line 391 show the fixture/render pattern to copy).
+(If `boardWith`/`unblockCard` collide with existing names, rename in BOTH test files consistently.) Note the fixture's `generated_at` (2026-06-23) is older than the 30s stale window relative to `time.Now()`, so the surface renders STALE — which is usable; the drawer gate only refuses UNAVAILABLE.
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -593,6 +654,9 @@ and insert, between the `</dl>` close and the existing Blockers section:
 						if plan.ScopeCommand != "" {
 							<p class="text-xs text-warm-secondary break-words">Relabel the target issue to admit it. Hive reads labels only — it never edits them; this action is yours:</p>
 							<pre class="bg-elevated border border-edge rounded p-2 overflow-x-auto"><code class="text-[11px] font-mono text-warm-secondary select-all">{ plan.ScopeCommand }</code></pre>
+						}
+						if plan.ScopeCommand != "" && plan.ProtectedCommand != "" {
+							<p class="text-xs text-warm-muted break-words">The scope command alone does not admit the issue — the protected-action boundary below must be separately authorized.</p>
 						}
 						if plan.ProtectedCommand != "" {
 							<p class="text-xs text-amber-300 break-words">This second command clears a protected-action boundary — run it only if you authorize the protected action:</p>
