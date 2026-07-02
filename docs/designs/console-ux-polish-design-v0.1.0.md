@@ -1,8 +1,8 @@
 # Console UX Polish — Design Packet
 
 - **doc_id:** SITE-CONSOLE-UX-POLISH-DESIGN-001
-- **version:** v0.1.0
-- **status:** draft → IADA → CFADA
+- **version:** v0.2.0 (CFADA round 1 resolved)
+- **status:** CFADA round 2
 - **issue:** https://github.com/transpara-ai/site/issues/202
 - **base:** site main @ b68e214
 - **scope:** `graph/console*` only (+ committed generated `*_templ.go`); zero backend changes; console stays a read-only projection surface.
@@ -26,14 +26,18 @@ Cards stay scannable (board density is a feature). A blocked card shows its exis
 New pure function (no I/O), `consoleIssueScanUnblockPlan(card) (consoleUnblockPlan, bool)`:
 
 - **Gate (allowlist; every condition must hold or return `ok=false`):**
-  - the card has ≥1 blocker AND **every** blocker type on the card ∈ {`not_pr_ready`, `needs_human_scope`, `protected_action`} (IADA-1: a card that also carries `stale_target`/`duplicate_chain`/unknown must NOT offer a label command — relabeling would not unblock it and the offer would be a lie)
+  - the card has ≥1 blocker AND **every** blocker type projected for the card's `RunID` anywhere on the board (across all sibling cards/columns, via a runID→blocker-types index built during the board walk) ∈ {`not_pr_ready`, `needs_human_scope`, `protected_action`} (IADA-1 + CFADA1-1: sibling cards of the same run can carry non-label blockers — e.g. a `protected_action` card whose run also has a `stale_target` blocker on another card must NOT offer a command; relabeling would not unblock the run)
   - issue ref selected with the **same preference the existing card helpers use** (target issue preferred, else selected issue), all fields (repo, number, labels) taken from that one ref — never mixed (IADA-2)
   - ref `Repo` matches `^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$`
   - ref `Number > 0`
-  - action needed: at least one deny label present, OR `cc:pr-ready` absent
-- **Label comparison** normalizes with `strings.ToLower(strings.TrimSpace(l))` — identical to hive's `issueScanLabelSet` (`pkg/hive/issue_scan_parking.go:367-376`), so the site's view of the gate matches the gate (IADA-3).
+  - **evidence binding per blocker type (CFADA1-2)** — each blocker type on the run must be corroborated by the label evidence on the chosen ref, else `ok=false`:
+    - `needs_human_scope` → requires labels ∩ {`cc:needs-human-scope`, `cc:pr-deferred`} ≠ ∅ (hive maps both to this blocker, `issue_scan_parking.go:190-201`)
+    - `protected_action` → requires `cc:protected-action` present
+    - `not_pr_ready` → requires `cc:pr-ready` absent
+    - blocker projected without its corroborating label evidence = projection/label mismatch → no command (fail closed; the projected `RequiredAction` still renders)
+- **Label comparison** normalizes with `strings.ToLower(strings.TrimSpace(l))` — identical to hive's `issueScanLabelSet` (`pkg/hive/issue_scan_parking.go:367-376`) and to the admission gate `IssueScanCandidatePRReady` (`pkg/hive/issue_intake.go:328-349`: requires `cc:pr-ready` present AND none of the three deny labels), so the site's view of the gate matches the gate (IADA-3, CFADA1-adv2).
 - **Command construction:** `gh issue edit <number> --repo <repo>` + one `--remove-label <l>` per present deny label (`cc:pr-deferred`, `cc:needs-human-scope`, `cc:protected-action`, in that fixed order) + `--add-label cc:pr-ready` iff absent. Labels come from the fixed constant set, never echoed from projection free-text.
-- **Rescan command:** `hive factory scan-issues --human <name> --repo <repo>` (repo passes the same gate). Verified (`cmd/hive/factory_scan_issues.go:32`): `--dispatch` defaults false and is the extra step that turns the queued run into a FactoryOrder task — copy presents the bare scan as the re-queue step and mentions `--dispatch` as the optional immediate-launch flag (IADA-4). `<name>` is a documented placeholder: operator identity is not projected, and fabricating one would violate the honesty contract. A one-line note says to replace it and mentions the daemon alternative (`hive factory daemon --issue-scan-interval 15m`).
+- **Rescan command:** `hive factory scan-issues --human YOUR_NAME --repo <repo>` (repo passes the same gate). Verified (`cmd/hive/factory_scan_issues.go:32`): `--dispatch` defaults false and is the extra step that turns the queued run into a FactoryOrder task — copy presents the bare scan as the re-queue step and mentions `--dispatch` as the optional immediate-launch flag (IADA-4). `YOUR_NAME` is a deliberately shell-inert placeholder (CFADA1-4: angle-bracket placeholders are POSIX redirection metacharacters inside a copyable block): operator identity is not projected, and fabricating one would violate the honesty contract. A one-line note says to replace it and mentions the daemon alternative (`hive factory daemon --issue-scan-interval 15m`).
 - **No fall-through emits a command.** `stale_target`, `duplicate_chain`, empty, and any unknown/future blocker type render the projected `RequiredAction` text only. There is no `default:` that constructs a command.
 
 Rationale: hive owns label semantics and never mutates labels itself (`pkg/hive/issue_intake.go:18-21`); the human performs the labeling act. Rendering the command is presentation of governance, not a write path.
@@ -63,14 +67,14 @@ No new dependencies, no new JS beyond existing HTMX patterns, Tailwind v4 semant
 - **Shell/tabs:** tab row gets consistent spacing + `aria-current="page"` on active tab; keep border-bottom active style.
 - **Freshness badges:** unify into one component style — dot + label (`live`/`stale`/`partial`/`unavailable`), colors as today (emerald/amber/amber/muted); timestamps in `font-mono text-[11px]`.
 - **Kanban:** lens nav becomes a segmented control (single bordered group, active segment `bg-elevated text-warm`, inactive `text-warm-muted`); column headers get count pills (`bg-elevated rounded-full px-2`); cards keep fields, tighten hierarchy (title `text-warm`, meta row `text-[11px] text-warm-muted`).
-- **Intake:** cards get label chips row (deny labels amber-tinted chip `border-amber-500/40 text-amber-300`, `cc:pr-ready` emerald chip, other `cc:*` labels neutral `border-edge text-warm-muted`; chips only for labels matching `^cc:[a-z0-9-]+$`, others fall back to existing plain text — allowlist, escaped either way); blocked cards show `unblock available` hint per D1; drawer gets sectioned layout (Issue / State / Possession / **Unblock** / Blockers / Lineage / Evidence) with `text-[10px] uppercase tracking-wide text-warm-faint` section headers.
+- **Intake:** cards get label chips row (deny labels amber-tinted chip `border-amber-500/40 text-amber-300`, `cc:pr-ready` emerald chip, other `cc:*` labels neutral `border-edge text-warm-muted`; chips only for labels matching `^cc:[a-z0-9-]+$`, others fall back to existing plain text — allowlist, escaped either way; chips read from the **same chosen issue ref as the command** (CFADA1-adv1: card-level `Labels` can differ from the ref's labels)); blocked cards show `unblock available` hint per D1 iff the plan gate passes; drawer gets sectioned layout (Issue / State / Possession / **Unblock** / Blockers / Lineage / Evidence) with `text-[10px] uppercase tracking-wide text-warm-faint` section headers.
 - **Config:** stat cards + tables keep content; normalize table header style with intake drawer section headers; deprecated flag stays amber.
 - **Health:** stat cards normalized to the same style as Config's; approvals/notices boxes use the shared notice style (amber box for degraded, neutral for info).
 - **Command blocks (new):** `<pre><code>` with `bg-elevated border border-edge rounded p-2 text-[11px] font-mono text-warm-secondary select-all` — selectable text, **not** a button; zero write affordances.
 
 ### D6 — TDD plan (tests first, whole-domain coverage)
 
-1. **Unblock plan domain table** (`console_intake_test.go`): every known blocker type × {deny labels present/absent, pr-ready present/absent, valid/invalid repo, number 0/negative/positive} + `""` + `"future_blocker_v2"`. Assert: command exact-match for the three actionable types with valid data; `ok=false` for everything else. This is the fix-the-class test over the full input domain.
+1. **Unblock plan domain table** (`console_intake_test.go`): every known blocker type × {deny labels present/absent, pr-ready present/absent, valid/invalid repo, number 0/negative/positive} + `""` + `"future_blocker_v2"`. Assert: command exact-match for the three actionable types with corroborating label evidence; `ok=false` for everything else — including **blocker/label mismatch** rows (e.g. `protected_action` blocker without `cc:protected-action` label) and **same-run sibling blocker** rows (actionable card whose RunID carries a `stale_target`/`duplicate_chain`/unknown blocker on another board card) (CFADA1-1/2/adv3). This is the fix-the-class test over the full input domain.
 2. **Render tests:** drawer shows command + terminal-run copy + rescan for an actionable card; shows only `RequiredAction` for `stale_target`/`duplicate_chain`/unknown; card hint appears iff plan exists.
 3. **Read-only extension:** Intake surface (page + fragment + drawer with unblock section) asserts no `<form>`, no `hx-post/put/delete/patch`, no `<button type="submit">`, no write endpoints (mirror of `TestConsoleConfigRendersNoWriteControls`).
 4. **Hostile-projection extension:** hostile repo (`transpara-ai/docs" onmouseover=…`, `../../etc`, `javascript:` URL), hostile labels, number 0 — assert raw payloads never survive AND no command renders (gate, not just escaping).
@@ -103,3 +107,13 @@ Adversarial pass by the authoring session before CFADA:
 - **IADA-3 (case drift, fixed in D2):** hive normalizes labels ToLower/TrimSpace; naive exact compare would diverge from the real gate on cased labels.
 - **IADA-4 (dispatch overreach, fixed in D2):** `--dispatch` verified optional (default false); presenting it as part of the mandatory rescan would push the operator into immediately spending agent tokens. Bare scan re-queues; `--dispatch` documented as the optional launch step.
 - **IADA-5 (screenshot honesty, fixed in §5):** the live box serves main, not the branch; branch screenshots come from a local branch build with fixture mocks, and are labeled as such — no passing fixture renders off as live-box captures.
+
+## 7. CFADA record
+
+### Round 1 (codex, 2026-07-02) — VERDICT: BLOCKERS (4) → all resolved in v0.2.0
+
+- **CFADA1-1 (same-run sibling blockers):** per-card gate could offer a command while the same run carries a non-label blocker on a sibling card. Resolved: gate aggregates blocker types per RunID across the whole board.
+- **CFADA1-2 (evidence binding):** `cc:pr-ready` absence alone could produce an add-only command for `protected_action`/`needs_human_scope` cards whose deny labels are not observed. Resolved: each blocker type must be corroborated by its specific label evidence on the chosen ref, else no command.
+- **CFADA1-3 (issue/packet dispatch divergence):** companion issue #202 R1 still showed `--dispatch` in the rescan command. Resolved: issue body updated to match the packet (bare scan re-queues; `--dispatch` documented as the optional immediate-launch flag).
+- **CFADA1-4 (`<name>` is a shell metacharacter):** placeholder replaced with shell-inert `YOUR_NAME` everywhere a copyable block renders it.
+- Advisories 1-3 adopted: chips read from the chosen ref; `IssueScanCandidatePRReady` cited; sibling-blocker and mismatch test rows added to D6.
