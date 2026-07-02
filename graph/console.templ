@@ -59,7 +59,7 @@ templ consoleTab(id, label, href, active string, enabled bool) {
 	if !enabled {
 		<span class="px-3 py-2 text-warm-muted cursor-not-allowed opacity-60" aria-disabled="true" title="coming soon">{ label }</span>
 	} else if id == active {
-		<a href={ templ.SafeURL(href) } class="px-3 py-2 border-b-2 border-brand text-warm font-medium">{ label }</a>
+		<a href={ templ.SafeURL(href) } aria-current="page" class="px-3 py-2 border-b-2 border-brand text-warm font-medium">{ label }</a>
 	} else {
 		<a href={ templ.SafeURL(href) } class="px-3 py-2 text-warm-muted hover:text-warm transition-colors">{ label }</a>
 	}
@@ -68,13 +68,13 @@ templ consoleTab(id, label, href, active string, enabled bool) {
 templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
 	switch f {
 		case FreshnessCurrent:
-			<span class="inline-flex items-center gap-1 text-xs text-emerald-300">live · { generatedAt }</span>
+			<span data-freshness="current" class="inline-flex items-center gap-1.5 text-xs text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400" aria-hidden="true"></span>live<span class="font-mono text-[11px] text-warm-muted">{ generatedAt }</span></span>
 		case FreshnessStale:
-			<span class="inline-flex items-center gap-1 text-xs text-amber-300">stale · last update { generatedAt }</span>
+			<span data-freshness="stale" class="inline-flex items-center gap-1.5 text-xs text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>stale · last update<span class="font-mono text-[11px] text-warm-muted">{ generatedAt }</span></span>
 		case FreshnessPartial:
-			<span class="inline-flex items-center gap-1 text-xs text-amber-300">partial · some sources degraded</span>
+			<span data-freshness="partial" class="inline-flex items-center gap-1.5 text-xs text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-400" aria-hidden="true"></span>partial · some sources degraded</span>
 		default:
-			<span class="inline-flex items-center gap-1 text-xs text-warm-muted">unavailable</span>
+			<span data-freshness="unavailable" class="inline-flex items-center gap-1.5 text-xs text-warm-muted"><span class="w-1.5 h-1.5 rounded-full border border-warm-muted" aria-hidden="true"></span>unavailable</span>
 	}
 }
 
@@ -102,7 +102,7 @@ templ consoleKanban(k ConsoleKanban) {
 			<div class="flex gap-4 overflow-x-auto pb-2">
 				for _, col := range k.Columns {
 					<section class="min-w-[16rem] flex-shrink-0 space-y-2">
-						<h2 class="text-xs uppercase tracking-wide text-warm-muted">{ col.Label } · { columnCount(col) }</h2>
+						<h2 class="flex items-center gap-2 text-xs uppercase tracking-wide text-warm-muted">{ col.Label } <span class="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-mono text-warm-secondary">{ columnCount(col) }</span></h2>
 						for _, card := range col.Cards {
 							@consoleOrderCard(card)
 						}
@@ -154,7 +154,7 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 			<div class="flex gap-4 overflow-x-auto pb-2">
 				for _, col := range s.Board.Columns {
 					<section class="min-w-[18rem] flex-shrink-0 space-y-2">
-						<h3 class="text-xs uppercase tracking-wide text-warm-muted">{ col.Label } · { strconv.Itoa(len(col.Cards)) }</h3>
+						<h3 class="flex items-center gap-2 text-xs uppercase tracking-wide text-warm-muted">{ col.Label } <span class="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-mono text-warm-secondary">{ strconv.Itoa(len(col.Cards)) }</span></h3>
 						for _, card := range col.Cards {
 							@consoleIssueScanCard(card)
 						}
@@ -304,7 +304,7 @@ templ consoleIssueScanDrawer(card OpsCivilizationIssueScanKanbanCard, found bool
 }
 
 templ consoleKanbanLensNav(active ConsoleKanbanLens) {
-	<div class="flex gap-1 text-xs">
+	<div class="inline-flex rounded-md border border-edge overflow-hidden text-xs" role="group" aria-label="Kanban lens">
 		@consoleLensLink("risk", "Risk + aging", active)
 		@consoleLensLink("status", "Status", active)
 		@consoleLensLink("agent", "Agent", active)
@@ -314,9 +314,9 @@ templ consoleKanbanLensNav(active ConsoleKanbanLens) {
 
 templ consoleLensLink(lens, label string, active ConsoleKanbanLens) {
 	if ConsoleKanbanLens(lens) == active {
-		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } class="px-2 py-1 border-b-2 border-brand text-warm">{ label }</a>
+		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } aria-current="true" class="px-2.5 py-1 bg-elevated text-warm border-l border-edge first:border-l-0">{ label }</a>
 	} else {
-		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } class="px-2 py-1 text-warm-muted hover:text-warm transition-colors">{ label }</a>
+		<a href={ templ.SafeURL("/console/kanban?lens=" + lens) } class="px-2.5 py-1 text-warm-muted hover:text-warm hover:bg-elevated/50 transition-colors border-l border-edge first:border-l-0">{ label }</a>
 	}
 }
 

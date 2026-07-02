@@ -208,6 +208,69 @@ func TestDeriveFreshness(t *testing.T) {
 	}
 }
 
+func TestConsoleFreshnessBadgeCarriesStateDot(t *testing.T) {
+	tests := []struct {
+		name  string
+		state ConsoleFreshness
+		want  string
+	}{
+		{"current", FreshnessCurrent, `data-freshness="current"`},
+		{"stale", FreshnessStale, `data-freshness="stale"`},
+		{"partial", FreshnessPartial, `data-freshness="partial"`},
+		{"unavailable", FreshnessUnavailable, `data-freshness="unavailable"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := consoleFreshnessBadge(tt.state, "2026-07-02T12:00:00Z").Render(context.Background(), &buf); err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			out := buf.String()
+			if !strings.Contains(out, tt.want) {
+				t.Errorf("badge for %q missing %q; body: %s", tt.state, tt.want, out)
+			}
+			if tt.state == FreshnessCurrent && !strings.Contains(out, "live") {
+				t.Errorf("current badge missing %q; body: %s", "live", out)
+			}
+		})
+	}
+}
+
+func TestConsoleActiveTabIsAriaCurrent(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyConsole(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+
+	count := strings.Count(body, `aria-current="page"`)
+	if count != 1 {
+		t.Fatalf(`aria-current="page" appears %d times, want 1; body: %s`, count, body)
+	}
+
+	idx := strings.Index(body, `aria-current="page"`)
+	if idx == -1 {
+		t.Fatal(`aria-current="page" not found`)
+	}
+	// The nearest anchor start before aria-current must be the kanban tab's href.
+	start := strings.LastIndex(body[:idx], "<a href=")
+	if start == -1 {
+		t.Fatal("no enclosing <a href= found before aria-current")
+	}
+	surrounding := body[start:idx]
+	if !strings.Contains(surrounding, "/console/kanban") {
+		t.Fatalf("aria-current is not within the kanban tab anchor; surrounding: %s", surrounding)
+	}
+}
+
 func TestConsoleReadOnlyRoutesNoDB(t *testing.T) {
 	t.Setenv("HIVE_OPS_API_BASE_URL", "")
 	h := NewHandlers(nil, nil, nil)
