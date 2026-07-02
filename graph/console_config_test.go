@@ -1,7 +1,10 @@
 package graph
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -125,4 +128,141 @@ func TestBuildConsoleConfig(t *testing.T) {
 			t.Fatal("timestamp-less unavailable state must carry an explicit notice")
 		}
 	})
+}
+
+// newConfigHiveServer serves the operator projection with a populated model
+// selection, mirroring the health-wall live-upstream test pattern.
+func newConfigHiveServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/operator-projection" {
+			http.NotFound(w, r)
+			return
+		}
+		proj := OpsHiveProjection{
+			GeneratedAt:    time.Now().UTC().Format(time.RFC3339),
+			ModelSelection: testConfigModelSelection(),
+		}
+		if err := json.NewEncoder(w).Encode(proj); err != nil {
+			t.Errorf("encode projection: %v", err)
+		}
+	}))
+}
+
+func TestConsoleConfigRendersModelRouting(t *testing.T) {
+	srv := newConfigHiveServer(t)
+	defer srv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", srv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	// Catalog entries, role assignments, provenance, and catalog source all render.
+	for _, want := range []string{
+		"claude-opus-4-6", "gpt-5.5", // catalog + assignment models
+		"strategist", "implementer", // roles
+		"Manual · override",  // policy-event provenance (strategist)
+		"Manual · inferred",  // plain-model provenance (implementer)
+		"catalog-mixed.yaml", // catalog source
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("config surface missing %q", want)
+		}
+	}
+}
+
+func TestConsoleConfigTabEnabled(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	// The enabled Config tab is an anchor to /console/config, not a disabled span.
+	if !strings.Contains(body, `href="/console/config"`) {
+		t.Error("Config tab must be enabled (anchor to /console/config)")
+	}
+	if strings.Contains(body, `title="coming soon"`) {
+		t.Error("no console tab may remain in the disabled coming-soon state")
+	}
+}
+
+func TestConsoleConfigUnavailableWhenProjectionAbsent(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "") // no upstream configured -> fetch error
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "unavailable") {
+		t.Error("absent projection must render an explicit unavailable state")
+	}
+	// No fabricated routing data may appear.
+	if strings.Contains(body, "claude-opus-4-6") || strings.Contains(body, "strategist") {
+		t.Error("unavailable config must not fabricate routing rows")
+	}
+}
+
+func TestConsoleConfigFragmentIsShellFree(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/config/fragment", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+	if strings.Contains(body, "<html") {
+		t.Fatal("fragment must not include the full page shell")
+	}
+	if !strings.Contains(body, "unavailable") {
+		t.Fatal("fragment must render honest staleness")
+	}
+}
+
+func TestConsoleConfigRoutesInReadOnlyRegistrar(t *testing.T) {
+	// Both registrars must serve the config routes: Register (full site) and
+	// RegisterReadOnlyConsole (no-DB console deployment).
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyConsole(mux)
+
+	for _, path := range []string{"/console/config", "/console/config/fragment"} {
+		req := httptest.NewRequest(http.MethodGet, "http://site.test"+path, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("%s: status = %d, want 200 in read-only registrar", path, w.Code)
+		}
+		if !strings.Contains(w.Body.String(), "unavailable") {
+			t.Errorf("%s: no-DB console must render explicit unavailable state", path)
+		}
+	}
 }

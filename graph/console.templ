@@ -24,7 +24,7 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					@consoleTab("health", "Health wall", "/console", data.Active, true)
 					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
 					@consoleTab("intake", "Intake", "/console/intake", data.Active, true)
-					@consoleTab("config", "Config", "/console/config", data.Active, false)
+					@consoleTab("config", "Config", "/console/config", data.Active, true)
 				</nav>
 				if data.Health != nil {
 					@consoleHealthWallFragment(*data.Health)
@@ -36,6 +36,9 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				if data.IssueScan != nil {
 					@consoleIssueScanSurface(*data.IssueScan)
 					<div id="console-intake-drawer"></div>
+				}
+				if data.Config != nil {
+					@consoleConfigFragment(*data.Config)
 				}
 			</main>
 		</body>
@@ -370,6 +373,97 @@ templ consoleHealthWall(w ConsoleHealthWall) {
 					}
 				</div>
 			}
+		}
+	</section>
+}
+
+
+templ consoleConfigFragment(c ConsoleConfig) {
+	<div id="console-config" hx-get="/console/config/fragment" hx-trigger="every 10s" hx-swap="outerHTML">
+		@consoleConfig(c)
+	</div>
+}
+
+// consoleConfig renders the read-only model-routing surface: catalog,
+// role→model assignments, and default-vs-override provenance. It carries NO
+// write affordances — no form, no input, no button. The governed write
+// (POST /ops/hive/model-policy) intentionally stays on the /ops surface.
+templ consoleConfig(c ConsoleConfig) {
+	<section class="space-y-4" data-console-surface="config">
+		<div class="flex items-center justify-between gap-3">
+			<div>
+				<h2 class="text-lg font-medium text-warm">Config — model routing</h2>
+				<p class="text-xs text-warm-muted mt-1">read-only projection · policy editing is governed and lives on the /ops surface</p>
+			</div>
+			@consoleFreshnessBadge(c.Freshness, c.GeneratedAt)
+		</div>
+		if c.Freshness == FreshnessUnavailable {
+			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(c.Notices) }</p>
+		} else {
+			if len(c.Notices) > 0 {
+				<div class="border border-amber-500/40 bg-surface rounded-lg p-3 text-xs text-amber-300">
+					for _, n := range c.Notices {
+						<p>{ n }</p>
+					}
+				</div>
+			}
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Catalog models</p>
+					<p class="text-2xl text-warm">{ strconv.Itoa(len(c.Selection.Models)) }</p>
+				</div>
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Role assignments</p>
+					<p class="text-2xl text-warm">{ strconv.Itoa(len(c.Selection.Assignments)) }</p>
+				</div>
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Global mode</p>
+					<p class="text-sm text-warm mt-2">{ consoleConfigGlobalMode(c.Selection) }</p>
+				</div>
+				<div class="border border-edge bg-surface rounded-lg p-4">
+					<p class="text-xs text-warm-muted">Catalog source</p>
+					<p class="text-xs text-warm mt-2 break-all">{ orFallback(c.Selection.CatalogSource, "not projected") }</p>
+				</div>
+			</div>
+			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Role → model routing</div>
+				if len(c.Selection.Assignments) == 0 {
+					<div class="px-4 py-3 text-sm text-warm-muted">No role assignments projected.</div>
+				} else {
+					for _, item := range c.Selection.Assignments {
+						<div class="px-4 py-2 border-b border-edge last:border-0">
+							<div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+								<span class="text-sm font-medium text-warm w-32 truncate">{ orFallback(item.Role, "role not projected") }</span>
+								<span class="text-xs text-warm font-mono break-all">{ consoleConfigAssignmentModel(item) }</span>
+								<span class="text-xs text-warm-muted">{ consoleConfigAssignmentProvider(item) }</span>
+								<span class="text-xs text-warm-muted ml-auto">{ consoleConfigAssignmentMode(c.Selection, item) }</span>
+							</div>
+							if item.Error != "" {
+								<p class="text-xs text-amber-300 mt-1 break-words">{ item.Error }</p>
+							}
+						</div>
+					}
+				}
+			</div>
+			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
+				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Model catalog</div>
+				if len(c.Selection.Models) == 0 {
+					<div class="px-4 py-3 text-sm text-warm-muted">No catalog models projected.</div>
+				} else {
+					for _, m := range c.Selection.Models {
+						<div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 border-b border-edge last:border-0">
+							<span class="text-sm text-warm font-mono break-all">{ orFallback(m.ID, "id not projected") }</span>
+							<span class="text-xs text-warm-muted">{ orFallback(m.Provider, "provider not projected") }</span>
+							<span class="text-xs text-warm-muted">{ orFallback(m.AuthMode, "auth not projected") }</span>
+							<span class="text-xs text-warm-muted">{ orFallback(m.Tier, "tier not projected") }</span>
+							if m.Deprecated {
+								<span class="text-xs text-amber-300 ml-auto">deprecated</span>
+							}
+						</div>
+					}
+				}
+			</div>
+			<p class="text-xs text-warm-muted">Model policy is hive-owned. This console renders the routing projection only; it never persists or forwards changes.</p>
 		}
 	</section>
 }

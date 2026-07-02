@@ -397,6 +397,8 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /console/intake", h.writeWrap(h.handleConsoleIntake))
 	mux.Handle("GET /console/intake/fragment", h.writeWrap(h.handleConsoleIntakeFragment))
 	mux.Handle("GET /console/intake/card", h.writeWrap(h.handleConsoleIntakeCard))
+	mux.Handle("GET /console/config", h.writeWrap(h.handleConsoleConfig))
+	mux.Handle("GET /console/config/fragment", h.writeWrap(h.handleConsoleConfigFragment))
 }
 
 // RegisterReadOnlyOps adds no-DB operator routes for local/offline read-only
@@ -437,6 +439,8 @@ func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
 	mux.HandleFunc("GET /console/intake", h.handleConsoleIntake)
 	mux.HandleFunc("GET /console/intake/fragment", h.handleConsoleIntakeFragment)
 	mux.HandleFunc("GET /console/intake/card", h.handleConsoleIntakeCard)
+	mux.HandleFunc("GET /console/config", h.handleConsoleConfig)
+	mux.HandleFunc("GET /console/config/fragment", h.handleConsoleConfigFragment)
 }
 
 // ────────────────────────────────────────────────────────────────────

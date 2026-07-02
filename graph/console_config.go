@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"net/http"
 	"strings"
 	"time"
 )
@@ -85,4 +86,16 @@ func consoleConfigAssignmentMode(sel OpsHiveModelSelection, item OpsHiveModelRol
 func consoleConfigGlobalMode(sel OpsHiveModelSelection) string {
 	mode, provenance, _ := obsHiveProjectionModelModeState(sel)
 	return mode + " · " + provenance
+}
+
+func (h *Handlers) handleConsoleConfig(w http.ResponseWriter, r *http.Request) {
+	proj, err := fetchHiveOperatorProjection(r)
+	cfg := buildConsoleConfig(proj, err, time.Now().UTC())
+	h.renderConsole(w, r, ConsolePageData{Title: "Config", Active: "config", Config: &cfg})
+}
+
+func (h *Handlers) handleConsoleConfigFragment(w http.ResponseWriter, r *http.Request) {
+	proj, err := fetchHiveOperatorProjection(r)
+	cfg := buildConsoleConfig(proj, err, time.Now().UTC())
+	consoleConfigFragment(cfg).Render(r.Context(), w)
 }
