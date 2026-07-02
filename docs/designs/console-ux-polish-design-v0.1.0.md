@@ -1,7 +1,7 @@
 # Console UX Polish — Design Packet
 
 - **doc_id:** SITE-CONSOLE-UX-POLISH-DESIGN-001
-- **version:** v0.4.0 (CFADA rounds 1-3 resolved)
+- **version:** v0.5.0 (CFADA rounds 1-3 + CFAR round 1 resolved)
 - **status:** CFADA-clean pending round-4 confirmation; building under TDD
 - **issue:** https://github.com/transpara-ai/site/issues/202
 - **base:** site main @ b68e214
@@ -142,3 +142,11 @@ Adversarial pass by the authoring session before CFADA:
 - Advisory 2 (round 3): codex explicitly accepted the split-command authority posture: "a separately warned protected-action removal command is an acceptable read-only authority posture for a human authority owner."
 - Advisory 3 adopted: when both commands render, copy states the scope command alone does not admit until the protected boundary is separately authorized.
 - Advisory 4 adopted: plan header provenance updated to the current packet version.
+
+### CFAR round 1 (codex, on PR #203) — 1 blocker → resolved in v0.5.0
+
+- **CFAR1-1 (stale-projection command suppression):** `buildConsoleIssueScan` stamped `UnblockAvailable` — and `handleConsoleIntakeCard` derived/rendered the unblock plan — whenever freshness was anything other than `FreshnessUnavailable`. That let `FreshnessStale` (and `FreshnessPartial`) boards and drawers offer exact `gh issue edit` label-surgery commands derived from an out-of-date label snapshot: the projection had already fallen outside `consoleStaleWindow` (or come from a degraded/partial source set), so the labels a command would remove/add were no longer a verified-current fact. Resolved with a two-tier, fail-closed gate:
+  - **Tier 1 — finding the card at all** (`handleConsoleIntakeCard`): unchanged, still gated to `scan.Freshness != FreshnessUnavailable`. A stale or partial drawer still shows the real run and its projected `RequiredAction` honestly — hiding a genuine run because its timestamp aged out would itself be dishonest.
+  - **Tier 2 — offering hints/commands**: tightened to an explicit allowlist, `scan.Freshness == FreshnessCurrent` only. `buildConsoleIssueScan` now computes freshness *before* the per-card stamping loop and only stamps `UnblockAvailable` when it is exactly `FreshnessCurrent`; every other value (stale, partial, unavailable, and any future enum addition) leaves every card's `UnblockAvailable` at its zero value (`false`) by falling through rather than by an explicit per-case deny — the class of "not verified current" is denied by construction, not enumerated. `handleConsoleIntakeCard` mirrors this: it only calls `consoleIssueScanUnblockPlan` when `scan.Freshness == FreshnessCurrent`; otherwise it renders `consoleUnblockPlan{}, false`, matching the not-found path's behavior for the plan argument.
+  - Partial is deliberately included in the suppression, not just stale: a partial derivation is a degraded source set (some records missing/failed), which is not a verified-current label snapshot either — allowlisting only `FreshnessCurrent` covers both without needing a separate partial-specific carve-out.
+  - Test coverage: `graph/console_intake_test.go` adds `freshHiveCivilizationAssemblyProjectionFixture()` (rewrites the shared fixture's baked-in stale `generated_at` to `time.Now()` for tests that need `FreshnessCurrent` to assert real command rendering) and a new `TestConsoleIntakeStaleProjectionSuppressesUnblock`, which serves the shared fixture unmodified (stale) and asserts the board still renders `transpara-ai/docs#172` and the drawer still shows "human must clarify issue scope before runtime continues," but neither the board's "unblock available" hint nor any "gh issue edit" command appears anywhere. `TestConsoleIntakeDrawerNoCommandForNonLabelBlocker` was switched to the fresh fixture with a comment clarifying it asserts the sibling-blocker gate, not the freshness gate (which now has its own dedicated test).

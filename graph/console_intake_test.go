@@ -13,6 +13,23 @@ import (
 	"time"
 )
 
+// freshHiveCivilizationAssemblyProjectionFixture returns
+// hiveCivilizationAssemblyProjectionFixture (graph/handlers_test.go) with its
+// baked-in generated_at ("2026-06-23T09:30:00Z", which renders FreshnessStale
+// against any realistic test clock) rewritten to now. Unblock hints/commands
+// are gated to FreshnessCurrent only (buildConsoleIssueScan), so tests that
+// assert real gh-command rendering must serve a fixture that lands current,
+// not the shared fixture's stale timestamp.
+func freshHiveCivilizationAssemblyProjectionFixture() string {
+	const staleGeneratedAt = `"generated_at": "2026-06-23T09:30:00Z"`
+	freshGeneratedAt := fmt.Sprintf(`"generated_at": %q`, time.Now().UTC().Format(time.RFC3339))
+	replaced := strings.Replace(hiveCivilizationAssemblyProjectionFixture, staleGeneratedAt, freshGeneratedAt, 1)
+	if replaced == hiveCivilizationAssemblyProjectionFixture {
+		panic("freshHiveCivilizationAssemblyProjectionFixture: staleGeneratedAt marker not found in fixture; fixture format changed")
+	}
+	return replaced
+}
+
 func TestConsoleIssueScanCardAgentsCombinesAssignedAndTouching(t *testing.T) {
 	// Assigned + touching are both surfaced (deduped, assigned first) so a
 	// touching-only worker is not hidden behind the assignee; empty → unassigned.
@@ -541,7 +558,7 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 func TestConsoleIntakeDrawerRendersUnblockCommands(t *testing.T) {
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
@@ -574,11 +591,15 @@ func TestConsoleIntakeDrawerRendersUnblockCommands(t *testing.T) {
 
 // End-to-end negative: run_site_115 has sibling blockers protected_action +
 // stale_target, so the gate must refuse — no command anywhere, projected
-// required action still shown.
+// required action still shown. Uses the FRESH fixture (FreshnessCurrent)
+// deliberately: this test asserts the sibling-blocker GATE refuses, not the
+// freshness gate (which has its own dedicated coverage in
+// TestConsoleIntakeStaleProjectionSuppressesUnblock). A stale fixture here
+// would make the assertion trivially true for the wrong reason.
 func TestConsoleIntakeDrawerNoCommandForNonLabelBlocker(t *testing.T) {
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
@@ -599,13 +620,63 @@ func TestConsoleIntakeDrawerNoCommandForNonLabelBlocker(t *testing.T) {
 	}
 }
 
+// CFAR (codex, PR #203, P2): buildConsoleIssueScan stamped UnblockAvailable —
+// and handleConsoleIntakeCard derived/rendered the plan — from ANY freshness
+// other than FreshnessUnavailable, so a stale projection's out-of-date label
+// snapshot could still produce exact "gh issue edit" commands. This test
+// serves the shared fixture AS-IS (its baked-in generated_at is
+// "2026-06-23T09:30:00Z", which is FreshnessStale against any realistic test
+// clock — see freshHiveCivilizationAssemblyProjectionFixture's doc comment)
+// and asserts the board still renders honestly (cards, required actions) but
+// the gate suppresses every unblock hint and command.
+func TestConsoleIntakeStaleProjectionSuppressesUnblock(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture) // stale, deliberately unmodified
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	boardReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	boardW := httptest.NewRecorder()
+	mux.ServeHTTP(boardW, boardReq)
+	if boardW.Code != http.StatusOK {
+		t.Fatalf("board status = %d, want 200; body: %s", boardW.Code, boardW.Body.String())
+	}
+	boardBody := boardW.Body.String()
+	if !strings.Contains(boardBody, "transpara-ai/docs#172") {
+		t.Error("stale board must still render its cards honestly (data, not commands, is suppressed)")
+	}
+	if strings.Contains(boardBody, "unblock available") {
+		t.Error("stale board must not render the unblock hint — the label snapshot is out of date")
+	}
+
+	drawerReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	drawerW := httptest.NewRecorder()
+	mux.ServeHTTP(drawerW, drawerReq)
+	if drawerW.Code != http.StatusOK {
+		t.Fatalf("drawer status = %d, want 200; body: %s", drawerW.Code, drawerW.Body.String())
+	}
+	drawerBody := drawerW.Body.String()
+	if !strings.Contains(drawerBody, "human must clarify issue scope before runtime continues") {
+		t.Error("stale drawer must still show the projected required action honestly")
+	}
+	if strings.Contains(drawerBody, "gh issue edit") {
+		t.Error("stale drawer must NOT render a gh command — the label snapshot may be out of date")
+	}
+}
+
 // Board hint appears exactly once with the shared fixture: only
 // run_docs_172_scope passes the gate (run_docs_172 = duplicate_chain,
 // run_site_115 = protected_action + stale_target siblings).
 func TestConsoleIntakeCardUnblockHint(t *testing.T) {
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
@@ -707,7 +778,7 @@ func TestConsoleIntakeEmptyStateExplainsScanCycle(t *testing.T) {
 func TestConsoleIntakeSurfaceRendersNoWriteControls(t *testing.T) {
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture)
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
 	}))
 	defer hiveSrv.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)

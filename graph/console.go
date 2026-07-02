@@ -151,15 +151,25 @@ func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Tim
 	}
 	generatedAt := proj.GeneratedAt.UTC().Format(time.RFC3339)
 	hasPartial := status == opsCivilizationProjectionStatusPartial
-	runBlockerTypes := consoleIssueScanRunBlockerTypes(board)
-	for ci := range board.Columns {
-		for i := range board.Columns[ci].Cards {
-			_, ok := consoleIssueScanUnblockPlan(board.Columns[ci].Cards[i], runBlockerTypes)
-			board.Columns[ci].Cards[i].UnblockAvailable = ok
+	freshness := deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow)
+	// Unblock hints/commands are gated to a verified-current projection by
+	// allowlist: only freshness == current stamps UnblockAvailable. Stale and
+	// partial still render cards, blockers, and required actions honestly —
+	// they just never offer commands derived from a label snapshot that may
+	// no longer match reality (partial is a degraded source set, not a
+	// verified-current one). The default (any other freshness) leaves every
+	// card's UnblockAvailable at its zero value (false).
+	if freshness == FreshnessCurrent {
+		runBlockerTypes := consoleIssueScanRunBlockerTypes(board)
+		for ci := range board.Columns {
+			for i := range board.Columns[ci].Cards {
+				_, ok := consoleIssueScanUnblockPlan(board.Columns[ci].Cards[i], runBlockerTypes)
+				board.Columns[ci].Cards[i].UnblockAvailable = ok
+			}
 		}
 	}
 	return ConsoleIssueScan{
-		Freshness:   deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow),
+		Freshness:   freshness,
 		GeneratedAt: generatedAt,
 		Status:      board.Status,
 		Summary:     board.Summary,
@@ -208,18 +218,35 @@ func (h *Handlers) handleConsoleIntakeFragment(w http.ResponseWriter, r *http.Re
 func (h *Handlers) handleConsoleIntakeCard(w http.ResponseWriter, r *http.Request) {
 	run := strings.TrimSpace(r.URL.Query().Get("run"))
 	stage := strings.TrimSpace(r.URL.Query().Get("stage"))
-	// Honest-staleness, fail-closed: gate the drawer through the SAME freshness
-	// computation as the board (buildConsoleIssueScan). A failed / timestamp-less
-	// projection can still carry records; without this gate a direct card request
-	// would expose run details the board intentionally hides. When the surface is
-	// unavailable, the loop is skipped and the honest not-found drawer renders.
+	// Two-tier honest-staleness gate, both fail-closed against the SAME
+	// freshness computation as the board (buildConsoleIssueScan):
+	//   1. Finding the card at all: gated to != FreshnessUnavailable. A failed
+	//      / timestamp-less projection can still carry records; without this
+	//      gate a direct card request would expose run details the board
+	//      intentionally hides. Stale/partial still show the run honestly —
+	//      hiding a real run because its timestamp is old would itself be
+	//      dishonest.
+	//   2. Deriving the unblock plan: gated to == FreshnessCurrent only. A
+	//      stale or partial projection's label snapshot may no longer match
+	//      reality, so the exact gh issue edit commands it would produce are
+	//      not trustworthy — only a verified-current projection may offer
+	//      commands. Stale/partial drawers still render the projected
+	//      required action, just never a command.
+	// When the surface is unavailable, the loop is skipped and the honest
+	// not-found drawer renders.
 	scan := buildConsoleIssueScan(fetchOpsCivilizationProjection(r), time.Now().UTC())
 	if scan.Freshness != FreshnessUnavailable {
-		runBlockerTypes := consoleIssueScanRunBlockerTypes(scan.Board)
+		var runBlockerTypes map[string][]string
+		if scan.Freshness == FreshnessCurrent {
+			runBlockerTypes = consoleIssueScanRunBlockerTypes(scan.Board)
+		}
 		for _, col := range scan.Board.Columns {
 			for _, card := range col.Cards {
 				if card.RunID == run && card.StageID == stage {
-					plan, planOK := consoleIssueScanUnblockPlan(card, runBlockerTypes)
+					plan, planOK := consoleUnblockPlan{}, false
+					if scan.Freshness == FreshnessCurrent {
+						plan, planOK = consoleIssueScanUnblockPlan(card, runBlockerTypes)
+					}
 					consoleIssueScanDrawer(card, true, plan, planOK).Render(r.Context(), w)
 					return
 				}
