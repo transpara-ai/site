@@ -1116,7 +1116,7 @@ type opsPipelineReportResponse struct {
 }
 
 var hiveOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
-var civilizationOpsProjectionClient = &http.Client{Timeout: 8 * time.Second}
+var civilizationOpsProjectionClient = &http.Client{Timeout: 9 * time.Second}
 var evidenceOpsProjectionClient = &http.Client{Timeout: 3 * time.Second}
 
 func (h *Handlers) handleOps(w http.ResponseWriter, r *http.Request) {

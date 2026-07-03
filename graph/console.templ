@@ -158,6 +158,9 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 			</div>
 			@consoleFreshnessBadge(s.Freshness, s.GeneratedAt)
 		</div>
+		if s.RecentRuns.Available {
+			@consoleRecentRunsRail(s.RecentRuns)
+		}
 		if s.Freshness == FreshnessUnavailable {
 			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(s.Notices) }</p>
 		} else if len(s.Board.Columns) == 0 {
@@ -178,6 +181,62 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 			</div>
 		}
 	</section>
+}
+
+// consoleRecentRunsRail renders the recent-intakes rail: a horizontal-scroll
+// strip of compact chips above the board. Rendered only when
+// s.RecentRuns.Available (checked by the caller, consoleIssueScan) — this
+// templ itself does not re-check Available so it stays a pure render of
+// whatever entries it's given; the fail-closed gate lives in
+// buildConsoleRecentRuns (graph/console.go), not here.
+templ consoleRecentRunsRail(rail ConsoleRecentRuns) {
+	<div class="space-y-2" data-console-rail>
+		<h3 class="text-[10px] uppercase tracking-widest text-warm-faint">recent intakes</h3>
+		<div class="flex gap-2 overflow-x-auto pb-1">
+			for _, entry := range rail.Entries {
+				@consoleRecentRunChip(entry)
+			}
+			if rail.Truncated {
+				<span class="text-[10px] text-warm-faint whitespace-nowrap self-center">… truncated</span>
+			}
+		</div>
+	</div>
+}
+
+// consoleRecentRunChip renders one rail entry. Linked entries (their
+// (RunID, StageID) exists on the rendered board — see buildConsoleRecentRuns)
+// are an <a> wired to the same drawer target/swap mechanics as a board card;
+// unlinked entries are a plain <span> with identical visual styling and no
+// hx-get, so the rail never fabricates a drawer target the board itself
+// doesn't expose.
+templ consoleRecentRunChip(entry ConsoleRecentRunEntry) {
+	if entry.Linked {
+		<a
+			href="#"
+			class="flex-shrink-0 flex flex-col gap-0.5 rounded border border-edge bg-surface/40 px-2 py-1 hover:border-brand transition-colors"
+			hx-get={ entry.DrawerURL }
+			hx-target="#console-intake-drawer"
+			hx-swap="innerHTML"
+		>
+			@consoleRecentRunChipContent(entry)
+		</a>
+	} else {
+		<span class="flex-shrink-0 flex flex-col gap-0.5 rounded border border-edge bg-surface/40 px-2 py-1">
+			@consoleRecentRunChipContent(entry)
+		</span>
+	}
+}
+
+templ consoleRecentRunChipContent(entry ConsoleRecentRunEntry) {
+	<span class="text-xs text-warm whitespace-nowrap">{ entry.IssueLabel }</span>
+	if entry.StyleKind == "amber" {
+		<span class="text-[10px] text-amber-300 whitespace-nowrap">{ entry.State }</span>
+	} else {
+		<span class="text-[10px] text-warm-muted whitespace-nowrap">{ entry.State }</span>
+	}
+	if entry.Age != "" {
+		<span class="text-[10px] font-mono text-warm-muted whitespace-nowrap">{ entry.Age }</span>
+	}
 }
 
 templ consoleIssueScanCard(card OpsCivilizationIssueScanKanbanCard) {
