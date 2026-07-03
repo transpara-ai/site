@@ -387,3 +387,31 @@ func TestConsoleConfigSourceOnlySelectionRendersHonestEmptyStates(t *testing.T) 
 		t.Error("empty catalog must render the explicit empty state")
 	}
 }
+
+func TestConsoleConfigEmptyStatesCarryContext(t *testing.T) {
+	// A selection with Source set but no models/assignments is usable — the
+	// empty states must carry enough context to explain WHY they're empty,
+	// not just state the fact.
+	cfg := buildConsoleConfig(&OpsHiveProjection{
+		GeneratedAt:    time.Now().UTC().Format(time.RFC3339),
+		ModelSelection: OpsHiveModelSelection{Source: "hive-operator-projection"},
+	}, nil, time.Now().UTC())
+	if cfg.Freshness != FreshnessCurrent {
+		t.Fatalf("freshness = %q, want current for source-only selection", cfg.Freshness)
+	}
+	var buf bytes.Buffer
+	if err := consoleConfig(cfg).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{
+		"No role assignments projected.",
+		"No catalog models projected.",
+		"Role routing appears once",
+		"hot-reloaded",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("config empty state missing %q; body: %s", want, out)
+		}
+	}
+}

@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -132,6 +134,28 @@ func TestBuildConsoleHealthWall(t *testing.T) {
 	})
 }
 
+func TestConsoleHealthEmptyRosterIsPurposeful(t *testing.T) {
+	// Fresh projection, zero agents — a genuinely usable-but-empty roster
+	// (between civilization runs). The empty state must say why, not just
+	// shrug with "reported."
+	now := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
+	proj := &OpsHiveProjection{GeneratedAt: now.Add(-2 * time.Second).Format(time.RFC3339)}
+	wall := buildConsoleHealthWall(proj, nil, now)
+	if wall.Freshness != FreshnessCurrent {
+		t.Fatalf("freshness = %q, want current for a fresh, empty roster", wall.Freshness)
+	}
+	var buf bytes.Buffer
+	if err := consoleHealthWall(wall).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	for _, want := range []string{"No active agents.", "civilization run"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("empty health body missing %q; body: %s", want, out)
+		}
+	}
+}
+
 func TestHandleConsoleHealthFragment(t *testing.T) {
 	h := newConsoleTestHandlers()
 	t.Setenv("HIVE_OPS_API_BASE_URL", "")
@@ -181,6 +205,69 @@ func TestDeriveFreshness(t *testing.T) {
 				t.Fatalf("deriveFreshness = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestConsoleFreshnessBadgeCarriesStateDot(t *testing.T) {
+	tests := []struct {
+		name  string
+		state ConsoleFreshness
+		want  string
+	}{
+		{"current", FreshnessCurrent, `data-freshness="current"`},
+		{"stale", FreshnessStale, `data-freshness="stale"`},
+		{"partial", FreshnessPartial, `data-freshness="partial"`},
+		{"unavailable", FreshnessUnavailable, `data-freshness="unavailable"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := consoleFreshnessBadge(tt.state, "2026-07-02T12:00:00Z").Render(context.Background(), &buf); err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			out := buf.String()
+			if !strings.Contains(out, tt.want) {
+				t.Errorf("badge for %q missing %q; body: %s", tt.state, tt.want, out)
+			}
+			if tt.state == FreshnessCurrent && !strings.Contains(out, "live") {
+				t.Errorf("current badge missing %q; body: %s", "live", out)
+			}
+		})
+	}
+}
+
+func TestConsoleActiveTabIsAriaCurrent(t *testing.T) {
+	t.Setenv("HIVE_OPS_API_BASE_URL", "")
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyConsole(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/kanban", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	body := w.Body.String()
+
+	count := strings.Count(body, `aria-current="page"`)
+	if count != 1 {
+		t.Fatalf(`aria-current="page" appears %d times, want 1; body: %s`, count, body)
+	}
+
+	idx := strings.Index(body, `aria-current="page"`)
+	if idx == -1 {
+		t.Fatal(`aria-current="page" not found`)
+	}
+	// The nearest anchor start before aria-current must be the kanban tab's href.
+	start := strings.LastIndex(body[:idx], "<a href=")
+	if start == -1 {
+		t.Fatal("no enclosing <a href= found before aria-current")
+	}
+	surrounding := body[start:idx]
+	if !strings.Contains(surrounding, "/console/kanban") {
+		t.Fatalf("aria-current is not within the kanban tab anchor; surrounding: %s", surrounding)
 	}
 }
 
