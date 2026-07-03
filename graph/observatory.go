@@ -585,7 +585,8 @@ func buildObsCivilization(agents []ObsAgentView, hive *OpsHiveData) ObsCivilizat
 		if civ.Roster[i].Model == "" {
 			civ.Roster[i].Model = "not projected"
 		}
-		if civ.Roster[i].ModelMode == "" || (civ.Roster[i].ModelMode == "unknown" && civ.GlobalModeProvenance != "not projected") {
+		if obsModeInheritsGlobal(civ.Roster[i].ModelMode, civ.Roster[i].ModelModeProvenance) &&
+			(civ.Roster[i].ModelMode == "" || civ.GlobalModeProvenance != "not projected") {
 			civ.Roster[i].ModelMode = civ.GlobalModelMode
 			civ.Roster[i].ModelModeProvenance = obsInheritedModelModeProvenance(civ.GlobalModeProvenance)
 		}
@@ -815,12 +816,54 @@ func obsAssignmentModelMode(selection OpsHiveModelSelection, item OpsHiveModelRo
 	return mode
 }
 
+// obsAssignmentModelModeProvenance is a render-boundary accessor (ops.templ
+// prints its return directly), so internal provenance sentinels are mapped to
+// operator-visible copy here.
 func obsAssignmentModelModeProvenance(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) string {
 	_, provenance := obsAssignmentModelModeState(selection, item)
+	return obsModeProvenanceDisplay(provenance)
+}
+
+// obsModeProvenanceInvalidProjection is the internal provenance sentinel for
+// a projected selection_mode that is PRESENT but outside the allowlisted
+// vocabulary. It is deliberately distinct from the genuinely-absent
+// "not projected" so the global-mode inheritance in buildObsCivilization can
+// refuse to overwrite it (present-invalid is sticky — CFADA2-1).
+// obsModeProvenanceDisplay maps it to "not projected" at the render boundary.
+const obsModeProvenanceInvalidProjection = "invalid projection"
+
+// obsModeProvenanceDisplay maps internal provenance sentinels to their
+// operator-visible copy at the render boundary. The invalid-projection
+// sentinel stays a distinct value internally (the inheritance gate keys on
+// it) but displays as "not projected": the operator-facing fact is the same —
+// there is no trustworthy projected mode. Every other provenance passes
+// through unchanged.
+func obsModeProvenanceDisplay(provenance string) string {
+	if provenance == obsModeProvenanceInvalidProjection {
+		return "not projected"
+	}
 	return provenance
 }
 
+// obsAssignmentModelModeState derives the Auto/Manual chip and its provenance
+// for one role assignment. The hive-projected resolver mode
+// (item.SelectionMode, vocabulary manual-explicit | auto-tier |
+// system-default, plus the legacy canonical values) is evaluated FIRST,
+// three-way (design packet D4, CFADA1-2):
+//   - allowlisted value → (canonical mode, "explicit"); legacy site-side
+//     fields — OverrideMode included — can never mask a projected resolver
+//     mode;
+//   - present-but-invalid → fail closed immediately: ("unknown", sticky
+//     invalid-projection sentinel) — no legacy fallback, no inference;
+//   - absent → the legacy derivation chain below runs unchanged,
+//     byte-identical for upstreams that project no mode.
 func obsAssignmentModelModeState(selection OpsHiveModelSelection, item OpsHiveModelRoleAssignment) (string, string) {
+	if projected := strings.TrimSpace(item.SelectionMode); projected != "" {
+		if mode := obsCanonicalModelMode(projected); mode != "" {
+			return mode, "explicit"
+		}
+		return "unknown", obsModeProvenanceInvalidProjection
+	}
 	if mode := obsCanonicalModelMode(item.OverrideMode); mode != "" {
 		return mode, "override"
 	}
@@ -847,9 +890,15 @@ func obsHiveProjectionModelMode(selection OpsHiveModelSelection) string {
 	return mode
 }
 
+// obsHiveProjectionModelModeProvenance is a render-boundary accessor
+// (ops.templ prints its return directly), so it routes through
+// obsModeProvenanceDisplay for class-consistency with every other provenance
+// render site. Provably a no-op today — the global state function's
+// vocabulary cannot produce the invalid-projection sentinel — but it closes
+// the class so a future global sentinel could never leak to the surface.
 func obsHiveProjectionModelModeProvenance(selection OpsHiveModelSelection) string {
 	_, provenance, _ := obsHiveProjectionModelModeState(selection)
-	return provenance
+	return obsModeProvenanceDisplay(provenance)
 }
 
 func obsHiveProjectionModelModeState(selection OpsHiveModelSelection) (string, string, string) {
@@ -860,6 +909,20 @@ func obsHiveProjectionModelModeState(selection OpsHiveModelSelection) (string, s
 		return "Auto", "inferred", "inferred from presence of model-selection metadata; no explicit global mode projected"
 	}
 	return "unknown", "not projected", "Hive did not return model-selection projection metadata"
+}
+
+// obsModeInheritsGlobal reports whether a roster row's mode state is
+// genuinely absent — the ONLY state the global-mode inheritance in
+// buildObsCivilization may overwrite. Allowlist-form (CFADA2-1): the mode
+// must be the absent vocabulary ("" or "unknown") AND the provenance must be
+// one of the exact values the legacy path inherits over today ("" or
+// "not projected"). The sticky invalid-projection sentinel — like any other
+// unrecognized provenance — fails the allowlist, so a present-but-invalid
+// projected selection_mode is never laundered into an inherited global mode.
+func obsModeInheritsGlobal(mode, provenance string) bool {
+	modeAbsent := mode == "" || mode == "unknown"
+	provenanceAbsent := provenance == "" || provenance == "not projected"
+	return modeAbsent && provenanceAbsent
 }
 
 func obsInheritedModelModeProvenance(globalProvenance string) string {
@@ -876,11 +939,16 @@ func obsOperateState(canOperate bool) string {
 	return "false"
 }
 
+// obsCanonicalModelMode maps a raw mode string to the binary chip vocabulary.
+// Allowlist-form: the legacy site values plus the hive-projected resolver
+// vocabulary (manual-explicit | auto-tier | system-default; a default IS
+// automatic selection). Anything else non-empty stays unrecognized — the
+// empty return is how callers fail closed, never a coerced mode.
 func obsCanonicalModelMode(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "auto", "automatic":
+	case "auto", "automatic", "auto-tier", "system-default":
 		return "Auto"
-	case "manual", "pinned":
+	case "manual", "pinned", "manual-explicit":
 		return "Manual"
 	default:
 		return ""

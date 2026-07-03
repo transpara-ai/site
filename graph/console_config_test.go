@@ -132,6 +132,32 @@ func TestBuildConsoleConfig(t *testing.T) {
 	})
 }
 
+// TestConsoleConfigAssignmentModeProjectedVocabulary guards the /console
+// render boundary for the hive-projected selection_mode: valid vocabulary
+// renders "Mode · explicit"; a present-but-invalid value fails closed to
+// "unknown · not projected" — the internal sentinel never reaches copy.
+func TestConsoleConfigAssignmentModeProjectedVocabulary(t *testing.T) {
+	sel := testConfigModelSelection()
+	item := OpsHiveModelRoleAssignment{
+		Role:          "strategist",
+		Model:         "claude-opus-4-6",
+		Source:        "hive-model-policy-event",
+		PolicyEventID: "evt_123",
+		SelectionMode: "resolver-mode-v2", // present-but-invalid
+	}
+	if got := consoleConfigAssignmentMode(sel, item); got != "unknown · not projected" {
+		t.Fatalf("invalid projected mode = %q, want %q", got, "unknown · not projected")
+	}
+	item.SelectionMode = "manual-explicit"
+	if got := consoleConfigAssignmentMode(sel, item); got != "Manual · explicit" {
+		t.Fatalf("manual-explicit = %q, want %q", got, "Manual · explicit")
+	}
+	item.SelectionMode = "system-default"
+	if got := consoleConfigAssignmentMode(sel, item); got != "Auto · explicit" {
+		t.Fatalf("system-default = %q, want %q", got, "Auto · explicit")
+	}
+}
+
 // newConfigHiveServer serves the operator projection with a populated model
 // selection, mirroring the health-wall live-upstream test pattern.
 func newConfigHiveServer(t *testing.T) *httptest.Server {

@@ -415,7 +415,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 				<div class="shrink-0 text-right">
 					<p class="text-[10px] text-warm-faint uppercase tracking-widest mb-1">Global Model Selection Mode</p>
 					@obsModelModeToggle(data.Civilization.GlobalModelMode)
-					<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { data.Civilization.GlobalModeProvenance }</p>
+					<p class="text-[10px] text-warm-faint mt-1 uppercase tracking-widest">provenance: { obsModeProvenanceDisplay(data.Civilization.GlobalModeProvenance) }</p>
 					<p class="text-[11px] text-warm-faint mt-1 max-w-xs">{ data.Civilization.GlobalModeReason }</p>
 				</div>
 			</div>
@@ -462,7 +462,7 @@ templ opsCivilizationAssembly(data *OpsCivilizationAssemblyData) {
 								<td class="py-2 px-3 text-warm-muted">{ row.Model }</td>
 								<td class="py-2 px-3">
 									@obsModelModeToggle(row.ModelMode)
-									<p class="text-[10px] text-warm-faint mt-1">{ row.ModelModeProvenance }</p>
+									<p class="text-[10px] text-warm-faint mt-1">{ obsModeProvenanceDisplay(row.ModelModeProvenance) }</p>
 								</td>
 								<td class="py-2 px-3 text-warm-faint">
 									<p>reports: { row.ReportsTo }</p>
