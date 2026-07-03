@@ -102,7 +102,134 @@ type ConsoleIssueScan struct {
 	Status      string
 	Summary     string
 	Board       OpsCivilizationIssueScanKanban
+	RecentRuns  ConsoleRecentRuns
 	Notices     []string
+}
+
+// ConsoleRecentRuns is the recent-intakes rail view-model derived from the
+// hive recent_issue_scan_runs projection section (schema 1.6.0). Available is
+// false — never populated with entries — unless BOTH the surface freshness is
+// usable (current/stale/partial, the board's exact set) AND the section's own
+// status is "available"; this keeps a 1.5.0 payload (no field at all) and any
+// unknown/unavailable section status byte-identical to "no rail".
+type ConsoleRecentRuns struct {
+	Available bool
+	Truncated bool
+	Entries   []ConsoleRecentRunEntry
+}
+
+// ConsoleRecentRunEntry is one rail chip. StyleKind is allowlist-derived
+// ("amber" only for parked/human_action; "neutral" for every other value,
+// known or not — never a default that yields amber). DrawerURL is only ever
+// set when Linked is true (the (RunID, StageID) pair exists on the rendered
+// board), via consoleIssueScanCardURL mechanics, so the rail never fabricates
+// a drawer target.
+type ConsoleRecentRunEntry struct {
+	RunID      string
+	StageID    string
+	IssueLabel string
+	IssueURL   string
+	State      string
+	StyleKind  string
+	Age        string
+	DrawerURL  string
+	Linked     bool
+}
+
+// consoleRecentRunAmberStates is the allowlist of states that render amber.
+// Every other state value (queued, in_flight, recorded, and any unknown/
+// future value including a hypothetical ready state) renders neutral — no
+// denylist, no default that yields a healthy or alarming color by accident.
+var consoleRecentRunAmberStates = map[string]bool{
+	"parked":       true,
+	"human_action": true,
+}
+
+// consoleRecentRunUsableFreshness is the EXACT surface-freshness set that
+// renders the board (buildConsoleIssueScan's own success path): current,
+// stale, partial. This is intentionally the same decision as the board's, so
+// the rail and board can never diverge on when they render.
+var consoleRecentRunUsableFreshness = map[ConsoleFreshness]bool{
+	FreshnessCurrent: true,
+	FreshnessStale:   true,
+	FreshnessPartial: true,
+}
+
+// buildConsoleRecentRuns derives the recent-intakes rail view-model. It is a
+// pure function: no I/O, no time.Now() (now is passed in), fail-closed at
+// every gate.
+//
+// Gates, both required:
+//  1. freshness must be in consoleRecentRunUsableFreshness (the board's own
+//     usable set) — an unavailable/unknown surface never renders a rail even
+//     if the section itself claims to be available.
+//  2. proj.RecentIssueScanRuns.Status must be exactly "available" — absent
+//     field (1.5.0 payload, decodes to the zero value ""), "unavailable", or
+//     any unrecognized value all deny.
+//
+// Linked is true only when the (RunID, StageID) pair is present on the
+// rendered board (site-side index built from the same board passed in), so a
+// rail entry can never link to a drawer the board itself doesn't expose.
+func buildConsoleRecentRuns(proj *OpsCivilizationAssemblyProjection, board OpsCivilizationIssueScanKanban, freshness ConsoleFreshness, now time.Time) ConsoleRecentRuns {
+	if proj == nil {
+		return ConsoleRecentRuns{}
+	}
+	if !consoleRecentRunUsableFreshness[freshness] {
+		return ConsoleRecentRuns{}
+	}
+	section := proj.RecentIssueScanRuns
+	if section.Status != opsCivilizationFieldAvailable {
+		return ConsoleRecentRuns{}
+	}
+
+	onBoard := map[string]bool{}
+	for _, col := range board.Columns {
+		for _, card := range col.Cards {
+			onBoard[runStageKey(card.RunID, card.StageID)] = true
+		}
+	}
+
+	entries := make([]ConsoleRecentRunEntry, 0, len(section.Runs))
+	for _, run := range section.Runs {
+		linked := onBoard[runStageKey(run.RunID, run.StageID)]
+		entry := ConsoleRecentRunEntry{
+			RunID:      run.RunID,
+			StageID:    run.StageID,
+			IssueLabel: opsCivilizationIssueRefLabel(OpsCivilizationIssueRef{Repo: run.Repo, Number: run.IssueNumber, URL: run.IssueURL, Title: run.IssueTitle}),
+			IssueURL:   run.IssueURL,
+			State:      run.State,
+			StyleKind:  consoleRecentRunStyleKind(run.State),
+			Age:        consoleRecentRunAge(now, run.LastEventAt),
+			Linked:     linked,
+		}
+		if linked {
+			entry.DrawerURL = consoleIssueScanCardURL(OpsCivilizationIssueScanKanbanCard{RunID: run.RunID, StageID: run.StageID})
+		}
+		entries = append(entries, entry)
+	}
+
+	return ConsoleRecentRuns{
+		Available: true,
+		Truncated: section.Truncated,
+		Entries:   entries,
+	}
+}
+
+// consoleRecentRunStyleKind is a pure allowlist: amber ONLY for parked and
+// human_action; every other value — including queued/in_flight/recorded and
+// any state not in the v1 set — is neutral. No default branch produces amber.
+func consoleRecentRunStyleKind(state string) string {
+	if consoleRecentRunAmberStates[state] {
+		return "amber"
+	}
+	return "neutral"
+}
+
+// consoleRecentRunAge reuses humanizeAge (graph/console_kanban.go) so the
+// rail's relative-age formatting matches the rest of the console. Unparseable
+// or absent timestamps yield "" (never "now") per humanizeAge's own contract.
+func consoleRecentRunAge(now time.Time, lastEventAt string) string {
+	return humanizeAge(now, lastEventAt)
 }
 
 // buildConsoleIssueScan maps the civilization assembly projection (or its
@@ -151,12 +278,30 @@ func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Tim
 	}
 	generatedAt := proj.GeneratedAt.UTC().Format(time.RFC3339)
 	hasPartial := status == opsCivilizationProjectionStatusPartial
+	freshness := deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow)
+	// Unblock hints/commands are gated to a verified-current projection by
+	// allowlist: only freshness == current stamps UnblockAvailable. Stale and
+	// partial still render cards, blockers, and required actions honestly —
+	// they just never offer commands derived from a label snapshot that may
+	// no longer match reality (partial is a degraded source set, not a
+	// verified-current one). The default (any other freshness) leaves every
+	// card's UnblockAvailable at its zero value (false).
+	if freshness == FreshnessCurrent {
+		runBlockerTypes := consoleIssueScanRunBlockerTypes(board)
+		for ci := range board.Columns {
+			for i := range board.Columns[ci].Cards {
+				_, ok := consoleIssueScanUnblockPlan(board.Columns[ci].Cards[i], runBlockerTypes)
+				board.Columns[ci].Cards[i].UnblockAvailable = ok
+			}
+		}
+	}
 	return ConsoleIssueScan{
-		Freshness:   deriveFreshness(generatedAt, nil, hasPartial, now, consoleStaleWindow),
+		Freshness:   freshness,
 		GeneratedAt: generatedAt,
 		Status:      board.Status,
 		Summary:     board.Summary,
 		Board:       board,
+		RecentRuns:  buildConsoleRecentRuns(proj, board, freshness, now),
 	}
 }
 
@@ -201,24 +346,43 @@ func (h *Handlers) handleConsoleIntakeFragment(w http.ResponseWriter, r *http.Re
 func (h *Handlers) handleConsoleIntakeCard(w http.ResponseWriter, r *http.Request) {
 	run := strings.TrimSpace(r.URL.Query().Get("run"))
 	stage := strings.TrimSpace(r.URL.Query().Get("stage"))
-	// Honest-staleness, fail-closed: gate the drawer through the SAME freshness
-	// computation as the board (buildConsoleIssueScan). A failed / timestamp-less
-	// projection can still carry records; without this gate a direct card request
-	// would expose run details the board intentionally hides. When the surface is
-	// unavailable, the loop is skipped and the honest not-found drawer renders.
+	// Two-tier honest-staleness gate, both fail-closed against the SAME
+	// freshness computation as the board (buildConsoleIssueScan):
+	//   1. Finding the card at all: gated to != FreshnessUnavailable. A failed
+	//      / timestamp-less projection can still carry records; without this
+	//      gate a direct card request would expose run details the board
+	//      intentionally hides. Stale/partial still show the run honestly —
+	//      hiding a real run because its timestamp is old would itself be
+	//      dishonest.
+	//   2. Deriving the unblock plan: gated to == FreshnessCurrent only. A
+	//      stale or partial projection's label snapshot may no longer match
+	//      reality, so the exact gh issue edit commands it would produce are
+	//      not trustworthy — only a verified-current projection may offer
+	//      commands. Stale/partial drawers still render the projected
+	//      required action, just never a command.
+	// When the surface is unavailable, the loop is skipped and the honest
+	// not-found drawer renders.
 	scan := buildConsoleIssueScan(fetchOpsCivilizationProjection(r), time.Now().UTC())
 	if scan.Freshness != FreshnessUnavailable {
+		var runBlockerTypes map[string][]string
+		if scan.Freshness == FreshnessCurrent {
+			runBlockerTypes = consoleIssueScanRunBlockerTypes(scan.Board)
+		}
 		for _, col := range scan.Board.Columns {
 			for _, card := range col.Cards {
 				if card.RunID == run && card.StageID == stage {
-					consoleIssueScanDrawer(card, true).Render(r.Context(), w)
+					plan, planOK := consoleUnblockPlan{}, false
+					if scan.Freshness == FreshnessCurrent {
+						plan, planOK = consoleIssueScanUnblockPlan(card, runBlockerTypes)
+					}
+					consoleIssueScanDrawer(card, true, plan, planOK).Render(r.Context(), w)
 					return
 				}
 			}
 		}
 	}
 	// Not found, upstream error, or unavailable surface: honest empty drawer, never a fabricated run.
-	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false).Render(r.Context(), w)
+	consoleIssueScanDrawer(OpsCivilizationIssueScanKanbanCard{RunID: run, StageID: stage}, false, consoleUnblockPlan{}, false).Render(r.Context(), w)
 }
 
 // consoleIssueScanCardIssue renders the leading issue reference (repo#number,
