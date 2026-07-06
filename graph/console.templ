@@ -161,6 +161,9 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 		if s.RecentRuns.Available {
 			@consoleRecentRunsRail(s.RecentRuns)
 		}
+		if s.SourceMarkers.Visible {
+			@consoleSourceMarkers(s.SourceMarkers)
+		}
 		if s.Freshness == FreshnessUnavailable {
 			<p class="text-sm text-warm-muted" data-state="unavailable">unavailable — { noticeText(s.Notices) }</p>
 		} else if len(s.Board.Columns) == 0 {
@@ -181,6 +184,138 @@ templ consoleIssueScan(s ConsoleIssueScan) {
 			</div>
 		}
 	</section>
+}
+
+// consoleSourceMarkers renders read-only operator evidence from the
+// issue_scan_source_markers projection section. It does not expose mutation
+// controls and does not interpret derived GitHub marker comments as truth.
+templ consoleSourceMarkers(markers ConsoleSourceMarkers) {
+	<div class="space-y-2" data-console-source-markers>
+		<div class="flex items-center justify-between gap-2">
+			<h3 class="text-[10px] uppercase tracking-widest text-warm-faint">source markers</h3>
+			if markers.Truncated {
+				<span class="text-[10px] text-amber-300">truncated</span>
+			}
+		</div>
+		if !markers.Available {
+			<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted">source-marker projection { opsCivilizationValue(markers.Status, "unavailable") }; no marker evidence rendered</p>
+		} else if len(markers.Entries) == 0 {
+			<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted" data-state="source-markers-empty">No source marker projections are present.</p>
+		} else {
+			if markers.Summary != "" {
+				<p class="text-xs text-warm-muted">{ markers.Summary }</p>
+			}
+			<div class="grid gap-2 lg:grid-cols-2">
+				for _, entry := range markers.Entries {
+					@consoleSourceMarkerEntry(entry)
+				}
+			</div>
+		}
+	</div>
+}
+
+templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
+	<article class="rounded border border-edge bg-surface/40 p-3 space-y-2">
+		<div class="flex items-start justify-between gap-3">
+			<div class="min-w-0 space-y-1">
+				<div class="flex flex-wrap items-center gap-2">
+					if entry.StyleKind == "amber" {
+						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+					} else if entry.StyleKind == "ready" {
+						<span class="rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] text-emerald-300">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+					} else if entry.StyleKind == "muted" {
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+					} else {
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-muted">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+					}
+					if entry.StaleTarget {
+						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">stale target</span>
+					}
+					if entry.SupersededBy != "" {
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">superseded</span>
+					}
+				</div>
+				<p class="text-sm text-warm font-medium break-words">
+					if entry.IssueURL != "" {
+						<a href={ templ.URL(entry.IssueURL) } class="text-brand hover:underline" target="_blank" rel="noreferrer">{ entry.IssueLabel }</a>
+					} else {
+						{ entry.IssueLabel }
+					}
+				</p>
+			</div>
+			if entry.Age != "" {
+				<span class="text-[10px] font-mono text-warm-muted whitespace-nowrap">{ entry.Age }</span>
+			}
+		</div>
+		<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-[11px]">
+			<dt class="text-warm-muted">Run</dt>
+			<dd class="break-all">{ opsCivilizationValue(entry.RunID, "not projected") }</dd>
+			<dt class="text-warm-muted">Stage</dt>
+			<dd class="break-all">
+				{ opsCivilizationValue(entry.StageID, "not projected") }
+				if entry.StageNumber > 0 {
+					<span class="text-warm-faint">({ strconv.Itoa(entry.StageNumber) })</span>
+				}
+			</dd>
+			<dt class="text-warm-muted">Gate</dt>
+			<dd class="break-all">{ opsCivilizationValue(entry.Gate, "not projected") }</dd>
+			<dt class="text-warm-muted">Actor</dt>
+			<dd class="break-all">{ opsCivilizationValue(entry.ActorRole, "role not projected") } / { opsCivilizationValue(entry.ActorID, "actor not projected") }</dd>
+			<dt class="text-warm-muted">Occurred</dt>
+			<dd class="break-all">{ opsCivilizationValue(entry.OccurredAt, "not projected") }</dd>
+			<dt class="text-warm-muted">Idempotency</dt>
+			<dd class="break-all">{ opsCivilizationValue(entry.IdempotencyKey, "not projected") }</dd>
+			<dt class="text-warm-muted">Authority</dt>
+			<dd class="break-words">{ opsCivilizationValue(entry.AuthorityBoundary, "not projected") }</dd>
+		</dl>
+		<div class="grid gap-2 md:grid-cols-2 text-[10px]">
+			<div class="space-y-1">
+				<p class="uppercase tracking-widest text-warm-faint">canonical Work refs</p>
+				<p class="text-warm-muted break-all">{ opsCivilizationJoinSummary(entry.WorkRefs, "none projected", 8) }</p>
+			</div>
+			<div class="space-y-1">
+				<p class="uppercase tracking-widest text-warm-faint">EventGraph projection refs</p>
+				<p class="text-warm-muted break-all">{ opsCivilizationJoinSummary(entry.EventGraphRefs, "none projected", 8) }</p>
+			</div>
+		</div>
+		<div class="grid gap-2 md:grid-cols-2 text-[10px]">
+			<div class="space-y-1">
+				<p class="uppercase tracking-widest text-warm-faint">evidence refs</p>
+				<p class="text-warm-muted break-all">{ opsCivilizationJoinSummary(entry.EvidenceRefs, "none projected", 8) }</p>
+			</div>
+			<div class="space-y-1">
+				<p class="uppercase tracking-widest text-warm-faint">authority exclusions</p>
+				<p class="text-warm-muted break-all">{ opsCivilizationJoinSummary(entry.AuthorityExclusions, "none projected", 6) }</p>
+			</div>
+		</div>
+		<p class="text-[10px] text-warm-faint break-words">
+			projection: { opsCivilizationValue(entry.ProjectionKind, "not projected") };
+			canonical source: { opsCivilizationValue(entry.CanonicalSource, "not projected") };
+			projection only: { opsCivilizationBoolValue(entry.ProjectionOnly) }
+		</p>
+		<p class="text-[10px] text-warm-faint break-words">
+			work ref: { opsCivilizationValue(entry.WorkProjectionKind, "not projected") };
+			work canonical source: { opsCivilizationValue(entry.WorkCanonicalSource, "not projected") };
+			work projection only: { opsCivilizationBoolValue(entry.WorkProjectionOnly) }
+		</p>
+		if entry.HasGitHubMarker {
+			<div class="border-t border-edge pt-2 space-y-1 text-[10px]" data-derived-github-marker>
+				<p class="uppercase tracking-widest text-warm-faint">derived GitHub marker (projection only)</p>
+				<p class="text-warm-muted break-all">
+					{ opsCivilizationValue(entry.GitHubMarkerSystem, "system not projected") } /
+					{ entry.GitHubMarkerIssueLabel };
+					derived output: { opsCivilizationBoolValue(entry.GitHubDerivedOutput) };
+					projection sink: { opsCivilizationBoolValue(entry.GitHubProjectionSink) }
+				</p>
+				if entry.GitHubMarkerCommentURL != "" {
+					<a href={ templ.URL(entry.GitHubMarkerCommentURL) } class="text-brand hover:underline break-all" target="_blank" rel="noreferrer">comment { opsCivilizationValue(entry.GitHubMarkerCommentID, "projected") }</a>
+				} else {
+					<p class="text-warm-muted break-all">comment { opsCivilizationValue(entry.GitHubMarkerCommentID, "not projected") }</p>
+				}
+				<p class="text-warm-muted break-all">labels: { opsCivilizationJoin(entry.GitHubMarkerLabels, "none projected") }</p>
+			</div>
+		}
+	</article>
 }
 
 // consoleRecentRunsRail renders the recent-intakes rail: a horizontal-scroll

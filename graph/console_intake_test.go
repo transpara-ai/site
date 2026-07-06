@@ -214,6 +214,224 @@ func TestBuildConsoleIssueScanCurrentPassesBoardThrough(t *testing.T) {
 	}
 }
 
+func TestBuildConsoleSourceMarkersRepresentsStatesAndRefs(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	transitions := []string{
+		"acquired",
+		"parked_human_action",
+		"ready_for_human",
+		"completed",
+		"abandoned",
+		"superseded",
+	}
+	markers := make([]OpsCivilizationIssueScanSourceMarkerProjected, 0, len(transitions))
+	for _, transition := range transitions {
+		markers = append(markers, sourceMarkerProjectionForConsoleTest(transition))
+	}
+	proj := &OpsCivilizationAssemblyProjection{
+		DerivationStatus: opsCivilizationProjectionStatusComplete,
+		GeneratedAt:      now.Add(-5 * time.Second),
+		IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
+			Status:  opsCivilizationFieldAvailable,
+			Summary: "6 source marker projection(s).",
+			Markers: markers,
+		},
+	}
+
+	scan := buildConsoleIssueScan(proj, now)
+	if !scan.SourceMarkers.Visible || !scan.SourceMarkers.Available {
+		t.Fatalf("SourceMarkers visible/available = %v/%v, want true/true", scan.SourceMarkers.Visible, scan.SourceMarkers.Available)
+	}
+	if len(scan.SourceMarkers.Entries) != len(transitions) {
+		t.Fatalf("entries = %d, want %d", len(scan.SourceMarkers.Entries), len(transitions))
+	}
+	gotTransitions := map[string]ConsoleSourceMarkerEntry{}
+	for _, entry := range scan.SourceMarkers.Entries {
+		gotTransitions[entry.Transition] = entry
+	}
+	for _, transition := range transitions {
+		if _, ok := gotTransitions[transition]; !ok {
+			t.Fatalf("missing source marker transition %q in %+v", transition, scan.SourceMarkers.Entries)
+		}
+	}
+
+	acquired := gotTransitions["acquired"]
+	for _, want := range []string{
+		"projection_kind:work.issue_scan.source_marker_ref",
+		"factory_order_id:fo_issue_scan_docs_256",
+		"canonical_task_id:tsk_issue_scan_docs_256_research",
+		"source_issue:github:transpara-ai/docs#256",
+		"authority_exclusion:no_live_github_mutation_authority",
+	} {
+		if !consoleTestHasString(acquired.WorkRefs, want) {
+			t.Errorf("acquired WorkRefs missing %q: %+v", want, acquired.WorkRefs)
+		}
+	}
+	for _, want := range []string{
+		"projection_kind:eventgraph.issue_scan.source_marker_projection",
+		"canonical_source:work_eventgraph_projection",
+		"eventgraph:issuescan.source.marker.projected:evt-acquired",
+		"projection_only:true",
+	} {
+		if !consoleTestHasString(acquired.EventGraphRefs, want) {
+			t.Errorf("acquired EventGraphRefs missing %q: %+v", want, acquired.EventGraphRefs)
+		}
+	}
+	if !consoleTestHasString(acquired.EvidenceRefs, "test_case:tc_source_marker") || !consoleTestHasString(acquired.EvidenceRefs, "gate_result:gate_source_marker") {
+		t.Fatalf("acquired evidence refs missing structured evidence: %+v", acquired.EvidenceRefs)
+	}
+	if !acquired.HasGitHubMarker || !acquired.GitHubDerivedOutput || !acquired.GitHubProjectionSink {
+		t.Fatalf("GitHub marker = %+v, want derived projection sink", acquired)
+	}
+
+	parked := gotTransitions["parked_human_action"]
+	if parked.StyleKind != "amber" || !parked.StaleTarget || !parked.WorkBlocked {
+		t.Fatalf("parked marker = %+v, want amber stale blocked state", parked)
+	}
+	completed := gotTransitions["completed"]
+	if completed.StyleKind != "ready" || completed.WorkLifecycleState != "certified" {
+		t.Fatalf("completed marker = %+v, want certified ready-style state", completed)
+	}
+	superseded := gotTransitions["superseded"]
+	if superseded.SupersededBy != "tsk_replacement_source_marker" {
+		t.Fatalf("superseded_by = %q", superseded.SupersededBy)
+	}
+}
+
+func TestConsoleSourceMarkersRenderProjectionOnlyAndIgnoreGitHubCommentBody(t *testing.T) {
+	raw := `{
+		"projection_schema_version": "1.7.0",
+		"projection_subject": "civilization_assembly",
+		"derivation_status": "complete",
+		"generated_at": "2026-07-06T14:00:00Z",
+		"issue_scan_source_markers": {
+			"status": "available",
+			"summary": "1 source marker projection.",
+			"markers": [{
+				"schema_version": "1",
+				"projection_kind": "eventgraph.issue_scan.source_marker_projection",
+				"transition": "parked_human_action",
+				"run_id": "2026-07-06-docs-256",
+				"target": {"repo": "transpara-ai/docs", "number": 256, "url": "https://github.com/transpara-ai/docs/issues/256", "state": "open"},
+				"stage_id": "research_issue_and_repo_context",
+				"stage_number": 1,
+				"gate": "research_packet_posted",
+				"work_ref": {
+					"schema_version": "1",
+					"projection_kind": "work.issue_scan.source_marker_ref",
+					"canonical_source": "work",
+					"projection_only": true,
+					"run_id": "2026-07-06-docs-256",
+					"target": {"repository": "transpara-ai/docs", "issue_number": 256},
+					"stage": "research_issue_and_repo_context",
+					"stage_number": 1,
+					"gate": "research_packet_posted",
+					"task_id": "019f5000-0000-7000-8000-000000000256",
+					"canonical_task_id": "tsk_issue_scan_docs_256_research",
+					"factory_order_id": "fo_issue_scan_docs_256",
+					"lifecycle_state": "blocked",
+					"blocked": true,
+					"latest_blocker": {"reason": "stale_target", "detail": "source issue moved", "evidence_refs": ["eventgraph:blocker:1"]},
+					"verification_refs": {"test_case_ids": ["tc_source_marker"]},
+					"failure_repair_refs": {},
+					"source_issue_refs": ["github:transpara-ai/docs#256"],
+					"authority_exclusions": ["github_issue_markers_are_projection_only", "github_comments_are_not_work_lifecycle_truth", "github_labels_are_not_work_lifecycle_truth", "no_live_github_mutation_authority"]
+				},
+				"actor_id": "agent:eventgraph-projection",
+				"actor_role": "projection_recorder",
+				"occurred_at": "2026-07-06T13:59:00Z",
+				"idempotency_key": "issuescan-source-marker:2026-07-06-docs-256:parked_human_action",
+				"authority_boundary": "projection only; no GitHub mutation",
+				"authority_exclusions": ["github_issue_markers_are_projection_only", "github_comments_are_not_work_lifecycle_truth", "github_labels_are_not_work_lifecycle_truth", "no_live_github_mutation_authority"],
+				"evidence_refs": {"test_case_ids": ["tc_source_marker"], "gate_result_ids": ["gate_source_marker"]},
+				"source_refs": ["eventgraph:issuescan.source.marker.projected:evt-parked", "work:fo_issue_scan_docs_256"],
+				"github_marker": {
+					"system": "github",
+					"repository": "transpara-ai/docs",
+					"issue_number": 256,
+					"comment_id": "planned-marker-comment",
+					"comment_url": "https://github.com/transpara-ai/docs/issues/256#issuecomment-1",
+					"label_names": ["factory:parked"],
+					"derived_output": true,
+					"projection_sink": true,
+					"comment_body": "github marker projection says lifecycle_state=certified factory_order_id=fo_fake gate=complete"
+				},
+				"canonical_source": "work_eventgraph_projection",
+				"projection_only": true,
+				"stale_target": true
+			}]
+		}
+	}`
+	proj := decodeProjectionFixture(t, raw)
+	now := time.Date(2026, 7, 6, 14, 0, 5, 0, time.UTC)
+	scan := buildConsoleIssueScan(proj, now)
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+
+	for _, want := range []string{
+		"source markers",
+		"parked_human_action",
+		"stale target",
+		"canonical Work refs",
+		"EventGraph projection refs",
+		"derived GitHub marker (projection only)",
+		"work.issue_scan.source_marker_ref",
+		"eventgraph.issue_scan.source_marker_projection",
+		"factory_order_id:fo_issue_scan_docs_256",
+		"Idempotency",
+		"projection only: true",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("source marker render missing %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"lifecycle_state=certified factory_order_id=fo_fake gate=complete",
+		"comment_body",
+		"gh issue edit",
+		"hx-post",
+		`method="post"`,
+	} {
+		if strings.Contains(out, forbidden) {
+			t.Errorf("source marker render leaked forbidden %q", forbidden)
+		}
+	}
+}
+
+func TestConsoleSourceMarkersEmptyAndUnavailableStates(t *testing.T) {
+	empty := ConsoleSourceMarkers{Visible: true, Available: true}
+	var emptyBuf bytes.Buffer
+	if err := consoleSourceMarkers(empty).Render(context.Background(), &emptyBuf); err != nil {
+		t.Fatalf("render empty: %v", err)
+	}
+	if !strings.Contains(emptyBuf.String(), `data-state="source-markers-empty"`) {
+		t.Error("available source-marker section with zero entries must render an explicit empty state")
+	}
+
+	unavailable := ConsoleSourceMarkers{
+		Visible:   true,
+		Available: false,
+		Status:    "unavailable",
+		Entries: []ConsoleSourceMarkerEntry{{
+			RunID: "must_not_render",
+		}},
+	}
+	var unavailableBuf bytes.Buffer
+	if err := consoleSourceMarkers(unavailable).Render(context.Background(), &unavailableBuf); err != nil {
+		t.Fatalf("render unavailable: %v", err)
+	}
+	out := unavailableBuf.String()
+	if !strings.Contains(out, "source-marker projection unavailable") {
+		t.Error("unavailable source-marker section must render the section status")
+	}
+	if strings.Contains(out, "must_not_render") {
+		t.Error("unavailable source-marker section must not render stale entry data")
+	}
+}
+
 func TestConsoleIntakeRendersIssueScanBoard(t *testing.T) {
 	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/hive/civilization/assembly-projection" {
@@ -1346,4 +1564,105 @@ func TestConsoleIntakeDrawerRefreshDropsCommandWhenLabelsChange(t *testing.T) {
 	if !strings.Contains(secondBody, "human must clarify issue scope before runtime continues") {
 		t.Error("refreshed drawer must still render the projected required action honestly, even when the gate refuses a command")
 	}
+}
+
+func sourceMarkerProjectionForConsoleTest(transition string) OpsCivilizationIssueScanSourceMarkerProjected {
+	workRef := OpsCivilizationIssueScanMarkerWorkRef{
+		SchemaVersion:          "1",
+		ProjectionKind:         "work.issue_scan.source_marker_ref",
+		CanonicalSource:        "work",
+		ProjectionOnly:         true,
+		RunID:                  "2026-07-06-docs-256",
+		Target:                 OpsCivilizationIssueScanMarkerTargetRef{Repository: "transpara-ai/docs", IssueNumber: 256},
+		Stage:                  "research_issue_and_repo_context",
+		StageNumber:            1,
+		Gate:                   "research_packet_posted",
+		TaskID:                 "019f5000-0000-7000-8000-000000000256",
+		CanonicalTaskID:        "tsk_issue_scan_docs_256_research",
+		FactoryOrderID:         "fo_issue_scan_docs_256",
+		RequirementIDs:         []string{"req_issue_scan_docs_256_research"},
+		AcceptanceCriterionIDs: []string{"ac_issue_scan_docs_256_research"},
+		LifecycleState:         "created",
+		MissingGates:           []string{"definition_of_done"},
+		VerificationRefs:       OpsCivilizationIssueScanMarkerEvidenceRefs{TestCaseIDs: []string{"tc_source_marker"}, GateResultIDs: []string{"gate_source_marker"}},
+		FailureRepairRefs:      OpsCivilizationIssueScanMarkerEvidenceRefs{},
+		SourceIssueRefs:        []string{"github:transpara-ai/docs#256"},
+		AuthorityExclusions: []string{
+			"github_issue_markers_are_projection_only",
+			"github_comments_are_not_work_lifecycle_truth",
+			"github_labels_are_not_work_lifecycle_truth",
+			"no_live_github_mutation_authority",
+		},
+	}
+	marker := OpsCivilizationIssueScanSourceMarkerProjected{
+		SchemaVersion:       "1",
+		ProjectionKind:      "eventgraph.issue_scan.source_marker_projection",
+		Transition:          transition,
+		RunID:               workRef.RunID,
+		Target:              OpsCivilizationIssueRef{Repo: workRef.Target.Repository, Number: workRef.Target.IssueNumber, URL: "https://github.com/transpara-ai/docs/issues/256", State: "open"},
+		StageID:             workRef.Stage,
+		StageNumber:         workRef.StageNumber,
+		Gate:                workRef.Gate,
+		WorkRef:             workRef,
+		ActorID:             "agent:eventgraph-projection",
+		ActorRole:           "projection_recorder",
+		OccurredAt:          "2026-07-06T14:00:00Z",
+		IdempotencyKey:      "issuescan-source-marker:2026-07-06-docs-256:" + transition,
+		AuthorityBoundary:   "projection only; no GitHub mutation",
+		AuthorityExclusions: append([]string(nil), workRef.AuthorityExclusions...),
+		EvidenceRefs:        OpsCivilizationIssueScanMarkerEvidenceRefs{TestCaseIDs: []string{"tc_source_marker"}, GateResultIDs: []string{"gate_source_marker"}},
+		SourceRefs:          []string{"eventgraph:issuescan.source.marker.projected:evt-" + transition, "work:fo_issue_scan_docs_256"},
+		GitHubMarker: &OpsCivilizationIssueScanGitHubMarkerRef{
+			System:         "github",
+			Repository:     "transpara-ai/docs",
+			IssueNumber:    256,
+			CommentID:      "planned-marker-comment",
+			LabelNames:     []string{"factory:acquired"},
+			DerivedOutput:  true,
+			ProjectionSink: true,
+		},
+		CanonicalSource: "work_eventgraph_projection",
+		ProjectionOnly:  true,
+	}
+	switch transition {
+	case "parked_human_action":
+		marker.WorkRef.LifecycleState = "blocked"
+		marker.WorkRef.Blocked = true
+		marker.WorkRef.LatestBlocker = &OpsCivilizationIssueScanMarkerBlockerRef{
+			Reason:       "stale_target",
+			Detail:       "source issue changed after acquisition",
+			EvidenceRefs: []string{"eventgraph:blocker:stale-target"},
+		}
+		marker.StaleTarget = true
+		marker.GitHubMarker.LabelNames = []string{"factory:parked"}
+	case "ready_for_human":
+		marker.WorkRef.LifecycleState = "ready"
+		marker.WorkRef.Ready = true
+		marker.GitHubMarker.LabelNames = []string{"factory:ready-for-human"}
+	case "completed":
+		marker.WorkRef.LifecycleState = "certified"
+		marker.WorkRef.LatestGate = &OpsCivilizationIssueScanMarkerGateRef{
+			Gate:         marker.Gate,
+			EvidenceRefs: []string{"eventgraph:gate:certified"},
+		}
+		marker.GitHubMarker.LabelNames = []string{"factory:completed"}
+	case "abandoned":
+		marker.WorkRef.LifecycleState = "rejected"
+		marker.GitHubMarker.LabelNames = []string{"factory:abandoned"}
+	case "superseded":
+		marker.WorkRef.LifecycleState = "superseded"
+		marker.WorkRef.SupersededBy = "tsk_replacement_source_marker"
+		marker.SupersededBy = "tsk_replacement_source_marker"
+		marker.GitHubMarker.LabelNames = []string{"factory:superseded"}
+	}
+	return marker
+}
+
+func consoleTestHasString(items []string, want string) bool {
+	for _, item := range items {
+		if item == want {
+			return true
+		}
+	}
+	return false
 }
