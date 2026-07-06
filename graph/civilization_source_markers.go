@@ -214,6 +214,11 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 	marker.RunID = strings.TrimSpace(marker.RunID)
 	marker.StageID = strings.TrimSpace(marker.StageID)
 	marker.Transition = strings.TrimSpace(marker.Transition)
+	marker.Target.Repo = strings.TrimSpace(marker.Target.Repo)
+	marker.Target.URL = strings.TrimSpace(marker.Target.URL)
+	marker.Target.Title = strings.TrimSpace(marker.Target.Title)
+	marker.Target.State = strings.TrimSpace(marker.Target.State)
+	marker.Target.StateReason = strings.TrimSpace(marker.Target.StateReason)
 	if marker.RunID == "" && marker.StageID == "" && marker.Transition == "" {
 		return ConsoleSourceMarkerEntry{}, false
 	}
@@ -329,8 +334,8 @@ func consoleSourceMarkerWorkRefs(workRef OpsCivilizationIssueScanMarkerWorkRef) 
 	refs = append(refs, prefixedStrings("missing_gate", workRef.MissingGates)...)
 	refs = append(refs, prefixedStrings("missing_fact", workRef.MissingFacts)...)
 	refs = append(refs, prefixedStrings("source_issue", workRef.SourceIssueRefs)...)
-	refs = append(refs, consoleSourceMarkerEvidenceRefs(workRef.VerificationRefs)...)
-	refs = append(refs, consoleSourceMarkerEvidenceRefs(workRef.FailureRepairRefs)...)
+	refs = append(refs, consoleSourceMarkerEvidenceRefsWithPrefix("verification", workRef.VerificationRefs)...)
+	refs = append(refs, consoleSourceMarkerEvidenceRefsWithPrefix("failure_repair", workRef.FailureRepairRefs)...)
 	refs = append(refs, prefixedStrings("authority_exclusion", workRef.AuthorityExclusions)...)
 	refs = sortedNonEmpty(refs)
 	return refs
@@ -354,13 +359,24 @@ func consoleSourceMarkerEventGraphRefs(marker OpsCivilizationIssueScanSourceMark
 }
 
 func consoleSourceMarkerEvidenceRefs(refs OpsCivilizationIssueScanMarkerEvidenceRefs) []string {
+	return consoleSourceMarkerEvidenceRefsWithPrefix("", refs)
+}
+
+func consoleSourceMarkerEvidenceRefsWithPrefix(channel string, refs OpsCivilizationIssueScanMarkerEvidenceRefs) []string {
+	prefix := func(kind string) string {
+		channel = strings.TrimSpace(channel)
+		if channel == "" {
+			return kind
+		}
+		return channel + "_" + kind
+	}
 	out := []string{}
-	out = append(out, prefixedStrings("test_case", refs.TestCaseIDs)...)
-	out = append(out, prefixedStrings("test_run", refs.TestRunIDs)...)
-	out = append(out, prefixedStrings("gate_result", refs.GateResultIDs)...)
-	out = append(out, prefixedStrings("failure", refs.FailureIDs)...)
-	out = append(out, prefixedStrings("repair_attempt", refs.RepairAttemptIDs)...)
-	out = append(out, prefixedStrings("waiver", refs.WaiverIDs)...)
+	out = append(out, prefixedStrings(prefix("test_case"), refs.TestCaseIDs)...)
+	out = append(out, prefixedStrings(prefix("test_run"), refs.TestRunIDs)...)
+	out = append(out, prefixedStrings(prefix("gate_result"), refs.GateResultIDs)...)
+	out = append(out, prefixedStrings(prefix("failure"), refs.FailureIDs)...)
+	out = append(out, prefixedStrings(prefix("repair_attempt"), refs.RepairAttemptIDs)...)
+	out = append(out, prefixedStrings(prefix("waiver"), refs.WaiverIDs)...)
 	return sortedNonEmpty(out)
 }
 

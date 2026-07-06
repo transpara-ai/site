@@ -244,9 +244,9 @@ templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
 				</div>
 				<p class="text-sm text-warm font-medium break-words">
 					if entry.IssueURL != "" {
-						<a href={ templ.URL(entry.IssueURL) } class="text-brand hover:underline" target="_blank" rel="noreferrer">{ entry.IssueLabel }</a>
+						<a href={ templ.URL(entry.IssueURL) } class="text-brand hover:underline" target="_blank" rel="noreferrer">{ opsCivilizationValue(entry.IssueLabel, "target not projected") }</a>
 					} else {
-						{ entry.IssueLabel }
+						{ opsCivilizationValue(entry.IssueLabel, "target not projected") }
 					}
 				</p>
 			</div>

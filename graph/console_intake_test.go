@@ -261,6 +261,9 @@ func TestBuildConsoleSourceMarkersRepresentsStatesAndRefs(t *testing.T) {
 		"factory_order_id:fo_issue_scan_docs_256",
 		"canonical_task_id:tsk_issue_scan_docs_256_research",
 		"source_issue:github:transpara-ai/docs#256",
+		"verification_test_case:tc_source_marker",
+		"verification_gate_result:gate_source_marker",
+		"failure_repair_waiver:waiver_repair_marker",
 		"authority_exclusion:no_live_github_mutation_authority",
 	} {
 		if !consoleTestHasString(acquired.WorkRefs, want) {
@@ -298,7 +301,7 @@ func TestBuildConsoleSourceMarkersRepresentsStatesAndRefs(t *testing.T) {
 	}
 
 	fallbackMarker := sourceMarkerProjectionForConsoleTest("acquired")
-	fallbackMarker.Target = OpsCivilizationIssueRef{}
+	fallbackMarker.Target = OpsCivilizationIssueRef{Repo: "   "}
 	fallbackEntry, ok := buildConsoleSourceMarkerEntry(fallbackMarker, now)
 	if !ok {
 		t.Fatal("fallback marker unexpectedly invalid")
@@ -458,6 +461,46 @@ func TestConsoleSourceMarkersAbsentFieldLeavesNoTrace(t *testing.T) {
 	}
 }
 
+func TestConsoleIntakeFragmentRendersSourceMarkers(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	proj := &OpsCivilizationAssemblyProjection{
+		ProjectionSchemaVersion: "1.7.0",
+		ProjectionSubject:       "civilization_assembly",
+		DerivationStatus:        opsCivilizationProjectionStatusComplete,
+		GeneratedAt:             now,
+		IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
+			Status:  opsCivilizationFieldAvailable,
+			Summary: "1 source marker projection.",
+			Markers: []OpsCivilizationIssueScanSourceMarkerProjected{sourceMarkerProjectionForConsoleTest("completed")},
+		},
+	}
+	hiveSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(proj); err != nil {
+			t.Fatalf("encode projection: %v", err)
+		}
+	}))
+	defer hiveSrv.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveSrv.URL)
+
+	h := newConsoleTestHandlers()
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/intake/fragment", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	for _, want := range []string{"data-console-source-markers", "source markers", "completed", "derived GitHub marker"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("fragment missing %q", want)
+		}
+	}
+}
+
 func TestBuildConsoleSourceMarkersFreshnessGate(t *testing.T) {
 	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
 	proj := &OpsCivilizationAssemblyProjection{
@@ -476,6 +519,22 @@ func TestBuildConsoleSourceMarkersFreshnessGate(t *testing.T) {
 		got := buildConsoleSourceMarkers(proj, freshness, now)
 		if got.Visible || got.Available || len(got.Entries) != 0 {
 			t.Fatalf("freshness %q = %+v, want no visible marker section", freshness, got)
+		}
+	}
+}
+
+func TestBuildConsoleSourceMarkersNonAvailableStatusWithholdsEntries(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	for _, status := range []string{opsCivilizationFieldUnavailable, "some_future_status"} {
+		proj := &OpsCivilizationAssemblyProjection{
+			IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
+				Status:  status,
+				Markers: []OpsCivilizationIssueScanSourceMarkerProjected{sourceMarkerProjectionForConsoleTest("acquired")},
+			},
+		}
+		got := buildConsoleSourceMarkers(proj, FreshnessCurrent, now)
+		if !got.Visible || got.Available || len(got.Entries) != 0 || got.WithheldCount != 0 {
+			t.Fatalf("status %q = %+v, want visible unavailable section with no entries", status, got)
 		}
 	}
 }
@@ -1666,7 +1725,7 @@ func sourceMarkerProjectionForConsoleTest(transition string) OpsCivilizationIssu
 		LifecycleState:         "created",
 		MissingGates:           []string{"definition_of_done"},
 		VerificationRefs:       OpsCivilizationIssueScanMarkerEvidenceRefs{TestCaseIDs: []string{"tc_source_marker"}, GateResultIDs: []string{"gate_source_marker"}},
-		FailureRepairRefs:      OpsCivilizationIssueScanMarkerEvidenceRefs{},
+		FailureRepairRefs:      OpsCivilizationIssueScanMarkerEvidenceRefs{WaiverIDs: []string{"waiver_repair_marker"}},
 		SourceIssueRefs:        []string{"github:transpara-ai/docs#256"},
 		AuthorityExclusions: []string{
 			"github_issue_markers_are_projection_only",
