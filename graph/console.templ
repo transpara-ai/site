@@ -198,8 +198,14 @@ templ consoleSourceMarkers(markers ConsoleSourceMarkers) {
 			}
 		</div>
 		if !markers.Available {
+			if markers.Summary != "" {
+				<p class="text-xs text-warm-muted">{ markers.Summary }</p>
+			}
 			<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted">source-marker projection { opsCivilizationValue(markers.Status, "unavailable") }; no marker evidence rendered</p>
 		} else if len(markers.Entries) == 0 {
+			if markers.Summary != "" {
+				<p class="text-xs text-warm-muted">{ markers.Summary }</p>
+			}
 			if markers.WithheldCount > 0 {
 				<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted" data-state="source-markers-empty">No renderable source marker projections.</p>
 			} else {

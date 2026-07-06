@@ -229,7 +229,6 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		Transition:          marker.Transition,
 		StyleKind:           consoleSourceMarkerStyleKind(marker.Transition),
 		IssueLabel:          opsCivilizationIssueRefLabel(marker.Target),
-		IssueURL:            strings.TrimSpace(marker.Target.URL),
 		RunID:               marker.RunID,
 		StageID:             marker.StageID,
 		StageNumber:         marker.StageNumber,
@@ -432,10 +431,27 @@ func consoleSourceMarkerCanonicalIssueURL(repo string, number int) string {
 		return ""
 	}
 	parts := strings.Split(repo, "/")
-	if len(parts) != 2 || parts[0] != "transpara-ai" || parts[1] == "" || strings.ContainsAny(parts[1], " \t\r\n?#") {
+	if len(parts) != 2 || parts[0] != "transpara-ai" || !consoleSourceMarkerValidGitHubRepoName(parts[1]) {
 		return ""
 	}
 	return fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
+}
+
+func consoleSourceMarkerValidGitHubRepoName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z':
+		case r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9':
+		case r == '-' || r == '_' || r == '.':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func consoleSourceMarkerGitHubCommentURL(marker OpsCivilizationIssueScanGitHubMarkerRef) string {

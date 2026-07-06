@@ -419,19 +419,24 @@ func TestConsoleSourceMarkersRenderProjectionOnlyAndIgnoreGitHubCommentBody(t *t
 }
 
 func TestConsoleSourceMarkersEmptyAndUnavailableStates(t *testing.T) {
-	empty := ConsoleSourceMarkers{Visible: true, Available: true}
+	empty := ConsoleSourceMarkers{Visible: true, Available: true, Summary: "0 source marker projections."}
 	var emptyBuf bytes.Buffer
 	if err := consoleSourceMarkers(empty).Render(context.Background(), &emptyBuf); err != nil {
 		t.Fatalf("render empty: %v", err)
 	}
-	if !strings.Contains(emptyBuf.String(), `data-state="source-markers-empty"`) {
+	emptyOut := emptyBuf.String()
+	if !strings.Contains(emptyOut, `data-state="source-markers-empty"`) {
 		t.Error("available source-marker section with zero entries must render an explicit empty state")
+	}
+	if !strings.Contains(emptyOut, "0 source marker projections.") {
+		t.Error("available source-marker section with zero entries must render the projected summary")
 	}
 
 	unavailable := ConsoleSourceMarkers{
 		Visible:   true,
 		Available: false,
 		Status:    "unavailable",
+		Summary:   "Projection withheld by upstream gate.",
 		Entries: []ConsoleSourceMarkerEntry{{
 			RunID: "must_not_render",
 		}},
@@ -443,6 +448,9 @@ func TestConsoleSourceMarkersEmptyAndUnavailableStates(t *testing.T) {
 	out := unavailableBuf.String()
 	if !strings.Contains(out, "source-marker projection unavailable") {
 		t.Error("unavailable source-marker section must render the section status")
+	}
+	if !strings.Contains(out, "Projection withheld by upstream gate.") {
+		t.Error("unavailable source-marker section must render the projected summary")
 	}
 	if strings.Contains(out, "must_not_render") {
 		t.Error("unavailable source-marker section must not render stale entry data")
@@ -537,6 +545,74 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	}
 	if mismatchedEntry.GitHubMarkerCommentURL != "" {
 		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed mismatched host/path", mismatchedEntry.GitHubMarkerCommentURL)
+	}
+}
+
+func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {
+	tests := []struct {
+		name   string
+		repo   string
+		number int
+		want   string
+	}{
+		{
+			name:   "transpara repo",
+			repo:   "transpara-ai/docs",
+			number: 256,
+			want:   "https://github.com/transpara-ai/docs/issues/256",
+		},
+		{
+			name:   "non transpara org suppressed",
+			repo:   "evil/docs",
+			number: 256,
+		},
+		{
+			name:   "dot segment suppressed",
+			repo:   "transpara-ai/..",
+			number: 256,
+		},
+		{
+			name:   "encoded dot segment suppressed",
+			repo:   "transpara-ai/%2e%2e",
+			number: 256,
+		},
+		{
+			name:   "missing repo name suppressed",
+			repo:   "transpara-ai/",
+			number: 256,
+		},
+		{
+			name:   "nested repo suppressed",
+			repo:   "transpara-ai/docs/extra",
+			number: 256,
+		},
+		{
+			name: "non positive issue suppressed",
+			repo: "transpara-ai/docs",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := consoleSourceMarkerCanonicalIssueURL(tt.repo, tt.number); got != tt.want {
+				t.Fatalf("canonical URL = %q, want %q", got, tt.want)
+			}
+			commentURL := fmt.Sprintf("https://github.com/%s/issues/%d#issuecomment-1", tt.repo, tt.number)
+			marker := OpsCivilizationIssueScanGitHubMarkerRef{
+				Repository:    tt.repo,
+				IssueNumber:   tt.number,
+				CommentURL:    commentURL,
+				CommentID:     "1",
+				System:        "github",
+				DerivedOutput: true,
+			}
+			gotComment := consoleSourceMarkerGitHubCommentURL(marker)
+			if tt.want == "" && gotComment != "" {
+				t.Fatalf("comment URL = %q, want suppressed", gotComment)
+			}
+			if tt.want != "" && gotComment != tt.want+"#issuecomment-1" {
+				t.Fatalf("comment URL = %q, want %q", gotComment, tt.want+"#issuecomment-1")
+			}
+		})
 	}
 }
 
