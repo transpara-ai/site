@@ -496,6 +496,36 @@ func TestConsoleSourceMarkerCommentURLWithoutIDUsesHonestPlaceholder(t *testing.
 	}
 }
 
+func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	marker := sourceMarkerProjectionForConsoleTest("acquired")
+	marker.Target = OpsCivilizationIssueRef{URL: "https://example.invalid/unidentified"}
+	marker.WorkRef.Target = OpsCivilizationIssueScanMarkerTargetRef{}
+	marker.GitHubMarker.CommentURL = "javascript:alert(1)"
+	entry, ok := buildConsoleSourceMarkerEntry(marker, now)
+	if !ok {
+		t.Fatal("marker unexpectedly invalid")
+	}
+	if entry.IssueURL != "" {
+		t.Fatalf("IssueURL = %q, want suppressed when target lacks repo/number identity", entry.IssueURL)
+	}
+	markers := ConsoleSourceMarkers{Visible: true, Available: true, Entries: []ConsoleSourceMarkerEntry{entry}}
+	var buf bytes.Buffer
+	if err := consoleSourceMarkers(markers).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if strings.Contains(out, `<a href="https://example.invalid/unidentified"`) {
+		t.Error("unidentified issue URL must not render as a clickable issue link")
+	}
+	if strings.Contains(out, "javascript:alert") {
+		t.Error("hostile GitHub marker comment URL scheme must not render")
+	}
+	if !strings.Contains(out, "about:invalid") {
+		t.Error("hostile GitHub marker comment URL should be sanitized by templ.URL")
+	}
+}
+
 func TestConsoleSourceMarkersAbsentFieldLeavesNoTrace(t *testing.T) {
 	proj := decodeProjectionFixture(t, hiveCivilizationAssemblyProjectionFixture)
 	now := time.Date(2026, 6, 23, 9, 30, 5, 0, time.UTC)
@@ -593,6 +623,11 @@ func TestBuildConsoleSourceMarkersNonAvailableStatusWithholdsEntries(t *testing.
 func TestBuildConsoleSourceMarkersWithholdsInvalidAndCapsEntries(t *testing.T) {
 	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
 	markers := []OpsCivilizationIssueScanSourceMarkerProjected{{}, {Transition: "acquired"}}
+	garbageTime := sourceMarkerProjectionForConsoleTest("acquired")
+	garbageTime.RunID = "run-garbage-time"
+	garbageTime.WorkRef.RunID = garbageTime.RunID
+	garbageTime.OccurredAt = "not-a-timestamp"
+	markers = append(markers, garbageTime)
 	for i := 0; i < consoleSourceMarkerRenderLimit+2; i++ {
 		marker := sourceMarkerProjectionForConsoleTest("acquired")
 		marker.RunID = fmt.Sprintf("run-%02d", i)
@@ -614,8 +649,11 @@ func TestBuildConsoleSourceMarkersWithholdsInvalidAndCapsEntries(t *testing.T) {
 	if got.Entries[0].RunID != "run-51" || got.Entries[len(got.Entries)-1].RunID != "run-02" {
 		t.Fatalf("cap kept wrong marker order: first=%s last=%s, want newest 50 by occurred_at", got.Entries[0].RunID, got.Entries[len(got.Entries)-1].RunID)
 	}
-	if got.WithheldCount != 4 || got.WithheldReason != "missing identifiers or local render cap" {
-		t.Fatalf("withheld = %d/%q, want 4 combined reason", got.WithheldCount, got.WithheldReason)
+	if consoleTestHasRunID(got.Entries, "run-garbage-time") {
+		t.Fatal("unparseable occurred_at marker should sort behind parseable recent markers and be capped first")
+	}
+	if got.WithheldCount != 5 || got.WithheldReason != "missing identifiers or local render cap" {
+		t.Fatalf("withheld = %d/%q, want 5 combined reason", got.WithheldCount, got.WithheldReason)
 	}
 	var buf bytes.Buffer
 	if err := consoleSourceMarkers(got).Render(context.Background(), &buf); err != nil {
@@ -1856,6 +1894,15 @@ func sourceMarkerProjectionForConsoleTest(transition string) OpsCivilizationIssu
 func consoleTestHasString(items []string, want string) bool {
 	for _, item := range items {
 		if item == want {
+			return true
+		}
+	}
+	return false
+}
+
+func consoleTestHasRunID(entries []ConsoleSourceMarkerEntry, want string) bool {
+	for _, entry := range entries {
+		if entry.RunID == want {
 			return true
 		}
 	}

@@ -256,8 +256,11 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		SupersededBy:        strings.TrimSpace(marker.SupersededBy),
 	}
 	entry.Age = humanizeAge(now, entry.OccurredAt)
+	targetHasIdentity := marker.Target.Repo != "" && marker.Target.Number > 0
 	if marker.Target.Repo == "" && marker.Target.Number == 0 && marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
 		entry.IssueLabel = fmt.Sprintf("%s#%d", marker.WorkRef.Target.Repository, marker.WorkRef.Target.IssueNumber)
+		entry.IssueURL = ""
+	} else if !targetHasIdentity {
 		entry.IssueURL = ""
 	}
 	if marker.GitHubMarker != nil {
