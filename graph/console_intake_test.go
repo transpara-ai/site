@@ -526,6 +526,9 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	if strings.Contains(out, `<a href="https://example.invalid/unidentified"`) {
 		t.Error("unidentified issue URL must not render as a clickable issue link")
 	}
+	if strings.Contains(out, "example.invalid/unidentified") {
+		t.Error("unidentified raw issue URL must not render as label text")
+	}
 	if strings.Contains(out, "javascript:alert") {
 		t.Error("hostile GitHub marker comment URL scheme must not render")
 	}
@@ -574,6 +577,16 @@ func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {
 		{
 			name:   "encoded dot segment suppressed",
 			repo:   "transpara-ai/%2e%2e",
+			number: 256,
+		},
+		{
+			name:   "leading dot repo suppressed",
+			repo:   "transpara-ai/.hidden",
+			number: 256,
+		},
+		{
+			name:   "trailing dot repo suppressed",
+			repo:   "transpara-ai/docs.",
 			number: 256,
 		},
 		{
@@ -699,13 +712,17 @@ func TestBuildConsoleSourceMarkersNonAvailableStatusWithholdsEntries(t *testing.
 	for _, status := range []string{opsCivilizationFieldUnavailable, "some_future_status"} {
 		proj := &OpsCivilizationAssemblyProjection{
 			IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
-				Status:  status,
-				Markers: []OpsCivilizationIssueScanSourceMarkerProjected{sourceMarkerProjectionForConsoleTest("acquired")},
+				Status:    status,
+				Markers:   []OpsCivilizationIssueScanSourceMarkerProjected{sourceMarkerProjectionForConsoleTest("acquired")},
+				Truncated: true,
 			},
 		}
 		got := buildConsoleSourceMarkers(proj, FreshnessCurrent, now)
 		if !got.Visible || got.Available || len(got.Entries) != 0 || got.WithheldCount != 0 {
 			t.Fatalf("status %q = %+v, want visible unavailable section with no entries", status, got)
+		}
+		if got.Truncated {
+			t.Fatalf("status %q left Truncated=true on unavailable source-marker section", status)
 		}
 	}
 }

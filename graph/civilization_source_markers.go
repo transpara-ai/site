@@ -181,15 +181,15 @@ func buildConsoleSourceMarkers(proj *OpsCivilizationAssemblyProjection, freshnes
 		return ConsoleSourceMarkers{}
 	}
 	out := ConsoleSourceMarkers{
-		Visible:   true,
-		Status:    status,
-		Summary:   strings.TrimSpace(section.Summary),
-		Truncated: section.Truncated,
+		Visible: true,
+		Status:  status,
+		Summary: strings.TrimSpace(section.Summary),
 	}
 	if status != opsCivilizationFieldAvailable {
 		return out
 	}
 	out.Available = true
+	out.Truncated = section.Truncated
 	entries := make([]ConsoleSourceMarkerEntry, 0, len(section.Markers))
 	invalidCount := 0
 	for _, marker := range section.Markers {
@@ -262,6 +262,7 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.IssueLabel = fmt.Sprintf("%s#%d", marker.WorkRef.Target.Repository, marker.WorkRef.Target.IssueNumber)
 		entry.IssueURL = ""
 	} else {
+		entry.IssueLabel = ""
 		entry.IssueURL = ""
 	}
 	if marker.GitHubMarker != nil {
@@ -400,8 +401,8 @@ func consoleSourceMarkerEvidenceRefs(refs OpsCivilizationIssueScanMarkerEvidence
 }
 
 func consoleSourceMarkerEvidenceRefsWithPrefix(channel string, refs OpsCivilizationIssueScanMarkerEvidenceRefs) []string {
+	channel = strings.TrimSpace(channel)
 	prefix := func(kind string) string {
-		channel = strings.TrimSpace(channel)
 		if channel == "" {
 			return kind
 		}
@@ -438,7 +439,7 @@ func consoleSourceMarkerCanonicalIssueURL(repo string, number int) string {
 }
 
 func consoleSourceMarkerValidGitHubRepoName(name string) bool {
-	if name == "" || name == "." || name == ".." {
+	if name == "" || strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".") || strings.Contains(name, "..") {
 		return false
 	}
 	for _, r := range name {
