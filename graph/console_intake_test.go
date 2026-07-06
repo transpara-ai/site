@@ -569,6 +569,23 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	if crossIssueEntry.GitHubMarkerCommentURL != "" {
 		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed when marker target and GitHub marker issue disagree", crossIssueEntry.GitHubMarkerCommentURL)
 	}
+
+	fallbackCrossIssue := sourceMarkerProjectionForConsoleTest("acquired")
+	fallbackCrossIssue.Target = OpsCivilizationIssueRef{}
+	fallbackCrossIssue.GitHubMarker.Repository = "transpara-ai/site"
+	fallbackCrossIssue.GitHubMarker.IssueNumber = 208
+	fallbackCrossIssue.GitHubMarker.CommentID = "22"
+	fallbackCrossIssue.GitHubMarker.CommentURL = "https://github.com/transpara-ai/site/issues/208#issuecomment-22"
+	fallbackCrossIssueEntry, ok := buildConsoleSourceMarkerEntry(fallbackCrossIssue, now)
+	if !ok {
+		t.Fatal("fallback cross-issue marker unexpectedly invalid")
+	}
+	if fallbackCrossIssueEntry.IssueLabel != "transpara-ai/docs#256" {
+		t.Fatalf("fallback IssueLabel = %q, want WorkRef target label", fallbackCrossIssueEntry.IssueLabel)
+	}
+	if fallbackCrossIssueEntry.GitHubMarkerCommentURL != "" {
+		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed when WorkRef fallback target and GitHub marker issue disagree", fallbackCrossIssueEntry.GitHubMarkerCommentURL)
+	}
 }
 
 func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {
@@ -711,7 +728,7 @@ func TestConsoleSourceMarkersAbsentFieldLeavesNoTrace(t *testing.T) {
 }
 
 func TestConsoleIntakeFragmentRendersSourceMarkers(t *testing.T) {
-	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	now := time.Now().UTC()
 	proj := &OpsCivilizationAssemblyProjection{
 		ProjectionSchemaVersion: "1.7.0",
 		ProjectionSubject:       "civilization_assembly",

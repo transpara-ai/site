@@ -270,7 +270,7 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.GitHubMarkerSystem = strings.TrimSpace(marker.GitHubMarker.System)
 		entry.GitHubMarkerIssueLabel = consoleSourceMarkerGitHubIssueLabel(*marker.GitHubMarker)
 		entry.GitHubMarkerCommentID = strings.TrimSpace(marker.GitHubMarker.CommentID)
-		if consoleSourceMarkerGitHubMarkerMatchesTarget(*marker.GitHubMarker, marker.Target) {
+		if consoleSourceMarkerGitHubMarkerMatchesEntryTarget(*marker.GitHubMarker, marker.Target, marker.WorkRef.Target) {
 			entry.GitHubMarkerCommentURL = consoleSourceMarkerGitHubCommentURL(*marker.GitHubMarker)
 		}
 		entry.GitHubMarkerLabels = sortedNonEmpty(marker.GitHubMarker.LabelNames)
@@ -480,12 +480,16 @@ func consoleSourceMarkerGitHubCommentURL(marker OpsCivilizationIssueScanGitHubMa
 	return commentURL
 }
 
-func consoleSourceMarkerGitHubMarkerMatchesTarget(marker OpsCivilizationIssueScanGitHubMarkerRef, target OpsCivilizationIssueRef) bool {
+func consoleSourceMarkerGitHubMarkerMatchesEntryTarget(marker OpsCivilizationIssueScanGitHubMarkerRef, target OpsCivilizationIssueRef, fallbackTarget OpsCivilizationIssueScanMarkerTargetRef) bool {
 	targetRepo := strings.TrimSpace(target.Repo)
-	if targetRepo == "" || target.Number <= 0 {
-		return true
+	if targetRepo != "" && target.Number > 0 {
+		return strings.TrimSpace(marker.Repository) == targetRepo && marker.IssueNumber == target.Number
 	}
-	return strings.TrimSpace(marker.Repository) == targetRepo && marker.IssueNumber == target.Number
+	fallbackRepo := strings.TrimSpace(fallbackTarget.Repository)
+	if fallbackRepo != "" && fallbackTarget.IssueNumber > 0 {
+		return strings.TrimSpace(marker.Repository) == fallbackRepo && marker.IssueNumber == fallbackTarget.IssueNumber
+	}
+	return true
 }
 
 func consoleSourceMarkerAllDigits(value string) bool {
