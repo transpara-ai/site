@@ -257,10 +257,12 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 	}
 	entry.Age = humanizeAge(now, entry.OccurredAt)
 	targetHasIdentity := marker.Target.Repo != "" && marker.Target.Number > 0
-	if marker.Target.Repo == "" && marker.Target.Number == 0 && marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
+	if targetHasIdentity {
+		entry.IssueURL = consoleSourceMarkerCanonicalIssueURL(marker.Target.Repo, marker.Target.Number)
+	} else if marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
 		entry.IssueLabel = fmt.Sprintf("%s#%d", marker.WorkRef.Target.Repository, marker.WorkRef.Target.IssueNumber)
 		entry.IssueURL = ""
-	} else if !targetHasIdentity {
+	} else {
 		entry.IssueURL = ""
 	}
 	if marker.GitHubMarker != nil {
@@ -268,7 +270,7 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.GitHubMarkerSystem = strings.TrimSpace(marker.GitHubMarker.System)
 		entry.GitHubMarkerIssueLabel = consoleSourceMarkerGitHubIssueLabel(*marker.GitHubMarker)
 		entry.GitHubMarkerCommentID = strings.TrimSpace(marker.GitHubMarker.CommentID)
-		entry.GitHubMarkerCommentURL = strings.TrimSpace(marker.GitHubMarker.CommentURL)
+		entry.GitHubMarkerCommentURL = consoleSourceMarkerGitHubCommentURL(*marker.GitHubMarker)
 		entry.GitHubMarkerLabels = sortedNonEmpty(marker.GitHubMarker.LabelNames)
 		entry.GitHubDerivedOutput = marker.GitHubMarker.DerivedOutput
 		entry.GitHubProjectionSink = marker.GitHubMarker.ProjectionSink
@@ -422,6 +424,33 @@ func consoleSourceMarkerGitHubIssueLabel(marker OpsCivilizationIssueScanGitHubMa
 		return fmt.Sprintf("%s#%d", repo, marker.IssueNumber)
 	}
 	return "not projected"
+}
+
+func consoleSourceMarkerCanonicalIssueURL(repo string, number int) string {
+	repo = strings.TrimSpace(repo)
+	if number <= 0 {
+		return ""
+	}
+	parts := strings.Split(repo, "/")
+	if len(parts) != 2 || parts[0] != "transpara-ai" || parts[1] == "" || strings.ContainsAny(parts[1], " \t\r\n?#") {
+		return ""
+	}
+	return fmt.Sprintf("https://github.com/%s/issues/%d", repo, number)
+}
+
+func consoleSourceMarkerGitHubCommentURL(marker OpsCivilizationIssueScanGitHubMarkerRef) string {
+	commentURL := strings.TrimSpace(marker.CommentURL)
+	if commentURL == "" {
+		return ""
+	}
+	issueURL := consoleSourceMarkerCanonicalIssueURL(marker.Repository, marker.IssueNumber)
+	if issueURL == "" {
+		return ""
+	}
+	if !strings.HasPrefix(commentURL, issueURL+"#issuecomment-") {
+		return ""
+	}
+	return commentURL
 }
 
 func labeledNonEmpty(label, value string) string {

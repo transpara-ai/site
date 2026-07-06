@@ -521,8 +521,22 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	if strings.Contains(out, "javascript:alert") {
 		t.Error("hostile GitHub marker comment URL scheme must not render")
 	}
-	if !strings.Contains(out, "about:invalid") {
-		t.Error("hostile GitHub marker comment URL should be sanitized by templ.URL")
+	if strings.Contains(out, "about:invalid") {
+		t.Error("hostile GitHub marker comment URL should be suppressed before templ.URL")
+	}
+
+	mismatched := sourceMarkerProjectionForConsoleTest("acquired")
+	mismatched.Target.URL = "https://evil.example/transpara-ai/docs/issues/256"
+	mismatched.GitHubMarker.CommentURL = "https://evil.example/transpara-ai/docs/issues/256#issuecomment-1"
+	mismatchedEntry, ok := buildConsoleSourceMarkerEntry(mismatched, now)
+	if !ok {
+		t.Fatal("mismatched marker unexpectedly invalid")
+	}
+	if mismatchedEntry.IssueURL != "https://github.com/transpara-ai/docs/issues/256" {
+		t.Fatalf("IssueURL = %q, want canonical GitHub URL derived from repo/number identity", mismatchedEntry.IssueURL)
+	}
+	if mismatchedEntry.GitHubMarkerCommentURL != "" {
+		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed mismatched host/path", mismatchedEntry.GitHubMarkerCommentURL)
 	}
 }
 
