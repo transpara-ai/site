@@ -296,6 +296,16 @@ func TestBuildConsoleSourceMarkersRepresentsStatesAndRefs(t *testing.T) {
 	if superseded.SupersededBy != "tsk_replacement_source_marker" {
 		t.Fatalf("superseded_by = %q", superseded.SupersededBy)
 	}
+
+	fallbackMarker := sourceMarkerProjectionForConsoleTest("acquired")
+	fallbackMarker.Target = OpsCivilizationIssueRef{}
+	fallbackEntry, ok := buildConsoleSourceMarkerEntry(fallbackMarker, now)
+	if !ok {
+		t.Fatal("fallback marker unexpectedly invalid")
+	}
+	if fallbackEntry.IssueLabel != "transpara-ai/docs#256" {
+		t.Fatalf("IssueLabel fallback = %q, want WorkRef target", fallbackEntry.IssueLabel)
+	}
 }
 
 func TestConsoleSourceMarkersRenderProjectionOnlyAndIgnoreGitHubCommentBody(t *testing.T) {
@@ -429,6 +439,77 @@ func TestConsoleSourceMarkersEmptyAndUnavailableStates(t *testing.T) {
 	}
 	if strings.Contains(out, "must_not_render") {
 		t.Error("unavailable source-marker section must not render stale entry data")
+	}
+}
+
+func TestConsoleSourceMarkersAbsentFieldLeavesNoTrace(t *testing.T) {
+	proj := decodeProjectionFixture(t, hiveCivilizationAssemblyProjectionFixture)
+	now := time.Date(2026, 6, 23, 9, 30, 5, 0, time.UTC)
+	scan := buildConsoleIssueScan(proj, now)
+	if scan.SourceMarkers.Visible {
+		t.Fatal("legacy payload without issue_scan_source_markers must keep SourceMarkers invisible")
+	}
+	var buf bytes.Buffer
+	if err := consoleIssueScan(scan).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if strings.Contains(buf.String(), "data-console-source-markers") {
+		t.Error("legacy payload without issue_scan_source_markers must leave no marker section trace")
+	}
+}
+
+func TestBuildConsoleSourceMarkersFreshnessGate(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	proj := &OpsCivilizationAssemblyProjection{
+		IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
+			Status:  opsCivilizationFieldAvailable,
+			Markers: []OpsCivilizationIssueScanSourceMarkerProjected{sourceMarkerProjectionForConsoleTest("acquired")},
+		},
+	}
+	for _, freshness := range []ConsoleFreshness{FreshnessCurrent, FreshnessStale, FreshnessPartial} {
+		got := buildConsoleSourceMarkers(proj, freshness, now)
+		if !got.Visible || !got.Available || len(got.Entries) != 1 {
+			t.Fatalf("freshness %q = %+v, want one visible marker", freshness, got)
+		}
+	}
+	for _, freshness := range []ConsoleFreshness{FreshnessUnavailable, ConsoleFreshness("future")} {
+		got := buildConsoleSourceMarkers(proj, freshness, now)
+		if got.Visible || got.Available || len(got.Entries) != 0 {
+			t.Fatalf("freshness %q = %+v, want no visible marker section", freshness, got)
+		}
+	}
+}
+
+func TestBuildConsoleSourceMarkersWithholdsInvalidAndCapsEntries(t *testing.T) {
+	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
+	markers := []OpsCivilizationIssueScanSourceMarkerProjected{{}}
+	for i := 0; i < consoleSourceMarkerRenderLimit+2; i++ {
+		marker := sourceMarkerProjectionForConsoleTest("acquired")
+		marker.RunID = fmt.Sprintf("run-%02d", i)
+		marker.WorkRef.RunID = marker.RunID
+		marker.IdempotencyKey = fmt.Sprintf("marker-%02d", i)
+		markers = append(markers, marker)
+	}
+	proj := &OpsCivilizationAssemblyProjection{
+		IssueScanSourceMarkers: OpsCivilizationIssueScanSourceMarkers{
+			Status:  opsCivilizationFieldAvailable,
+			Markers: markers,
+		},
+	}
+	got := buildConsoleSourceMarkers(proj, FreshnessCurrent, now)
+	if len(got.Entries) != consoleSourceMarkerRenderLimit {
+		t.Fatalf("entries = %d, want render cap %d", len(got.Entries), consoleSourceMarkerRenderLimit)
+	}
+	if got.WithheldCount != 3 || got.WithheldReason != "missing identifiers or local render cap" {
+		t.Fatalf("withheld = %d/%q, want 3 combined reason", got.WithheldCount, got.WithheldReason)
+	}
+	var buf bytes.Buffer
+	if err := consoleSourceMarkers(got).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, `data-state="source-markers-withheld"`) || !strings.Contains(out, "missing identifiers or local render cap") {
+		t.Fatalf("withheld notice missing from output: %s", out)
 	}
 }
 

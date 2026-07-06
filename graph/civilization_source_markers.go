@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const consoleSourceMarkerRenderLimit = 50
+
 // OpsCivilizationIssueScanSourceMarkers mirrors the Site-facing read-model
 // section for EventGraph issuescan.source.marker.projected events. It is
 // display-only: Site must not derive lifecycle truth from GitHub marker
@@ -110,12 +112,14 @@ type OpsCivilizationIssueScanGitHubMarkerRef struct {
 }
 
 type ConsoleSourceMarkers struct {
-	Visible   bool
-	Available bool
-	Status    string
-	Summary   string
-	Truncated bool
-	Entries   []ConsoleSourceMarkerEntry
+	Visible        bool
+	Available      bool
+	Status         string
+	Summary        string
+	Truncated      bool
+	WithheldCount  int
+	WithheldReason string
+	Entries        []ConsoleSourceMarkerEntry
 }
 
 type ConsoleSourceMarkerEntry struct {
@@ -187,12 +191,22 @@ func buildConsoleSourceMarkers(proj *OpsCivilizationAssemblyProjection, freshnes
 	}
 	out.Available = true
 	out.Entries = make([]ConsoleSourceMarkerEntry, 0, len(section.Markers))
+	invalidCount := 0
+	cappedCount := 0
 	for _, marker := range section.Markers {
 		entry, ok := buildConsoleSourceMarkerEntry(marker, now)
 		if ok {
+			if len(out.Entries) >= consoleSourceMarkerRenderLimit {
+				cappedCount++
+				continue
+			}
 			out.Entries = append(out.Entries, entry)
+		} else {
+			invalidCount++
 		}
 	}
+	out.WithheldCount = invalidCount + cappedCount
+	out.WithheldReason = consoleSourceMarkerWithheldReason(invalidCount, cappedCount)
 	return out
 }
 
@@ -215,7 +229,6 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		ActorID:             strings.TrimSpace(marker.ActorID),
 		ActorRole:           strings.TrimSpace(marker.ActorRole),
 		OccurredAt:          strings.TrimSpace(marker.OccurredAt),
-		Age:                 humanizeAge(now, marker.OccurredAt),
 		IdempotencyKey:      strings.TrimSpace(marker.IdempotencyKey),
 		AuthorityBoundary:   strings.TrimSpace(marker.AuthorityBoundary),
 		AuthorityExclusions: sortedNonEmpty(marker.AuthorityExclusions),
@@ -234,7 +247,8 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		StaleTarget:         marker.StaleTarget,
 		SupersededBy:        strings.TrimSpace(marker.SupersededBy),
 	}
-	if entry.IssueLabel == "not projected" && marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
+	entry.Age = humanizeAge(now, entry.OccurredAt)
+	if marker.Target.Repo == "" && marker.Target.Number == 0 && marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
 		entry.IssueLabel = fmt.Sprintf("%s#%d", marker.WorkRef.Target.Repository, marker.WorkRef.Target.IssueNumber)
 	}
 	if marker.GitHubMarker != nil {
@@ -248,6 +262,19 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.GitHubProjectionSink = marker.GitHubMarker.ProjectionSink
 	}
 	return entry, true
+}
+
+func consoleSourceMarkerWithheldReason(invalidCount, cappedCount int) string {
+	switch {
+	case invalidCount > 0 && cappedCount > 0:
+		return "missing identifiers or local render cap"
+	case invalidCount > 0:
+		return "missing identifiers"
+	case cappedCount > 0:
+		return "local render cap"
+	default:
+		return ""
+	}
 }
 
 func consoleSourceMarkerStyleKind(transition string) string {

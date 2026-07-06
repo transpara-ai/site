@@ -193,14 +193,18 @@ templ consoleSourceMarkers(markers ConsoleSourceMarkers) {
 	<div class="space-y-2" data-console-source-markers>
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="text-[10px] uppercase tracking-widest text-warm-faint">source markers</h3>
-			if markers.Truncated {
+			if markers.Available && markers.Truncated {
 				<span class="text-[10px] text-amber-300">truncated</span>
 			}
 		</div>
 		if !markers.Available {
 			<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted">source-marker projection { opsCivilizationValue(markers.Status, "unavailable") }; no marker evidence rendered</p>
 		} else if len(markers.Entries) == 0 {
-			<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted" data-state="source-markers-empty">No source marker projections are present.</p>
+			if markers.WithheldCount > 0 {
+				<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted" data-state="source-markers-empty">No renderable source marker projections.</p>
+			} else {
+				<p class="rounded border border-edge bg-surface/40 px-3 py-2 text-xs text-warm-muted" data-state="source-markers-empty">No source marker projections are present.</p>
+			}
 		} else {
 			if markers.Summary != "" {
 				<p class="text-xs text-warm-muted">{ markers.Summary }</p>
@@ -211,6 +215,9 @@ templ consoleSourceMarkers(markers ConsoleSourceMarkers) {
 				}
 			</div>
 		}
+		if markers.Available && markers.WithheldCount > 0 {
+			<p class="rounded border border-amber-500/40 bg-surface/40 px-3 py-2 text-xs text-amber-300" data-state="source-markers-withheld">{ strconv.Itoa(markers.WithheldCount) } source marker projection(s) withheld: { opsCivilizationValue(markers.WithheldReason, "not renderable") }</p>
+		}
 	</div>
 }
 
@@ -220,13 +227,13 @@ templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
 			<div class="min-w-0 space-y-1">
 				<div class="flex flex-wrap items-center gap-2">
 					if entry.StyleKind == "amber" {
-						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">{ opsCivilizationValue(entry.Transition, "not projected") }</span>
 					} else if entry.StyleKind == "ready" {
-						<span class="rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] text-emerald-300">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+						<span class="rounded-full border border-emerald-500/40 px-2 py-0.5 text-[10px] text-emerald-300">{ opsCivilizationValue(entry.Transition, "not projected") }</span>
 					} else if entry.StyleKind == "muted" {
-						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">{ opsCivilizationValue(entry.Transition, "not projected") }</span>
 					} else {
-						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-muted">{ opsCivilizationValue(entry.Transition, "projection_only") }</span>
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-muted">{ opsCivilizationValue(entry.Transition, "not projected") }</span>
 					}
 					if entry.StaleTarget {
 						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">stale target</span>
@@ -247,7 +254,7 @@ templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
 				<span class="text-[10px] font-mono text-warm-muted whitespace-nowrap">{ entry.Age }</span>
 			}
 		</div>
-		<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-[11px]">
+		<dl class="grid grid-cols-[8rem_1fr] gap-y-1 text-[11px]">
 			<dt class="text-warm-muted">Run</dt>
 			<dd class="break-all">{ opsCivilizationValue(entry.RunID, "not projected") }</dd>
 			<dt class="text-warm-muted">Stage</dt>
