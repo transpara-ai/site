@@ -586,6 +586,19 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	if fallbackCrossIssueEntry.GitHubMarkerCommentURL != "" {
 		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed when WorkRef fallback target and GitHub marker issue disagree", fallbackCrossIssueEntry.GitHubMarkerCommentURL)
 	}
+
+	unidentifiedMarker := sourceMarkerProjectionForConsoleTest("acquired")
+	unidentifiedMarker.Target = OpsCivilizationIssueRef{}
+	unidentifiedMarker.WorkRef.Target = OpsCivilizationIssueScanMarkerTargetRef{}
+	unidentifiedMarker.GitHubMarker.CommentID = "33"
+	unidentifiedMarker.GitHubMarker.CommentURL = "https://github.com/transpara-ai/docs/issues/256#issuecomment-33"
+	unidentifiedEntry, ok := buildConsoleSourceMarkerEntry(unidentifiedMarker, now)
+	if !ok {
+		t.Fatal("unidentified marker unexpectedly invalid")
+	}
+	if unidentifiedEntry.GitHubMarkerCommentURL != "" {
+		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed when no target identity corroborates the derived marker issue", unidentifiedEntry.GitHubMarkerCommentURL)
+	}
 }
 
 func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {

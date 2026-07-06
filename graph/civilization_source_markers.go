@@ -489,7 +489,7 @@ func consoleSourceMarkerGitHubMarkerMatchesEntryTarget(marker OpsCivilizationIss
 	if fallbackRepo != "" && fallbackTarget.IssueNumber > 0 {
 		return strings.TrimSpace(marker.Repository) == fallbackRepo && marker.IssueNumber == fallbackTarget.IssueNumber
 	}
-	return true
+	return false
 }
 
 func consoleSourceMarkerAllDigits(value string) bool {
