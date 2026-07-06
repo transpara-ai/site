@@ -97,13 +97,14 @@ func buildConsoleHealthWall(proj *OpsHiveProjection, fetchErr error, now time.Ti
 // projection. It fails closed — a nil, failed, or timestamp-less projection is
 // rendered as unavailable with a human-readable notice and no invented cards.
 type ConsoleIssueScan struct {
-	Freshness   ConsoleFreshness
-	GeneratedAt string
-	Status      string
-	Summary     string
-	Board       OpsCivilizationIssueScanKanban
-	RecentRuns  ConsoleRecentRuns
-	Notices     []string
+	Freshness     ConsoleFreshness
+	GeneratedAt   string
+	Status        string
+	Summary       string
+	Board         OpsCivilizationIssueScanKanban
+	RecentRuns    ConsoleRecentRuns
+	SourceMarkers ConsoleSourceMarkers
+	Notices       []string
 }
 
 // ConsoleRecentRuns is the recent-intakes rail view-model derived from the
@@ -296,12 +297,13 @@ func buildConsoleIssueScan(proj *OpsCivilizationAssemblyProjection, now time.Tim
 		}
 	}
 	return ConsoleIssueScan{
-		Freshness:   freshness,
-		GeneratedAt: generatedAt,
-		Status:      board.Status,
-		Summary:     board.Summary,
-		Board:       board,
-		RecentRuns:  buildConsoleRecentRuns(proj, board, freshness, now),
+		Freshness:     freshness,
+		GeneratedAt:   generatedAt,
+		Status:        board.Status,
+		Summary:       board.Summary,
+		Board:         board,
+		RecentRuns:    buildConsoleRecentRuns(proj, board, freshness, now),
+		SourceMarkers: buildConsoleSourceMarkers(proj, freshness, now),
 	}
 }
 
