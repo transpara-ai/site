@@ -549,6 +549,26 @@ func TestConsoleSourceMarkerSuppressesUnidentifiedIssueURLAndSanitizesCommentURL
 	if mismatchedEntry.GitHubMarkerCommentURL != "" {
 		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed mismatched host/path", mismatchedEntry.GitHubMarkerCommentURL)
 	}
+	var mismatchedBuf bytes.Buffer
+	if err := consoleSourceMarkers(ConsoleSourceMarkers{Visible: true, Available: true, Entries: []ConsoleSourceMarkerEntry{mismatchedEntry}}).Render(context.Background(), &mismatchedBuf); err != nil {
+		t.Fatalf("render mismatched target: %v", err)
+	}
+	if strings.Contains(mismatchedBuf.String(), "evil.example") {
+		t.Error("hostile target URL must not render as href or label text when repo/number identity is present")
+	}
+
+	crossIssue := sourceMarkerProjectionForConsoleTest("acquired")
+	crossIssue.GitHubMarker.Repository = "transpara-ai/site"
+	crossIssue.GitHubMarker.IssueNumber = 208
+	crossIssue.GitHubMarker.CommentID = "22"
+	crossIssue.GitHubMarker.CommentURL = "https://github.com/transpara-ai/site/issues/208#issuecomment-22"
+	crossIssueEntry, ok := buildConsoleSourceMarkerEntry(crossIssue, now)
+	if !ok {
+		t.Fatal("cross-issue marker unexpectedly invalid")
+	}
+	if crossIssueEntry.GitHubMarkerCommentURL != "" {
+		t.Fatalf("GitHubMarkerCommentURL = %q, want suppressed when marker target and GitHub marker issue disagree", crossIssueEntry.GitHubMarkerCommentURL)
+	}
 }
 
 func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {
@@ -624,6 +644,51 @@ func TestConsoleSourceMarkerCanonicalIssueURLAllowlist(t *testing.T) {
 			}
 			if tt.want != "" && gotComment != tt.want+"#issuecomment-1" {
 				t.Fatalf("comment URL = %q, want %q", gotComment, tt.want+"#issuecomment-1")
+			}
+		})
+	}
+
+	commentCases := []struct {
+		name      string
+		commentID string
+		url       string
+		want      string
+	}{
+		{
+			name:      "numeric suffix matches comment id",
+			commentID: "123",
+			url:       "https://github.com/transpara-ai/docs/issues/256#issuecomment-123",
+			want:      "https://github.com/transpara-ai/docs/issues/256#issuecomment-123",
+		},
+		{
+			name: "numeric suffix allowed without projected comment id",
+			url:  "https://github.com/transpara-ai/docs/issues/256#issuecomment-123",
+			want: "https://github.com/transpara-ai/docs/issues/256#issuecomment-123",
+		},
+		{
+			name: "empty suffix suppressed",
+			url:  "https://github.com/transpara-ai/docs/issues/256#issuecomment-",
+		},
+		{
+			name: "non digit suffix suppressed",
+			url:  "https://github.com/transpara-ai/docs/issues/256#issuecomment-abc",
+		},
+		{
+			name:      "mismatched comment id suppressed",
+			commentID: "999",
+			url:       "https://github.com/transpara-ai/docs/issues/256#issuecomment-123",
+		},
+	}
+	for _, tt := range commentCases {
+		t.Run(tt.name, func(t *testing.T) {
+			marker := OpsCivilizationIssueScanGitHubMarkerRef{
+				Repository:  "transpara-ai/docs",
+				IssueNumber: 256,
+				CommentID:   tt.commentID,
+				CommentURL:  tt.url,
+			}
+			if got := consoleSourceMarkerGitHubCommentURL(marker); got != tt.want {
+				t.Fatalf("comment URL = %q, want %q", got, tt.want)
 			}
 		})
 	}

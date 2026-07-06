@@ -270,7 +270,9 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.GitHubMarkerSystem = strings.TrimSpace(marker.GitHubMarker.System)
 		entry.GitHubMarkerIssueLabel = consoleSourceMarkerGitHubIssueLabel(*marker.GitHubMarker)
 		entry.GitHubMarkerCommentID = strings.TrimSpace(marker.GitHubMarker.CommentID)
-		entry.GitHubMarkerCommentURL = consoleSourceMarkerGitHubCommentURL(*marker.GitHubMarker)
+		if consoleSourceMarkerGitHubMarkerMatchesTarget(*marker.GitHubMarker, marker.Target) {
+			entry.GitHubMarkerCommentURL = consoleSourceMarkerGitHubCommentURL(*marker.GitHubMarker)
+		}
 		entry.GitHubMarkerLabels = sortedNonEmpty(marker.GitHubMarker.LabelNames)
 		entry.GitHubDerivedOutput = marker.GitHubMarker.DerivedOutput
 		entry.GitHubProjectionSink = marker.GitHubMarker.ProjectionSink
@@ -464,10 +466,38 @@ func consoleSourceMarkerGitHubCommentURL(marker OpsCivilizationIssueScanGitHubMa
 	if issueURL == "" {
 		return ""
 	}
-	if !strings.HasPrefix(commentURL, issueURL+"#issuecomment-") {
+	prefix := issueURL + "#issuecomment-"
+	if !strings.HasPrefix(commentURL, prefix) {
+		return ""
+	}
+	commentSuffix := strings.TrimPrefix(commentURL, prefix)
+	if commentSuffix == "" || !consoleSourceMarkerAllDigits(commentSuffix) {
+		return ""
+	}
+	if commentID := strings.TrimSpace(marker.CommentID); commentID != "" && commentID != commentSuffix {
 		return ""
 	}
 	return commentURL
+}
+
+func consoleSourceMarkerGitHubMarkerMatchesTarget(marker OpsCivilizationIssueScanGitHubMarkerRef, target OpsCivilizationIssueRef) bool {
+	targetRepo := strings.TrimSpace(target.Repo)
+	if targetRepo == "" || target.Number <= 0 {
+		return true
+	}
+	return strings.TrimSpace(marker.Repository) == targetRepo && marker.IssueNumber == target.Number
+}
+
+func consoleSourceMarkerAllDigits(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func labeledNonEmpty(label, value string) string {
