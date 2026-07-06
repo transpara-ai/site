@@ -239,7 +239,7 @@ templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
 						<span class="rounded-full border border-amber-500/40 px-2 py-0.5 text-[10px] text-amber-300">stale target</span>
 					}
 					if entry.SupersededBy != "" {
-						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">superseded</span>
+						<span class="rounded-full border border-edge px-2 py-0.5 text-[10px] text-warm-faint">superseded by { entry.SupersededBy }</span>
 					}
 				</div>
 				<p class="text-sm text-warm font-medium break-words">
@@ -315,7 +315,7 @@ templ consoleSourceMarkerEntry(entry ConsoleSourceMarkerEntry) {
 					projection sink: { opsCivilizationBoolValue(entry.GitHubProjectionSink) }
 				</p>
 				if entry.GitHubMarkerCommentURL != "" {
-					<a href={ templ.URL(entry.GitHubMarkerCommentURL) } class="text-brand hover:underline break-all" target="_blank" rel="noreferrer">comment { opsCivilizationValue(entry.GitHubMarkerCommentID, "projected") }</a>
+					<a href={ templ.URL(entry.GitHubMarkerCommentURL) } class="text-brand hover:underline break-all" target="_blank" rel="noreferrer">comment { opsCivilizationValue(entry.GitHubMarkerCommentID, "id not projected") }</a>
 				} else {
 					<p class="text-warm-muted break-all">comment { opsCivilizationValue(entry.GitHubMarkerCommentID, "not projected") }</p>
 				}

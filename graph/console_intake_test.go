@@ -301,13 +301,17 @@ func TestBuildConsoleSourceMarkersRepresentsStatesAndRefs(t *testing.T) {
 	}
 
 	fallbackMarker := sourceMarkerProjectionForConsoleTest("acquired")
-	fallbackMarker.Target = OpsCivilizationIssueRef{Repo: "   "}
+	fallbackMarker.Target = OpsCivilizationIssueRef{Repo: "   ", URL: "https://example.invalid/wrong-target"}
+	fallbackMarker.WorkRef.Target.Repository = "  transpara-ai/docs  "
 	fallbackEntry, ok := buildConsoleSourceMarkerEntry(fallbackMarker, now)
 	if !ok {
 		t.Fatal("fallback marker unexpectedly invalid")
 	}
 	if fallbackEntry.IssueLabel != "transpara-ai/docs#256" {
 		t.Fatalf("IssueLabel fallback = %q, want WorkRef target", fallbackEntry.IssueLabel)
+	}
+	if fallbackEntry.IssueURL != "" {
+		t.Fatalf("IssueURL fallback = %q, want suppressed URL when label comes from WorkRef target", fallbackEntry.IssueURL)
 	}
 }
 
@@ -443,6 +447,53 @@ func TestConsoleSourceMarkersEmptyAndUnavailableStates(t *testing.T) {
 	if strings.Contains(out, "must_not_render") {
 		t.Error("unavailable source-marker section must not render stale entry data")
 	}
+
+	truncated := ConsoleSourceMarkers{Visible: true, Available: true, Truncated: true}
+	var truncatedBuf bytes.Buffer
+	if err := consoleSourceMarkers(truncated).Render(context.Background(), &truncatedBuf); err != nil {
+		t.Fatalf("render truncated: %v", err)
+	}
+	if !strings.Contains(truncatedBuf.String(), "truncated") {
+		t.Error("available truncated source-marker section must render the truncation badge")
+	}
+
+	truncatedUnavailable := ConsoleSourceMarkers{Visible: true, Available: false, Status: "unavailable", Truncated: true}
+	var truncatedUnavailableBuf bytes.Buffer
+	if err := consoleSourceMarkers(truncatedUnavailable).Render(context.Background(), &truncatedUnavailableBuf); err != nil {
+		t.Fatalf("render unavailable truncated: %v", err)
+	}
+	if strings.Contains(truncatedUnavailableBuf.String(), "truncated") {
+		t.Error("unavailable source-marker section must not pair a truncated badge with unavailable evidence")
+	}
+}
+
+func TestConsoleSourceMarkerCommentURLWithoutIDUsesHonestPlaceholder(t *testing.T) {
+	markers := ConsoleSourceMarkers{
+		Visible:   true,
+		Available: true,
+		Entries: []ConsoleSourceMarkerEntry{{
+			Transition:             "acquired",
+			IssueLabel:             "transpara-ai/docs#256",
+			RunID:                  "run-comment-placeholder",
+			HasGitHubMarker:        true,
+			GitHubMarkerSystem:     "github",
+			GitHubMarkerIssueLabel: "transpara-ai/docs#256",
+			GitHubMarkerCommentURL: "https://github.com/transpara-ai/docs/issues/256#issuecomment-1",
+			GitHubDerivedOutput:    true,
+			GitHubProjectionSink:   true,
+		}},
+	}
+	var buf bytes.Buffer
+	if err := consoleSourceMarkers(markers).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "comment id not projected") {
+		t.Error("comment URL without comment ID must render an honest missing-ID placeholder")
+	}
+	if strings.Contains(out, "comment projected") {
+		t.Error("comment URL without comment ID must not claim the ID was projected")
+	}
 }
 
 func TestConsoleSourceMarkersAbsentFieldLeavesNoTrace(t *testing.T) {
@@ -541,12 +592,13 @@ func TestBuildConsoleSourceMarkersNonAvailableStatusWithholdsEntries(t *testing.
 
 func TestBuildConsoleSourceMarkersWithholdsInvalidAndCapsEntries(t *testing.T) {
 	now := time.Date(2026, 7, 6, 14, 15, 0, 0, time.UTC)
-	markers := []OpsCivilizationIssueScanSourceMarkerProjected{{}}
+	markers := []OpsCivilizationIssueScanSourceMarkerProjected{{}, {Transition: "acquired"}}
 	for i := 0; i < consoleSourceMarkerRenderLimit+2; i++ {
 		marker := sourceMarkerProjectionForConsoleTest("acquired")
 		marker.RunID = fmt.Sprintf("run-%02d", i)
 		marker.WorkRef.RunID = marker.RunID
 		marker.IdempotencyKey = fmt.Sprintf("marker-%02d", i)
+		marker.OccurredAt = now.Add(time.Duration(i) * time.Minute).Format(time.RFC3339)
 		markers = append(markers, marker)
 	}
 	proj := &OpsCivilizationAssemblyProjection{
@@ -559,8 +611,11 @@ func TestBuildConsoleSourceMarkersWithholdsInvalidAndCapsEntries(t *testing.T) {
 	if len(got.Entries) != consoleSourceMarkerRenderLimit {
 		t.Fatalf("entries = %d, want render cap %d", len(got.Entries), consoleSourceMarkerRenderLimit)
 	}
-	if got.WithheldCount != 3 || got.WithheldReason != "missing identifiers or local render cap" {
-		t.Fatalf("withheld = %d/%q, want 3 combined reason", got.WithheldCount, got.WithheldReason)
+	if got.Entries[0].RunID != "run-51" || got.Entries[len(got.Entries)-1].RunID != "run-02" {
+		t.Fatalf("cap kept wrong marker order: first=%s last=%s, want newest 50 by occurred_at", got.Entries[0].RunID, got.Entries[len(got.Entries)-1].RunID)
+	}
+	if got.WithheldCount != 4 || got.WithheldReason != "missing identifiers or local render cap" {
+		t.Fatalf("withheld = %d/%q, want 4 combined reason", got.WithheldCount, got.WithheldReason)
 	}
 	var buf bytes.Buffer
 	if err := consoleSourceMarkers(got).Render(context.Background(), &buf); err != nil {

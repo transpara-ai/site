@@ -190,21 +190,23 @@ func buildConsoleSourceMarkers(proj *OpsCivilizationAssemblyProjection, freshnes
 		return out
 	}
 	out.Available = true
-	out.Entries = make([]ConsoleSourceMarkerEntry, 0, len(section.Markers))
+	entries := make([]ConsoleSourceMarkerEntry, 0, len(section.Markers))
 	invalidCount := 0
-	cappedCount := 0
 	for _, marker := range section.Markers {
 		entry, ok := buildConsoleSourceMarkerEntry(marker, now)
 		if ok {
-			if len(out.Entries) >= consoleSourceMarkerRenderLimit {
-				cappedCount++
-				continue
-			}
-			out.Entries = append(out.Entries, entry)
+			entries = append(entries, entry)
 		} else {
 			invalidCount++
 		}
 	}
+	sortConsoleSourceMarkerEntries(entries)
+	cappedCount := 0
+	if len(entries) > consoleSourceMarkerRenderLimit {
+		cappedCount = len(entries) - consoleSourceMarkerRenderLimit
+		entries = entries[:consoleSourceMarkerRenderLimit]
+	}
+	out.Entries = entries
 	out.WithheldCount = invalidCount + cappedCount
 	out.WithheldReason = consoleSourceMarkerWithheldReason(invalidCount, cappedCount)
 	return out
@@ -219,7 +221,8 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 	marker.Target.Title = strings.TrimSpace(marker.Target.Title)
 	marker.Target.State = strings.TrimSpace(marker.Target.State)
 	marker.Target.StateReason = strings.TrimSpace(marker.Target.StateReason)
-	if marker.RunID == "" && marker.StageID == "" && marker.Transition == "" {
+	marker.WorkRef.Target.Repository = strings.TrimSpace(marker.WorkRef.Target.Repository)
+	if marker.RunID == "" {
 		return ConsoleSourceMarkerEntry{}, false
 	}
 	entry := ConsoleSourceMarkerEntry{
@@ -255,6 +258,7 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 	entry.Age = humanizeAge(now, entry.OccurredAt)
 	if marker.Target.Repo == "" && marker.Target.Number == 0 && marker.WorkRef.Target.Repository != "" && marker.WorkRef.Target.IssueNumber > 0 {
 		entry.IssueLabel = fmt.Sprintf("%s#%d", marker.WorkRef.Target.Repository, marker.WorkRef.Target.IssueNumber)
+		entry.IssueURL = ""
 	}
 	if marker.GitHubMarker != nil {
 		entry.HasGitHubMarker = true
@@ -267,6 +271,35 @@ func buildConsoleSourceMarkerEntry(marker OpsCivilizationIssueScanSourceMarkerPr
 		entry.GitHubProjectionSink = marker.GitHubMarker.ProjectionSink
 	}
 	return entry, true
+}
+
+func sortConsoleSourceMarkerEntries(entries []ConsoleSourceMarkerEntry) {
+	sort.SliceStable(entries, func(i, j int) bool {
+		left, leftOK := consoleSourceMarkerOccurredAt(entries[i])
+		right, rightOK := consoleSourceMarkerOccurredAt(entries[j])
+		switch {
+		case leftOK && rightOK:
+			return left.After(right)
+		case leftOK:
+			return true
+		case rightOK:
+			return false
+		default:
+			return false
+		}
+	})
+}
+
+func consoleSourceMarkerOccurredAt(entry ConsoleSourceMarkerEntry) (time.Time, bool) {
+	occurredAt := strings.TrimSpace(entry.OccurredAt)
+	if occurredAt == "" {
+		return time.Time{}, false
+	}
+	parsed, err := time.Parse(time.RFC3339, occurredAt)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parsed, true
 }
 
 func consoleSourceMarkerWithheldReason(invalidCount, cappedCount int) string {
