@@ -24,15 +24,19 @@ func validFactoryV1TestOrder(id, status string) FactoryV1Order {
 		DocumentSHA256: strings.Repeat("a", 64),
 		Status:         status,
 		TLCStage:       "cfada",
-		TLCIndex:       5,
+		TLCIndex:       4,
 		ElapsedMS:      65_000,
 		Peers:          []string{"reviewer", "guardian"},
 		GateState:      "pending",
 		Evidence:       []FactoryV1Evidence{{Kind: "accepted_order", Ref: "eg:" + id, SHA256: strings.Repeat("b", 64), EventID: "event_" + id}},
 		NextAction:     "complete the current gate",
 		Budget:         FactoryV1Budget{MaxAttempts: 12, ConsumedAttempts: 4, RemainingAttempts: 8, MaxTokens: 100_000, ConsumedTokens: 20_000, RemainingTokens: 80_000},
-		Stages:         []FactoryV1Stage{{Stage: "ingest_work", Index: 1, State: "passed", AttemptID: "attempt_1", EventID: "event_stage_1", OccurredAt: "2026-08-04T22:00:00Z", Peers: []string{"intake"}, WorkArtifactID: "artifact_1"}},
+		Stages:         []FactoryV1Stage{{Stage: "ingest_work", Index: 0, State: "passed", AttemptID: "attempt_1", EventID: "event_stage_1", OccurredAt: "2026-08-04T22:00:00Z", Peers: []string{"intake"}, WorkArtifactID: "artifact_1", Evidence: []FactoryV1Evidence{{Kind: "accepted_order", Reference: "eg:" + id}}}},
 	}
+}
+
+func factoryV1TestApprovalReceipt(order FactoryV1Order, basis string) json.RawMessage {
+	return json.RawMessage(`{"basis":"` + basis + `","actor_id":"eventgraph_human_1","credential_key_id":"key_1","source_sha256":"` + strings.Repeat("d", 64) + `","factory_order_blob_sha":"` + order.DocumentSHA256 + `","order_id":"` + order.OrderID + `","order_version":"` + order.Version + `","document_sha256":"` + order.DocumentSHA256 + `","approval_sentence":"Human approved this exact bounded order.","approval_source_event_id":"event_approval_1","issued_at":"2026-08-04T21:59:00Z"}`)
 }
 
 func TestFactoryV1MissionControlStates(t *testing.T) {
@@ -41,7 +45,7 @@ func TestFactoryV1MissionControlStates(t *testing.T) {
 	progressing.ActivelyExecuting = true
 	progressing.ActiveAttemptID = "attempt_live"
 	progressing.Evidence = nil
-	progressing.Stages = []FactoryV1Stage{{Stage: "cfada", Index: 5, State: "running", AttemptID: "attempt_live", EventID: "event_running", OccurredAt: now.Add(-time.Second).Format(time.RFC3339), Peers: []string{"reviewer", "guardian"}}}
+	progressing.Stages = []FactoryV1Stage{{Stage: "cfada", Index: 4, State: "running", AttemptID: "attempt_live", EventID: "event_running", OccurredAt: now.Add(-time.Second).Format(time.RFC3339), Peers: []string{"reviewer", "guardian"}}}
 	blocked := validFactoryV1TestOrder("fo_blocked", "blocked")
 	blocked.Blocker = "CFADA evidence not yet accepted"
 	blocked.NextAction = "repair the exact design finding"
@@ -50,9 +54,9 @@ func TestFactoryV1MissionControlStates(t *testing.T) {
 	human.NextAction = "resolve intervention int_1"
 	ready := validFactoryV1TestOrder("fo_human_review", "human_review")
 	ready.TLCStage = "human_review"
-	ready.TLCIndex = 12
+	ready.TLCIndex = 11
 	ready.HumanApprovalBasis = "standing_scoped"
-	ready.HumanApprovalReceipt = json.RawMessage(`{"actor_id":"eventgraph_human_1","credential_key_id":"key_1","document_sha256":"` + strings.Repeat("a", 64) + `","approval_source_event_id":"event_approval_1"}`)
+	ready.HumanApprovalReceipt = factoryV1TestApprovalReceipt(ready, "standing_scoped")
 	ready.PR = FactoryV1PR{Repository: "transpara-ai/site", Number: 314, URL: "https://github.com/transpara-ai/site/pull/314", HeadSHA: strings.Repeat("c", 40), ReviewedHeadSHA: strings.Repeat("c", 40), Open: true, ChecksPassing: true}
 	ready.NextAction = "Human reviews the exact ready PR head"
 
@@ -127,12 +131,12 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
     "order_id":"FO-DEMO","version":"1.0.0","title":"Demo","channel":"human_idea",
     "source_ref":{"kind":"human_idea","identity":"human-idea:demo","sha256":"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
     "document_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "status":"accepted","tlc_stage":"design","tlc_index":3,"elapsed_ms":1000,
+    "status":"accepted","tlc_stage":"design","tlc_index":2,"elapsed_ms":1000,
     "actively_executing":false,"peers":["planner","reviewer"],"gate_state":"unavailable",
     "evidence":[{"kind":"design","reference":"docs/design.md","design_blob_sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
     "next_action":"start design",
     "budget":{"max_attempts":24,"consumed_attempts":2,"remaining_attempts":22,"max_tokens":100000,"consumed_tokens":5000,"remaining_tokens":95000,"max_cost_micros":1000000,"consumed_cost_micros":100000,"remaining_cost_micros":900000,"exhausted":false},
-    "stages":[{"stage":"craft_factory_order","index":2,"state":"passed","attempt_id":"attempt-2","ordinal":1,"event_id":"event-2","occurred_at":"2026-08-04T21:59:59Z","peers":["planner"],"evidence":[{"kind":"canonical_order","reference":"work:FO-DEMO"}],"work_artifact_id":"artifact-2","recovered":false}]
+    "stages":[{"stage":"craft_factory_order","index":1,"state":"passed","attempt_id":"attempt-2","ordinal":1,"event_id":"event-2","occurred_at":"2026-08-04T21:59:59Z","peers":["planner"],"evidence":[{"kind":"canonical_order","reference":"work:FO-DEMO"}],"work_artifact_id":"artifact-2","recovered":false}]
   }],
   "ideas":[{"idea_id":"idea-1","title":"Demo","target_repository":"transpara-ai/site","status":"refining","current_revision":1,"revisions":[{"revision":1,"note":"initial","candidate":{"doc_id":"FO-DEMO"},"candidate_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","validation_errors":[],"event_id":"event-idea","recorded_at":"2026-08-04T21:58:00Z"}]}],
   "interventions":[]
@@ -156,6 +160,68 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
 	}
 	if got := factoryV1IdeaRevisionInstruction(projection.Ideas[0].Revisions[0]); got != "initial" {
 		t.Fatalf("idea note = %q", got)
+	}
+}
+
+func TestFactoryV1EvidenceDueAtCanonicalStageBoundaries(t *testing.T) {
+	direct := validFactoryV1TestOrder("FO-DIRECT", "accepted")
+	direct.Channel = "completed_factory_order"
+	direct.TLCStage = "write_code"
+	direct.TLCIndex = 6
+	direct.HumanApprovalBasis = ""
+	direct.HumanApprovalReceipt = nil
+	approval := factoryV1TestApprovalReceipt(direct, "standing_scoped")
+	direct.Evidence = []FactoryV1Evidence{{Kind: "human_approval", Reference: "eventgraph:event_approval_1", Approval: approval}}
+	direct.Stages = append(direct.Stages, FactoryV1Stage{
+		Stage: "human_design_review", Index: 5, State: "passed", AttemptID: "attempt_human", EventID: "event_human", WorkArtifactID: "artifact_human", Peers: []string{"human", "guardian"},
+		Evidence: []FactoryV1Evidence{{Kind: "human_approval", Reference: "eventgraph:event_approval_1", Approval: approval}},
+	})
+	if missing := factoryV1OrderMissingEvidence(direct); len(missing) != 0 {
+		t.Fatalf("completed-order standing approval stage reported missing: %v", missing)
+	}
+
+	draftPending := direct
+	draftPending.TLCStage = "create_draft_pr"
+	draftPending.TLCIndex = 7
+	draftPending.PR = FactoryV1PR{}
+	if missing := factoryV1OrderMissingEvidence(draftPending); len(missing) != 0 {
+		t.Fatalf("create_draft_pr requires evidence before it is due: %v", missing)
+	}
+
+	iar := direct
+	iar.TLCStage = "iar"
+	iar.TLCIndex = 8
+	iar.PR = FactoryV1PR{Repository: "transpara-ai/work", Number: 97, HeadSHA: strings.Repeat("b", 40), Open: true, Draft: true}
+	if missing := factoryV1OrderMissingEvidence(iar); len(missing) != 0 {
+		t.Fatalf("IAR draft PR incorrectly requires later exact-head readiness: %v", missing)
+	}
+
+	markReady := iar
+	markReady.TLCStage = "mark_pr_ready"
+	markReady.TLCIndex = 10
+	if missing := factoryV1OrderMissingEvidence(markReady); len(missing) != 0 {
+		t.Fatalf("mark_pr_ready incorrectly requires its own terminal evidence: %v", missing)
+	}
+
+	humanReview := markReady
+	humanReview.TLCStage = "human_review"
+	humanReview.TLCIndex = 11
+	humanReview.PR.Draft = false
+	humanReview.PR.ChecksPassing = true
+	humanReview.PR.ReviewedHeadSHA = humanReview.PR.HeadSHA
+	if missing := factoryV1OrderMissingEvidence(humanReview); len(missing) != 0 {
+		t.Fatalf("exact-head ready Human Review evidence reported missing: %v", missing)
+	}
+}
+
+func TestFactoryV1FreshAcceptanceDoesNotInventFailure(t *testing.T) {
+	order := validFactoryV1TestOrder("FO-FRESH", "accepted")
+	order.TLCStage = "ingest_work"
+	order.TLCIndex = 0
+	order.Evidence = nil
+	order.Stages = nil
+	if missing := factoryV1OrderMissingEvidence(order); len(missing) != 0 {
+		t.Fatalf("fresh accepted order reported missing future evidence: %v", missing)
 	}
 }
 

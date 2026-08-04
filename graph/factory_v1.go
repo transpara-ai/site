@@ -91,6 +91,7 @@ type FactoryV1Evidence struct {
 	AuthorFamily    string            `json:"author_family"`
 	ReviewerFamily  string            `json:"reviewer_family"`
 	BlockerCount    *int              `json:"blocker_count"`
+	Approval        json.RawMessage   `json:"approval"`
 	Metadata        map[string]string `json:"metadata"`
 }
 
@@ -216,7 +217,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 	if freshness == FreshnessUnavailable {
 		view.Notices = append(view.Notices, "projection generated_at is missing, invalid, or in the future")
 	}
-	if (strings.TrimSpace(proj.Service.InstanceID) == "" && strings.TrimSpace(proj.Service.ServiceID) == "") || strings.TrimSpace(proj.Service.StartedAt) == "" {
+	if (strings.TrimSpace(proj.Service.InstanceID) == "" && strings.TrimSpace(proj.Service.ServiceID) == "") || !factoryV1TimestampValid(proj.Service.StartedAt) {
 		view.Notices = append(view.Notices, "service identity or start receipt is not projected")
 		if view.Freshness == FreshnessCurrent {
 			view.Freshness = FreshnessPartial
@@ -231,6 +232,10 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 	}
 
 	for _, order := range proj.Orders {
+		if basis, receipt := factoryV1OrderApproval(order); basis != "" {
+			order.HumanApprovalBasis = basis
+			order.HumanApprovalReceipt = receipt
+		}
 		missing := factoryV1OrderMissingEvidence(order)
 		status := strings.ToLower(strings.TrimSpace(order.Status))
 		switch status {
@@ -248,6 +253,10 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 }
 
 func factoryV1OrderMissingEvidence(order FactoryV1Order) []string {
+	if basis, receipt := factoryV1OrderApproval(order); basis != "" {
+		order.HumanApprovalBasis = basis
+		order.HumanApprovalReceipt = receipt
+	}
 	missing := make([]string, 0, 12)
 	require := func(ok bool, label string) {
 		if !ok {
@@ -260,25 +269,32 @@ func factoryV1OrderMissingEvidence(order FactoryV1Order) []string {
 	require(strings.TrimSpace(order.Channel) != "", "channel")
 	require(factoryV1SourceRefValid(order.SourceRef), "source_ref")
 	require(factoryV1SHA256Pattern.MatchString(strings.TrimSpace(order.DocumentSHA256)), "document_sha256")
-	require(strings.TrimSpace(order.TLCStage) != "" && order.TLCIndex >= 0, "TLC stage/index")
+	require(factoryV1TLCStageIndexValid(order.TLCStage, order.TLCIndex), "TLC stage/index")
 	require(strings.TrimSpace(order.GateState) != "", "gate_state")
 	require(strings.TrimSpace(order.NextAction) != "", "next_action")
 	limit, consumed, remaining := factoryV1BudgetAttempts(order.Budget)
 	require(limit > 0 && consumed >= 0 && remaining >= 0, "budget")
-	require(factoryV1OrderCanonicalEvidencePresent(order), "canonical evidence")
-	require(len(order.Stages) > 0, "stage ledger")
+	status := strings.ToLower(strings.TrimSpace(order.Status))
+	initiallyAccepted := order.TLCIndex == 0 && len(order.Stages) == 0 && (status == "accepted" || status == "queued" || status == "human_required")
+	if !initiallyAccepted {
+		require(factoryV1OrderCanonicalEvidencePresent(order), "canonical evidence")
+		require(factoryV1StageLedgerValid(order.Stages), "stage ledger")
+	}
 	if order.TLCIndex >= 6 {
 		basis := strings.TrimSpace(order.HumanApprovalBasis)
 		require(basis == "standing_scoped" || basis == "fresh_scoped", "human_approval_basis")
-		require(factoryV1ApprovalReceiptValid(order.HumanApprovalReceipt), "human_approval_receipt")
+		require(factoryV1ApprovalReceiptValid(order, order.HumanApprovalReceipt), "human_approval_receipt")
 	}
-	if order.TLCIndex >= 7 {
+	// Hive projects the next stage immediately after a pass. PR identity is
+	// therefore due only after create_draft_pr (index 7) has passed and IAR is
+	// current, not while create_draft_pr itself is accepted or running.
+	if order.TLCIndex >= 8 {
 		require(strings.TrimSpace(order.PR.Repository) != "" && order.PR.Number > 0 && factoryV1GitHashPattern.MatchString(strings.TrimSpace(order.PR.HeadSHA)), "PR identity/head")
 	}
-	if order.TLCIndex >= 8 {
+	// The cumulative PR projection becomes exact-head, green, and non-draft
+	// only when mark_pr_ready (index 10) passes into Human Review (index 11).
+	if order.TLCIndex >= 11 {
 		require(factoryV1GitHashPattern.MatchString(strings.TrimSpace(order.PR.ReviewedHeadSHA)) && order.PR.ReviewedHeadSHA == order.PR.HeadSHA, "exact reviewed PR head")
-	}
-	if order.TLCIndex >= 10 {
 		require(order.PR.Open && !order.PR.Draft && order.PR.ChecksPassing, "ready PR with passing checks")
 	}
 	return missing
@@ -302,26 +318,97 @@ func factoryV1OrderCanonicalEvidencePresent(order FactoryV1Order) bool {
 	return false
 }
 
+func factoryV1StageLedgerValid(stages []FactoryV1Stage) bool {
+	if len(stages) == 0 {
+		return false
+	}
+	for _, stage := range stages {
+		state := factoryV1StageState(stage)
+		if !factoryV1TLCStageIndexValid(stage.Stage, stage.Index) || strings.TrimSpace(stage.AttemptID) == "" || strings.TrimSpace(stage.EventID) == "" || len(stage.Peers) == 0 {
+			return false
+		}
+		switch state {
+		case "running":
+		case "passed", "blocked", "human_required":
+			if len(stage.Evidence) == 0 || strings.TrimSpace(stage.WorkArtifactID) == "" {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func factoryV1RawPresent(raw json.RawMessage) bool {
 	v := strings.TrimSpace(string(raw))
 	return v != "" && v != "null" && v != `""` && v != "{}" && v != "[]"
 }
 
-func factoryV1ApprovalReceiptValid(raw json.RawMessage) bool {
+func factoryV1ApprovalReceiptValid(order FactoryV1Order, raw json.RawMessage) bool {
 	if !factoryV1RawPresent(raw) {
 		return false
 	}
 	var receipt struct {
+		Basis                 string `json:"basis"`
 		ActorID               string `json:"actor_id"`
 		CredentialKeyID       string `json:"credential_key_id"`
+		SourceSHA256          string `json:"source_sha256"`
+		FactoryOrderBlobSHA   string `json:"factory_order_blob_sha"`
+		OrderID               string `json:"order_id"`
+		OrderVersion          string `json:"order_version"`
 		DocumentSHA256        string `json:"document_sha256"`
+		ApprovalSentence      string `json:"approval_sentence"`
 		ApprovalSourceEventID string `json:"approval_source_event_id"`
+		IssuedAt              string `json:"issued_at"`
 	}
 	if err := json.Unmarshal(raw, &receipt); err != nil {
 		return false
 	}
-	return strings.TrimSpace(receipt.ActorID) != "" && strings.TrimSpace(receipt.CredentialKeyID) != "" &&
-		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.DocumentSHA256)) && strings.TrimSpace(receipt.ApprovalSourceEventID) != ""
+	basis := strings.TrimSpace(receipt.Basis)
+	return (basis == "standing_scoped" || basis == "fresh_scoped") &&
+		strings.TrimSpace(receipt.ActorID) != "" && strings.TrimSpace(receipt.CredentialKeyID) != "" &&
+		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.SourceSHA256)) &&
+		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.FactoryOrderBlobSHA)) &&
+		receipt.OrderID == order.OrderID && receipt.OrderVersion == order.Version &&
+		receipt.DocumentSHA256 == order.DocumentSHA256 &&
+		strings.TrimSpace(receipt.ApprovalSentence) != "" && strings.TrimSpace(receipt.ApprovalSourceEventID) != "" &&
+		factoryV1TimestampValid(receipt.IssuedAt)
+}
+
+func factoryV1OrderApproval(order FactoryV1Order) (string, json.RawMessage) {
+	if factoryV1RawPresent(order.HumanApprovalReceipt) {
+		return strings.TrimSpace(order.HumanApprovalBasis), order.HumanApprovalReceipt
+	}
+	for stageIndex := len(order.Stages) - 1; stageIndex >= 0; stageIndex-- {
+		for evidenceIndex := len(order.Stages[stageIndex].Evidence) - 1; evidenceIndex >= 0; evidenceIndex-- {
+			raw := order.Stages[stageIndex].Evidence[evidenceIndex].Approval
+			if !factoryV1RawPresent(raw) {
+				continue
+			}
+			var receipt struct {
+				Basis string `json:"basis"`
+			}
+			if json.Unmarshal(raw, &receipt) == nil {
+				return strings.TrimSpace(receipt.Basis), raw
+			}
+		}
+	}
+	return "", nil
+}
+
+func factoryV1TimestampValid(value string) bool {
+	parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(value))
+	return err == nil && !parsed.IsZero()
+}
+
+var factoryV1TLCStages = [...]string{
+	"ingest_work", "craft_factory_order", "design", "iada", "cfada", "human_design_review",
+	"write_code", "create_draft_pr", "iar", "cfar", "mark_pr_ready", "human_review",
+}
+
+func factoryV1TLCStageIndexValid(stage string, index int) bool {
+	return index >= 0 && index < len(factoryV1TLCStages) && strings.TrimSpace(stage) == factoryV1TLCStages[index]
 }
 
 func factoryV1SourceRefValid(raw json.RawMessage) bool {
@@ -780,5 +867,5 @@ func factoryV1EvidenceExactness(evidence FactoryV1Evidence) string {
 }
 
 func factoryV1OrderPlaceholder() string {
-	return `{"doc_id":"FO-...","version":"1.0.0","status":"approved","title":"...","channel":"completed_factory_order","target_repository":"transpara-ai/repository","requirements":[],"acceptance_criteria":[],"test_plan":[],"constraints":[],"expected_outputs":[],"authority_scope":{},"budget":{}}`
+	return `{"doc_id":"FO-DEMO-001","version":"1.0.0","status":"approved","title":"Bounded demonstration","channel":"completed_factory_order","target_repository":"transpara-ai/docs","source_references":[{"kind":"human_submission","identity":"site:completed-order","sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}],"requirements":[{"id":"R1","statement":"Make one bounded change.","rationale":"Human supplied completed order."}],"acceptance_criteria":[{"id":"AC1","statement":"Change is verified.","verification_method":"Run repository tests.","risk_class":"medium"}],"test_plan":["Run repository verification."],"constraints":["Non-production only"],"non_goals":["Unrelated refactors"],"expected_outputs":["Ready PR"],"authority_scope":{"actor_id":"actor_00000000000000000000000000000086","allowed_actions":["repo.branch.create","repo.commit.create","repo.pull_request.create","repo.pull_request.mark_ready"],"target_repositories":["transpara-ai/docs"],"non_production_only":true},"budget":{"max_attempts":24,"max_tokens":2000000,"max_cost_micros":100000000}}`
 }
