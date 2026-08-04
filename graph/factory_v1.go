@@ -24,7 +24,11 @@ const (
 	factoryV1MaxResolutionBytes  = 12_000
 )
 
-var factoryV1IDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$`)
+var (
+	factoryV1IDPattern      = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$`)
+	factoryV1SHA256Pattern  = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	factoryV1GitHashPattern = regexp.MustCompile(`^(?:[0-9a-f]{40}|[0-9a-f]{64})$`)
+)
 
 // FactoryV1Projection is the Site-owned transport view of Hive's canonical
 // factory-v1 projection. Optional fields deliberately retain their zero values:
@@ -149,6 +153,7 @@ type FactoryV1IdeaRevision struct {
 	Instruction      string          `json:"instruction"`
 	Note             string          `json:"note"`
 	Candidate        json.RawMessage `json:"candidate"`
+	CandidateSHA256  string          `json:"candidate_sha256"`
 	ValidationErrors []string        `json:"validation_errors"`
 	CreatedAt        string          `json:"created_at"`
 	RecordedAt       string          `json:"recorded_at"`
@@ -229,9 +234,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 		missing := factoryV1OrderMissingEvidence(order)
 		status := strings.ToLower(strings.TrimSpace(order.Status))
 		switch status {
-		case "accepted", "queued":
-			status = "progressing"
-		case "progressing", "blocked", "human_required", "human_review":
+		case "accepted", "queued", "progressing", "blocked", "human_required", "human_review":
 		default:
 			missing = append(missing, "recognized status")
 		}
@@ -256,8 +259,8 @@ func factoryV1OrderMissingEvidence(order FactoryV1Order) []string {
 	require(strings.TrimSpace(order.Title) != "", "title")
 	require(strings.TrimSpace(order.Channel) != "", "channel")
 	require(factoryV1SourceRefValid(order.SourceRef), "source_ref")
-	require(len(strings.TrimSpace(order.DocumentSHA256)) == 64, "document_sha256")
-	require(strings.TrimSpace(order.TLCStage) != "" && order.TLCIndex > 0, "TLC stage/index")
+	require(factoryV1SHA256Pattern.MatchString(strings.TrimSpace(order.DocumentSHA256)), "document_sha256")
+	require(strings.TrimSpace(order.TLCStage) != "" && order.TLCIndex >= 0, "TLC stage/index")
 	require(strings.TrimSpace(order.GateState) != "", "gate_state")
 	require(strings.TrimSpace(order.NextAction) != "", "next_action")
 	limit, consumed, remaining := factoryV1BudgetAttempts(order.Budget)
@@ -267,10 +270,16 @@ func factoryV1OrderMissingEvidence(order FactoryV1Order) []string {
 	if order.TLCIndex >= 6 {
 		basis := strings.TrimSpace(order.HumanApprovalBasis)
 		require(basis == "standing_scoped" || basis == "fresh_scoped", "human_approval_basis")
-		require(factoryV1RawPresent(order.HumanApprovalReceipt), "human_approval_receipt")
+		require(factoryV1ApprovalReceiptValid(order.HumanApprovalReceipt), "human_approval_receipt")
+	}
+	if order.TLCIndex >= 7 {
+		require(strings.TrimSpace(order.PR.Repository) != "" && order.PR.Number > 0 && factoryV1GitHashPattern.MatchString(strings.TrimSpace(order.PR.HeadSHA)), "PR identity/head")
 	}
 	if order.TLCIndex >= 8 {
-		require(strings.TrimSpace(order.PR.Repository) != "" && order.PR.Number > 0 && strings.TrimSpace(order.PR.HeadSHA) != "", "PR identity/head")
+		require(factoryV1GitHashPattern.MatchString(strings.TrimSpace(order.PR.ReviewedHeadSHA)) && order.PR.ReviewedHeadSHA == order.PR.HeadSHA, "exact reviewed PR head")
+	}
+	if order.TLCIndex >= 10 {
+		require(order.PR.Open && !order.PR.Draft && order.PR.ChecksPassing, "ready PR with passing checks")
 	}
 	return missing
 }
@@ -298,13 +307,26 @@ func factoryV1RawPresent(raw json.RawMessage) bool {
 	return v != "" && v != "null" && v != `""` && v != "{}" && v != "[]"
 }
 
-func factoryV1SourceRefValid(raw json.RawMessage) bool {
+func factoryV1ApprovalReceiptValid(raw json.RawMessage) bool {
 	if !factoryV1RawPresent(raw) {
 		return false
 	}
-	var legacy string
-	if err := json.Unmarshal(raw, &legacy); err == nil {
-		return strings.TrimSpace(legacy) != ""
+	var receipt struct {
+		ActorID               string `json:"actor_id"`
+		CredentialKeyID       string `json:"credential_key_id"`
+		DocumentSHA256        string `json:"document_sha256"`
+		ApprovalSourceEventID string `json:"approval_source_event_id"`
+	}
+	if err := json.Unmarshal(raw, &receipt); err != nil {
+		return false
+	}
+	return strings.TrimSpace(receipt.ActorID) != "" && strings.TrimSpace(receipt.CredentialKeyID) != "" &&
+		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.DocumentSHA256)) && strings.TrimSpace(receipt.ApprovalSourceEventID) != ""
+}
+
+func factoryV1SourceRefValid(raw json.RawMessage) bool {
+	if !factoryV1RawPresent(raw) {
+		return false
 	}
 	var source struct {
 		Identity string `json:"identity"`
@@ -313,7 +335,7 @@ func factoryV1SourceRefValid(raw json.RawMessage) bool {
 	if err := json.Unmarshal(raw, &source); err != nil {
 		return false
 	}
-	return strings.TrimSpace(source.Identity) != "" && len(strings.TrimSpace(source.SHA256)) == 64
+	return strings.TrimSpace(source.Identity) != "" && factoryV1SHA256Pattern.MatchString(strings.TrimSpace(source.SHA256))
 }
 
 func fetchFactoryV1Projection(r *http.Request) (*FactoryV1Projection, error) {
@@ -403,7 +425,21 @@ func (h *Handlers) handleFactoryV1IdeaSubmit(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "invalid idea id", http.StatusBadRequest)
 		return
 	}
-	h.factoryV1Mutation(w, r, "/api/hive/factory/v1/ideas/"+id+"/submit", map[string]any{"approved": true})
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	revision, err := strconv.Atoi(strings.TrimSpace(r.FormValue("revision")))
+	if err != nil || revision <= 0 {
+		http.Error(w, "revision must be a positive integer", http.StatusBadRequest)
+		return
+	}
+	candidateSHA256 := strings.TrimSpace(r.FormValue("candidate_sha256"))
+	if !factoryV1SHA256Pattern.MatchString(candidateSHA256) {
+		http.Error(w, "candidate_sha256 must be 64 lowercase hexadecimal characters", http.StatusBadRequest)
+		return
+	}
+	h.factoryV1Mutation(w, r, "/api/hive/factory/v1/ideas/"+id+"/submit", map[string]any{"approved": true, "revision": revision, "candidate_sha256": candidateSHA256})
 }
 
 func (h *Handlers) handleFactoryV1OrderCreate(w http.ResponseWriter, r *http.Request) {
@@ -439,27 +475,36 @@ func (h *Handlers) handleFactoryV1InterventionResolve(w http.ResponseWriter, r *
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	actorID, ok := h.factoryV1ActorID(r)
+	actorID, operatorPrincipalID, ok := h.factoryV1ActorIdentity(r)
 	if !ok {
 		http.Error(w, "factory operator identity is not configured", http.StatusUnauthorized)
 		return
 	}
-	h.factoryV1Mutation(w, r, "/api/hive/factory/v1/interventions/"+id+"/resolve", map[string]any{"resolution": resolution, "actor_id": actorID})
+	h.factoryV1Mutation(w, r, "/api/hive/factory/v1/interventions/"+id+"/resolve", map[string]any{"resolution": resolution, "actor_id": actorID, "operator_principal_id": operatorPrincipalID})
 }
 
 // factoryV1ActorID binds intervention receipts to a configured EventGraph
 // Human actor in the local acceptance stack. An authenticated Site identity is
 // the fallback for normal application use; the anonymous sentinel is never
 // forwarded as Human authority.
-func (h *Handlers) factoryV1ActorID(r *http.Request) (string, bool) {
-	if configured := strings.TrimSpace(os.Getenv("HIVE_FACTORY_V1_ACTOR_ID")); configured != "" {
-		return validFactoryV1ID(configured)
+func (h *Handlers) factoryV1ActorIdentity(r *http.Request) (actorID, operatorPrincipalID string, ok bool) {
+	principal := h.userID(r)
+	configured := strings.TrimSpace(os.Getenv("HIVE_FACTORY_V1_ACTOR_ID"))
+	if principal == anonUserID {
+		principal = configured
 	}
-	actorID := h.userID(r)
-	if actorID == anonUserID {
-		return "", false
+	principal, principalOK := validFactoryV1ID(principal)
+	if !principalOK {
+		return "", "", false
 	}
-	return validFactoryV1ID(actorID)
+	if configured == "" {
+		return principal, principal, true
+	}
+	configured, configuredOK := validFactoryV1ID(configured)
+	if !configuredOK {
+		return "", "", false
+	}
+	return configured, principal, true
 }
 
 func (h *Handlers) factoryV1Mutation(w http.ResponseWriter, r *http.Request, endpoint string, payload any) {
@@ -583,10 +628,19 @@ func factoryV1IdeaApprovable(idea FactoryV1Idea) bool {
 	}
 	for _, revision := range idea.Revisions {
 		if revision.Revision == idea.CurrentRevision {
-			return factoryV1RawPresent(revision.Candidate) && len(revision.ValidationErrors) == 0
+			return factoryV1RawPresent(revision.Candidate) && factoryV1SHA256Pattern.MatchString(revision.CandidateSHA256) && len(revision.ValidationErrors) == 0
 		}
 	}
 	return false
+}
+
+func factoryV1CurrentIdeaSHA256(idea FactoryV1Idea) string {
+	for _, revision := range idea.Revisions {
+		if revision.Revision == idea.CurrentRevision {
+			return revision.CandidateSHA256
+		}
+	}
+	return ""
 }
 
 func factoryV1PRLabel(pr FactoryV1PR) string {
@@ -657,7 +711,13 @@ func factoryV1PRState(pr FactoryV1PR) string {
 		if pr.Draft {
 			return "open draft"
 		}
-		return "open ready"
+		if !pr.ChecksPassing {
+			return "open; checks not passing"
+		}
+		if !factoryV1GitHashPattern.MatchString(pr.HeadSHA) || pr.HeadSHA != pr.ReviewedHeadSHA {
+			return "open; exact-head review missing"
+		}
+		return "open exact-head ready"
 	}
 	if pr.Number > 0 {
 		return "not open"

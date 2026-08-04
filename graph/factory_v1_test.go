@@ -52,7 +52,7 @@ func TestFactoryV1MissionControlStates(t *testing.T) {
 	ready.TLCStage = "human_review"
 	ready.TLCIndex = 12
 	ready.HumanApprovalBasis = "standing_scoped"
-	ready.HumanApprovalReceipt = json.RawMessage(`"receipt_1"`)
+	ready.HumanApprovalReceipt = json.RawMessage(`{"actor_id":"eventgraph_human_1","credential_key_id":"key_1","document_sha256":"` + strings.Repeat("a", 64) + `","approval_source_event_id":"event_approval_1"}`)
 	ready.PR = FactoryV1PR{Repository: "transpara-ai/site", Number: 314, URL: "https://github.com/transpara-ai/site/pull/314", HeadSHA: strings.Repeat("c", 40), ReviewedHeadSHA: strings.Repeat("c", 40), Open: true, ChecksPassing: true}
 	ready.NextAction = "Human reviews the exact ready PR head"
 
@@ -82,7 +82,7 @@ func TestFactoryV1MissionControlStates(t *testing.T) {
 		`data-order-id="fo_progressing"`, `data-order-status="progressing"`, "· active",
 		`data-order-id="fo_blocked"`, `data-order-status="blocked"`, "CFADA evidence not yet accepted",
 		`data-order-id="fo_human"`, `data-order-status="human_required"`, "bounded operator decision required",
-		`data-order-id="fo_human_review"`, `data-order-status="human_review"`, "transpara-ai/site#314", "open ready", "passing",
+		`data-order-id="fo_human_review"`, `data-order-status="human_review"`, "transpara-ai/site#314", "open exact-head ready", "passing",
 		"reviewer, guardian", "1m5s", "4 / 12 attempts · 8 left", "20000 / 100000 tokens",
 		`data-intervention-id="int_1"`, "Confirm the bounded correction", "Resolve and resume",
 		`data-factory-v1-form="idea"`, `data-factory-v1-form="completed-order"`,
@@ -134,7 +134,7 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
     "budget":{"max_attempts":24,"consumed_attempts":2,"remaining_attempts":22,"max_tokens":100000,"consumed_tokens":5000,"remaining_tokens":95000,"max_cost_micros":1000000,"consumed_cost_micros":100000,"remaining_cost_micros":900000,"exhausted":false},
     "stages":[{"stage":"craft_factory_order","index":2,"state":"passed","attempt_id":"attempt-2","ordinal":1,"event_id":"event-2","occurred_at":"2026-08-04T21:59:59Z","peers":["planner"],"evidence":[{"kind":"canonical_order","reference":"work:FO-DEMO"}],"work_artifact_id":"artifact-2","recovered":false}]
   }],
-  "ideas":[{"idea_id":"idea-1","title":"Demo","target_repository":"transpara-ai/site","status":"refining","current_revision":1,"revisions":[{"revision":1,"note":"initial","candidate":{"doc_id":"FO-DEMO"},"validation_errors":[],"event_id":"event-idea","recorded_at":"2026-08-04T21:58:00Z"}]}],
+  "ideas":[{"idea_id":"idea-1","title":"Demo","target_repository":"transpara-ai/site","status":"refining","current_revision":1,"revisions":[{"revision":1,"note":"initial","candidate":{"doc_id":"FO-DEMO"},"candidate_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","validation_errors":[],"event_id":"event-idea","recorded_at":"2026-08-04T21:58:00Z"}]}],
   "interventions":[]
 }`
 	var projection FactoryV1Projection
@@ -145,8 +145,8 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
 	if view.Freshness != FreshnessCurrent || !view.Writable {
 		t.Fatalf("view = freshness %q writable %v notices %v", view.Freshness, view.Writable, view.Notices)
 	}
-	if got := view.Orders[0].EffectiveStatus; got != "progressing" {
-		t.Fatalf("accepted Hive order maps to %q, want progressing", got)
+	if got := view.Orders[0].EffectiveStatus; got != "accepted" {
+		t.Fatalf("accepted Hive order maps to %q, want accepted", got)
 	}
 	if len(view.Orders[0].Missing) != 0 {
 		t.Fatalf("valid Hive order reported missing fields: %v", view.Orders[0].Missing)
@@ -214,6 +214,9 @@ func TestFactoryV1InterventionPOST(t *testing.T) {
 	if got.body["actor_id"] != "eventgraph_human_1" || got.body["resolution"] != "Use the verified bounded input and resume this order." {
 		t.Errorf("body = %#v", got.body)
 	}
+	if got.body["operator_principal_id"] != "human_operator_1" {
+		t.Errorf("operator principal = %#v, want authenticated human_operator_1", got.body["operator_principal_id"])
+	}
 }
 
 func TestFactoryV1IdeaAndCompletedOrderPOST(t *testing.T) {
@@ -256,7 +259,10 @@ func TestFactoryV1IdeaAndCompletedOrderPOST(t *testing.T) {
 		t.Fatalf("refine status = %d; body=%s", refineW.Code, refineW.Body.String())
 	}
 
-	submitReq := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/ideas/idea_1/submit", nil)
+	candidateSHA256 := strings.Repeat("c", 64)
+	submitForm := url.Values{"revision": {"2"}, "candidate_sha256": {candidateSHA256}}
+	submitReq := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/ideas/idea_1/submit", strings.NewReader(submitForm.Encode()))
+	submitReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	submitW := httptest.NewRecorder()
 	mux.ServeHTTP(submitW, submitReq)
 	if submitW.Code != http.StatusSeeOther {
@@ -287,7 +293,40 @@ func TestFactoryV1IdeaAndCompletedOrderPOST(t *testing.T) {
 	if got := byPath["/api/hive/factory/v1/ideas/idea_1/refine"]; got["instruction"] != "Make the acceptance evidence exact-head." {
 		t.Errorf("refine payload = %#v", got)
 	}
-	if got := byPath["/api/hive/factory/v1/ideas/idea_1/submit"]; got["approved"] != true {
+	if got := byPath["/api/hive/factory/v1/ideas/idea_1/submit"]; got["approved"] != true || got["revision"] != float64(2) || got["candidate_sha256"] != candidateSHA256 {
 		t.Errorf("submit payload = %#v", got)
+	}
+}
+
+func TestFactoryV1IdeaSubmitRequiresExactCandidate(t *testing.T) {
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	for name, form := range map[string]url.Values{
+		"missing revision": {"candidate_sha256": {strings.Repeat("a", 64)}},
+		"invalid digest":   {"revision": {"3"}, "candidate_sha256": {"not-a-digest"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/ideas/idea_1/submit", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400; body=%s", w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestFactoryV1NotRegisteredInNoDBConsole(t *testing.T) {
+	h := NewHandlers(nil, nil, nil)
+	mux := http.NewServeMux()
+	h.RegisterReadOnlyConsole(mux)
+	req := httptest.NewRequest(http.MethodGet, "http://site.test/console/factory-v1", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", w.Code)
 	}
 }

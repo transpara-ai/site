@@ -152,6 +152,8 @@ templ factoryV1IdeaCard(idea FactoryV1Idea, writable bool) {
 				</form>
 				if factoryV1IdeaApprovable(idea) {
 					<form method="post" action={ templ.SafeURL("/console/factory-v1/ideas/" + idea.IdeaID + "/submit") } data-factory-v1-form="approve-idea">
+						<input type="hidden" name="revision" value={ strconv.Itoa(idea.CurrentRevision) }/>
+						<input type="hidden" name="candidate_sha256" value={ factoryV1CurrentIdeaSHA256(idea) }/>
 						<button type="submit" class="w-full rounded bg-brand px-3 py-2 text-sm font-medium text-void hover:opacity-90">Approve candidate</button>
 					</form>
 				}
