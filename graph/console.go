@@ -11,8 +11,9 @@ import (
 
 type ConsolePageData struct {
 	Title     string
-	Active    string // health | kanban | intake | config
+	Active    string // health | factory-v1 | kanban | intake | config
 	Health    *ConsoleHealthWall
+	FactoryV1 *FactoryV1MissionControl
 	Kanban    *ConsoleKanban
 	IssueScan *ConsoleIssueScan
 	Config    *ConsoleConfig

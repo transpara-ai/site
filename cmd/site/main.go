@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -910,7 +911,7 @@ func main() {
 		fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
 	})
 
-	addr := ":" + p
+	addr := siteListenAddress(os.Getenv, p)
 	log.Printf("site listening on %s", addr)
 
 	// Profile middleware slots between noCache and the mux so every route
@@ -928,6 +929,10 @@ func main() {
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func siteListenAddress(getenv func(string) string, port string) string {
+	return net.JoinHostPort(strings.TrimSpace(getenv("SITE_BIND_HOST")), port)
 }
 
 func registerNoDatabaseRoutes(mux *http.ServeMux, handleHome http.HandlerFunc) {
