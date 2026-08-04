@@ -29,6 +29,7 @@ Always run `templ generate` after editing any `.templ` file. The `*_templ.go` fi
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `PORT` | HTTP port (default 8080) |
+| `SITE_BIND_HOST` | Optional HTTP bind host. Empty preserves the existing all-interface bind; use `127.0.0.1` for the bounded local factory stack. |
 | `GOOGLE_OAUTH_ID` / `GOOGLE_OAUTH_SECRET` | OAuth2 credentials |
 | `SITE_CATALOG` | Optional path to a YAML model catalog. Defaults to the built-in `eventgraph/go/pkg/modelconfig` catalog. |
 | `HIVE_REPO_PATH` | Path to sibling hive repo (default: `../hive`) |

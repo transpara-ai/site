@@ -391,6 +391,13 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /console", h.writeWrap(h.handleConsoleHealth))
 	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
 	mux.Handle("GET /console/health/fragment", h.writeWrap(h.handleConsoleHealthFragment))
+	mux.Handle("GET /console/factory-v1", h.writeWrap(h.handleFactoryV1MissionControl))
+	mux.Handle("GET /console/factory-v1/fragment", h.writeWrap(h.handleFactoryV1MissionControlFragment))
+	mux.Handle("POST /console/factory-v1/ideas", h.writeWrap(h.handleFactoryV1IdeaCreate))
+	mux.Handle("POST /console/factory-v1/ideas/{id}/refine", h.writeWrap(h.handleFactoryV1IdeaRefine))
+	mux.Handle("POST /console/factory-v1/ideas/{id}/submit", h.writeWrap(h.handleFactoryV1IdeaSubmit))
+	mux.Handle("POST /console/factory-v1/orders", h.writeWrap(h.handleFactoryV1OrderCreate))
+	mux.Handle("POST /console/factory-v1/interventions/{id}/resolve", h.writeWrap(h.handleFactoryV1InterventionResolve))
 	mux.Handle("GET /console/kanban", h.writeWrap(h.handleConsoleKanban))
 	mux.Handle("GET /console/kanban/fragment", h.writeWrap(h.handleConsoleKanbanFragment))
 	mux.Handle("GET /console/kanban/order/{id}", h.writeWrap(h.handleConsoleKanbanOrder))
@@ -428,7 +435,8 @@ func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
 
 // RegisterReadOnlyConsole adds the no-DB Mission Control console routes. The
 // console handlers tolerate a nil store and render an explicit unavailable
-// state when upstream projections are absent, so they are safe in offline mode.
+// state when upstream projections are absent. Factory v1 is deliberately not
+// registered here because its projection contains authenticated operator data.
 func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
 	mux.HandleFunc("GET /console", h.handleConsoleHealth)
 	mux.HandleFunc("GET /console/health", h.handleConsoleHealth)
