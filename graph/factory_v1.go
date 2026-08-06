@@ -223,7 +223,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 		}
 	}
 	serviceStatus := factoryV1ServiceStatus(proj.Service)
-	if serviceStatus != "running" && serviceStatus != "healthy" {
+	if !proj.Service.Healthy || (serviceStatus != "running" && serviceStatus != "healthy") {
 		view.Notices = append(view.Notices, "factory service is not confirmed running")
 		if view.Freshness == FreshnessCurrent {
 			view.Freshness = FreshnessPartial
@@ -247,7 +247,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 		}
 		view.Orders = append(view.Orders, FactoryV1OrderView{Order: order, EffectiveStatus: status, Missing: missing})
 	}
-	view.Writable = view.Freshness == FreshnessCurrent && (serviceStatus == "running" || serviceStatus == "healthy")
+	view.Writable = view.Freshness == FreshnessCurrent && proj.Service.Healthy && (serviceStatus == "running" || serviceStatus == "healthy")
 	return view
 }
 

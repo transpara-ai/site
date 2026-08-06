@@ -421,6 +421,11 @@ func TestFactoryV1MutationRequiresFreshWritableProjection(t *testing.T) {
 			p.Service.Healthy = false
 			return p
 		}()},
+		{name: "contradictory healthy status", projection: func() FactoryV1Projection {
+			p := healthy
+			p.Service.Healthy = false
+			return p
+		}()},
 		{name: "missing service identity", projection: func() FactoryV1Projection {
 			p := healthy
 			p.Service.ServiceID = ""
