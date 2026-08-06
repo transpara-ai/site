@@ -328,7 +328,7 @@ templ factoryV1Definition(label, value string) {
 templ factoryV1EvidenceItem(evidence FactoryV1Evidence) {
 	<li class="rounded border border-edge px-3 py-2 text-xs">
 		<p class="text-warm-secondary">{ factoryV1Value(evidence.Kind, "kind missing") } · { factoryV1EvidenceReference(evidence) }</p>
-		<p class="mt-1 break-all font-mono text-[10px] text-warm-faint">sha { factoryV1Value(evidence.SHA256, "missing") } · event { factoryV1Value(evidence.EventID, "missing") }</p>
+		<p class="mt-1 break-all font-mono text-[10px] text-warm-faint">sha { factoryV1Value(evidence.SHA256, "missing") }</p>
 		<p class="mt-1 break-all font-mono text-[10px] text-warm-faint">{ factoryV1EvidenceExactness(evidence) }</p>
 	</li>
 }

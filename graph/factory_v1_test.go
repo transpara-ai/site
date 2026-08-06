@@ -28,10 +28,26 @@ func validFactoryV1TestOrder(id, status string) FactoryV1Order {
 		ElapsedMS:      65_000,
 		Peers:          []string{"reviewer", "guardian"},
 		GateState:      "pending",
-		Evidence:       []FactoryV1Evidence{{Kind: "accepted_order", Ref: "eg:" + id, SHA256: strings.Repeat("b", 64), EventID: "event_" + id}},
+		Evidence:       []FactoryV1Evidence{{Kind: "accepted_order", Ref: "eg:" + id, SHA256: strings.Repeat("b", 64)}},
 		NextAction:     "complete the current gate",
 		Budget:         FactoryV1Budget{MaxAttempts: 12, ConsumedAttempts: 4, RemainingAttempts: 8, MaxTokens: 100_000, ConsumedTokens: 20_000, RemainingTokens: 80_000},
 		Stages:         []FactoryV1Stage{{Stage: "ingest_work", Index: 0, State: "passed", AttemptID: "attempt_1", EventID: "event_stage_1", OccurredAt: "2026-08-04T22:00:00Z", Peers: []string{"intake"}, WorkArtifactID: "artifact_1", Evidence: []FactoryV1Evidence{{Kind: "accepted_order", Reference: "eg:" + id}}}},
+	}
+}
+
+func writeHealthyFactoryV1Projection(t *testing.T, w http.ResponseWriter) {
+	t.Helper()
+	now := time.Now().UTC()
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(FactoryV1Projection{
+		SchemaVersion: factoryV1SchemaVersion,
+		GeneratedAt:   now.Format(time.RFC3339Nano),
+		Service: FactoryV1Service{
+			ServiceID: "factory-v1", InstanceID: "factory-v1-test",
+			StartedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), Status: "healthy", Healthy: true,
+		},
+	}); err != nil {
+		t.Errorf("encode healthy projection: %v", err)
 	}
 }
 
@@ -133,7 +149,7 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
     "document_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "status":"accepted","tlc_stage":"design","tlc_index":2,"elapsed_ms":1000,
     "actively_executing":false,"peers":["planner","reviewer"],"gate_state":"unavailable",
-    "evidence":[{"kind":"design","reference":"docs/design.md","design_blob_sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
+    "evidence":[{"kind":"design","reference":"docs/design.md","event_id":"phantom-evidence-event","design_blob_sha":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}],
     "next_action":"start design",
     "budget":{"max_attempts":24,"consumed_attempts":2,"remaining_attempts":22,"max_tokens":100000,"consumed_tokens":5000,"remaining_tokens":95000,"max_cost_micros":1000000,"consumed_cost_micros":100000,"remaining_cost_micros":900000,"exhausted":false},
     "stages":[{"stage":"craft_factory_order","index":1,"state":"passed","attempt_id":"attempt-2","ordinal":1,"event_id":"event-2","occurred_at":"2026-08-04T21:59:59Z","peers":["planner"],"evidence":[{"kind":"canonical_order","reference":"work:FO-DEMO"}],"work_artifact_id":"artifact-2","recovered":false}]
@@ -157,6 +173,13 @@ func TestFactoryV1DecodesHiveProjectionContract(t *testing.T) {
 	}
 	if got := factoryV1EvidenceReference(projection.Orders[0].Evidence[0]); got != "docs/design.md" {
 		t.Fatalf("evidence reference = %q", got)
+	}
+	var rendered strings.Builder
+	if err := factoryV1EvidenceItem(projection.Orders[0].Evidence[0]).Render(context.Background(), &rendered); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(rendered.String(), "phantom-evidence-event") || strings.Contains(rendered.String(), "· event") {
+		t.Fatalf("evidence row retained phantom event id: %s", rendered.String())
 	}
 	if got := factoryV1IdeaRevisionInstruction(projection.Ideas[0].Revisions[0]); got != "initial" {
 		t.Fatalf("idea note = %q", got)
@@ -234,6 +257,10 @@ func TestFactoryV1InterventionPOST(t *testing.T) {
 	}
 	captured := make(chan capturedRequest, 1)
 	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			writeHealthyFactoryV1Projection(t, w)
+			return
+		}
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Errorf("decode body: %v", err)
@@ -292,6 +319,10 @@ func TestFactoryV1IdeaAndCompletedOrderPOST(t *testing.T) {
 	}
 	requests := make(chan captured, 4)
 	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			writeHealthyFactoryV1Projection(t, w)
+			return
+		}
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Errorf("decode body: %v", err)
@@ -361,6 +392,102 @@ func TestFactoryV1IdeaAndCompletedOrderPOST(t *testing.T) {
 	}
 	if got := byPath["/api/hive/factory/v1/ideas/idea_1/submit"]; got["approved"] != true || got["revision"] != float64(2) || got["candidate_sha256"] != candidateSHA256 {
 		t.Errorf("submit payload = %#v", got)
+	}
+}
+
+func TestFactoryV1MutationRequiresFreshWritableProjection(t *testing.T) {
+	now := time.Now().UTC()
+	healthy := FactoryV1Projection{
+		SchemaVersion: factoryV1SchemaVersion,
+		GeneratedAt:   now.Format(time.RFC3339Nano),
+		Service: FactoryV1Service{
+			ServiceID: "factory-v1", InstanceID: "factory-v1-test",
+			StartedAt: now.Add(-time.Minute).Format(time.RFC3339Nano), Status: "healthy", Healthy: true,
+		},
+	}
+	tests := []struct {
+		name       string
+		projection FactoryV1Projection
+	}{
+		{name: "unsupported schema", projection: func() FactoryV1Projection { p := healthy; p.SchemaVersion = "future"; return p }()},
+		{name: "stale projection", projection: func() FactoryV1Projection {
+			p := healthy
+			p.GeneratedAt = now.Add(-10 * time.Minute).Format(time.RFC3339Nano)
+			return p
+		}()},
+		{name: "unhealthy service", projection: func() FactoryV1Projection {
+			p := healthy
+			p.Service.Status = "stopped"
+			p.Service.Healthy = false
+			return p
+		}()},
+		{name: "contradictory healthy status", projection: func() FactoryV1Projection {
+			p := healthy
+			p.Service.Healthy = false
+			return p
+		}()},
+		{name: "missing service identity", projection: func() FactoryV1Projection {
+			p := healthy
+			p.Service.ServiceID = ""
+			p.Service.InstanceID = ""
+			return p
+		}()},
+		{name: "missing service start", projection: func() FactoryV1Projection { p := healthy; p.Service.StartedAt = ""; return p }()},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			posts := 0
+			hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost {
+					posts++
+					w.WriteHeader(http.StatusCreated)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				if err := json.NewEncoder(w).Encode(test.projection); err != nil {
+					t.Errorf("encode projection: %v", err)
+				}
+			}))
+			defer hive.Close()
+			t.Setenv("HIVE_OPS_API_BASE_URL", hive.URL)
+			t.Setenv("HIVE_OPS_API_KEY", "operator-secret")
+
+			h := NewHandlers(nil, nil, nil)
+			req := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/ideas", nil)
+			w := httptest.NewRecorder()
+			h.factoryV1Mutation(w, req, "/api/hive/factory/v1/ideas", map[string]any{"title": "must not post"})
+			if w.Code != http.StatusServiceUnavailable {
+				t.Fatalf("status = %d, want 503; body=%s", w.Code, w.Body.String())
+			}
+			if posts != 0 {
+				t.Fatalf("POST count = %d, want 0", posts)
+			}
+		})
+	}
+
+	t.Run("projection transport failure", func(t *testing.T) {
+		hive := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+		base := hive.URL
+		hive.Close()
+		t.Setenv("HIVE_OPS_API_BASE_URL", base)
+		t.Setenv("HIVE_OPS_API_KEY", "operator-secret")
+		h := NewHandlers(nil, nil, nil)
+		req := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/ideas", nil)
+		w := httptest.NewRecorder()
+		h.factoryV1Mutation(w, req, "/api/hive/factory/v1/ideas", map[string]any{"title": "must not post"})
+		if w.Code != http.StatusServiceUnavailable {
+			t.Fatalf("status = %d, want 503; body=%s", w.Code, w.Body.String())
+		}
+	})
+}
+
+func TestFactoryV1AnonymousPrincipalCannotBorrowConfiguredActor(t *testing.T) {
+	t.Setenv("HIVE_FACTORY_V1_ACTOR_ID", "eventgraph_human_1")
+	h := NewHandlers(nil, nil, nil)
+	req := httptest.NewRequest(http.MethodPost, "http://site.test/console/factory-v1/interventions/int_1/resolve", nil)
+	actorID, principalID, ok := h.factoryV1ActorIdentity(req)
+	if ok || actorID != "" || principalID != "" {
+		t.Fatalf("anonymous identity = (%q, %q, %v), want rejected", actorID, principalID, ok)
 	}
 }
 

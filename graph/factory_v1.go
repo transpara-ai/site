@@ -84,7 +84,6 @@ type FactoryV1Evidence struct {
 	Ref             string            `json:"ref"`
 	Reference       string            `json:"reference"`
 	SHA256          string            `json:"sha256"`
-	EventID         string            `json:"event_id"`
 	DesignBlobSHA   string            `json:"design_blob_sha"`
 	PRHeadSHA       string            `json:"pr_head_sha"`
 	ReviewedHeadSHA string            `json:"reviewed_head_sha"`
@@ -224,7 +223,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 		}
 	}
 	serviceStatus := factoryV1ServiceStatus(proj.Service)
-	if serviceStatus != "running" && serviceStatus != "healthy" {
+	if !proj.Service.Healthy || (serviceStatus != "running" && serviceStatus != "healthy") {
 		view.Notices = append(view.Notices, "factory service is not confirmed running")
 		if view.Freshness == FreshnessCurrent {
 			view.Freshness = FreshnessPartial
@@ -248,7 +247,7 @@ func buildFactoryV1MissionControl(proj *FactoryV1Projection, fetchErr error, now
 		}
 		view.Orders = append(view.Orders, FactoryV1OrderView{Order: order, EffectiveStatus: status, Missing: missing})
 	}
-	view.Writable = view.Freshness == FreshnessCurrent && (serviceStatus == "running" || serviceStatus == "healthy")
+	view.Writable = view.Freshness == FreshnessCurrent && proj.Service.Healthy && (serviceStatus == "running" || serviceStatus == "healthy")
 	return view
 }
 
@@ -576,14 +575,14 @@ func (h *Handlers) handleFactoryV1InterventionResolve(w http.ResponseWriter, r *
 // forwarded as Human authority.
 func (h *Handlers) factoryV1ActorIdentity(r *http.Request) (actorID, operatorPrincipalID string, ok bool) {
 	principal := h.userID(r)
-	configured := strings.TrimSpace(os.Getenv("HIVE_FACTORY_V1_ACTOR_ID"))
 	if principal == anonUserID {
-		principal = configured
+		return "", "", false
 	}
 	principal, principalOK := validFactoryV1ID(principal)
 	if !principalOK {
 		return "", "", false
 	}
+	configured := strings.TrimSpace(os.Getenv("HIVE_FACTORY_V1_ACTOR_ID"))
 	if configured == "" {
 		return principal, principal, true
 	}
@@ -595,6 +594,18 @@ func (h *Handlers) factoryV1ActorIdentity(r *http.Request) (actorID, operatorPri
 }
 
 func (h *Handlers) factoryV1Mutation(w http.ResponseWriter, r *http.Request, endpoint string, payload any) {
+	projection, err := fetchFactoryV1Projection(r)
+	view := buildFactoryV1MissionControl(projection, err, time.Now().UTC())
+	if !view.Writable {
+		reason := "factory writes are unavailable"
+		if len(view.Notices) != 0 {
+			reason += ": " + strings.Join(view.Notices, "; ")
+		} else {
+			reason += fmt.Sprintf(": projection freshness is %s and service status is %s", view.Freshness, factoryV1ServiceStatus(view.Service))
+		}
+		http.Error(w, reason, http.StatusServiceUnavailable)
+		return
+	}
 	if err := postFactoryV1JSON(r, endpoint, payload); err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
