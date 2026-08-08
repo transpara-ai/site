@@ -1624,14 +1624,14 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 146, "\" class=\"rounded-lg border border-edge bg-void/30 p-3 md:p-4\"><div class=\"flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between\"><div><p class=\"text-[10px] uppercase tracking-wide text-warm-faint\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 146, "\" class=\"rounded-lg border border-edge bg-void/30 p-3 md:p-4\"><div class=\"flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between\"><div class=\"min-w-0\"><p class=\"text-[10px] uppercase tracking-wide text-warm-faint\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var74 string
 		templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinStringErrs(item.Kind)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 160}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 176}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 		if templ_7745c5c3_Err != nil {
@@ -1644,20 +1644,20 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var75 string
 		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.JoinStringErrs(item.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 225}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 241}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var75))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 148, "</h3><p class=\"mt-1 font-mono text-[10px] text-warm-faint\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 148, "</h3><p class=\"mt-1 break-all font-mono text-[10px] text-warm-faint\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var76 string
 		templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(item.FactoryOrderID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 307}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 333}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 		if templ_7745c5c3_Err != nil {
@@ -1666,7 +1666,7 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var77 string
 		templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinStringErrs("@")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 314}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 340}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 		if templ_7745c5c3_Err != nil {
@@ -1675,7 +1675,7 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var78 string
 		templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.JoinStringErrs(item.FactoryOrderVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 342}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 368}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var78))
 		if templ_7745c5c3_Err != nil {
@@ -1688,7 +1688,7 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var79 string
 		templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.JoinStringErrs(item.WorkTaskID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 370}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 396}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var79))
 		if templ_7745c5c3_Err != nil {
@@ -1701,7 +1701,7 @@ func missionWIPCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var80 string
 		templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinStringErrs(item.DocumentSHA256)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 401}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 260, Col: 427}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 		if templ_7745c5c3_Err != nil {
@@ -1977,14 +1977,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 			templ_7745c5c3_Var92 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 169, "<article class=\"rounded-lg border border-edge bg-void/30 p-3\"><div class=\"flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between\"><div><p class=\"text-sm font-medium text-warm\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 169, "<article class=\"rounded-lg border border-edge bg-void/30 p-3\"><div class=\"flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between\"><div class=\"min-w-0\"><p class=\"text-sm font-medium text-warm\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var93 string
 		templ_7745c5c3_Var93, templ_7745c5c3_Err = templ.JoinStringErrs(item.FactoryOrderID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 148}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 164}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var93))
 		if templ_7745c5c3_Err != nil {
@@ -1993,7 +1993,7 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var94 string
 		templ_7745c5c3_Var94, templ_7745c5c3_Err = templ.JoinStringErrs("@")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 155}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 171}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var94))
 		if templ_7745c5c3_Err != nil {
@@ -2002,20 +2002,20 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var95 string
 		templ_7745c5c3_Var95, templ_7745c5c3_Err = templ.JoinStringErrs(item.FactoryOrderVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 183}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 199}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var95))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 170, "</p><div class=\"mt-2 grid gap-2 text-[10px] text-warm-faint sm:grid-cols-3\"><p class=\"flex flex-wrap items-center gap-1\"><span class=\"font-mono\">FO ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 170, "</p><div class=\"mt-2 grid gap-2 text-[10px] text-warm-faint sm:grid-cols-3\"><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"break-all font-mono\">FO ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var96 string
 		templ_7745c5c3_Var96, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.FactoryOrderRef)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 370}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 404}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var96))
 		if templ_7745c5c3_Err != nil {
@@ -2029,14 +2029,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 172, "</p><p class=\"flex flex-wrap items-center gap-1\"><span class=\"font-mono\">design ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 172, "</p><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"break-all font-mono\">design ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var97 string
 		templ_7745c5c3_Var97, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.DesignBlobSHA)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 566}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 618}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var97))
 		if templ_7745c5c3_Err != nil {
@@ -2050,14 +2050,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 174, "</p><p class=\"flex flex-wrap items-center gap-1\"><span class=\"font-mono\">HDR ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 174, "</p><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"break-all font-mono\">HDR ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var98 string
 		templ_7745c5c3_Var98, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.HumanDesignReviewRef)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 764}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 279, Col: 834}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var98))
 		if templ_7745c5c3_Err != nil {
@@ -2079,14 +2079,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 177, "</div><div class=\"mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4\"><p class=\"flex flex-wrap items-center gap-1\"><span><span class=\"text-warm-faint\">PR:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 177, "</div><div class=\"mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4\"><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"min-w-0 break-all\"><span class=\"text-warm-faint\">PR:</span> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var99 string
 		templ_7745c5c3_Var99, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.PRRepository)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 195}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 229}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var99))
 		if templ_7745c5c3_Err != nil {
@@ -2099,7 +2099,7 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var100 string
 		templ_7745c5c3_Var100, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", item.EvidenceRollup.PRNumber))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 247}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 281}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var100))
 		if templ_7745c5c3_Err != nil {
@@ -2112,7 +2112,7 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var101 string
 		templ_7745c5c3_Var101, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.PRState)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 282}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 316}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var101))
 		if templ_7745c5c3_Err != nil {
@@ -2126,14 +2126,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 181, "</p><p class=\"flex flex-wrap items-center gap-1\"><span><span class=\"text-warm-faint\">head:</span> <span class=\"font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 181, "</p><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"min-w-0 break-all\"><span class=\"text-warm-faint\">head:</span> <span class=\"font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var102 string
 		templ_7745c5c3_Var102, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.PRHeadSHA)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 507}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 575}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var102))
 		if templ_7745c5c3_Err != nil {
@@ -2147,14 +2147,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 183, "</p><p class=\"flex flex-wrap items-center gap-1\"><span><span class=\"text-warm-faint\">reviewed:</span> <span class=\"font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 183, "</p><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"min-w-0 break-all\"><span class=\"text-warm-faint\">reviewed:</span> <span class=\"font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var103 string
 		templ_7745c5c3_Var103, templ_7745c5c3_Err = templ.JoinStringErrs(item.EvidenceRollup.ReviewedHeadSHA)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 752}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 854}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var103))
 		if templ_7745c5c3_Err != nil {
@@ -2168,14 +2168,14 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 185, "</p><p class=\"flex flex-wrap items-center gap-1\"><span><span class=\"text-warm-faint\">exact-head:</span> ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 185, "</p><p class=\"flex min-w-0 flex-wrap items-center gap-1\"><span class=\"min-w-0 break-all\"><span class=\"text-warm-faint\">exact-head:</span> ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var104 string
 		templ_7745c5c3_Var104, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", item.EvidenceRollup.ReadyHeadMatches))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 1001}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 1137}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var104))
 		if templ_7745c5c3_Err != nil {
@@ -2188,7 +2188,7 @@ func missionEvidenceCard(item MissionWIPItem) templ.Component {
 		var templ_7745c5c3_Var105 string
 		templ_7745c5c3_Var105, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", item.EvidenceRollup.PendingTier3HumanReview))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 1086}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/mission_control.templ`, Line: 280, Col: 1222}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var105))
 		if templ_7745c5c3_Err != nil {
