@@ -31,7 +31,7 @@ func TestHandleConsoleHealth(t *testing.T) {
 		mux := http.NewServeMux()
 		h.Register(mux)
 
-		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console/health", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -63,7 +63,7 @@ func TestHandleConsoleHealth(t *testing.T) {
 
 		mux := http.NewServeMux()
 		h.Register(mux)
-		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console/health", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -285,5 +285,14 @@ func TestConsoleReadOnlyRoutesNoDB(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), "unavailable") {
 		t.Fatal("no-DB console must render explicit unavailable state")
+	}
+	if strings.Contains(w.Body.String(), `data-console-surface="civilization-mission-control"`) {
+		t.Fatal("no-DB console exposed the authenticated Mission Control projection")
+	}
+	req = httptest.NewRequest(http.MethodGet, "http://site.test/console/mission-control/fragment", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("no-DB Mission Control fragment status = %d, want 404", w.Code)
 	}
 }
