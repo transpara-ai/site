@@ -7,7 +7,7 @@ templ missionControlMark(mark MissionEvidenceMark) {
 		case "current":
 			<span data-evidence-state="current" class="inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-300">current · exact</span>
 		case "stale":
-			<span data-evidence-state="stale" class="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">stale · { mark.Basis }</span>
+			<span data-evidence-state="stale" class="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">stale · { mark.Basis } · { missionEvidenceAge(mark) }</span>
 		case "inferred":
 			<span data-evidence-state="inferred" class="inline-flex rounded-full border border-violet-300/30 bg-violet-300/10 px-2 py-0.5 text-[10px] text-violet-300">inferred</span>
 		case "projected_only":

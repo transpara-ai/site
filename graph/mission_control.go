@@ -911,6 +911,13 @@ func missionTime(value time.Time) string {
 	return value.UTC().Format(time.RFC3339)
 }
 
+func missionEvidenceAge(mark MissionEvidenceMark) string {
+	if mark.ObservedAt.IsZero() || mark.GeneratedAt.IsZero() || mark.GeneratedAt.Before(mark.ObservedAt) {
+		return "age unavailable"
+	}
+	return mark.GeneratedAt.Sub(mark.ObservedAt).Round(time.Second).String() + " old"
+}
+
 func missionRefs(refs []string) string {
 	if len(refs) == 0 {
 		return "none"

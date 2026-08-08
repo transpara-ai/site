@@ -300,6 +300,9 @@ func TestSITEMCT5AtomicStaleRetentionExpiryAndRecovery(t *testing.T) {
 	if stale.Projection == nil || missionMarkState(stale.HiveAcquisition) != "current" || missionMarkState(stale.WorkHealth.Mark) != "stale" || stale.HiveAcquisition.ObservedAt == observed || stale.SourceSkew <= 5*time.Second || stale.OverallStatus != "degraded" {
 		t.Fatalf("stale=%+v", stale)
 	}
+	if age := missionEvidenceAge(stale.WorkHealth.Mark); age != "1m0s old" {
+		t.Fatalf("visible stale age = %q", age)
+	}
 	workObserved := stale.WorkHealth.Mark.ObservedAt
 	clock.Add(14 * time.Minute)
 	stillStale := acquirer.acquire(context.Background())
