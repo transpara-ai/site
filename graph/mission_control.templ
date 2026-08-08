@@ -1,0 +1,270 @@
+package graph
+
+import "fmt"
+
+templ missionControlMark(mark MissionEvidenceMark) {
+	switch missionMarkState(mark) {
+		case "current":
+			<span data-evidence-state="current" class="inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-300">current · exact</span>
+		case "stale":
+			<span data-evidence-state="stale" class="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-[10px] text-amber-300">stale · { mark.Basis }</span>
+		case "inferred":
+			<span data-evidence-state="inferred" class="inline-flex rounded-full border border-violet-300/30 bg-violet-300/10 px-2 py-0.5 text-[10px] text-violet-300">inferred</span>
+		case "projected_only":
+			<span data-evidence-state="projected_only" class="inline-flex rounded-full border border-sky-300/30 bg-sky-300/10 px-2 py-0.5 text-[10px] text-sky-300">projected-only</span>
+		default:
+			<span data-evidence-state="unavailable" class="inline-flex rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-[10px] text-rose-300">unavailable</span>
+	}
+}
+
+templ missionControlStatus(status string) {
+	switch missionServiceStatus(status) {
+		case "healthy":
+			<span data-operational-status="healthy" class="text-xs text-emerald-300">healthy</span>
+		case "degraded":
+			<span data-operational-status="degraded" class="text-xs text-amber-300">degraded</span>
+		default:
+			<span data-operational-status="unavailable" class="text-xs text-rose-300">unavailable</span>
+	}
+}
+
+templ missionControlServiceCard(service MissionObservedService) {
+	<article class="rounded-lg border border-edge bg-void/30 p-3 min-w-0">
+		<div class="flex items-start justify-between gap-2"><h3 class="text-sm font-medium text-warm">{ service.Label }</h3>@missionControlStatus(service.OperationalStatus)</div>
+		<p class="mt-2 text-xs leading-relaxed text-warm-muted">{ service.Detail }</p>
+		<div class="mt-3 flex flex-wrap items-center gap-2">@missionControlMark(service.Mark)<span class="font-mono text-[10px] text-warm-faint">observed { missionTime(service.Mark.ObservedAt) }</span></div>
+	</article>
+}
+
+templ missionControlHiveServiceCard(service MissionServiceHealth) {
+	<article class="rounded-lg border border-edge bg-void/30 p-3 min-w-0">
+		<div class="flex items-start justify-between gap-2"><h3 class="text-sm font-medium text-warm">{ service.Label }</h3>@missionControlStatus(service.OperationalStatus)</div>
+		<p class="mt-2 text-xs leading-relaxed text-warm-muted">{ service.Detail }</p>
+		<div class="mt-3 flex flex-wrap items-center gap-2">@missionControlMark(service.Mark)<span class="font-mono text-[10px] text-warm-faint">observed { missionTime(service.Mark.ObservedAt) }</span></div>
+	</article>
+}
+
+templ missionControlUnavailableSection(id, title, detail string) {
+	<section data-mission-landmark={ id } class="rounded-lg border border-rose-300/20 bg-surface p-4">
+		<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">{ title }</h2><span data-evidence-state="unavailable" class="text-xs text-rose-300">unavailable</span></div>
+		<p class="mt-3 text-sm text-warm-muted">{ detail }</p>
+	</section>
+}
+
+templ missionControlFragment(view MissionControlView) {
+	<div id="civilization-mission-control" data-console-surface="civilization-mission-control" hx-get="/console/mission-control/fragment" hx-trigger="every 5s" hx-swap="outerHTML" class="space-y-5">
+		<section data-mission-landmark="aggregate" class="rounded-xl border border-edge bg-surface p-4 md:p-5">
+			<div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+				<div>
+					<div class="flex flex-wrap items-center gap-3"><h2 class="text-xl font-display text-warm">Civilization overview</h2>@missionControlStatus(view.OverallStatus)</div>
+					<p class="mt-2 max-w-3xl text-sm leading-relaxed text-warm-muted">Live read-only projection of TLC work, Agents, capacity, Human actions, workflow mechanics, and exact evidence. It grants no approval, merge, deployment, configuration, or execution authority.</p>
+				</div>
+				<div class="text-left md:text-right">
+					@missionControlMark(view.HiveAcquisition)
+					if view.Projection != nil {
+						<div class="mt-2"><span class="mr-2 text-[10px] text-warm-faint">durable-source confidence</span>@missionControlMark(view.Projection.DerivationState)</div>
+						<p class="mt-1 font-mono text-[10px] text-warm-faint">source skew { view.SourceSkew.String() }</p>
+					}
+					<p class="mt-2 font-mono text-[10px] text-warm-faint">Site generated { missionTime(view.GeneratedAt) }</p>
+				</div>
+			</div>
+			<div data-mission-landmark="epistemic-legend" class="mt-4 flex flex-wrap items-center gap-2 border-t border-edge pt-4 text-[11px] text-warm-muted">
+				<span class="mr-1 font-medium text-warm">Evidence legend</span>
+				<span data-evidence-state="current">current = fresh exact</span><span>·</span><span data-evidence-state="stale">stale = retained observation</span><span>·</span><span data-evidence-state="unavailable">unavailable = no safe value</span><span>·</span><span data-evidence-state="inferred">inferred = conservative derivation</span><span>·</span><span data-evidence-state="projected_only">projected-only = display derivation, not durable proof</span>
+			</div>
+			if len(view.Notices) > 0 {
+				<ul class="mt-4 space-y-1 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-200">
+					for _, notice := range view.Notices {
+						<li>{ notice }</li>
+					}
+				</ul>
+			}
+		</section>
+
+		<section data-mission-landmark="health" class="rounded-lg border border-edge bg-surface p-4">
+			<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">Civilization and service health</h2><span class="text-[11px] text-warm-faint">independent observations</span></div>
+			<div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+				@missionControlServiceCard(view.SiteHealth)
+				@missionControlServiceCard(view.WorkHealth)
+				@missionControlServiceCard(missionHiveTransportService(view.HiveAcquisition))
+				if view.Projection != nil {
+					for _, service := range view.Projection.Services {
+						@missionControlHiveServiceCard(service)
+					}
+				}
+			</div>
+		</section>
+
+		if view.Projection == nil {
+			@missionControlUnavailableSection("capacity", "Worker capacity and utilization", "Hive runtime evidence is unavailable; zero workers is not inferred.")
+			@missionControlUnavailableSection("human-actions", "Needs Human", "Human action evidence is unavailable; an empty queue is not claimed.")
+			@missionControlUnavailableSection("wip", "WIP — incomplete source set", "Factory and Work evidence is unavailable; an empty WIP set is not claimed.")
+			@missionControlUnavailableSection("roles-agents", "Configured roles and Agents", "Roster, running state, provider, model, authority, capacity, status, and assignment are unavailable.")
+			@missionControlUnavailableSection("workflow", "In-flight workflow and handoffs", "Workflow evidence is unavailable; no normal handoff is inferred.")
+			@missionControlUnavailableSection("exact-evidence", "FactoryOrder, design, gates, PR, and exact-head evidence", "Exact evidence is unavailable and receives no gate credit.")
+			@missionControlUnavailableSection("sources", "Source completeness", "Required source envelopes are unavailable.")
+		} else {
+			<section data-mission-landmark="capacity" class="rounded-lg border border-edge bg-surface p-4">
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-medium text-warm">Worker capacity and utilization</h2>@missionControlMark(view.Projection.WorkerPool.Mark)</div>
+				<div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+					@missionMetric("configured", view.Projection.WorkerPool.ConfiguredWorkers)
+					@missionMetric("active", view.Projection.WorkerPool.ActiveWorkers)
+					@missionMetric("available", view.Projection.WorkerPool.AvailableWorkers)
+					@missionMetric("queued", view.Projection.WorkerPool.QueuedOrders)
+					@missionMetric("schedulable", view.Projection.WorkerPool.SchedulableOrders)
+					@missionMetric("utilization %", view.Projection.WorkerPool.UtilizationPercent)
+				</div>
+				if len(view.Projection.WorkerPool.Assignments) > 0 {
+					<div class="mt-4 overflow-x-auto">
+						<table class="w-full min-w-[48rem] text-left text-xs"><thead class="text-warm-faint"><tr><th class="pb-2">Order</th><th>Stage</th><th>Attempt</th><th>Provider</th><th>Model</th><th>Assigned</th></tr></thead><tbody class="divide-y divide-edge">
+							for _, item := range view.Projection.WorkerPool.Assignments {
+								<tr><td class="py-2 font-mono text-warm">{ item.OrderID }{ "@" }{ item.OrderVersion }</td><td>{ item.Stage }</td><td class="font-mono">{ item.AttemptID }</td><td>{ item.ProviderID }</td><td>{ item.ModelID }</td><td>{ missionTime(item.AssignedAt) }</td></tr>
+							}
+						</tbody></table>
+					</div>
+				}
+			</section>
+
+			<section data-mission-landmark="human-actions" class="rounded-lg border border-edge bg-surface p-4">
+				<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">Needs Human</h2><span class="rounded-full bg-amber-300/10 px-2 py-1 text-xs text-amber-300">{ fmt.Sprintf("%d", len(view.Projection.HumanActions)) }</span></div>
+				if len(view.Projection.HumanActions) == 0 {
+					<p class="mt-3 text-sm text-warm-muted">No Human action is projected. Verify source completeness before treating this as a cleared queue.</p>
+				}
+				<div class="mt-3 grid gap-3 lg:grid-cols-2">
+					for _, action := range view.Projection.HumanActions {
+						<article class="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3"><div class="flex items-start justify-between gap-3"><div><p class="text-xs font-medium uppercase tracking-wide text-amber-300">{ action.Severity } · { action.Kind }</p><h3 class="mt-1 text-sm font-medium text-warm">{ action.SubjectID }</h3></div>@missionControlMark(action.Mark)</div><p class="mt-2 text-sm text-warm-muted">{ action.Summary }</p><p class="mt-2 text-sm text-warm"><span class="text-warm-faint">Required:</span> { action.RequiredAction }</p><p class="mt-2 font-mono text-[10px] text-warm-faint">stage { action.OwningStage } · source { missionTime(action.SourceTime) } · refs { missionRefs(action.EvidenceRefs) }</p></article>
+					}
+				</div>
+			</section>
+
+			<section data-mission-landmark="wip" class="rounded-lg border border-edge bg-surface p-4">
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-medium text-warm">
+					if view.Projection.Completeness.Complete {
+						<span>All WIP</span>
+					} else {
+						<span>WIP — incomplete source set</span>
+					}
+				</h2><span class="text-xs text-warm-muted">{ fmt.Sprintf("%d items", len(view.Projection.WIP)) }</span></div>
+				if len(view.Projection.WIP) == 0 {
+					<p class="mt-3 text-sm text-warm-muted">No WIP rows were projected. This is a healthy empty set only when completeness is true.</p>
+				}
+				<div class="mt-3 space-y-3">
+					for _, item := range view.Projection.WIP {
+						@missionWIPCard(item)
+					}
+				</div>
+			</section>
+
+			<section data-mission-landmark="roles-agents" class="rounded-lg border border-edge bg-surface p-4">
+				<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">Configured roles versus instantiated/running Agents</h2><span class="text-xs text-warm-muted">dimensions remain independent</span></div>
+				<div class="mt-3 overflow-x-auto">
+					<table class="w-full min-w-[82rem] text-left text-xs"><thead class="text-warm-faint"><tr><th class="pb-2">Role / actor</th><th>Configured</th><th>Instantiated</th><th>Event-active</th><th>Running</th><th>Provider</th><th>Model</th><th>Authority</th><th>Capacity</th><th>Status</th><th>Assignment</th></tr></thead><tbody class="divide-y divide-edge">
+						for _, row := range view.Projection.Roles {
+							<tr data-role-agent={ row.StableID }><td class="py-3"><p class="font-medium text-warm">{ row.Role }</p><p class="font-mono text-[10px] text-warm-faint">{ row.ActorID }</p></td>@missionTableValue(row.Configured)@missionTableValue(row.Instantiated)@missionTableValue(row.EventActive)@missionTableValue(row.Running)@missionTableValue(row.Provider)@missionTableValue(row.Model)@missionTableValue(row.Authority)@missionTableValue(row.Capacity)@missionTableValue(row.Status)@missionTableValue(row.Assignment)</tr>
+						}
+					</tbody></table>
+				</div>
+			</section>
+
+			<section data-mission-landmark="workflow" class="rounded-lg border border-edge bg-surface p-4">
+				<h2 class="text-base font-medium text-warm">In-flight workflow mechanics and handoffs</h2>
+				<div class="mt-3 grid gap-3 lg:grid-cols-2">
+					for _, handoff := range view.Projection.Handoffs {
+						<article class={ "rounded-lg border p-3", templ.KV("border-rose-300/20 bg-rose-300/5", handoff.Blocked), templ.KV("border-edge bg-void/30", !handoff.Blocked) }><div class="flex items-center justify-between gap-3"><p class="text-sm font-medium text-warm">{ handoff.SubjectID }</p>@missionControlMark(handoff.Mark)</div><p class="mt-2 text-sm"><span class="text-warm-muted">{ handoff.FromStage }</span> <span class="px-2 text-warm-faint">→</span> <span class="text-warm">{ handoff.ToStage }</span></p><p class="mt-2 text-xs text-warm-muted">Peers: { missionRefs(handoff.ExpectedRoles) }</p><p class="mt-1 text-xs text-warm-muted">Predicate: { handoff.CompletionPredicate }</p><p class="mt-1 font-mono text-[10px] text-warm-faint">refs { missionRefs(handoff.EvidenceRefs) }</p></article>
+					}
+				</div>
+				if len(view.Projection.Interventions) > 0 {
+					<h3 class="mt-5 text-sm font-medium text-warm">Interventions</h3>
+					<div class="mt-2 space-y-2">
+						for _, item := range view.Projection.Interventions {
+							<div class="rounded border border-edge bg-void/30 p-3 text-sm"><div class="flex items-center justify-between"><span class="font-medium text-warm">{ item.OrderID } · { item.Kind }</span><span class="text-xs text-warm-muted">{ item.Status }</span></div><p class="mt-1 text-warm-muted">{ item.Prompt }</p></div>
+						}
+					</div>
+				}
+			</section>
+
+			<section data-mission-landmark="exact-evidence" class="rounded-lg border border-edge bg-surface p-4">
+				<h2 class="text-base font-medium text-warm">FactoryOrder, design, gate, PR, and exact-head evidence</h2>
+				<div class="mt-3 space-y-3">
+					for _, item := range view.Projection.WIP {
+						if item.Kind == "factory_order" {
+							@missionEvidenceCard(item)
+						}
+					}
+				</div>
+			</section>
+
+			<section data-mission-landmark="sources" class="rounded-lg border border-edge bg-surface p-4">
+				<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">Source completeness and head evidence</h2><span class="text-xs text-warm-muted">
+					if view.Projection.Completeness.Complete {
+						<span>complete</span>
+					} else {
+						<span>incomplete</span>
+					}
+				</span></div>
+				<div class="mt-3 grid gap-3 lg:grid-cols-2">
+					for _, source := range view.Projection.Sources {
+						<article class="rounded-lg border border-edge bg-void/30 p-3"><div class="flex items-center justify-between gap-2"><h3 class="text-sm font-medium text-warm">{ source.SourceID }</h3>@missionControlMark(source.Mark)</div><p class="mt-2 text-xs text-warm-muted">complete { fmt.Sprintf("%t", source.Completeness.Complete) } · start { source.Completeness.StartHead } · end { source.Completeness.EndHead }</p><p class="mt-1 text-xs text-warm-faint">reasons { missionRefs(source.Completeness.Reasons) }</p></article>
+					}
+				</div>
+			</section>
+		}
+
+		<section data-mission-landmark="non-authorization" class="rounded-lg border border-rose-300/20 bg-rose-300/5 p-4">
+			<h2 class="text-base font-medium text-warm">Authority boundary</h2>
+			if view.Projection != nil {
+				<ul class="mt-3 space-y-1 text-sm text-warm-muted">
+					for _, item := range view.Projection.NonAuthorizations {
+						<li>{ item }</li>
+					}
+				</ul>
+				<details class="mt-4"><summary class="cursor-pointer text-xs text-warm-muted">Residual risks</summary><ul class="mt-2 space-y-1 text-xs text-warm-faint">
+					for _, item := range view.Projection.ResidualRisks {
+						<li>{ item }</li>
+					}
+				</ul></details>
+			} else {
+				<p class="mt-3 text-sm text-warm-muted">This unavailable screen grants no approval, gate, merge, deploy, runtime, configuration, authority, or production action.</p>
+			}
+		</section>
+	</div>
+}
+
+templ missionMetric(label string, value MissionMarkedValue) {
+	<div class="rounded-lg border border-edge bg-void/30 p-3"><p class="text-[10px] uppercase tracking-wide text-warm-faint">{ label }</p><p class="mt-1 text-xl font-medium text-warm">{ missionValue(value) }</p><div class="mt-2">@missionControlMark(value.Mark)</div></div>
+}
+
+templ missionTableValue(value MissionMarkedValue) {
+	<td class="py-3 pr-3 align-top"><p class="max-w-48 break-words text-warm-muted">{ missionValue(value) }</p><div class="mt-1">@missionControlMark(value.Mark)</div></td>
+}
+
+templ missionWIPCard(item MissionWIPItem) {
+	<article data-wip-item={ item.StableID } class="rounded-lg border border-edge bg-void/30 p-3 md:p-4">
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-[10px] uppercase tracking-wide text-warm-faint">{ item.Kind }</p><h3 class="mt-1 text-sm font-medium text-warm">{ item.Title }</h3><p class="mt-1 font-mono text-[10px] text-warm-faint">{ item.FactoryOrderID }{ "@" }{ item.FactoryOrderVersion } · work { item.WorkTaskID } · doc { item.DocumentSHA256 }</p></div>@missionControlMark(item.Mark)</div>
+		<div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+			@missionField("repository", item.TargetRepository)@missionField("assignment", item.Assignment)@missionField("lifecycle", item.LifecycleStatus)@missionField("engine protocol", item.EngineProtocol)
+			@missionField("TLC stage", item.TLCStage)@missionField("stage index", item.TLCStageIndex)@missionField("started", item.ItemStartedAt)@missionField("last effect", item.LastEffectAt)
+			@missionField("elapsed ms", item.ElapsedMS)@missionField("next handoff", item.NextHandoff)@missionField("item completeness", item.Completeness)
+			<div><p class="text-[10px] uppercase tracking-wide text-warm-faint">TLC 4.5 packet / Human Review</p><p class="mt-1 text-sm text-warm">{ item.Classification.EffectiveGovernanceProtocol } · { item.Classification.EffectivePacketProfile } · Tier { fmt.Sprintf("%d", item.Classification.EffectiveHumanReviewTier) }</p><div class="mt-1">@missionControlMark(item.Classification.Mark)</div><p class="mt-1 text-[10px] text-warm-faint">raw { item.Classification.EngineProtocol } · declared { item.Classification.DeclaredGovernanceProtocol } { item.Classification.DeclaredPacketProfile }</p></div>
+		</div>
+		if len(item.BlockerRefs) > 0 || len(item.InterventionRefs) > 0 {
+			<p class="mt-3 border-t border-edge pt-3 text-xs text-rose-200">Blockers { missionRefs(item.BlockerRefs) } · interventions { missionRefs(item.InterventionRefs) }</p>
+		}
+	</article>
+}
+
+templ missionField(label string, value MissionMarkedValue) {
+	<div><p class="text-[10px] uppercase tracking-wide text-warm-faint">{ label }</p><p class="mt-1 break-words text-sm text-warm">{ missionValue(value) }</p><div class="mt-1">@missionControlMark(value.Mark)</div></div>
+}
+
+templ missionEvidenceCard(item MissionWIPItem) {
+	<article class="rounded-lg border border-edge bg-void/30 p-3">
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-sm font-medium text-warm">{ item.FactoryOrderID }{ "@" }{ item.FactoryOrderVersion }</p><div class="mt-2 grid gap-2 text-[10px] text-warm-faint sm:grid-cols-3"><p class="flex flex-wrap items-center gap-1"><span class="font-mono">FO { item.EvidenceRollup.FactoryOrderRef }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["factory_order_ref"])</p><p class="flex flex-wrap items-center gap-1"><span class="font-mono">design { item.EvidenceRollup.DesignBlobSHA }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["design_blob_sha"])</p><p class="flex flex-wrap items-center gap-1"><span class="font-mono">HDR { item.EvidenceRollup.HumanDesignReviewRef }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["human_design_review_ref"])</p></div></div>@missionControlMark(item.EvidenceRollup.Mark)</div>
+		<div class="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4"><p class="flex flex-wrap items-center gap-1"><span><span class="text-warm-faint">PR:</span> { item.EvidenceRollup.PRRepository }#{ fmt.Sprintf("%d", item.EvidenceRollup.PRNumber) } · { item.EvidenceRollup.PRState }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_state"])</p><p class="flex flex-wrap items-center gap-1"><span><span class="text-warm-faint">head:</span> <span class="font-mono">{ item.EvidenceRollup.PRHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_head_sha"])</p><p class="flex flex-wrap items-center gap-1"><span><span class="text-warm-faint">reviewed:</span> <span class="font-mono">{ item.EvidenceRollup.ReviewedHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["reviewed_head_sha"])</p><p class="flex flex-wrap items-center gap-1"><span><span class="text-warm-faint">exact-head:</span> { fmt.Sprintf("%t", item.EvidenceRollup.ReadyHeadMatches) } · Tier 3 pending { fmt.Sprintf("%t", item.EvidenceRollup.PendingTier3HumanReview) }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["ready_head_matches"])</p></div>
+		<details class="mt-3"><summary class="cursor-pointer text-xs text-brand">{ fmt.Sprintf("%d evidence items", len(item.EvidenceRollup.Items)) }</summary><div class="mt-2 space-y-2">
+			for _, evidence := range item.EvidenceRollup.Items {
+				<div class="rounded border border-edge p-2 text-xs"><div class="flex items-center justify-between gap-2"><span class="font-medium text-warm">{ evidence.Stage } · { evidence.Kind }</span>@missionControlMark(evidence.Mark)</div><p class="mt-1 break-all font-mono text-[10px] text-warm-faint">{ evidence.Reference } · blob { evidence.BlobSHA } · head { evidence.PRHeadSHA } · reviewed { evidence.ReviewedHeadSHA }</p><p class="mt-1 text-[10px] text-warm-muted">author { evidence.AuthorFamily } · reviewer { evidence.ReviewerFamily } · provider { evidence.ProviderID }</p></div>
+			}
+		</div></details>
+	</article>
+}

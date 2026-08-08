@@ -387,8 +387,9 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /factory", h.writeWrap(h.handleFactory))
 	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
 
-	// Mission Control console — health wall.
-	mux.Handle("GET /console", h.writeWrap(h.handleConsoleHealth))
+	// Mission Control console — unified read-only overview and focused screens.
+	mux.Handle("GET /console", h.writeWrap(h.handleMissionControl))
+	mux.Handle("GET /console/mission-control/fragment", h.writeWrap(h.handleMissionControlFragment))
 	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
 	mux.Handle("GET /console/health/fragment", h.writeWrap(h.handleConsoleHealthFragment))
 	mux.Handle("GET /console/factory-v1", h.writeWrap(h.handleFactoryV1MissionControl))
@@ -438,7 +439,8 @@ func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
 // state when upstream projections are absent. Factory v1 is deliberately not
 // registered here because its projection contains authenticated operator data.
 func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
-	mux.HandleFunc("GET /console", h.handleConsoleHealth)
+	mux.HandleFunc("GET /console", h.handleMissionControl)
+	mux.HandleFunc("GET /console/mission-control/fragment", h.handleMissionControlFragment)
 	mux.HandleFunc("GET /console/health", h.handleConsoleHealth)
 	mux.HandleFunc("GET /console/health/fragment", h.handleConsoleHealthFragment)
 	mux.HandleFunc("GET /console/kanban", h.handleConsoleKanban)

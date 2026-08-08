@@ -20,13 +20,17 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 						<p class="text-sm text-warm-muted">transpara-ai civilization</p>
 					</div>
 				</header>
-				<nav class="flex gap-1 border-b border-edge pb-1 text-sm">
-					@consoleTab("health", "Health wall", "/console", data.Active, true)
+				<nav class="flex gap-1 border-b border-edge pb-1 text-sm overflow-x-auto">
+					@consoleTab("mission-control", "Overview", "/console", data.Active, true)
+					@consoleTab("health", "Health wall", "/console/health", data.Active, true)
 					@consoleTab("factory-v1", "Factory v1", "/console/factory-v1", data.Active, true)
 					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
 					@consoleTab("intake", "Intake", "/console/intake", data.Active, true)
 					@consoleTab("config", "Config", "/console/config", data.Active, true)
 				</nav>
+				if data.MissionControl != nil {
+					@missionControlFragment(*data.MissionControl)
+				}
 				if data.Health != nil {
 					@consoleHealthWallFragment(*data.Health)
 				}

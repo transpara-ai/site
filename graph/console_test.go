@@ -31,7 +31,7 @@ func TestHandleConsoleHealth(t *testing.T) {
 		mux := http.NewServeMux()
 		h.Register(mux)
 
-		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console/health", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
@@ -63,7 +63,7 @@ func TestHandleConsoleHealth(t *testing.T) {
 
 		mux := http.NewServeMux()
 		h.Register(mux)
-		req := httptest.NewRequest(http.MethodGet, "http://site.test/console", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://site.test/console/health", nil)
 		w := httptest.NewRecorder()
 		mux.ServeHTTP(w, req)
 
