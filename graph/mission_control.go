@@ -298,10 +298,10 @@ func (a *missionControlAcquirer) acquire(ctx context.Context) MissionControlView
 		Mark: missionSiteMark("current", "projected_only", "site_process", now, now, nil, "Site self-health does not prove Hive, Work, or durable evidence health"),
 	}
 	if hive.err != nil {
-		view.Notices = append(view.Notices, hive.err.Error())
+		view.Notices = append(view.Notices, "Hive Mission Control acquisition failed; upstream details are withheld.")
 	}
 	if work.err != nil {
-		view.Notices = append(view.Notices, work.err.Error())
+		view.Notices = append(view.Notices, "Work health acquisition failed; upstream details are withheld.")
 	}
 	view.OverallStatus = missionOverallStatus(view)
 	return view
@@ -318,16 +318,16 @@ func (a *missionControlAcquirer) acquireHive(ctx context.Context, now time.Time)
 		a.mu.Lock()
 		a.hive = missionProjectionCache{projection: projection, observedAt: projection.GeneratedAt, endpoint: endpoint, valid: true}
 		a.mu.Unlock()
-		mark := missionSiteMark("current", "exact", "site_hive_transport", projection.GeneratedAt, now, []string{endpoint}, "")
+		mark := missionSiteMark("current", "exact", "site_hive_transport", projection.GeneratedAt, now, []string{"hive:mission_control_projection"}, "")
 		return &projection, mark, nil
 	}
 	a.mu.Lock()
 	cached := a.hive
 	a.mu.Unlock()
-	reason := "Hive Mission Control unavailable: " + err.Error()
+	reason := "Hive Mission Control acquisition failed; upstream details are withheld."
 	if cached.valid && cached.endpoint == endpoint && missionHiveFallbackEligible(cached.projection, now) {
 		copy := cached.projection
-		mark := missionSiteMark("stale", "exact", "site_hive_transport", cached.observedAt, now, []string{endpoint}, reason)
+		mark := missionSiteMark("stale", "exact", "site_hive_transport", cached.observedAt, now, []string{"hive:mission_control_projection"}, reason)
 		return &copy, mark, errors.New(reason + "; retaining last complete Hive response")
 	}
 	return nil, missionSiteMark("unavailable", "unavailable", "site_hive_transport", time.Time{}, now, nil, reason), errors.New(reason)
@@ -388,14 +388,14 @@ func (a *missionControlAcquirer) acquireWork(ctx context.Context, now time.Time)
 		a.mu.Lock()
 		a.work = missionWorkHealthCache{observedAt: now, endpoint: endpoint, valid: true}
 		a.mu.Unlock()
-		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "healthy", Detail: "GET /health returned the exact supported ok payload; this proves HTTP liveness only.", Mark: missionSiteMark("current", "projected_only", "site_work_health", now, now, []string{endpoint}, "HTTP liveness does not prove EventGraph completeness")}, nil
+		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "healthy", Detail: "GET /health returned the exact supported ok payload; this proves HTTP liveness only.", Mark: missionSiteMark("current", "projected_only", "site_work_health", now, now, []string{"work:http_health"}, "HTTP liveness does not prove EventGraph completeness")}, nil
 	}
 	a.mu.Lock()
 	cached := a.work
 	a.mu.Unlock()
-	reason := "Work HTTP health unavailable: " + err.Error()
+	reason := "Work health acquisition failed; upstream details are withheld."
 	if cached.valid && cached.endpoint == endpoint && !now.Before(cached.observedAt) && now.Sub(cached.observedAt) <= missionControlRetention {
-		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "degraded", Detail: reason + "; retaining last healthy observation", Mark: missionSiteMark("stale", "projected_only", "site_work_health", cached.observedAt, now, []string{endpoint}, reason)}, errors.New(reason)
+		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "degraded", Detail: reason + "; retaining last healthy observation", Mark: missionSiteMark("stale", "projected_only", "site_work_health", cached.observedAt, now, []string{"work:http_health"}, reason)}, errors.New(reason)
 	}
 	return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "unavailable", Detail: reason, Mark: missionSiteMark("unavailable", "unavailable", "site_work_health", time.Time{}, now, nil, reason)}, errors.New(reason)
 }
@@ -442,17 +442,28 @@ func missionOverallStatus(view MissionControlView) string {
 	if view.Projection == nil || missionMarkState(view.HiveAcquisition) == "unavailable" {
 		return "unavailable"
 	}
+	if !missionHasRequiredIdentities(view.Projection.Sources, view.Projection.Services) {
+		return "unavailable"
+	}
 	if view.Projection.OperationalStatus == "unavailable" || view.WorkHealth.OperationalStatus == "unavailable" || view.SiteHealth.OperationalStatus == "unavailable" {
 		return "unavailable"
 	}
 	if view.Projection.OperationalStatus != "healthy" || !view.Projection.Completeness.Complete || missionMarkState(view.HiveAcquisition) != "current" || view.WorkHealth.OperationalStatus != "healthy" || missionMarkState(view.WorkHealth.Mark) != "projected_only" || view.SiteHealth.OperationalStatus != "healthy" || missionMarkState(view.SiteHealth.Mark) != "projected_only" || view.SourceSkew > 5*time.Second {
 		return "degraded"
 	}
-	for _, service := range view.Projection.Services {
-		if missionServiceStatus(service.OperationalStatus) == "unavailable" {
+	for _, source := range view.Projection.Sources {
+		if missionMarkState(source.Mark) == "unavailable" {
 			return "unavailable"
 		}
-		if missionServiceStatus(service.OperationalStatus) != "healthy" {
+		if !source.Completeness.Complete || missionMarkState(source.Mark) == "stale" || missionMarkState(source.Mark) == "inferred" {
+			return "degraded"
+		}
+	}
+	for _, service := range view.Projection.Services {
+		if missionServiceStatus(service.OperationalStatus) == "unavailable" || missionMarkState(service.Mark) == "unavailable" {
+			return "unavailable"
+		}
+		if missionServiceStatus(service.OperationalStatus) != "healthy" || missionMarkState(service.Mark) == "stale" || missionMarkState(service.Mark) == "inferred" {
 			return "degraded"
 		}
 	}
@@ -464,6 +475,32 @@ var missionRequiredSourceIDs = map[string]bool{
 	"roster_routing":          true,
 	"authority_actions":       true,
 	"factory_runtime":         true,
+}
+
+var missionRequiredServiceIDs = map[string]bool{
+	"civilization":    true,
+	"eventgraph":      true,
+	"work_projection": true,
+	"hive_ops_api":    true,
+	"factory_runtime": true,
+}
+
+func missionHasRequiredIdentities(sources []MissionSourceEnvelope, services []MissionServiceHealth) bool {
+	seenSources := map[string]bool{}
+	for _, source := range sources {
+		if !missionRequiredSourceIDs[source.SourceID] || seenSources[source.SourceID] {
+			return false
+		}
+		seenSources[source.SourceID] = true
+	}
+	seenServices := map[string]bool{}
+	for _, service := range services {
+		if !missionRequiredServiceIDs[service.ServiceID] || seenServices[service.ServiceID] {
+			return false
+		}
+		seenServices[service.ServiceID] = true
+	}
+	return len(seenSources) == len(missionRequiredSourceIDs) && len(seenServices) == len(missionRequiredServiceIDs)
 }
 
 func missionValidateProjection(projection MissionControlProjection, now time.Time) error {
@@ -489,6 +526,21 @@ func missionValidateProjection(projection MissionControlProjection, now time.Tim
 	for sourceID := range missionRequiredSourceIDs {
 		if !seen[sourceID] {
 			return fmt.Errorf("required Mission Control source %q is missing", sourceID)
+		}
+	}
+	seenServices := map[string]bool{}
+	for _, service := range projection.Services {
+		if !missionRequiredServiceIDs[service.ServiceID] {
+			return fmt.Errorf("unknown Mission Control service identity %q", service.ServiceID)
+		}
+		if seenServices[service.ServiceID] {
+			return fmt.Errorf("duplicate Mission Control service identity %q", service.ServiceID)
+		}
+		seenServices[service.ServiceID] = true
+	}
+	for serviceID := range missionRequiredServiceIDs {
+		if !seenServices[serviceID] {
+			return fmt.Errorf("required Mission Control service %q is missing", serviceID)
 		}
 	}
 	marks := []MissionEvidenceMark{projection.DerivationState, projection.WorkerPool.Mark,
@@ -651,10 +703,6 @@ func missionHiveFallbackEligible(projection MissionControlProjection, now time.T
 		}
 	}
 	return len(seen) == len(missionRequiredSourceIDs)
-}
-
-func missionRequiredSourceSkew(projection MissionControlProjection) time.Duration {
-	return missionJoinedSourceSkew(projection, MissionEvidenceMark{})
 }
 
 func missionJoinedSourceSkew(projection MissionControlProjection, additional ...MissionEvidenceMark) time.Duration {

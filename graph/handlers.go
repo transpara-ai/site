@@ -434,13 +434,12 @@ func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
 	mux.HandleFunc("GET /factory", h.handleFactory)
 }
 
-// RegisterReadOnlyConsole adds the no-DB Mission Control console routes. The
-// console handlers tolerate a nil store and render an explicit unavailable
-// state when upstream projections are absent. Factory v1 is deliberately not
-// registered here because its projection contains authenticated operator data.
+// RegisterReadOnlyConsole adds no-DB focused console routes. The unified Mission
+// Control and Factory v1 projections are deliberately excluded because they
+// contain authenticated operator data. /console preserves the legacy health
+// entry point without mounting the Mission Control acquisition handler.
 func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
-	mux.HandleFunc("GET /console", h.handleMissionControl)
-	mux.HandleFunc("GET /console/mission-control/fragment", h.handleMissionControlFragment)
+	mux.HandleFunc("GET /console", h.handleConsoleHealth)
 	mux.HandleFunc("GET /console/health", h.handleConsoleHealth)
 	mux.HandleFunc("GET /console/health/fragment", h.handleConsoleHealthFragment)
 	mux.HandleFunc("GET /console/kanban", h.handleConsoleKanban)

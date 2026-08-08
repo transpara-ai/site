@@ -121,7 +121,7 @@ func TestSITEMCT1OneScreenContractFullPageAndFragment(t *testing.T) {
 			t.Fatalf("%s status=%d body=%s", path, rec.Code, rec.Body.String())
 		}
 		body := rec.Body.String()
-		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="capacity"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `hx-trigger="every 5s"`, "P-ENVELOPE", "Tier 3", "tlc-v1", "FO-MC-1", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
+		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="capacity"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `data-mission-links="focused-screens"`, `href="/console/health"`, `href="/console/factory-v1"`, `href="/console/kanban"`, `href="/console/intake"`, `href="/console/config"`, `hx-trigger="every 5s"`, "P-ENVELOPE", "Tier 3", "tlc-v1", "FO-MC-1", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s missing %q", path, want)
 			}
@@ -152,6 +152,29 @@ func TestSITEMCT2HealthTruthTable(t *testing.T) {
 	incomplete.Projection = &copyProjection
 	if got := missionOverallStatus(incomplete); got != "degraded" {
 		t.Fatalf("incomplete status=%q", got)
+	}
+	missingServices := base
+	missingServiceProjection := projection
+	missingServiceProjection.Services = nil
+	missingServices.Projection = &missingServiceProjection
+	if got := missionOverallStatus(missingServices); got != "unavailable" {
+		t.Fatalf("missing services status=%q", got)
+	}
+	incompleteSource := base
+	incompleteSourceProjection := projection
+	incompleteSourceProjection.Sources = append([]MissionSourceEnvelope(nil), projection.Sources...)
+	incompleteSourceProjection.Sources[0].Completeness.Complete = false
+	incompleteSource.Projection = &incompleteSourceProjection
+	if got := missionOverallStatus(incompleteSource); got != "degraded" {
+		t.Fatalf("incomplete source status=%q", got)
+	}
+	unavailableSource := base
+	unavailableSourceProjection := projection
+	unavailableSourceProjection.Sources = append([]MissionSourceEnvelope(nil), projection.Sources...)
+	unavailableSourceProjection.Sources[0].Mark = missionTestUnavailable(now)
+	unavailableSource.Projection = &unavailableSourceProjection
+	if got := missionOverallStatus(unavailableSource); got != "unavailable" {
+		t.Fatalf("unavailable source status=%q", got)
 	}
 	unknown := base
 	unknownProjection := projection
@@ -220,6 +243,8 @@ func TestSITEMCT4UnknownSemanticValuesAndIncompleteSourcesFailClosed(t *testing.
 		{name: "unknown lifecycle status", mutate: func(p *MissionControlProjection) { p.WIP[0].LifecycleStatus.Value = "teleported" }},
 		{name: "unknown WIP kind", mutate: func(p *MissionControlProjection) { p.WIP[0].Kind = "future_work" }},
 		{name: "truncated required sources", mutate: func(p *MissionControlProjection) { p.Sources = p.Sources[:3] }},
+		{name: "truncated required services", mutate: func(p *MissionControlProjection) { p.Services = p.Services[:4] }},
+		{name: "duplicate required service", mutate: func(p *MissionControlProjection) { p.Services[4].ServiceID = p.Services[0].ServiceID }},
 		{name: "unknown evidence field", mutate: func(p *MissionControlProjection) {
 			p.WIP[0].EvidenceRollup.FieldMarks["future_field"] = missionTestMark(now, "exact")
 		}},
@@ -252,6 +277,52 @@ func TestSITEMCT4UnknownSemanticValuesAndIncompleteSourcesFailClosed(t *testing.
 	for _, required := range []string{"unavailable", "wip — incomplete source set", "no normal handoff is inferred"} {
 		if !strings.Contains(rendered, required) {
 			t.Errorf("unavailable view missing %q", required)
+		}
+	}
+}
+
+func TestSITEMCT4BlockedHandoffAndInterventionEvidence(t *testing.T) {
+	now := time.Now().UTC()
+	projection := missionTestProjection(now)
+	projection.Handoffs[0].Blocked = true
+	projection.Interventions[0].EvidenceRefs = []string{"intervention:evidence"}
+	view := MissionControlView{Projection: &projection, HiveAcquisition: missionTestMark(now, "exact"), WorkHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}, SiteHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}, OverallStatus: "degraded", GeneratedAt: now}
+	var body bytes.Buffer
+	if err := missionControlFragment(view).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+	rendered := body.String()
+	for _, want := range []string{`data-handoff-state="blocked"`, "BLOCKED", "normal next handoff suppressed", "intervention:test", "requested", "intervention:evidence", `data-evidence-state="current"`} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(rendered, `data-handoff-state="normal"`) || strings.Contains(rendered, "→") {
+		t.Fatal("blocked handoff rendered a normal transition")
+	}
+}
+
+func TestSITEMCT5TransportErrorsDoNotLeakConfiguredEndpoints(t *testing.T) {
+	now := time.Now().UTC()
+	hiveBase := "http://127.0.0.1:1/private-hive"
+	workBase := "http://127.0.0.1:2/private-work"
+	t.Setenv("HIVE_OPS_API_BASE_URL", hiveBase)
+	t.Setenv("WORK_API_BASE_URL", workBase)
+	client := &http.Client{Timeout: 100 * time.Millisecond}
+	view := (&missionControlAcquirer{client: client, now: func() time.Time { return now }}).acquire(context.Background())
+	var body bytes.Buffer
+	if err := missionControlFragment(view).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+	rendered := body.String()
+	for _, secret := range []string{hiveBase, workBase, "private-hive", "private-work"} {
+		if strings.Contains(rendered, secret) {
+			t.Fatalf("rendered transport detail leaked %q", secret)
+		}
+	}
+	for _, want := range []string{"upstream details are withheld", "unavailable"} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("missing safe transport state %q", want)
 		}
 	}
 }
