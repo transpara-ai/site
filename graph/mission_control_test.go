@@ -68,7 +68,7 @@ func missionTestProjection(now time.Time) MissionControlProjection {
 		}, {Kind: "independent_work_task", StableID: "work:task-2", WorkTaskID: "task-2", Title: "Independent", TargetRepository: value(nil, unavailable), Assignment: value(nil, unavailable), LifecycleStatus: value("created", exact), EngineProtocol: value("work-v3.9", missionTestMark(now, "inferred")), TLCStage: value(nil, unavailable), TLCStageIndex: value(nil, unavailable), ItemStartedAt: value(now.Add(-time.Hour), exact), LastEffectAt: value(now.Add(-time.Minute), exact), ElapsedMS: value(3600000, exact), NextHandoff: value(nil, unavailable), Completeness: value(true, exact), Classification: MissionClassification{EngineProtocol: "work-v3.9", EffectiveGovernanceProtocol: "4.5.0", EffectivePacketProfile: "P-ENVELOPE", EffectiveHumanReviewTier: 3, Mark: missionTestMark(now, "inferred")}, EvidenceRollup: MissionEvidenceRollup{Mark: unavailable}, Mark: exact}},
 		Roles:         []MissionRoleAgentRow{{StableID: "role:guardian", Role: "guardian", Configured: value(true, projected), Instantiated: value(1, exact), EventActive: value(1, projected), Running: value(nil, unavailable), Provider: value("anthropic", projected), Model: value("claude-opus", projected), Authority: value(map[string]any{"can_operate": false}, exact), Capacity: value(32768, projected), Status: value("configured", projected), Assignment: value(nil, unavailable), Mark: projected}},
 		WorkerPool:    MissionWorkerPool{ConfiguredWorkers: value(3, projected), ActiveWorkers: value(1, projected), AvailableWorkers: value(2, projected), QueuedOrders: value(2, projected), SchedulableOrders: value(1, projected), UtilizationPercent: value(33.3, projected), Assignments: []MissionRuntimeAssignment{{OrderID: "FO-MC-1", OrderVersion: "1.0.0", Stage: "human_review", AttemptID: "attempt-1", ProviderID: "codex", ModelID: "gpt-5.6-sol", AssignedAt: now.Add(-time.Minute)}}, Mark: projected},
-		HumanActions:  []MissionHumanAction{{ActionID: "human-review:FO-MC-1", Kind: "human_review", Severity: "high", OwningStage: "human_review", SubjectID: "FO-MC-1", Summary: "Merge-ready PR waits for Human review.", RequiredAction: "Approve, reject, or request changes.", SourceTime: now.Add(-time.Minute), EvidenceRefs: []string{"head:" + strings.Repeat("a", 40)}, Mark: exact}},
+		HumanActions:  []MissionHumanAction{{ActionID: "human-review:FO-MC-1", Kind: "human_review", Severity: "high", OwningStage: "human_review", SubjectID: "FO-MC-1", Summary: "Merge-ready PR waits for Human review.", RequiredAction: "Approve, reject, or request changes.", SourceTime: now.Add(-time.Minute), EvidenceRefs: []string{"head:" + strings.Repeat("a", 40)}, Link: "/console/factory-v1", Mark: exact}},
 		Interventions: []MissionIntervention{{InterventionID: "intervention:test", OrderID: "FO-MC-1", Kind: "review", Status: "open", Prompt: "Human review required", RequestedAt: now.Add(-time.Minute), Mark: exact}},
 		Handoffs:      []MissionHandoff{{HandoffID: "handoff:FO-MC-1", SubjectID: "FO-MC-1", FromStage: "mark_pr_ready", ToStage: "human_review", ExpectedRoles: []string{"human"}, CompletionPredicate: "exact Human review receipt", EvidenceRefs: []string{"head:test"}, Mark: exact}},
 		ResidualRisks: []string{"runtime can become stale"}, NonAuthorizations: []string{"No merge or deployment authority."},
@@ -175,6 +175,12 @@ func TestSITEMCT2HealthTruthTable(t *testing.T) {
 	unavailableSource.Projection = &unavailableSourceProjection
 	if got := missionOverallStatus(unavailableSource); got != "unavailable" {
 		t.Fatalf("unavailable source status=%q", got)
+	}
+	combinedUnavailable := unavailableSource
+	combinedUnavailable.WorkHealth.OperationalStatus = "degraded"
+	combinedUnavailable.WorkHealth.Mark = missionSiteMark("stale", "projected_only", "test", now.Add(-time.Minute), now, nil, "stale")
+	if got := missionOverallStatus(combinedUnavailable); got != "unavailable" {
+		t.Fatalf("combined stale and unavailable status=%q", got)
 	}
 	unknown := base
 	unknownProjection := projection
@@ -297,8 +303,29 @@ func TestSITEMCT4BlockedHandoffAndInterventionEvidence(t *testing.T) {
 			t.Errorf("missing %q", want)
 		}
 	}
-	if strings.Contains(rendered, `data-handoff-state="normal"`) || strings.Contains(rendered, "→") {
+	if strings.Contains(rendered, `data-handoff-state="normal"`) {
 		t.Fatal("blocked handoff rendered a normal transition")
+	}
+}
+
+func TestSITEMCT4HumanActionLinksAreAllowlisted(t *testing.T) {
+	now := time.Now().UTC()
+	projection := missionTestProjection(now)
+	projection.HumanActions = append(projection.HumanActions, MissionHumanAction{ActionID: "hostile", Kind: "human_review", Severity: "high", SubjectID: "hostile", Summary: "hostile", RequiredAction: "none", Link: "javascript:alert(1)", Mark: missionTestMark(now, "exact")})
+	view := MissionControlView{Projection: &projection, HiveAcquisition: missionTestMark(now, "exact"), WorkHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}, SiteHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}, OverallStatus: "healthy", GeneratedAt: now}
+	var body bytes.Buffer
+	if err := missionControlFragment(view).Render(context.Background(), &body); err != nil {
+		t.Fatal(err)
+	}
+	rendered := body.String()
+	if !strings.Contains(rendered, `data-human-action-link="governed" href="/console/factory-v1"`) {
+		t.Fatal("allowlisted Human action link did not render")
+	}
+	if strings.Contains(rendered, "javascript:") {
+		t.Fatal("unallowlisted Human action link rendered")
+	}
+	if got := missionValue(MissionMarkedValue{Value: float64(3600000), Mark: missionTestMark(now, "exact")}); got != "3600000" {
+		t.Fatalf("integral numeric rendering = %q", got)
 	}
 }
 

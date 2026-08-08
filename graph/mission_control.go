@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -448,21 +449,25 @@ func missionOverallStatus(view MissionControlView) string {
 	if view.Projection.OperationalStatus == "unavailable" || view.WorkHealth.OperationalStatus == "unavailable" || view.SiteHealth.OperationalStatus == "unavailable" {
 		return "unavailable"
 	}
-	if view.Projection.OperationalStatus != "healthy" || !view.Projection.Completeness.Complete || missionMarkState(view.HiveAcquisition) != "current" || view.WorkHealth.OperationalStatus != "healthy" || missionMarkState(view.WorkHealth.Mark) != "projected_only" || view.SiteHealth.OperationalStatus != "healthy" || missionMarkState(view.SiteHealth.Mark) != "projected_only" || view.SourceSkew > 5*time.Second {
-		return "degraded"
-	}
 	for _, source := range view.Projection.Sources {
 		if missionMarkState(source.Mark) == "unavailable" {
 			return "unavailable"
-		}
-		if !source.Completeness.Complete || missionMarkState(source.Mark) == "stale" || missionMarkState(source.Mark) == "inferred" {
-			return "degraded"
 		}
 	}
 	for _, service := range view.Projection.Services {
 		if missionServiceStatus(service.OperationalStatus) == "unavailable" || missionMarkState(service.Mark) == "unavailable" {
 			return "unavailable"
 		}
+	}
+	if view.Projection.OperationalStatus != "healthy" || !view.Projection.Completeness.Complete || missionMarkState(view.HiveAcquisition) != "current" || view.WorkHealth.OperationalStatus != "healthy" || missionMarkState(view.WorkHealth.Mark) != "projected_only" || view.SiteHealth.OperationalStatus != "healthy" || missionMarkState(view.SiteHealth.Mark) != "projected_only" || view.SourceSkew > 5*time.Second {
+		return "degraded"
+	}
+	for _, source := range view.Projection.Sources {
+		if !source.Completeness.Complete || missionMarkState(source.Mark) == "stale" || missionMarkState(source.Mark) == "inferred" {
+			return "degraded"
+		}
+	}
+	for _, service := range view.Projection.Services {
 		if missionServiceStatus(service.OperationalStatus) != "healthy" || missionMarkState(service.Mark) == "stale" || missionMarkState(service.Mark) == "inferred" {
 			return "degraded"
 		}
@@ -938,7 +943,7 @@ func missionValue(value MissionMarkedValue) string {
 		}
 		return typed
 	case float64:
-		return fmt.Sprintf("%g", typed)
+		return strconv.FormatFloat(typed, 'f', -1, 64)
 	case bool:
 		if typed {
 			return "yes"
@@ -950,6 +955,16 @@ func missionValue(value MissionMarkedValue) string {
 		return "unavailable"
 	}
 	return string(encoded)
+}
+
+func missionHumanActionLink(value string) string {
+	link := strings.TrimSpace(value)
+	switch link {
+	case "/console/health", "/console/factory-v1", "/console/kanban", "/console/intake", "/console/config":
+		return link
+	default:
+		return ""
+	}
 }
 
 func missionTime(value time.Time) string {
