@@ -368,7 +368,7 @@ func factoryV1ApprovalReceiptValid(order FactoryV1Order, raw json.RawMessage) bo
 	return (basis == "standing_scoped" || basis == "fresh_scoped") &&
 		strings.TrimSpace(receipt.ActorID) != "" && strings.TrimSpace(receipt.CredentialKeyID) != "" &&
 		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.SourceSHA256)) &&
-		factoryV1SHA256Pattern.MatchString(strings.TrimSpace(receipt.FactoryOrderBlobSHA)) &&
+		factoryV1GitHashPattern.MatchString(strings.TrimSpace(receipt.FactoryOrderBlobSHA)) &&
 		receipt.OrderID == order.OrderID && receipt.OrderVersion == order.Version &&
 		receipt.DocumentSHA256 == order.DocumentSHA256 &&
 		strings.TrimSpace(receipt.ApprovalSentence) != "" && strings.TrimSpace(receipt.ApprovalSourceEventID) != "" &&

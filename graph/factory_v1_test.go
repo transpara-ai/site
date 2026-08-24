@@ -55,6 +55,10 @@ func factoryV1TestApprovalReceipt(order FactoryV1Order, basis string) json.RawMe
 	return json.RawMessage(`{"basis":"` + basis + `","actor_id":"eventgraph_human_1","credential_key_id":"key_1","source_sha256":"` + strings.Repeat("d", 64) + `","factory_order_blob_sha":"` + order.DocumentSHA256 + `","order_id":"` + order.OrderID + `","order_version":"` + order.Version + `","document_sha256":"` + order.DocumentSHA256 + `","approval_sentence":"Human approved this exact bounded order.","approval_source_event_id":"event_approval_1","issued_at":"2026-08-04T21:59:00Z"}`)
 }
 
+func factoryV1TestGitBlobApprovalReceipt(order FactoryV1Order, basis string) json.RawMessage {
+	return json.RawMessage(`{"basis":"` + basis + `","actor_id":"eventgraph_human_1","credential_key_id":"key_1","source_sha256":"` + strings.Repeat("d", 64) + `","factory_order_blob_sha":"` + strings.Repeat("e", 40) + `","order_id":"` + order.OrderID + `","order_version":"` + order.Version + `","document_sha256":"` + order.DocumentSHA256 + `","approval_sentence":"Human approved this exact governed Git blob.","approval_source_event_id":"event_approval_1","issued_at":"2026-08-04T21:59:00Z"}`)
+}
+
 func TestFactoryV1MissionControlStates(t *testing.T) {
 	now := time.Date(2026, 8, 4, 22, 0, 5, 0, time.UTC)
 	progressing := validFactoryV1TestOrder("fo_progressing", "progressing")
@@ -234,6 +238,16 @@ func TestFactoryV1EvidenceDueAtCanonicalStageBoundaries(t *testing.T) {
 	humanReview.PR.ReviewedHeadSHA = humanReview.PR.HeadSHA
 	if missing := factoryV1OrderMissingEvidence(humanReview); len(missing) != 0 {
 		t.Fatalf("exact-head ready Human Review evidence reported missing: %v", missing)
+	}
+}
+
+func TestFactoryV1ApprovalAcceptsGovernedGitBlobIdentity(t *testing.T) {
+	order := validFactoryV1TestOrder("FO-GIT-BLOB-APPROVAL", "progressing")
+	order.TLCStage = "write_code"
+	order.TLCIndex = 6
+	receipt := factoryV1TestGitBlobApprovalReceipt(order, "standing_scoped")
+	if !factoryV1ApprovalReceiptValid(order, receipt) {
+		t.Fatal("40-character governed Git blob identity was rejected")
 	}
 }
 
