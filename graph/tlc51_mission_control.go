@@ -272,7 +272,7 @@ func missionTLC51Reconciliation(value string) bool {
 }
 
 func missionTLC51ExternalState(value string) bool {
-	return value == "" || value == "absent" || value == "exact" || value == "conflict" || value == "unknown"
+	return value == "absent" || value == "exact" || value == "conflict" || value == "unknown"
 }
 
 func missionTLC51Optional(value *string) string {

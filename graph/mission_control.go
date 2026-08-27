@@ -459,6 +459,9 @@ func missionOverallStatus(view MissionControlView) string {
 	if view.Projection == nil || missionMarkState(view.HiveAcquisition) == "unavailable" {
 		return "unavailable"
 	}
+	if view.TLC51Projection == nil || missionMarkState(view.TLC51Acquisition) == "unavailable" {
+		return "unavailable"
+	}
 	if !missionHasRequiredIdentities(view.Projection.Sources, view.Projection.Services) {
 		return "unavailable"
 	}
@@ -475,7 +478,7 @@ func missionOverallStatus(view MissionControlView) string {
 			return "unavailable"
 		}
 	}
-	if view.Projection.OperationalStatus != "healthy" || !view.Projection.Completeness.Complete || missionMarkState(view.HiveAcquisition) != "current" || view.WorkHealth.OperationalStatus != "healthy" || missionMarkState(view.WorkHealth.Mark) != "projected_only" || view.SiteHealth.OperationalStatus != "healthy" || missionMarkState(view.SiteHealth.Mark) != "projected_only" || view.SourceSkew > 5*time.Second {
+	if view.Projection.OperationalStatus != "healthy" || !view.Projection.Completeness.Complete || missionMarkState(view.HiveAcquisition) != "current" || missionMarkState(view.TLC51Acquisition) != "current" || len(view.TLC51Projection.Errors) > 0 || view.WorkHealth.OperationalStatus != "healthy" || missionMarkState(view.WorkHealth.Mark) != "projected_only" || view.SiteHealth.OperationalStatus != "healthy" || missionMarkState(view.SiteHealth.Mark) != "projected_only" || view.SourceSkew > 5*time.Second {
 		return "degraded"
 	}
 	for _, source := range view.Projection.Sources {

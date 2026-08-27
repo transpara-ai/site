@@ -65,6 +65,15 @@ func TestTLC51MissionControlRejectsUnknownFieldsAndDuplicateRows(t *testing.T) {
 	}
 }
 
+func TestTLC51MissionControlRejectsBlankExternalState(t *testing.T) {
+	now := time.Date(2026, 8, 27, 19, 0, 0, 0, time.UTC)
+	projection := missionTLC51TestProjection(now)
+	projection.Orders[0].Effects[0].ExternalState = ""
+	if err := validateTLC51MissionControl(projection, now); err == nil || !strings.Contains(err.Error(), "invalid identity") {
+		t.Fatalf("blank external state error = %v", err)
+	}
+}
+
 func TestTLC51MissionControlRendersUnclassifiedWithoutLegacyDefault(t *testing.T) {
 	now := time.Date(2026, 8, 27, 19, 0, 0, 0, time.UTC)
 	projection := missionTLC51TestProjection(now)

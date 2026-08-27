@@ -161,9 +161,21 @@ func TestSITEMCT2HealthTruthTable(t *testing.T) {
 	projection := missionTestProjection(now)
 	exact := missionTestMark(now, "exact")
 	projected := missionTestMark(now, "projected_only")
-	base := MissionControlView{Projection: &projection, HiveAcquisition: exact, WorkHealth: MissionObservedService{OperationalStatus: "healthy", Mark: projected}, SiteHealth: MissionObservedService{OperationalStatus: "healthy", Mark: projected}}
+	tlc51Projection := missionTLC51TestProjection(now)
+	base := MissionControlView{Projection: &projection, HiveAcquisition: exact, TLC51Projection: &tlc51Projection, TLC51Acquisition: exact, WorkHealth: MissionObservedService{OperationalStatus: "healthy", Mark: projected}, SiteHealth: MissionObservedService{OperationalStatus: "healthy", Mark: projected}}
 	if got := missionOverallStatus(base); got != "healthy" {
 		t.Fatalf("all-current status=%q", got)
+	}
+	missingTLC51 := base
+	missingTLC51.TLC51Projection = nil
+	missingTLC51.TLC51Acquisition = missionTestUnavailable(now)
+	if got := missionOverallStatus(missingTLC51); got != "unavailable" {
+		t.Fatalf("missing TLC 5.1 status=%q", got)
+	}
+	staleTLC51 := base
+	staleTLC51.TLC51Acquisition = missionSiteMark("stale", "exact", "test", now.Add(-time.Minute), now, nil, "stale")
+	if got := missionOverallStatus(staleTLC51); got != "degraded" {
+		t.Fatalf("stale TLC 5.1 status=%q", got)
 	}
 	stale := base
 	stale.HiveAcquisition = missionSiteMark("stale", "exact", "test", now.Add(-time.Minute), now, nil, "stale")
@@ -390,6 +402,10 @@ func TestSITEMCT5AtomicStaleRetentionExpiryAndRecovery(t *testing.T) {
 			http.Error(w, "fail", http.StatusServiceUnavailable)
 			return
 		}
+		if r.URL.Path == tlc51MissionControlPath {
+			_ = json.NewEncoder(w).Encode(missionTLC51TestProjection(clock.Now()))
+			return
+		}
 		projection := missionTestProjection(clock.Now())
 		_ = json.NewEncoder(w).Encode(projection)
 	}))
@@ -406,6 +422,7 @@ func TestSITEMCT5AtomicStaleRetentionExpiryAndRecovery(t *testing.T) {
 	}))
 	defer workServer.Close()
 	t.Setenv("HIVE_OPS_API_BASE_URL", hiveServer.URL)
+	t.Setenv("HIVE_OPS_API_KEY", "test-key")
 	t.Setenv("WORK_API_BASE_URL", workServer.URL)
 	client := &http.Client{Timeout: time.Second}
 	acquirer := &missionControlAcquirer{client: client, now: clock.Now}
