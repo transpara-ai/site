@@ -235,14 +235,16 @@ type MissionObservedService struct {
 }
 
 type MissionControlView struct {
-	Projection      *MissionControlProjection
-	HiveAcquisition MissionEvidenceMark
-	WorkHealth      MissionObservedService
-	SiteHealth      MissionObservedService
-	OverallStatus   string
-	GeneratedAt     time.Time
-	SourceSkew      time.Duration
-	Notices         []string
+	Projection       *MissionControlProjection
+	HiveAcquisition  MissionEvidenceMark
+	TLC51Projection  *TLC51MissionControlEnvelope
+	TLC51Acquisition MissionEvidenceMark
+	WorkHealth       MissionObservedService
+	SiteHealth       MissionObservedService
+	OverallStatus    string
+	GeneratedAt      time.Time
+	SourceSkew       time.Duration
+	Notices          []string
 }
 
 type missionProjectionCache struct {
@@ -261,6 +263,7 @@ type missionWorkHealthCache struct {
 type missionControlAcquirer struct {
 	mu     sync.Mutex
 	hive   missionProjectionCache
+	tlc51  missionTLC51ProjectionCache
 	work   missionWorkHealthCache
 	client *http.Client
 	now    func() time.Time
@@ -280,14 +283,24 @@ func (a *missionControlAcquirer) acquire(ctx context.Context) MissionControlView
 		service MissionObservedService
 		err     error
 	}
-	hiveCh, workCh := make(chan hiveResult, 1), make(chan workResult, 1)
+	type tlc51Result struct {
+		projection *TLC51MissionControlEnvelope
+		mark       MissionEvidenceMark
+		err        error
+	}
+	hiveCh, workCh, tlc51Ch := make(chan hiveResult, 1), make(chan workResult, 1), make(chan tlc51Result, 1)
 	go func() {
 		projection, mark, err := a.acquireHive(ctx, now)
 		hiveCh <- hiveResult{projection: projection, mark: mark, err: err}
 	}()
 	go func() { service, err := a.acquireWork(ctx, now); workCh <- workResult{service: service, err: err} }()
-	hive, work := <-hiveCh, <-workCh
+	go func() {
+		projection, mark, err := a.acquireTLC51(ctx, now)
+		tlc51Ch <- tlc51Result{projection: projection, mark: mark, err: err}
+	}()
+	hive, work, tlc51 := <-hiveCh, <-workCh, <-tlc51Ch
 	view.Projection, view.HiveAcquisition, view.WorkHealth = hive.projection, hive.mark, work.service
+	view.TLC51Projection, view.TLC51Acquisition = tlc51.projection, tlc51.mark
 	if view.Projection != nil {
 		view.SourceSkew = missionJoinedSourceSkew(*view.Projection, view.WorkHealth.Mark)
 		if view.SourceSkew > 5*time.Second {
@@ -303,6 +316,9 @@ func (a *missionControlAcquirer) acquire(ctx context.Context) MissionControlView
 	}
 	if work.err != nil {
 		view.Notices = append(view.Notices, "Work health acquisition failed; upstream details are withheld.")
+	}
+	if tlc51.err != nil {
+		view.Notices = append(view.Notices, "Hive TLC 5.1 projection is unavailable; no TLC 5.1 state is inferred.")
 	}
 	view.OverallStatus = missionOverallStatus(view)
 	return view

@@ -102,6 +102,36 @@ templ missionControlFragment(view MissionControlView) {
 			</div>
 		</section>
 
+		<section data-mission-landmark="tlc51-governance" class="rounded-lg border border-edge bg-surface p-4">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+				<div><h2 class="text-base font-medium text-warm">TLC 5.1 gate governance</h2><p class="mt-1 text-xs text-warm-muted">Exact Hive projection only. Site displays plan-derived state and never evaluates policy or grants authority.</p></div>
+				@missionControlMark(view.TLC51Acquisition)
+			</div>
+			if view.TLC51Projection == nil {
+				<div class="mt-3 rounded border border-rose-300/20 bg-rose-300/5 p-3" data-tlc51-state="unavailable">
+					<p class="text-sm text-rose-200">TLC 5.1 projection unavailable</p>
+					<p class="mt-1 text-xs text-warm-muted">No TLC 4.5 or tlc-v1 default is substituted, and no empty gate queue is inferred.</p>
+				</div>
+			} else {
+				<div class="mt-3 flex flex-wrap gap-3 text-[11px] text-warm-muted"><span>schema <span class="font-mono text-warm">{ view.TLC51Projection.SchemaVersion }</span></span><span>generated <span class="font-mono text-warm">{ missionTime(view.TLC51Projection.GeneratedAt) }</span></span><span>orders <span class="font-mono text-warm">{ fmt.Sprintf("%d", len(view.TLC51Projection.Orders)) }</span></span><span data-tlc51-authority="false">authority granted <span class="font-mono text-warm">false</span></span></div>
+				if len(view.TLC51Projection.Errors) > 0 {
+					<ul class="mt-3 space-y-1 rounded border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-200">
+						for _, item := range view.TLC51Projection.Errors {
+							<li>{ item }</li>
+						}
+					</ul>
+				}
+				if len(view.TLC51Projection.Orders) == 0 {
+					<p class="mt-3 text-sm text-warm-muted">No TLC 5.1 orders are projected. This does not prove that work or gates are complete.</p>
+				}
+				<div class="mt-3 space-y-4">
+					for _, order := range view.TLC51Projection.Orders {
+						@missionTLC51OrderCard(order)
+					}
+				</div>
+			}
+		</section>
+
 		if view.Projection == nil {
 			@missionControlUnavailableSection("capacity", "Worker capacity and utilization", "Hive runtime evidence is unavailable; zero workers is not inferred.")
 			@missionControlUnavailableSection("human-actions", "Needs Human", "Human action evidence is unavailable; an empty queue is not claimed.")
@@ -245,6 +275,39 @@ templ missionControlFragment(view MissionControlView) {
 			}
 		</section>
 	</div>
+}
+
+templ missionTLC51OrderCard(order TLC51MissionControlOrder) {
+	<article data-tlc51-order={ order.FactoryOrderID } class="rounded-lg border border-edge bg-void/30 p-3 md:p-4">
+		<div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+			<div class="min-w-0"><p class="text-[10px] uppercase tracking-wide text-warm-faint">{ order.ProtocolVersion } · { order.InformationState } · track { missionTLC51Optional(order.Track) } · retained { missionTLC51Optional(order.RetainedFloor) }</p><h3 class="mt-1 text-sm font-medium text-warm">{ order.OrderID }{ "@" }{ order.OrderVersion }</h3><p class="mt-1 break-all font-mono text-[10px] text-warm-faint">{ order.FactoryOrderID } · series { order.ChangeSeriesID } · { order.Repository }</p></div>
+			<div class="text-left lg:text-right"><p data-tlc51-decision={ order.Decision } class="text-xs text-warm">decision { order.Decision }</p><p class="mt-1 text-[10px] text-warm-faint">Work reconciliation { order.WorkReconciliation }</p><p class="mt-1 text-[10px] text-warm-faint">authority granted false</p></div>
+		</div>
+		<div class="mt-3 grid gap-2 text-[10px] sm:grid-cols-2"><p class="break-all text-warm-faint">plan <span class="font-mono text-warm-muted">{ order.PlanDigest }</span></p><p class="break-all text-warm-faint">subject <span class="font-mono text-warm-muted">{ order.SubjectDigest }</span></p><p class="break-all text-warm-faint">release <span class="font-mono text-warm-muted">{ missionTLC51Raw(order.ReleaseIdentity) }</span></p><p class="break-all text-warm-faint">adapter <span class="font-mono text-warm-muted">{ missionTLC51Raw(order.AdapterIdentity) }</span></p></div>
+		<div class="mt-3 flex flex-wrap gap-2 text-[10px] text-warm-faint"><span>EventGraph { fmt.Sprintf("%d", order.EventGraphEventCount) }</span><span>·</span><span>Work { fmt.Sprintf("%d", order.WorkArtifactCount) }</span><span>·</span><span>receipt { order.ReceiptDigest }</span></div>
+		if len(order.Blockers) > 0 {
+			<p class="mt-3 text-xs text-rose-200">Blockers: { missionRefs(order.Blockers) }</p>
+		}
+		<div class="mt-3 overflow-x-auto"><table class="w-full min-w-[52rem] text-left text-xs"><thead class="text-warm-faint"><tr><th class="pb-2">Obligation</th><th>Kind</th><th>Status</th><th>Ready</th><th>Attempt</th><th>Provider</th><th>Prerequisites</th><th>Evidence</th></tr></thead><tbody class="divide-y divide-edge">
+			for _, obligation := range order.Obligations {
+				<tr data-tlc51-obligation={ obligation.ID }><td class="py-2 font-mono text-warm">{ obligation.ID }</td><td>{ obligation.Kind }</td><td>{ obligation.Status }</td><td>{ fmt.Sprintf("%t", obligation.Ready) }</td><td>{ fmt.Sprintf("%d", obligation.AttemptOrdinal) }</td><td>{ obligation.ProviderBindingID }</td><td>{ missionRefs(obligation.Prerequisites) }</td><td>{ missionRefs(obligation.EvidenceRecordIDs) }</td></tr>
+			}
+		</tbody></table></div>
+		if len(order.HumanWaits) > 0 {
+			<div class="mt-3"><h4 class="text-xs font-medium text-amber-200">Human waits</h4><div class="mt-2 space-y-2">
+				for _, wait := range order.HumanWaits {
+					<div class="rounded border border-amber-300/20 bg-amber-300/5 p-2 text-xs"><span class="font-mono text-warm">{ wait.RequestID }</span><span class="text-warm-muted"> · { wait.Boundary } · { wait.Status } · { wait.Reason }</span></div>
+				}
+			</div></div>
+		}
+		if len(order.Effects) > 0 {
+			<div class="mt-3"><h4 class="text-xs font-medium text-warm">Protected-effect observations</h4><div class="mt-2 space-y-2">
+				for _, effect := range order.Effects {
+					<div data-tlc51-effect={ effect.OperationID } class="rounded border border-edge p-2 text-xs text-warm-muted"><span class="font-mono text-warm">{ effect.Effect } · { effect.OperationID }</span><span> · state { effect.ExternalState } · recovery { effect.ReconciliationAction } · outcome { effect.Outcome } · observed { missionTime(effect.ObservedAt) }</span></div>
+				}
+			</div></div>
+		}
+	</article>
 }
 
 templ missionMetric(label string, value MissionMarkedValue) {

@@ -75,6 +75,25 @@ func missionTestProjection(now time.Time) MissionControlProjection {
 	}
 }
 
+func missionTLC51TestProjection(now time.Time) TLC51MissionControlEnvelope {
+	track := "H"
+	return TLC51MissionControlEnvelope{
+		SchemaVersion: tlc51MissionControlSchema, GeneratedAt: now, AuthorityGranted: false, Errors: []string{},
+		Orders: []TLC51MissionControlOrder{{
+			SchemaVersion: "factory-tlc51-mission-control/v1", ProtocolVersion: "factory-tlc51/v1",
+			FactoryOrderID: "fo_tlc51_site", OrderID: "FO-TLC51-SITE", OrderVersion: "0.1.0", ChangeSeriesID: "series-site-1",
+			ReleaseIdentity: json.RawMessage(`{"version":"5.1.0"}`), AdapterIdentity: json.RawMessage(`{"id":"hive-tlc51"}`),
+			Repository: "transpara-ai/site", InformationState: "CLASSIFIED", Track: &track, RetainedFloor: &track,
+			Subject:       json.RawMessage(`{"head_sha":"1111111111111111111111111111111111111111","kind":"pull_request"}`),
+			SubjectDigest: strings.Repeat("a", 64), PlanDigest: strings.Repeat("b", 64),
+			Obligations: []TLC51MissionObligation{{ID: "O001-cfar", Kind: "cfar", Status: "human_required", Ready: true, AttemptOrdinal: 1, ProviderBindingID: "claude-reviewer", Prerequisites: []string{}, EvidenceRecordIDs: []string{"record-cfar"}}},
+			Blockers:    []string{"human_wait:H001"}, HumanWaits: []TLC51MissionHumanWait{{RequestID: "H001", Boundary: "obligation:O001-cfar", Reason: "authenticated Human record required", Status: "waiting"}},
+			Decision: "unknown", Effects: []TLC51MissionEffect{{Effect: "merge", OperationID: "operation-1", ExternalState: "absent", ReconciliationAction: "block", ObservationID: "observation-1", ObservedAt: now.Add(-time.Second)}},
+			WorkReconciliation: "match", EventGraphEventCount: 5, WorkArtifactCount: 5, GeneratedAt: now, AuthorityGranted: false,
+		}},
+	}
+}
+
 func withMissionTestAcquirer(t *testing.T, acquirer *missionControlAcquirer) {
 	t.Helper()
 	prior := defaultMissionControlAcquirer
@@ -85,13 +104,18 @@ func withMissionTestAcquirer(t *testing.T, acquirer *missionControlAcquirer) {
 func TestSITEMCT1OneScreenContractFullPageAndFragment(t *testing.T) {
 	now := time.Date(2026, 8, 8, 13, 0, 0, 0, time.UTC)
 	projection := missionTestProjection(now)
+	tlc51Projection := missionTLC51TestProjection(now)
 	hiveServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != missionControlPath {
+		if r.URL.Path != missionControlPath && r.URL.Path != tlc51MissionControlPath {
 			http.NotFound(w, r)
 			return
 		}
 		if r.Header.Get("Authorization") != "Bearer secret" {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		if r.URL.Path == tlc51MissionControlPath {
+			_ = json.NewEncoder(w).Encode(tlc51Projection)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(projection)
@@ -121,7 +145,7 @@ func TestSITEMCT1OneScreenContractFullPageAndFragment(t *testing.T) {
 			t.Fatalf("%s status=%d body=%s", path, rec.Code, rec.Body.String())
 		}
 		body := rec.Body.String()
-		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="capacity"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `data-mission-links="focused-screens"`, `href="/console/health"`, `href="/console/factory-v1"`, `href="/console/kanban"`, `href="/console/intake"`, `href="/console/config"`, `hx-trigger="every 5s"`, "P-ENVELOPE", "Tier 3", "tlc-v1", "FO-MC-1", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
+		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="tlc51-governance"`, `data-tlc51-authority="false"`, `data-tlc51-order="fo_tlc51_site"`, `data-tlc51-obligation="O001-cfar"`, `data-tlc51-effect="operation-1"`, `data-mission-landmark="capacity"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `data-mission-links="focused-screens"`, `href="/console/health"`, `href="/console/factory-v1"`, `href="/console/kanban"`, `href="/console/intake"`, `href="/console/config"`, `hx-trigger="every 5s"`, "P-ENVELOPE", "Tier 3", "tlc-v1", "factory-tlc51/v1", "CLASSIFIED", "FO-TLC51-SITE", "O001-cfar", "human_wait:H001", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s missing %q", path, want)
 			}
