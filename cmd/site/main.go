@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -296,7 +297,10 @@ func main() {
 	readWrap, writeWrap := noop, noop
 
 	// Unified product with auth.
-	dsn := os.Getenv("DATABASE_URL")
+	dsn, err := environmentOrSecretFile("DATABASE_URL")
+	if err != nil {
+		log.Fatal(err)
+	}
 	if dsn != "" {
 		db, err := sql.Open("postgres", dsn)
 		if err != nil {
@@ -311,19 +315,33 @@ func main() {
 		// for local development only. Production must fail closed when auth is
 		// not explicitly configured.
 		clientID := os.Getenv("GOOGLE_CLIENT_ID")
-		clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+		clientSecret, secretErr := environmentOrSecretFile("GOOGLE_CLIENT_SECRET")
+		if secretErr != nil {
+			log.Fatal(secretErr)
+		}
+		if err := validateProductionAuthConfig(os.Getenv); err != nil {
+			log.Fatal(err)
+		}
 
 		if clientID != "" && clientSecret != "" {
 			redirectURL := os.Getenv("AUTH_REDIRECT_URL")
 			if redirectURL == "" {
 				log.Fatal("AUTH_REDIRECT_URL must be set when Google OAuth is configured (no public-domain default)")
 			}
-			secure := redirectURL[:5] == "https"
+			secure := strings.HasPrefix(strings.ToLower(redirectURL), "https://")
 
 			authService, err := auth.New(db, clientID, clientSecret, redirectURL, secure)
 			if err != nil {
 				log.Fatalf("auth: %v", err)
 			}
+			allowedDomains, err := allowedEmailDomains(os.Getenv("SITE_ALLOWED_EMAIL_DOMAINS"))
+			if err != nil {
+				log.Fatal(err)
+			}
+			if err := authService.SetAllowedEmailDomains(allowedDomains); err != nil {
+				log.Fatalf("auth domains: %v", err)
+			}
+			authService.SetMagicLinksEnabled(!isProductionEnvironment(os.Getenv))
 			authService.Register(mux)
 
 			// API key management page.
@@ -354,10 +372,6 @@ func main() {
 			readWrap = authService.OptionalAuth
 			log.Println("auth enabled (Google OAuth)")
 		} else {
-			if err := validateProductionAuthConfig(os.Getenv); err != nil {
-				log.Fatal(err)
-			}
-
 			// Anonymous mode with Bearer token support.
 			// If a valid Bearer token is present, resolve the real user
 			// (enables hive API key auth without full Google OAuth).
@@ -966,11 +980,61 @@ func validateProductionAuthConfig(getenv func(string) string) error {
 	if !isProductionEnvironment(getenv) {
 		return nil
 	}
-	if strings.TrimSpace(getenv("GOOGLE_CLIENT_ID")) != "" &&
-		strings.TrimSpace(getenv("GOOGLE_CLIENT_SECRET")) != "" {
-		return nil
+	if strings.TrimSpace(getenv("GOOGLE_CLIENT_ID")) == "" ||
+		(strings.TrimSpace(getenv("GOOGLE_CLIENT_SECRET")) == "" && strings.TrimSpace(getenv("GOOGLE_CLIENT_SECRET_FILE")) == "") {
+		return fmt.Errorf("production auth configuration missing: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
 	}
-	return fmt.Errorf("production auth configuration missing: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET")
+	domains, err := allowedEmailDomains(getenv("SITE_ALLOWED_EMAIL_DOMAINS"))
+	if err != nil {
+		return fmt.Errorf("production auth configuration invalid: %w", err)
+	}
+	if len(domains) == 0 {
+		return fmt.Errorf("production auth configuration missing: set SITE_ALLOWED_EMAIL_DOMAINS")
+	}
+	redirect, err := url.Parse(strings.TrimSpace(getenv("AUTH_REDIRECT_URL")))
+	if err != nil || redirect.Scheme != "https" || redirect.Host == "" || redirect.User != nil {
+		return fmt.Errorf("production auth configuration invalid: AUTH_REDIRECT_URL must be an absolute HTTPS URL without user info")
+	}
+	return nil
+}
+
+func allowedEmailDomains(raw string) ([]string, error) {
+	seen := map[string]struct{}{}
+	var result []string
+	for _, item := range strings.Split(raw, ",") {
+		domain := strings.ToLower(strings.TrimSpace(item))
+		if domain == "" {
+			continue
+		}
+		if strings.ContainsAny(domain, "@/: *?[]") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
+			return nil, fmt.Errorf("invalid SITE_ALLOWED_EMAIL_DOMAINS entry %q", item)
+		}
+		if _, duplicate := seen[domain]; duplicate {
+			continue
+		}
+		seen[domain] = struct{}{}
+		result = append(result, domain)
+	}
+	return result, nil
+}
+
+func environmentOrSecretFile(name string) (string, error) {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value, nil
+	}
+	path := strings.TrimSpace(os.Getenv(name + "_FILE"))
+	if path == "" {
+		return "", nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read %s_FILE: %w", name, err)
+	}
+	value := strings.TrimSpace(string(raw))
+	if value == "" {
+		return "", fmt.Errorf("%s_FILE is empty", name)
+	}
+	return value, nil
 }
 
 func isProductionEnvironment(getenv func(string) string) bool {

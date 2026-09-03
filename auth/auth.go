@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -54,10 +55,12 @@ func ContextWithUser(ctx context.Context, u *User) context.Context {
 
 // Auth handles Google OAuth2 and session management.
 type Auth struct {
-	db          *sql.DB
-	oauth       *oauth2.Config
-	secure      bool
-	userInfoURL string // defaults to Google's userinfo endpoint; overridable in tests
+	db                  *sql.DB
+	oauth               *oauth2.Config
+	secure              bool
+	userInfoURL         string // defaults to Google's userinfo endpoint; overridable in tests
+	allowedEmailDomains map[string]struct{}
+	magicLinksEnabled   bool
 }
 
 // New creates an Auth service backed by the given database.
@@ -71,13 +74,49 @@ func New(db *sql.DB, clientID, clientSecret, redirectURL string, secure bool) (*
 			Scopes:       []string{"openid", "email", "profile"},
 			Endpoint:     google.Endpoint,
 		},
-		secure:      secure,
-		userInfoURL: "https://www.googleapis.com/oauth2/v2/userinfo",
+		secure:            secure,
+		userInfoURL:       "https://www.googleapis.com/oauth2/v2/userinfo",
+		magicLinksEnabled: true,
 	}
 	if err := a.migrate(); err != nil {
 		return nil, fmt.Errorf("auth migrate: %w", err)
 	}
 	return a, nil
+}
+
+// SetMagicLinksEnabled controls the legacy development-only magic-link flow.
+// Production disables it because no mail delivery is implemented and the
+// development handler exposes generated links only to the service log.
+func (a *Auth) SetMagicLinksEnabled(enabled bool) {
+	a.magicLinksEnabled = enabled
+}
+
+// SetAllowedEmailDomains restricts Human OAuth and magic-link sign-in to exact
+// domains. An empty list preserves the existing development behavior. Call it
+// during startup, before Register or serving requests.
+func (a *Auth) SetAllowedEmailDomains(domains []string) error {
+	allowed := make(map[string]struct{}, len(domains))
+	for _, domain := range domains {
+		domain = strings.ToLower(strings.TrimSpace(domain))
+		if domain == "" || strings.ContainsAny(domain, "@/: *?[]") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
+			return fmt.Errorf("invalid allowed email domain %q", domain)
+		}
+		allowed[domain] = struct{}{}
+	}
+	a.allowedEmailDomains = allowed
+	return nil
+}
+
+func (a *Auth) emailAllowed(email string) bool {
+	if len(a.allowedEmailDomains) == 0 {
+		return true
+	}
+	_, domain, ok := strings.Cut(strings.ToLower(strings.TrimSpace(email)), "@")
+	if !ok || domain == "" || strings.Contains(domain, "@") {
+		return false
+	}
+	_, ok = a.allowedEmailDomains[domain]
+	return ok
 }
 
 func (a *Auth) migrate() error {
@@ -149,10 +188,13 @@ func (a *Auth) Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /auth/error", a.handleAuthError)
 	mux.HandleFunc("GET /auth/status", a.handleStatus)
 
-	// Magic link (email-based) auth — fallback for blocked OAuth users.
-	mux.HandleFunc("GET /auth/magic-link/request", a.handleMagicLinkRequestForm)
-	mux.HandleFunc("POST /auth/magic-link/request", a.handleMagicLinkRequest)
-	mux.HandleFunc("GET /auth/magic-link/verify", a.handleMagicLinkVerify)
+	// Magic links are a local-development fallback until real mail delivery is
+	// wired. Production startup disables and therefore does not register them.
+	if a.magicLinksEnabled {
+		mux.HandleFunc("GET /auth/magic-link/request", a.handleMagicLinkRequestForm)
+		mux.HandleFunc("POST /auth/magic-link/request", a.handleMagicLinkRequest)
+		mux.HandleFunc("GET /auth/magic-link/verify", a.handleMagicLinkVerify)
+	}
 
 	// API key management (requires session auth).
 	mux.Handle("POST /auth/api-keys", a.RequireAuth(a.handleCreateAPIKey))
@@ -275,16 +317,27 @@ func (a *Auth) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("auth: userinfo returned status %d", resp.StatusCode)
+		http.Redirect(w, r, "/auth/error?code=userinfo_failed", http.StatusSeeOther)
+		return
+	}
 
 	var info struct {
-		ID      string `json:"id"`
-		Email   string `json:"email"`
-		Name    string `json:"name"`
-		Picture string `json:"picture"`
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&info); err != nil {
 		log.Printf("auth: decode userinfo error: %v", err)
 		http.Redirect(w, r, "/auth/error?code=userinfo_failed", http.StatusSeeOther)
+		return
+	}
+	if !info.VerifiedEmail || !a.emailAllowed(info.Email) {
+		log.Printf("auth: rejected OAuth identity outside configured domains")
+		http.Redirect(w, r, "/auth/error?code=email_not_allowed", http.StatusSeeOther)
 		return
 	}
 
@@ -338,6 +391,8 @@ func (a *Auth) handleAuthError(w http.ResponseWriter, r *http.Request) {
 		msg = "Your sign-in session expired. Please try signing in again."
 	case "exchange_failed":
 		msg = "Could not complete sign-in with Google. Your organisation may block third-party sign-in. Try using an API key instead."
+	case "email_not_allowed":
+		msg = "This account is not allowed to access this internal service."
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -531,6 +586,9 @@ func (a *Auth) userBySession(ctx context.Context, sessionID string) (*User, erro
 // redirectURL derives the OAuth callback URL from the incoming request's Host
 // header so the cookie domain always matches the callback domain.
 func (a *Auth) redirectURL(r *http.Request) string {
+	if a.secure && a.oauth != nil && strings.TrimSpace(a.oauth.RedirectURL) != "" {
+		return a.oauth.RedirectURL
+	}
 	scheme := "https"
 	if !a.secure {
 		scheme = "http"
@@ -671,6 +729,10 @@ func (a *Auth) handleMagicLinkRequest(w http.ResponseWriter, r *http.Request) {
 	email := strings.TrimSpace(r.FormValue("email"))
 	if !strings.Contains(email, "@") || len(email) < 3 {
 		http.Error(w, "invalid email address", http.StatusBadRequest)
+		return
+	}
+	if !a.emailAllowed(email) {
+		http.Error(w, "email address is not allowed", http.StatusForbidden)
 		return
 	}
 
@@ -859,6 +921,11 @@ func newID() string {
 
 // handleLogin renders the login page with Google OAuth and email magic link options.
 func (a *Auth) handleLogin(w http.ResponseWriter, r *http.Request) {
+	if !a.magicLinksEnabled {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in — transpara.ai</title></head><body><main><h1>Sign in</h1><p>This internal service accepts approved organization accounts.</p><a href="/auth/google">Continue with Google</a></main></body></html>`)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, `<!DOCTYPE html>
 <html lang="en">

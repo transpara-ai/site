@@ -18,6 +18,7 @@ type ConsolePageData struct {
 	Kanban         *ConsoleKanban
 	IssueScan      *ConsoleIssueScan
 	Config         *ConsoleConfig
+	Workbench      *CivilizationWorkbench
 }
 
 func (h *Handlers) renderConsole(w http.ResponseWriter, r *http.Request, data ConsolePageData) {

@@ -1,0 +1,170 @@
+package graph
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
+	<section id="civilization-workbench" class="space-y-6" data-console-surface="civilization-workbench">
+		<header class="space-y-2">
+			<div class="flex flex-wrap items-center justify-between gap-3">
+				<div>
+					<h2 class="text-xl text-warm font-display">What should Civilization accomplish?</h2>
+					<p class="text-sm text-warm-muted">Describe the outcome. TLC routes it; Civilization handles the operational work.</p>
+				</div>
+				<div class="flex items-center gap-3">
+					<span class="text-[11px] text-warm-faint">{ data.GeneratedAt.Format("15:04:05 UTC") }</span>
+					<button type="button" hx-get="/console/workbench/fragment" hx-target="#civilization-workbench" hx-swap="outerHTML" class="text-xs text-brand hover:underline">Refresh</button>
+				</div>
+			</div>
+			if data.Notice != "" {
+				<div role="status" class="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">{ data.Notice }</div>
+			}
+		</header>
+
+		if len(data.Repositories) > 0 {
+			<form method="post" action="/console/workbench/intake" hx-post="/console/workbench/intake" hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button" class="rounded-xl border border-edge bg-surface p-4 md:p-5 space-y-4">
+				<input type="hidden" name="source_identity" value={ data.IntakeIdentity }/>
+				<label class="block space-y-2">
+					<span class="text-sm font-medium text-warm">Outcome</span>
+					<textarea name="text" required maxlength="20000" rows="4" placeholder="For example: Make the deployment status understandable at a glance, and let me answer blockers without opening GitHub." class="w-full rounded-lg border border-edge bg-elevated px-3 py-3 text-sm text-warm placeholder:text-warm-faint focus:border-brand focus:outline-none"></textarea>
+				</label>
+				<div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+					<label class="space-y-2 flex-1">
+						<span class="text-sm font-medium text-warm">Repository</span>
+						<select name="repository" required class="w-full rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-warm">
+							for _, repository := range data.Repositories {
+								<option value={ repository }>{ repository }</option>
+							}
+						</select>
+					</label>
+					<button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-void hover:opacity-90">Start work</button>
+				</div>
+				<p class="text-xs text-warm-faint">This records the intake immediately. Background work uses the installed TLC workflow, then implements and verifies the brief. It does not itself authorize publication or merge.</p>
+			</form>
+		}
+
+		<div class="space-y-3">
+			<div class="flex items-center justify-between gap-3">
+				<h2 class="text-sm uppercase tracking-widest text-warm-muted">Current work</h2>
+				<span class="text-xs text-warm-faint">{ fmt.Sprintf("%d items", len(data.Items)) }</span>
+			</div>
+			if !data.Available {
+				<div class="rounded-lg border border-edge bg-surface p-6 text-sm text-warm-muted">Workbench data is unavailable. Existing historical evidence remains unchanged.</div>
+			} else if len(data.Items) == 0 {
+				<div class="rounded-lg border border-edge bg-surface p-6 text-sm text-warm-muted">No production work yet. Start with the outcome above.</div>
+			} else {
+				for _, work := range data.Items {
+					@civilizationWorkCard(work)
+				}
+			}
+		</div>
+		<footer class="flex flex-wrap gap-3 text-xs text-warm-faint border-t border-edge pt-4">
+			<span>Production: clean EventGraph</span>
+			<span>·</span>
+			<a class="hover:text-warm underline" href="/console/factory-v1">Historical Factory evidence (read-only)</a>
+		</footer>
+	</section>
+}
+
+templ civilizationWorkCard(work CivilizationWork) {
+	<article class="rounded-xl border border-edge bg-surface p-4 md:p-5 space-y-4" data-work-id={ work.WorkID }>
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div class="space-y-1 max-w-3xl">
+				<h3 class="text-base font-medium text-warm">{ civilizationWorkOutcome(work) }</h3>
+				<p class="text-sm text-warm-muted">{ work.Summary }</p>
+			</div>
+			<div class="flex items-center gap-2">
+				<span class={ "rounded-full border px-2.5 py-1 text-xs " + civilizationStateClass(work.State) }>{ strings.ReplaceAll(work.State, "_", " ") }</span>
+				<span class="rounded-full border border-edge bg-elevated px-2.5 py-1 text-xs text-warm-muted">{ civilizationWorkRoute(work) }</span>
+			</div>
+		</div>
+
+		if work.Blocker != "" {
+			<div class="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 space-y-1">
+				<p class="text-sm font-medium text-amber-200">Needs attention</p>
+				<p class="text-sm text-amber-100">{ work.Blocker }</p>
+				if work.NextAction != "" {
+					<p class="text-xs text-amber-200/80">{ work.NextAction }</p>
+				}
+			</div>
+		}
+
+		if implementation := civilizationLatestProviderRun(work, "implement"); implementation != nil {
+			<section class="rounded-lg border border-edge bg-elevated/40 px-4 py-3 space-y-2" aria-label="Implementation result">
+				<p class="text-xs uppercase tracking-widest text-warm-faint">Implementation result</p>
+				<p class="text-sm text-warm">{ implementation.Result.Summary }</p>
+				if len(implementation.Result.Checks) > 0 {
+					<ul class="space-y-1 text-sm text-warm-muted" aria-label="Test results">
+						for _, check := range implementation.Result.Checks {
+							<li><span class="text-emerald-300">Passed</span> · { check.Name } — { check.Summary }</li>
+						}
+					</ul>
+				}
+				if review := civilizationLatestProviderRun(work, "review"); review != nil && review.Result.Review != nil {
+					<p class="text-sm text-warm-muted"><span class="text-warm">Review:</span> { review.Result.Review.Summary }</p>
+				}
+			</section>
+		}
+
+		for _, intervention := range work.Interventions {
+			if intervention.Status == "open" {
+				<form method="post" action={ templ.SafeURL("/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve") } hx-post={ "/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve" } hx-target="#civilization-workbench" hx-swap="outerHTML" class="rounded-lg border border-brand/30 bg-brand/5 p-4 space-y-3">
+					<label class="block space-y-2">
+						<span class="text-sm font-medium text-warm">{ intervention.Prompt }</span>
+						<textarea name="resolution" required maxlength="12000" rows="3" placeholder="Answer in plain language…" class="w-full rounded-lg border border-edge bg-elevated px-3 py-2 text-sm text-warm placeholder:text-warm-faint"></textarea>
+					</label>
+					<button type="submit" class="rounded-lg border border-brand px-4 py-2 text-sm text-brand hover:bg-brand/10">Record answer</button>
+					<p class="text-xs text-warm-faint">An answer resumes work. It is not repository-effect approval.</p>
+				</form>
+			}
+		}
+
+		<div class="flex flex-wrap items-center gap-3">
+			if work.PullRequest != nil && work.PullRequest.URL != "" {
+				<a href={ templ.URL(work.PullRequest.URL) } rel="noreferrer" class="rounded-lg border border-edge px-4 py-2 text-sm text-warm hover:border-brand">Open pull request #{ fmt.Sprintf("%d", work.PullRequest.Number) }</a>
+			}
+			if work.NextAction != "" && work.Blocker == "" {
+				<span class="text-sm text-warm-muted">Next: { work.NextAction }</span>
+			}
+		</div>
+
+		<details class="border-t border-edge pt-3 text-xs text-warm-muted">
+			<summary class="cursor-pointer select-none hover:text-warm">Technical details</summary>
+			<div class="mt-3 grid gap-3 md:grid-cols-2">
+				<div class="space-y-1">
+					<p><span class="text-warm-faint">Work ID</span> <span class="font-mono break-all">{ work.WorkID }</span></p>
+					<p><span class="text-warm-faint">Repository</span> { work.Source.Repository }</p>
+					if work.Bound != nil {
+						<p><span class="text-warm-faint">Workflow</span> { work.Bound.Envelope.Workflow.Name } { work.Bound.Envelope.Workflow.Version }</p>
+						<p><span class="text-warm-faint">Transport</span> { work.Bound.Envelope.SchemaVersion }</p>
+					}
+				</div>
+				if work.PullRequest != nil {
+					<div class="space-y-1 font-mono break-all">
+						<p>head { work.PullRequest.HeadSHA }</p>
+						<p>reviewed { work.PullRequest.ReviewedHeadSHA }</p>
+						<p>validated { work.PullRequest.ValidatedHeadSHA }</p>
+					</div>
+				}
+			</div>
+			if files := civilizationChangedFiles(work); len(files) > 0 {
+				<p class="mt-3 text-warm-faint">Changed files</p>
+				<ul class="mt-1 list-disc list-inside font-mono">
+					for _, file := range files {
+						<li>{ file }</li>
+					}
+				</ul>
+			}
+			if work.MergeDecision != nil && len(work.MergeDecision.Reasons) > 0 {
+				<p class="mt-3 text-warm-faint">Why automatic merge is not eligible</p>
+				<ul class="mt-1 list-disc list-inside">
+					for _, reason := range work.MergeDecision.Reasons {
+						<li>{ reason }</li>
+					}
+				</ul>
+			}
+		</details>
+	</article>
+}

@@ -36,13 +36,58 @@ func TestNoEnvDefaultsToNonProduction(t *testing.T) {
 
 func TestValidateProductionAuthConfigAllowsProductionWithOAuth(t *testing.T) {
 	env := map[string]string{
-		"APP_ENV":              "production",
-		"GOOGLE_CLIENT_ID":     "client-id",
-		"GOOGLE_CLIENT_SECRET": "client-secret",
+		"APP_ENV":                    "production",
+		"GOOGLE_CLIENT_ID":           "client-id",
+		"GOOGLE_CLIENT_SECRET":       "client-secret",
+		"SITE_ALLOWED_EMAIL_DOMAINS": "transpara.com,transpara.ai",
+		"AUTH_REDIRECT_URL":          "https://civilization.internal.example/auth/callback",
 	}
 
 	if err := validateProductionAuthConfig(mapGetter(env)); err != nil {
 		t.Fatalf("validateProductionAuthConfig: %v", err)
+	}
+}
+
+func TestValidateProductionAuthConfigAllowsProductionWithOAuthSecretFile(t *testing.T) {
+	env := map[string]string{
+		"APP_ENV": "production", "GOOGLE_CLIENT_ID": "client-id", "GOOGLE_CLIENT_SECRET_FILE": "/run/secrets/google-client-secret",
+		"SITE_ALLOWED_EMAIL_DOMAINS": "transpara.com",
+		"AUTH_REDIRECT_URL":          "https://civilization.internal.example/auth/callback",
+	}
+	if err := validateProductionAuthConfig(mapGetter(env)); err != nil {
+		t.Fatalf("validateProductionAuthConfig: %v", err)
+	}
+}
+
+func TestValidateProductionAuthConfigRequiresAllowedDomains(t *testing.T) {
+	env := map[string]string{
+		"APP_ENV": "production", "GOOGLE_CLIENT_ID": "client-id", "GOOGLE_CLIENT_SECRET": "client-secret",
+	}
+	if err := validateProductionAuthConfig(mapGetter(env)); err == nil || !strings.Contains(err.Error(), "SITE_ALLOWED_EMAIL_DOMAINS") {
+		t.Fatalf("error = %v, want missing domain allowlist", err)
+	}
+}
+
+func TestAllowedEmailDomainsNormalizesAndRejectsWildcards(t *testing.T) {
+	domains, err := allowedEmailDomains(" Transpara.COM,transpara.com,transpara.ai ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(domains) != 2 || domains[0] != "transpara.com" || domains[1] != "transpara.ai" {
+		t.Fatalf("domains = %#v", domains)
+	}
+	if _, err := allowedEmailDomains("*.transpara.com"); err == nil {
+		t.Fatal("wildcard domain must be rejected")
+	}
+}
+
+func TestValidateProductionAuthConfigRequiresHTTPSRedirect(t *testing.T) {
+	env := map[string]string{
+		"APP_ENV": "production", "GOOGLE_CLIENT_ID": "client-id", "GOOGLE_CLIENT_SECRET": "client-secret",
+		"SITE_ALLOWED_EMAIL_DOMAINS": "transpara.com", "AUTH_REDIRECT_URL": "http://civilization.internal.example/auth/callback",
+	}
+	if err := validateProductionAuthConfig(mapGetter(env)); err == nil || !strings.Contains(err.Error(), "HTTPS") {
+		t.Fatalf("error = %v, want HTTPS redirect rejection", err)
 	}
 }
 
