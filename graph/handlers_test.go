@@ -179,6 +179,9 @@ func TestHandleOpsGitHubCanonicalRendersReadOnlyMigrationSurface(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
+	if got := w.Header().Get("X-Transpara-Archive-Boundary"); got != "civilization-history/v1" {
+		t.Fatalf("archive boundary header = %q, want civilization-history/v1", got)
+	}
 	if w.Code != http.StatusOK {
 		t.Fatalf("GET /ops/github-canonical: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
@@ -2275,8 +2278,8 @@ func TestBuildOpsCivilizationConsumesCompleteProjection(t *testing.T) {
 	if data.IssueReadiness.Status != "pending: Surface ready-for-Human result PR" || data.IssueReadiness.FirstPendingStage != "Surface ready-for-Human result PR" {
 		t.Fatalf("issue readiness = %+v, want pending surface-ready stage", data.IssueReadiness)
 	}
-	if !strings.Contains(data.IssueReadiness.PRReadyWhen, "exact-head CFAR") {
-		t.Fatalf("issue PR-Ready-When = %q, want exact-head CFAR boundary", data.IssueReadiness.PRReadyWhen)
+	if !strings.Contains(data.IssueReadiness.PRReadyWhen, "exact-head Human review when required") {
+		t.Fatalf("issue PR-Ready-When = %q, want canonical Human-review boundary", data.IssueReadiness.PRReadyWhen)
 	}
 	if !strings.Contains(data.IssueReadiness.RecommendationState, "recommendation-only rank 1 of 3") {
 		t.Fatalf("issue recommendation state = %q", data.IssueReadiness.RecommendationState)

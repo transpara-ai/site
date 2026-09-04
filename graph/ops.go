@@ -1247,6 +1247,7 @@ func (h *Handlers) handleOpsCivilization(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handlers) handleOpsGitHubCanonical(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Transpara-Archive-Boundary", "civilization-history/v1")
 	h.renderOps(w, r, OpsPageData{
 		Title:           "GitHub Canonical",
 		Description:     "Read-only migration progress for replacing markdown development arcs with GitHub issue-canonical work records.",
@@ -1905,30 +1906,12 @@ func opsDrilldownSurfaces(readOnly bool) []OpsSurface {
 			Status:      "v4.0 bounded",
 		},
 		{
-			ID:          "github-canonical",
-			Label:       "GitHub Canonical",
-			Description: "Migration progress for issue-canonical work, blocked lanes, completed traceability, and legacy markdown retirement.",
-			Href:        "/ops/github-canonical",
-			Target:      "static typed Site migration fixture",
-			Owner:       "site read-only projection",
-			Status:      "partial cutover",
-		},
-		{
 			ID:          "public-proof",
 			Label:       "Public Proof",
 			Description: "Display-only public-reader and public-correction proof ledger with explicit unavailable, stale, fixture, and projection-only states.",
 			Href:        "/ops/public-proof",
 			Target:      "static Site public-proof evidence records",
 			Owner:       "site operator evidence surface",
-			Status:      "display only",
-		},
-		{
-			ID:          "review-console",
-			Label:       "Review Console",
-			Description: "External Committee decision evidence: exact-head approvals, residuals, authority packets, and gate closeout state.",
-			Href:        "/ops/review-console",
-			Target:      "docs v4.0 Event 13 review item records",
-			Owner:       "site read-only projection",
 			Status:      "display only",
 		},
 		{
@@ -1990,14 +1973,12 @@ func opsDrilldownSurfaces(readOnly bool) []OpsSurface {
 		return surfaces
 	}
 	registeredReadOnly := map[string]bool{
-		"telemetry":        true,
-		"observatory":      true,
-		"civilization":     true,
-		"github-canonical": true,
-		"public-proof":     true,
-		"review-console":   true,
-		"ingestion":        true,
-		"evidence":         true,
+		"telemetry":    true,
+		"observatory":  true,
+		"civilization": true,
+		"public-proof": true,
+		"ingestion":    true,
+		"evidence":     true,
 	}
 	filtered := make([]OpsSurface, 0, len(registeredReadOnly))
 	for _, surface := range surfaces {

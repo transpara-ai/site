@@ -16,6 +16,9 @@ func TestHandleOpsReviewConsoleRendersDisplayOnlyEvidence(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
+	if got := w.Header().Get("X-Transpara-Archive-Boundary"); got != "civilization-history/v1" {
+		t.Fatalf("archive boundary header = %q, want civilization-history/v1", got)
+	}
 	if w.Code != http.StatusOK {
 		t.Fatalf("GET /ops/review-console: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
