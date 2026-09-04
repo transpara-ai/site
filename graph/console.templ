@@ -24,7 +24,6 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 					@consoleTab("workbench", "Workbench", "/console/workbench", data.Active, true)
 					@consoleTab("mission-control", "Overview", "/console", data.Active, true)
 					@consoleTab("health", "Health wall", "/console/health", data.Active, true)
-					@consoleTab("factory-v1", "History", "/console/factory-v1", data.Active, true)
 					@consoleTab("kanban", "Kanban", "/console/kanban", data.Active, true)
 					@consoleTab("intake", "Intake", "/console/intake", data.Active, true)
 					@consoleTab("config", "Config", "/console/config", data.Active, true)
@@ -34,9 +33,6 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				}
 				if data.Health != nil {
 					@consoleHealthWallFragment(*data.Health)
-				}
-				if data.FactoryV1 != nil {
-					@factoryV1MissionControlSurface(*data.FactoryV1)
 				}
 				if data.Kanban != nil {
 					@consoleKanbanFragment(*data.Kanban)

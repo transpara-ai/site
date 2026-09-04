@@ -700,15 +700,15 @@ func TestAutoReplyDocumentInjectionPath(t *testing.T) {
 	// Seed two documents in the space.
 	store.CreateNode(ctx, CreateNodeParams{
 		SpaceID: space.ID, Kind: KindDocument,
-		Title:      "Team Handbook",
-		Body:       "We ship every Friday and have standups at 9am.",
-		Author:     "Tester", AuthorID: "test-owner", AuthorKind: "human",
+		Title:  "Team Handbook",
+		Body:   "We ship every Friday and have standups at 9am.",
+		Author: "Tester", AuthorID: "test-owner", AuthorKind: "human",
 	})
 	store.CreateNode(ctx, CreateNodeParams{
 		SpaceID: space.ID, Kind: KindDocument,
-		Title:      "Architecture Decisions",
-		Body:       "We use event-sourcing for all state changes.",
-		Author:     "Tester", AuthorID: "test-owner", AuthorKind: "human",
+		Title:  "Architecture Decisions",
+		Body:   "We use event-sourcing for all state changes.",
+		Author: "Tester", AuthorID: "test-owner", AuthorKind: "human",
 	})
 
 	t.Run("docs_present_injected_in_prompt", func(t *testing.T) {
@@ -770,9 +770,9 @@ func TestListDocumentContextBounded(t *testing.T) {
 	for i := 0; i < 15; i++ {
 		store.CreateNode(ctx, CreateNodeParams{
 			SpaceID: space.ID, Kind: KindDocument,
-			Title:      fmt.Sprintf("Doc %d", i),
-			Body:       fmt.Sprintf("Content for doc %d.", i),
-			Author:     "Tester", AuthorID: "test-owner", AuthorKind: "human",
+			Title:  fmt.Sprintf("Doc %d", i),
+			Body:   fmt.Sprintf("Content for doc %d.", i),
+			Author: "Tester", AuthorID: "test-owner", AuthorKind: "human",
 		})
 	}
 

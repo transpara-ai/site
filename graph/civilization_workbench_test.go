@@ -40,7 +40,7 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
 	for _, wanted := range []string{
 		`data-console-surface="civilization-workbench"`, "What should Civilization accomplish?", "A clear operator experience",
 		"Start work", "records the intake immediately", "Implementation result", "all packages passed", "No unresolved findings",
-		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.1", "Historical Factory evidence (read-only)",
+		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.1", "Historical Factory evidence remains recoverable from Git history.",
 	} {
 		if !strings.Contains(body, wanted) {
 			t.Fatalf("body missing %q:\n%s", wanted, body)

@@ -397,13 +397,6 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /console/mission-control/fragment", h.writeWrap(h.handleMissionControlFragment))
 	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
 	mux.Handle("GET /console/health/fragment", h.writeWrap(h.handleConsoleHealthFragment))
-	mux.Handle("GET /console/factory-v1", h.writeWrap(h.handleFactoryV1MissionControl))
-	mux.Handle("GET /console/factory-v1/fragment", h.writeWrap(h.handleFactoryV1MissionControlFragment))
-	mux.Handle("POST /console/factory-v1/ideas", h.writeWrap(h.handleFactoryV1IdeaCreate))
-	mux.Handle("POST /console/factory-v1/ideas/{id}/refine", h.writeWrap(h.handleFactoryV1IdeaRefine))
-	mux.Handle("POST /console/factory-v1/ideas/{id}/submit", h.writeWrap(h.handleFactoryV1IdeaSubmit))
-	mux.Handle("POST /console/factory-v1/orders", h.writeWrap(h.handleFactoryV1OrderCreate))
-	mux.Handle("POST /console/factory-v1/interventions/{id}/resolve", h.writeWrap(h.handleFactoryV1InterventionResolve))
 	mux.Handle("GET /console/kanban", h.writeWrap(h.handleConsoleKanban))
 	mux.Handle("GET /console/kanban/fragment", h.writeWrap(h.handleConsoleKanbanFragment))
 	mux.Handle("GET /console/kanban/order/{id}", h.writeWrap(h.handleConsoleKanbanOrder))
@@ -440,8 +433,8 @@ func (h *Handlers) RegisterReadOnlyFactory(mux *http.ServeMux) {
 }
 
 // RegisterReadOnlyConsole adds no-DB focused console routes. The unified Mission
-// Control and Factory v1 projections are deliberately excluded because they
-// contain authenticated operator data. /console preserves the legacy health
+// Control projection is deliberately excluded because it contains
+// authenticated operator data. /console preserves the legacy health
 // entry point without mounting the Mission Control acquisition handler.
 func (h *Handlers) RegisterReadOnlyConsole(mux *http.ServeMux) {
 	mux.HandleFunc("GET /console", h.handleConsoleHealth)

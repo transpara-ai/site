@@ -65,7 +65,6 @@ func TestOperatorAndHiveOpsRoutesRequireWriteAuth(t *testing.T) {
 		"/ops/decision",
 		"/ops/refinery",
 		"/factory",
-		"/console/factory-v1",
 		"/api/hive/site-ops?space=hive",
 	} {
 		t.Run(path, func(t *testing.T) {
@@ -97,11 +96,6 @@ func TestNewOperatorMutationRoutesRequireWriteAuth(t *testing.T) {
 	for _, path := range []string{
 		"/ops/control/intents",
 		"/factory/artifacts",
-		"/console/factory-v1/ideas",
-		"/console/factory-v1/ideas/idea_1/refine",
-		"/console/factory-v1/ideas/idea_1/submit",
-		"/console/factory-v1/orders",
-		"/console/factory-v1/interventions/int_1/resolve",
 	} {
 		t.Run(path, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, path, strings.NewReader("title=x"))
