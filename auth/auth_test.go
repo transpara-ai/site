@@ -10,9 +10,54 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/oauth2"
 	_ "github.com/lib/pq"
+	"golang.org/x/oauth2"
 )
+
+func TestAllowedEmailDomainsAreExactAndCaseInsensitive(t *testing.T) {
+	a := &Auth{}
+	if err := a.SetAllowedEmailDomains([]string{"Transpara.COM", "transpara.ai"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, email := range []string{"operator@transpara.com", "OPERATOR@TRANSPARA.AI"} {
+		if !a.emailAllowed(email) {
+			t.Fatalf("expected %q to be allowed", email)
+		}
+	}
+	for _, email := range []string{"operator@example.com", "operator@sub.transpara.com", "operator@transpara.com@example.com"} {
+		if a.emailAllowed(email) {
+			t.Fatalf("expected %q to be rejected", email)
+		}
+	}
+}
+
+func TestAllowedEmailDomainsRejectInvalidConfiguration(t *testing.T) {
+	for _, domain := range []string{"", "*.transpara.com", "@transpara.com", ".transpara.com", "transpara.com."} {
+		a := &Auth{}
+		if err := a.SetAllowedEmailDomains([]string{domain}); err == nil {
+			t.Fatalf("expected %q to be rejected", domain)
+		}
+	}
+}
+
+func TestDisabledMagicLinksAreNotRegisteredOrAdvertised(t *testing.T) {
+	a := &Auth{}
+	a.SetMagicLinksEnabled(false)
+	mux := http.NewServeMux()
+	a.Register(mux)
+
+	login := httptest.NewRecorder()
+	mux.ServeHTTP(login, httptest.NewRequest(http.MethodGet, "/auth/login", nil))
+	if strings.Contains(login.Body.String(), "magic-link") || !strings.Contains(login.Body.String(), "/auth/google") {
+		t.Fatalf("login body = %q", login.Body.String())
+	}
+
+	request := httptest.NewRecorder()
+	mux.ServeHTTP(request, httptest.NewRequest(http.MethodPost, "/auth/magic-link/request", nil))
+	if request.Code != http.StatusNotFound {
+		t.Fatalf("magic-link status = %d, want 404", request.Code)
+	}
+}
 
 func testAuth(t *testing.T) (*Auth, *sql.DB) {
 	t.Helper()
@@ -342,6 +387,18 @@ func TestAuthStatus(t *testing.T) {
 	}
 }
 
+func TestProductionRedirectURLIgnoresRequestHost(t *testing.T) {
+	a := &Auth{
+		secure: true,
+		oauth:  &oauth2.Config{RedirectURL: "https://civilization.internal.example/auth/callback"},
+	}
+	req := httptest.NewRequest(http.MethodGet, "https://attacker.example/auth/status", nil)
+	req.Host = "attacker.example"
+	if got := a.redirectURL(req); got != a.oauth.RedirectURL {
+		t.Fatalf("redirectURL = %q, want %q", got, a.oauth.RedirectURL)
+	}
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Magic link tests
 // ────────────────────────────────────────────────────────────────────
@@ -560,11 +617,12 @@ func TestOAuthHappyPath(t *testing.T) {
 	// Mock Google userinfo endpoint.
 	userInfoServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"id":      "google-oauth-test-123",
-			"email":   testEmail,
-			"name":    "OAuth Happy Tester",
-			"picture": "https://example.com/pic.jpg",
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"id":             "google-oauth-test-123",
+			"email":          testEmail,
+			"verified_email": true,
+			"name":           "OAuth Happy Tester",
+			"picture":        "https://example.com/pic.jpg",
 		})
 	}))
 	defer userInfoServer.Close()

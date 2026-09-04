@@ -388,6 +388,11 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("POST /factory/artifacts", h.writeWrap(h.handleFactoryArtifactCreate))
 
 	// Mission Control console — unified read-only overview and focused screens.
+	mux.Handle("GET /console/workbench", h.writeWrap(h.handleCivilizationWorkbench))
+	mux.Handle("GET /console/workbench/fragment", h.writeWrap(h.handleCivilizationWorkbenchFragment))
+	mux.Handle("POST /console/workbench/intake", h.writeWrap(h.handleCivilizationIntake))
+	mux.Handle("POST /console/workbench/work/{workID}/run", h.writeWrap(h.handleCivilizationRun))
+	mux.Handle("POST /console/workbench/work/{workID}/interventions/{interventionID}/resolve", h.writeWrap(h.handleCivilizationResolve))
 	mux.Handle("GET /console", h.writeWrap(h.handleMissionControl))
 	mux.Handle("GET /console/mission-control/fragment", h.writeWrap(h.handleMissionControlFragment))
 	mux.Handle("GET /console/health", h.writeWrap(h.handleConsoleHealth))
