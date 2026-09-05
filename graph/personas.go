@@ -15,18 +15,18 @@ var personaFiles embed.FS
 // personaCategory maps agent slug names to their UI category.
 var personaCategory = map[string]string{
 	// Care
-	"steward":  "care",
-	"witness":  "care",
-	"mourner":  "care",
-	"harmony":  "care",
-	"teacher":  "care",
+	"steward": "care",
+	"witness": "care",
+	"mourner": "care",
+	"harmony": "care",
+	"teacher": "care",
 	// Governance
-	"ceo":        "governance",
-	"cto":        "governance",
-	"pm":         "governance",
-	"guardian":   "governance",
-	"advocate":   "governance",
-	"dissenter":  "governance",
+	"ceo":         "governance",
+	"cto":         "governance",
+	"pm":          "governance",
+	"guardian":    "governance",
+	"advocate":    "governance",
+	"dissenter":   "governance",
 	"philosopher": "governance",
 	// Knowledge
 	"historian": "knowledge",
@@ -49,11 +49,11 @@ var personaCategory = map[string]string{
 	"growth":           "outward",
 	"customer-success": "outward",
 	// Resource
-	"simplifier":  "resource",
-	"legal":       "resource",
+	"simplifier":   "resource",
+	"legal":        "resource",
 	"philanthropy": "resource",
-	"budget":      "resource",
-	"finance":     "resource",
+	"budget":       "resource",
+	"finance":      "resource",
 }
 
 // personaActive is the set of personas shown to users on the Agents page.
@@ -71,7 +71,7 @@ var personaActive = map[string]bool{
 
 // personaModel maps agent slugs to the preferred model (default: sonnet).
 var personaModel = map[string]string{
-	"dissenter":  "opus",
+	"dissenter":   "opus",
 	"philosopher": "opus",
 }
 

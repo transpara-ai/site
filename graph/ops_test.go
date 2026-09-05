@@ -17,6 +17,16 @@ import (
 	"unicode/utf8"
 )
 
+func TestOpsDrilldownsExcludeArchivedDoctrineSurfaces(t *testing.T) {
+	for _, readOnly := range []bool{false, true} {
+		for _, surface := range opsDrilldownSurfaces(readOnly) {
+			if surface.ID == "github-canonical" || surface.ID == "review-console" {
+				t.Fatalf("archived surface %q remains in current navigation", surface.ID)
+			}
+		}
+	}
+}
+
 func TestFetchOpsWorkSummarizesWorkAPI(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {

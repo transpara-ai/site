@@ -55,7 +55,6 @@ templ missionControlFragment(view MissionControlView) {
 	<div id="civilization-mission-control" data-console-surface="civilization-mission-control" hx-get="/console/mission-control/fragment" hx-trigger="every 5s" hx-swap="outerHTML" class="space-y-5">
 		<nav data-mission-links="focused-screens" aria-label="Focused Mission Control screens" class="flex flex-wrap gap-2 text-xs">
 			<a href="/console/health" class="rounded border border-edge px-2 py-1 text-brand hover:border-brand">Health</a>
-			<a href="/console/factory-v1" class="rounded border border-edge px-2 py-1 text-brand hover:border-brand">Factory</a>
 			<a href="/console/kanban" class="rounded border border-edge px-2 py-1 text-brand hover:border-brand">Kanban</a>
 			<a href="/console/intake" class="rounded border border-edge px-2 py-1 text-brand hover:border-brand">Intake</a>
 			<a href="/console/config" class="rounded border border-edge px-2 py-1 text-brand hover:border-brand">Config</a>
@@ -103,35 +102,13 @@ templ missionControlFragment(view MissionControlView) {
 		</section>
 
 		if view.Projection == nil {
-			@missionControlUnavailableSection("capacity", "Worker capacity and utilization", "Hive runtime evidence is unavailable; zero workers is not inferred.")
 			@missionControlUnavailableSection("human-actions", "Needs Human", "Human action evidence is unavailable; an empty queue is not claimed.")
-			@missionControlUnavailableSection("wip", "WIP — incomplete source set", "Factory and Work evidence is unavailable; an empty WIP set is not claimed.")
+			@missionControlUnavailableSection("wip", "WIP — incomplete source set", "Work evidence is unavailable; an empty WIP set is not claimed.")
 			@missionControlUnavailableSection("roles-agents", "Configured roles and Agents", "Roster, running state, provider, model, authority, capacity, status, and assignment are unavailable.")
 			@missionControlUnavailableSection("workflow", "In-flight workflow and handoffs", "Workflow evidence is unavailable; no normal handoff is inferred.")
-			@missionControlUnavailableSection("exact-evidence", "FactoryOrder, design, gates, PR, and exact-head evidence", "Exact evidence is unavailable and receives no gate credit.")
+			@missionControlUnavailableSection("exact-evidence", "PR and exact-head evidence", "Exact evidence is unavailable and receives no authority credit.")
 			@missionControlUnavailableSection("sources", "Source completeness", "Required source envelopes are unavailable.")
 		} else {
-			<section data-mission-landmark="capacity" class="rounded-lg border border-edge bg-surface p-4">
-				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h2 class="text-base font-medium text-warm">Worker capacity and utilization</h2>@missionControlMark(view.Projection.WorkerPool.Mark)</div>
-				<div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-					@missionMetric("configured", view.Projection.WorkerPool.ConfiguredWorkers)
-					@missionMetric("active", view.Projection.WorkerPool.ActiveWorkers)
-					@missionMetric("available", view.Projection.WorkerPool.AvailableWorkers)
-					@missionMetric("queued", view.Projection.WorkerPool.QueuedOrders)
-					@missionMetric("schedulable", view.Projection.WorkerPool.SchedulableOrders)
-					@missionMetric("utilization %", view.Projection.WorkerPool.UtilizationPercent)
-				</div>
-				if len(view.Projection.WorkerPool.Assignments) > 0 {
-					<div class="mt-4 overflow-x-auto">
-						<table class="w-full min-w-[48rem] text-left text-xs"><thead class="text-warm-faint"><tr><th class="pb-2">Order</th><th>Stage</th><th>Attempt</th><th>Provider</th><th>Model</th><th>Assigned</th></tr></thead><tbody class="divide-y divide-edge">
-							for _, item := range view.Projection.WorkerPool.Assignments {
-								<tr><td class="py-2 font-mono text-warm">{ item.OrderID }{ "@" }{ item.OrderVersion }</td><td>{ item.Stage }</td><td class="font-mono">{ item.AttemptID }</td><td>{ item.ProviderID }</td><td>{ item.ModelID }</td><td>{ missionTime(item.AssignedAt) }</td></tr>
-							}
-						</tbody></table>
-					</div>
-				}
-			</section>
-
 			<section data-mission-landmark="human-actions" class="rounded-lg border border-edge bg-surface p-4">
 				<div class="flex items-center justify-between gap-3"><h2 class="text-base font-medium text-warm">Needs Human</h2><span class="rounded-full bg-amber-300/10 px-2 py-1 text-xs text-amber-300">{ fmt.Sprintf("%d", len(view.Projection.HumanActions)) }</span></div>
 				if len(view.Projection.HumanActions) == 0 {
@@ -201,10 +178,10 @@ templ missionControlFragment(view MissionControlView) {
 			</section>
 
 			<section data-mission-landmark="exact-evidence" class="rounded-lg border border-edge bg-surface p-4">
-				<h2 class="text-base font-medium text-warm">FactoryOrder, design, gate, PR, and exact-head evidence</h2>
+				<h2 class="text-base font-medium text-warm">PR and exact-head evidence</h2>
 				<div class="mt-3 space-y-3">
 					for _, item := range view.Projection.WIP {
-						if item.Kind == "factory_order" {
+						if len(item.EvidenceRollup.Items) > 0 || item.EvidenceRollup.PRRepository != "" {
 							@missionEvidenceCard(item)
 						}
 					}
@@ -260,9 +237,8 @@ templ missionWIPCard(item MissionWIPItem) {
 		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div class="min-w-0"><p class="text-[10px] uppercase tracking-wide text-warm-faint">{ item.Kind }</p><h3 class="mt-1 text-sm font-medium text-warm">{ item.Title }</h3><p class="mt-1 break-all font-mono text-[10px] text-warm-faint">{ item.FactoryOrderID }{ "@" }{ item.FactoryOrderVersion } · work { item.WorkTaskID } · doc { item.DocumentSHA256 }</p></div>@missionControlMark(item.Mark)</div>
 		<div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 			@missionField("repository", item.TargetRepository)@missionField("assignment", item.Assignment)@missionField("lifecycle", item.LifecycleStatus)@missionField("engine protocol", item.EngineProtocol)
-			@missionField("TLC stage", item.TLCStage)@missionField("stage index", item.TLCStageIndex)@missionField("started", item.ItemStartedAt)@missionField("last effect", item.LastEffectAt)
+			@missionField("started", item.ItemStartedAt)@missionField("last effect", item.LastEffectAt)
 			@missionField("elapsed ms", item.ElapsedMS)@missionField("next handoff", item.NextHandoff)@missionField("item completeness", item.Completeness)
-			<div><p class="text-[10px] uppercase tracking-wide text-warm-faint">TLC 4.5 packet / Human Review</p><p class="mt-1 text-sm text-warm">{ item.Classification.EffectiveGovernanceProtocol } · { item.Classification.EffectivePacketProfile } · Tier { fmt.Sprintf("%d", item.Classification.EffectiveHumanReviewTier) }</p><div class="mt-1">@missionControlMark(item.Classification.Mark)</div><p class="mt-1 text-[10px] text-warm-faint">raw { item.Classification.EngineProtocol } · declared { item.Classification.DeclaredGovernanceProtocol } { item.Classification.DeclaredPacketProfile }</p></div>
 		</div>
 		if len(item.BlockerRefs) > 0 || len(item.InterventionRefs) > 0 {
 			<p class="mt-3 border-t border-edge pt-3 text-xs text-rose-200">Blockers { missionRefs(item.BlockerRefs) } · interventions { missionRefs(item.InterventionRefs) }</p>
@@ -276,8 +252,8 @@ templ missionField(label string, value MissionMarkedValue) {
 
 templ missionEvidenceCard(item MissionWIPItem) {
 	<article class="rounded-lg border border-edge bg-void/30 p-3">
-		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div class="min-w-0"><p class="text-sm font-medium text-warm">{ item.FactoryOrderID }{ "@" }{ item.FactoryOrderVersion }</p><div class="mt-2 grid gap-2 text-[10px] text-warm-faint sm:grid-cols-3"><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="break-all font-mono">FO { item.EvidenceRollup.FactoryOrderRef }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["factory_order_ref"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="break-all font-mono">design { item.EvidenceRollup.DesignBlobSHA }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["design_blob_sha"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="break-all font-mono">HDR { item.EvidenceRollup.HumanDesignReviewRef }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["human_design_review_ref"])</p></div></div>@missionControlMark(item.EvidenceRollup.Mark)</div>
-		<div class="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4"><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">PR:</span> { item.EvidenceRollup.PRRepository }#{ fmt.Sprintf("%d", item.EvidenceRollup.PRNumber) } · { item.EvidenceRollup.PRState }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_state"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">head:</span> <span class="font-mono">{ item.EvidenceRollup.PRHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_head_sha"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">reviewed:</span> <span class="font-mono">{ item.EvidenceRollup.ReviewedHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["reviewed_head_sha"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">exact-head:</span> { fmt.Sprintf("%t", item.EvidenceRollup.ReadyHeadMatches) } · Tier 3 pending { fmt.Sprintf("%t", item.EvidenceRollup.PendingTier3HumanReview) }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["ready_head_matches"])</p></div>
+		<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div class="min-w-0"><p class="text-sm font-medium text-warm">{ item.Title }</p><p class="mt-1 font-mono text-[10px] text-warm-faint">work { item.WorkTaskID }</p></div>@missionControlMark(item.EvidenceRollup.Mark)</div>
+		<div class="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4"><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">PR:</span> { item.EvidenceRollup.PRRepository }#{ fmt.Sprintf("%d", item.EvidenceRollup.PRNumber) } · { item.EvidenceRollup.PRState }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_state"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">head:</span> <span class="font-mono">{ item.EvidenceRollup.PRHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["pr_head_sha"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">reviewed:</span> <span class="font-mono">{ item.EvidenceRollup.ReviewedHeadSHA }</span></span>@missionControlMark(item.EvidenceRollup.FieldMarks["reviewed_head_sha"])</p><p class="flex min-w-0 flex-wrap items-center gap-1"><span class="min-w-0 break-all"><span class="text-warm-faint">exact-head:</span> { fmt.Sprintf("%t", item.EvidenceRollup.ReadyHeadMatches) }</span>@missionControlMark(item.EvidenceRollup.FieldMarks["ready_head_matches"])</p></div>
 		<details class="mt-3"><summary class="cursor-pointer text-xs text-brand">{ fmt.Sprintf("%d evidence items", len(item.EvidenceRollup.Items)) }</summary><div class="mt-2 space-y-2">
 			for _, evidence := range item.EvidenceRollup.Items {
 				<div class="rounded border border-edge p-2 text-xs"><div class="flex items-center justify-between gap-2"><span class="font-medium text-warm">{ evidence.Stage } · { evidence.Kind }</span>@missionControlMark(evidence.Mark)</div><p class="mt-1 break-all font-mono text-[10px] text-warm-faint">{ evidence.Reference } · blob { evidence.BlobSHA } · head { evidence.PRHeadSHA } · reviewed { evidence.ReviewedHeadSHA }</p><p class="mt-1 text-[10px] text-warm-muted">author { evidence.AuthorFamily } · reviewer { evidence.ReviewerFamily } · provider { evidence.ProviderID }</p></div>

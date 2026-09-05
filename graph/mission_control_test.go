@@ -50,27 +50,23 @@ func missionTestProjection(now time.Time) MissionControlProjection {
 			{SourceID: "eventgraph_wip_evidence", Required: true, Completeness: MissionCompleteness{Complete: true, StartHead: "head-1", EndHead: "head-1"}, Mark: exact},
 			{SourceID: "roster_routing", Required: true, Completeness: MissionCompleteness{Complete: true, StartHead: "head-1", EndHead: "head-1"}, Mark: exact},
 			{SourceID: "authority_actions", Required: true, Completeness: MissionCompleteness{Complete: true, StartHead: "head-1", EndHead: "head-1"}, Mark: exact},
-			{SourceID: "factory_runtime", Required: true, Completeness: MissionCompleteness{Complete: true, StartHead: "boot-1", EndHead: "boot-1"}, Mark: projected},
 		},
 		Services: []MissionServiceHealth{
 			{ServiceID: "civilization", Label: "Civilization", OperationalStatus: "healthy", Detail: "complete", Mark: projected},
 			{ServiceID: "eventgraph", Label: "EventGraph evidence", OperationalStatus: "healthy", Detail: "complete", Mark: exact},
 			{ServiceID: "work_projection", Label: "Work projection", OperationalStatus: "healthy", Detail: "complete", Mark: exact},
 			{ServiceID: "hive_ops_api", Label: "Hive ops API", OperationalStatus: "healthy", Detail: "current", Mark: projected},
-			{ServiceID: "factory_runtime", Label: "Factory worker runtime", OperationalStatus: "healthy", Detail: "polling", Mark: projected},
 		},
 		WIP: []MissionWIPItem{{
-			Kind: "factory_order", StableID: "factory:FO-MC-1@1.0.0", FactoryOrderID: "FO-MC-1", FactoryOrderVersion: "1.0.0", DocumentSHA256: strings.Repeat("d", 64), WorkTaskID: "task-1", Title: "Mission Control",
-			TargetRepository: value("transpara-ai/site", exact), Assignment: value("attempt-1", exact), LifecycleStatus: value("human_review", exact), EngineProtocol: value("tlc-v1", exact), TLCStage: value("human_review", exact), TLCStageIndex: value(11, exact),
-			ItemStartedAt: value(now.Add(-time.Hour), exact), LastEffectAt: value(now.Add(-time.Minute), exact), ElapsedMS: value(3600000, exact), NextHandoff: value("Tier 3 Human Review", exact), Completeness: value(true, exact),
-			Classification: MissionClassification{EngineProtocol: "tlc-v1", EffectiveGovernanceProtocol: "4.5.0", EffectivePacketProfile: "P-ENVELOPE", EffectiveHumanReviewTier: 3, Mark: missionTestMark(now, "inferred")},
-			BlockerRefs:    []string{"blocker:test"}, InterventionRefs: []string{"intervention:test"}, EvidenceRollup: MissionEvidenceRollup{FactoryOrderRef: "0586cdc8", DesignBlobSHA: "abb89405", HumanDesignReviewRef: "6d409d", PRRepository: "transpara-ai/site", PRNumber: 42, PRState: "ready", PRHeadSHA: strings.Repeat("a", 40), ReviewedHeadSHA: strings.Repeat("a", 40), ReadyHeadMatches: true, PendingTier3HumanReview: true, Items: []MissionEvidenceItem{{Kind: "cfar", Stage: "cfar", State: "passed", Reference: "cfar:evidence", PRHeadSHA: strings.Repeat("a", 40), ReviewedHeadSHA: strings.Repeat("a", 40), AuthorFamily: "OpenAI/Codex", ReviewerFamily: "Anthropic/Claude", ProviderID: "claude", Mark: exact}}, FieldMarks: evidenceFieldMarks, Mark: exact}, Mark: exact,
-		}, {Kind: "independent_work_task", StableID: "work:task-2", WorkTaskID: "task-2", Title: "Independent", TargetRepository: value(nil, unavailable), Assignment: value(nil, unavailable), LifecycleStatus: value("created", exact), EngineProtocol: value("work-v3.9", missionTestMark(now, "inferred")), TLCStage: value(nil, unavailable), TLCStageIndex: value(nil, unavailable), ItemStartedAt: value(now.Add(-time.Hour), exact), LastEffectAt: value(now.Add(-time.Minute), exact), ElapsedMS: value(3600000, exact), NextHandoff: value(nil, unavailable), Completeness: value(true, exact), Classification: MissionClassification{EngineProtocol: "work-v3.9", EffectiveGovernanceProtocol: "4.5.0", EffectivePacketProfile: "P-ENVELOPE", EffectiveHumanReviewTier: 3, Mark: missionTestMark(now, "inferred")}, EvidenceRollup: MissionEvidenceRollup{Mark: unavailable}, Mark: exact}},
+			Kind: "independent_work_task", StableID: "work:task-1", FactoryOrderID: "historical-order-reference", WorkTaskID: "task-1", Title: "Mission Control",
+			TargetRepository: value("transpara-ai/site", exact), Assignment: value("builder", exact), LifecycleStatus: value("blocked", exact), EngineProtocol: value("work-v3.9", exact),
+			ItemStartedAt: value(now.Add(-time.Hour), exact), LastEffectAt: value(now.Add(-time.Minute), exact), ElapsedMS: value(3600000, exact), NextHandoff: value(nil, unavailable), Completeness: value(true, exact),
+			BlockerRefs: []string{"blocker:test"}, InterventionRefs: []string{"intervention:test"}, EvidenceRollup: MissionEvidenceRollup{Items: []MissionEvidenceItem{{Kind: "verification", State: "passed", Reference: "native-ci:evidence", Mark: exact}}, FieldMarks: evidenceFieldMarks, Mark: exact}, Mark: exact,
+		}, {Kind: "independent_work_task", StableID: "work:task-2", WorkTaskID: "task-2", Title: "Independent", TargetRepository: value(nil, unavailable), Assignment: value(nil, unavailable), LifecycleStatus: value("created", exact), EngineProtocol: value("work-v3.9", missionTestMark(now, "inferred")), ItemStartedAt: value(now.Add(-time.Hour), exact), LastEffectAt: value(now.Add(-time.Minute), exact), ElapsedMS: value(3600000, exact), NextHandoff: value(nil, unavailable), Completeness: value(true, exact), EvidenceRollup: MissionEvidenceRollup{Mark: unavailable}, Mark: exact}},
 		Roles:         []MissionRoleAgentRow{{StableID: "role:guardian", Role: "guardian", Configured: value(true, projected), Instantiated: value(1, exact), EventActive: value(1, projected), Running: value(nil, unavailable), Provider: value("anthropic", projected), Model: value("claude-opus", projected), Authority: value(map[string]any{"can_operate": false}, exact), Capacity: value(32768, projected), Status: value("configured", projected), Assignment: value(nil, unavailable), Mark: projected}},
-		WorkerPool:    MissionWorkerPool{ConfiguredWorkers: value(3, projected), ActiveWorkers: value(1, projected), AvailableWorkers: value(2, projected), QueuedOrders: value(2, projected), SchedulableOrders: value(1, projected), UtilizationPercent: value(33.3, projected), Assignments: []MissionRuntimeAssignment{{OrderID: "FO-MC-1", OrderVersion: "1.0.0", Stage: "human_review", AttemptID: "attempt-1", ProviderID: "codex", ModelID: "gpt-5.6-sol", AssignedAt: now.Add(-time.Minute)}}, Mark: projected},
-		HumanActions:  []MissionHumanAction{{ActionID: "human-review:FO-MC-1", Kind: "human_review", Severity: "high", OwningStage: "human_review", SubjectID: "FO-MC-1", Summary: "Merge-ready PR waits for Human review.", RequiredAction: "Approve, reject, or request changes.", SourceTime: now.Add(-time.Minute), EvidenceRefs: []string{"head:" + strings.Repeat("a", 40)}, Link: "/console/factory-v1", Mark: exact}},
+		HumanActions:  []MissionHumanAction{{ActionID: "authority:task-1", Kind: "authority_request", Severity: "high", OwningStage: "authority", SubjectID: "task-1", Summary: "Protected effect waits for Human authority.", RequiredAction: "Approve or deny the exact effect.", SourceTime: now.Add(-time.Minute), EvidenceRefs: []string{"head:" + strings.Repeat("a", 40)}, Link: "/console/kanban", Mark: exact}},
 		Interventions: []MissionIntervention{{InterventionID: "intervention:test", OrderID: "FO-MC-1", Kind: "review", Status: "open", Prompt: "Human review required", RequestedAt: now.Add(-time.Minute), Mark: exact}},
-		Handoffs:      []MissionHandoff{{HandoffID: "handoff:FO-MC-1", SubjectID: "FO-MC-1", FromStage: "mark_pr_ready", ToStage: "human_review", ExpectedRoles: []string{"human"}, CompletionPredicate: "exact Human review receipt", EvidenceRefs: []string{"head:test"}, Mark: exact}},
+		Handoffs:      []MissionHandoff{{HandoffID: "handoff:task-1", SubjectID: "task-1", FromStage: "work", ToStage: "human_authority", ExpectedRoles: []string{"human"}, CompletionPredicate: "exact scoped Human authority receipt", EvidenceRefs: []string{"head:test"}, Mark: exact}},
 		ResidualRisks: []string{"runtime can become stale"}, NonAuthorizations: []string{"No merge or deployment authority."},
 	}
 }
@@ -121,7 +117,7 @@ func TestSITEMCT1OneScreenContractFullPageAndFragment(t *testing.T) {
 			t.Fatalf("%s status=%d body=%s", path, rec.Code, rec.Body.String())
 		}
 		body := rec.Body.String()
-		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="capacity"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `data-mission-links="focused-screens"`, `href="/console/health"`, `href="/console/factory-v1"`, `href="/console/kanban"`, `href="/console/intake"`, `href="/console/config"`, `hx-trigger="every 5s"`, "P-ENVELOPE", "Tier 3", "tlc-v1", "FO-MC-1", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
+		for _, want := range []string{`data-mission-landmark="aggregate"`, `data-mission-landmark="health"`, `data-mission-landmark="human-actions"`, `data-mission-landmark="wip"`, `data-mission-landmark="roles-agents"`, `data-mission-landmark="workflow"`, `data-mission-landmark="exact-evidence"`, `data-mission-landmark="sources"`, `data-mission-landmark="epistemic-legend"`, `data-mission-landmark="non-authorization"`, `data-mission-links="focused-screens"`, `href="/console/health"`, `href="/console/kanban"`, `href="/console/intake"`, `href="/console/config"`, `hx-trigger="every 5s"`, "work-v3.9", "task-1", "transpara-ai/site", "claude-opus", "exact-head", "No merge or deployment authority"} {
 			if !strings.Contains(body, want) {
 				t.Errorf("%s missing %q", path, want)
 			}
@@ -242,15 +238,11 @@ func TestSITEMCT4UnknownSemanticValuesAndIncompleteSourcesFailClosed(t *testing.
 		name   string
 		mutate func(*MissionControlProjection)
 	}{
-		{name: "unknown profile", mutate: func(p *MissionControlProjection) { p.WIP[0].Classification.EffectivePacketProfile = "P-FUTURE" }},
-		{name: "invalid tier", mutate: func(p *MissionControlProjection) { p.WIP[0].Classification.EffectiveHumanReviewTier = 9 }},
-		{name: "unknown stage", mutate: func(p *MissionControlProjection) { p.WIP[0].TLCStage.Value = "future_stage" }},
-		{name: "mismatched stage index", mutate: func(p *MissionControlProjection) { p.WIP[0].TLCStageIndex.Value = 4 }},
 		{name: "unknown lifecycle status", mutate: func(p *MissionControlProjection) { p.WIP[0].LifecycleStatus.Value = "teleported" }},
 		{name: "unknown WIP kind", mutate: func(p *MissionControlProjection) { p.WIP[0].Kind = "future_work" }},
-		{name: "truncated required sources", mutate: func(p *MissionControlProjection) { p.Sources = p.Sources[:3] }},
-		{name: "truncated required services", mutate: func(p *MissionControlProjection) { p.Services = p.Services[:4] }},
-		{name: "duplicate required service", mutate: func(p *MissionControlProjection) { p.Services[4].ServiceID = p.Services[0].ServiceID }},
+		{name: "truncated required sources", mutate: func(p *MissionControlProjection) { p.Sources = p.Sources[:2] }},
+		{name: "truncated required services", mutate: func(p *MissionControlProjection) { p.Services = p.Services[:3] }},
+		{name: "duplicate required service", mutate: func(p *MissionControlProjection) { p.Services[3].ServiceID = p.Services[0].ServiceID }},
 		{name: "unknown evidence field", mutate: func(p *MissionControlProjection) {
 			p.WIP[0].EvidenceRollup.FieldMarks["future_field"] = missionTestMark(now, "exact")
 		}},
@@ -318,7 +310,7 @@ func TestSITEMCT4HumanActionLinksAreAllowlisted(t *testing.T) {
 		t.Fatal(err)
 	}
 	rendered := body.String()
-	if !strings.Contains(rendered, `data-human-action-link="governed" href="/console/factory-v1"`) {
+	if !strings.Contains(rendered, `data-human-action-link="governed" href="/console/kanban"`) {
 		t.Fatal("allowlisted Human action link did not render")
 	}
 	if strings.Contains(rendered, "javascript:") {
@@ -430,16 +422,16 @@ func TestSITEMCT5AtomicStaleRetentionExpiryAndRecovery(t *testing.T) {
 	}
 }
 
-func TestSITEMCT6AdditiveLegacyDecodeAndFutureSchema(t *testing.T) {
+func TestSITEMCT6AdditiveCurrentDecodeAndFutureSchema(t *testing.T) {
 	now := time.Now().UTC()
 	clock := &missionSiteTestClock{value: now}
 	var legacy MissionControlProjection
-	if err := json.Unmarshal([]byte(`{"schema_version":"civilization-mission-control/v1","generated_at":"`+now.Format(time.RFC3339Nano)+`","derivation_state":{"state":"current","freshness":"current","basis":"exact","source_id":"legacy","observed_at":"`+now.Format(time.RFC3339Nano)+`","generated_at":"`+now.Format(time.RFC3339Nano)+`","evidence_refs":[]},"operational_status":"degraded","completeness":{"complete":false}}`), &legacy); err != nil {
-		t.Fatalf("additive legacy decode: %v", err)
+	if err := json.Unmarshal([]byte(`{"schema_version":"civilization-mission-control/v2","generated_at":"`+now.Format(time.RFC3339Nano)+`","derivation_state":{"state":"current","freshness":"current","basis":"exact","source_id":"current","observed_at":"`+now.Format(time.RFC3339Nano)+`","generated_at":"`+now.Format(time.RFC3339Nano)+`","evidence_refs":[]},"operational_status":"degraded","completeness":{"complete":false}}`), &legacy); err != nil {
+		t.Fatalf("additive current decode: %v", err)
 	}
 	missionNormalizeProjection(&legacy, now)
-	if legacy.WIP == nil || legacy.Roles == nil || legacy.Sources == nil || legacy.WorkerPool.Assignments == nil {
-		t.Fatalf("legacy omitted slices were not normalized: %+v", legacy)
+	if legacy.WIP == nil || legacy.Roles == nil || legacy.Sources == nil {
+		t.Fatalf("current omitted slices were not normalized: %+v", legacy)
 	}
 	futureServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"schema_version":"future","generated_at":"` + now.Format(time.RFC3339Nano) + `"}`))

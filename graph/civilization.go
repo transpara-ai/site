@@ -688,7 +688,7 @@ func opsCivilizationReferenceGroups(projection *OpsCivilizationAssemblyProjectio
 func opsCivilizationIssueReadiness(projection *OpsCivilizationAssemblyProjection) OpsCivilizationIssueReadiness {
 	readiness := OpsCivilizationIssueReadiness{
 		Status:              opsCivilizationProjectionStatusUnavailable,
-		PRReadyWhen:         "PR-ready when recommendation states and guardrail labels are defined, validated, and supported by implementation, validation, exact-head CFAR, and ready-for-Human PR evidence.",
+		PRReadyWhen:         "PR-ready when recommendation states and guardrail labels are defined, validated, and supported by implementation, native validation, exact-head Human review when required, and ready-for-Human PR evidence.",
 		FirstPendingStage:   "not projected",
 		RecommendationState: "unavailable",
 		GroupingSummary:     "No grouping recommendation is available without queued issue-scan projection input.",

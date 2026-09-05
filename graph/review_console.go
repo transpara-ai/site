@@ -67,6 +67,7 @@ type OpsReviewItem struct {
 
 func (h *Handlers) handleOpsReviewConsole(w http.ResponseWriter, r *http.Request) {
 	data := buildOpsReviewConsoleData()
+	w.Header().Set("X-Transpara-Archive-Boundary", "civilization-history/v1")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := opsReviewConsoleTemplate.Execute(w, data); err != nil {
 		http.Error(w, "render review console: "+err.Error(), http.StatusInternalServerError)

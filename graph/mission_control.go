@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	missionControlSchemaVersion = "civilization-mission-control/v1"
+	missionControlSchemaVersion = "civilization-mission-control/v2"
 	missionControlPath          = "/api/hive/civilization/mission-control-projection"
 	missionControlRetention     = 15 * time.Minute
 	missionControlMaxBytes      = 4 * 1024 * 1024
@@ -63,18 +63,6 @@ type MissionServiceHealth struct {
 	Mark              MissionEvidenceMark `json:"mark"`
 }
 
-type MissionClassification struct {
-	EngineProtocol              string              `json:"engine_protocol"`
-	DeclaredGovernanceProtocol  string              `json:"declared_governance_protocol"`
-	DeclaredPacketProfile       string              `json:"declared_packet_profile"`
-	DeclaredHumanReviewTier     *int                `json:"declared_human_review_tier"`
-	EffectiveGovernanceProtocol string              `json:"effective_governance_protocol"`
-	EffectivePacketProfile      string              `json:"effective_packet_profile"`
-	EffectiveHumanReviewTier    int                 `json:"effective_human_review_tier"`
-	Mark                        MissionEvidenceMark `json:"mark"`
-	EvidenceRefs                []string            `json:"evidence_refs"`
-}
-
 type MissionEvidenceItem struct {
 	Kind            string              `json:"kind"`
 	Stage           string              `json:"stage"`
@@ -91,19 +79,15 @@ type MissionEvidenceItem struct {
 }
 
 type MissionEvidenceRollup struct {
-	FactoryOrderRef         string                         `json:"factory_order_ref"`
-	DesignBlobSHA           string                         `json:"design_blob_sha"`
-	HumanDesignReviewRef    string                         `json:"human_design_review_ref"`
-	PRRepository            string                         `json:"pr_repository"`
-	PRNumber                int                            `json:"pr_number"`
-	PRState                 string                         `json:"pr_state"`
-	PRHeadSHA               string                         `json:"pr_head_sha"`
-	ReviewedHeadSHA         string                         `json:"reviewed_head_sha"`
-	ReadyHeadMatches        bool                           `json:"ready_head_matches"`
-	PendingTier3HumanReview bool                           `json:"pending_tier_3_human_review"`
-	Items                   []MissionEvidenceItem          `json:"items"`
-	FieldMarks              map[string]MissionEvidenceMark `json:"field_marks"`
-	Mark                    MissionEvidenceMark            `json:"mark"`
+	PRRepository     string                         `json:"pr_repository"`
+	PRNumber         int                            `json:"pr_number"`
+	PRState          string                         `json:"pr_state"`
+	PRHeadSHA        string                         `json:"pr_head_sha"`
+	ReviewedHeadSHA  string                         `json:"reviewed_head_sha"`
+	ReadyHeadMatches bool                           `json:"ready_head_matches"`
+	Items            []MissionEvidenceItem          `json:"items"`
+	FieldMarks       map[string]MissionEvidenceMark `json:"field_marks"`
+	Mark             MissionEvidenceMark            `json:"mark"`
 }
 
 type MissionWIPItem struct {
@@ -118,14 +102,11 @@ type MissionWIPItem struct {
 	Assignment          MissionMarkedValue    `json:"assignment"`
 	LifecycleStatus     MissionMarkedValue    `json:"lifecycle_status"`
 	EngineProtocol      MissionMarkedValue    `json:"engine_protocol"`
-	TLCStage            MissionMarkedValue    `json:"tlc_stage"`
-	TLCStageIndex       MissionMarkedValue    `json:"tlc_stage_index"`
 	ItemStartedAt       MissionMarkedValue    `json:"item_started_at"`
 	LastEffectAt        MissionMarkedValue    `json:"last_effect_at"`
 	ElapsedMS           MissionMarkedValue    `json:"elapsed_ms"`
 	NextHandoff         MissionMarkedValue    `json:"next_handoff"`
 	Completeness        MissionMarkedValue    `json:"completeness"`
-	Classification      MissionClassification `json:"classification"`
 	BlockerRefs         []string              `json:"blocker_refs"`
 	InterventionRefs    []string              `json:"intervention_refs"`
 	EvidenceRollup      MissionEvidenceRollup `json:"evidence_rollup"`
@@ -147,28 +128,6 @@ type MissionRoleAgentRow struct {
 	Status       MissionMarkedValue  `json:"status"`
 	Assignment   MissionMarkedValue  `json:"assignment"`
 	Mark         MissionEvidenceMark `json:"mark"`
-}
-
-type MissionRuntimeAssignment struct {
-	OrderID        string    `json:"order_id"`
-	OrderVersion   string    `json:"order_version"`
-	DocumentSHA256 string    `json:"document_sha256"`
-	Stage          string    `json:"stage"`
-	AttemptID      string    `json:"attempt_id"`
-	ProviderID     string    `json:"provider_id"`
-	ModelID        string    `json:"model_id"`
-	AssignedAt     time.Time `json:"assigned_at"`
-}
-
-type MissionWorkerPool struct {
-	ConfiguredWorkers  MissionMarkedValue         `json:"configured_workers"`
-	ActiveWorkers      MissionMarkedValue         `json:"active_workers"`
-	AvailableWorkers   MissionMarkedValue         `json:"available_workers"`
-	QueuedOrders       MissionMarkedValue         `json:"queued_orders"`
-	SchedulableOrders  MissionMarkedValue         `json:"schedulable_orders"`
-	Assignments        []MissionRuntimeAssignment `json:"assignments"`
-	UtilizationPercent MissionMarkedValue         `json:"utilization_percent"`
-	Mark               MissionEvidenceMark        `json:"mark"`
 }
 
 type MissionHumanAction struct {
@@ -218,7 +177,6 @@ type MissionControlProjection struct {
 	Services          []MissionServiceHealth  `json:"services"`
 	WIP               []MissionWIPItem        `json:"wip"`
 	Roles             []MissionRoleAgentRow   `json:"roles"`
-	WorkerPool        MissionWorkerPool       `json:"worker_pool"`
 	HumanActions      []MissionHumanAction    `json:"human_actions"`
 	Interventions     []MissionIntervention   `json:"interventions"`
 	Handoffs          []MissionHandoff        `json:"handoffs"`
@@ -479,7 +437,6 @@ var missionRequiredSourceIDs = map[string]bool{
 	"eventgraph_wip_evidence": true,
 	"roster_routing":          true,
 	"authority_actions":       true,
-	"factory_runtime":         true,
 }
 
 var missionRequiredServiceIDs = map[string]bool{
@@ -487,7 +444,6 @@ var missionRequiredServiceIDs = map[string]bool{
 	"eventgraph":      true,
 	"work_projection": true,
 	"hive_ops_api":    true,
-	"factory_runtime": true,
 }
 
 func missionHasRequiredIdentities(sources []MissionSourceEnvelope, services []MissionServiceHealth) bool {
@@ -548,10 +504,7 @@ func missionValidateProjection(projection MissionControlProjection, now time.Tim
 			return fmt.Errorf("required Mission Control service %q is missing", serviceID)
 		}
 	}
-	marks := []MissionEvidenceMark{projection.DerivationState, projection.WorkerPool.Mark,
-		projection.WorkerPool.ConfiguredWorkers.Mark, projection.WorkerPool.ActiveWorkers.Mark,
-		projection.WorkerPool.AvailableWorkers.Mark, projection.WorkerPool.QueuedOrders.Mark,
-		projection.WorkerPool.SchedulableOrders.Mark, projection.WorkerPool.UtilizationPercent.Mark}
+	marks := []MissionEvidenceMark{projection.DerivationState}
 	for _, service := range projection.Services {
 		if missionServiceStatus(service.OperationalStatus) != service.OperationalStatus {
 			return fmt.Errorf("service %s has unknown operational status %q", service.ServiceID, service.OperationalStatus)
@@ -562,9 +515,9 @@ func missionValidateProjection(projection MissionControlProjection, now time.Tim
 		if err := missionValidateWIPSemantics(row); err != nil {
 			return err
 		}
-		marks = append(marks, row.Mark, row.Classification.Mark, row.EvidenceRollup.Mark,
+		marks = append(marks, row.Mark, row.EvidenceRollup.Mark,
 			row.TargetRepository.Mark, row.Assignment.Mark, row.LifecycleStatus.Mark, row.EngineProtocol.Mark,
-			row.TLCStage.Mark, row.TLCStageIndex.Mark, row.ItemStartedAt.Mark, row.LastEffectAt.Mark,
+			row.ItemStartedAt.Mark, row.LastEffectAt.Mark,
 			row.ElapsedMS.Mark, row.NextHandoff.Mark, row.Completeness.Mark)
 		for _, evidence := range row.EvidenceRollup.Items {
 			marks = append(marks, evidence.Mark)
@@ -596,12 +549,6 @@ func missionValidateProjection(projection MissionControlProjection, now time.Tim
 	return nil
 }
 
-var missionTLCStageIndexes = map[string]int{
-	"ingest_work": 0, "craft_factory_order": 1, "design": 2, "iada": 3, "cfada": 4,
-	"human_design_review": 5, "write_code": 6, "create_draft_pr": 7, "iar": 8,
-	"cfar": 9, "mark_pr_ready": 10, "human_review": 11,
-}
-
 var missionKnownWorkStatuses = map[string]bool{
 	"created": true, "ready": true, "running": true, "blocked": true, "failed": true,
 	"repair_required": true, "repair_running": true, "repaired": true, "verification_running": true,
@@ -610,72 +557,16 @@ var missionKnownWorkStatuses = map[string]bool{
 }
 
 func missionValidateWIPSemantics(row MissionWIPItem) error {
-	if row.Kind != "factory_order" && row.Kind != "independent_work_task" {
+	if row.Kind != "independent_work_task" {
 		return fmt.Errorf("unknown WIP kind %q", row.Kind)
-	}
-	profileRank := map[string]int{"P-MECHANICAL": 0, "P-IMPLEMENTATION": 1, "P-DESIGN-DELTA": 2, "P-ENVELOPE": 3}
-	if row.Classification.EffectiveGovernanceProtocol != "4.5.0" {
-		return fmt.Errorf("WIP %s has unknown effective governance protocol %q", row.StableID, row.Classification.EffectiveGovernanceProtocol)
-	}
-	if _, ok := profileRank[row.Classification.EffectivePacketProfile]; !ok {
-		return fmt.Errorf("WIP %s has unknown effective packet profile %q", row.StableID, row.Classification.EffectivePacketProfile)
-	}
-	if row.Classification.EffectiveHumanReviewTier < 0 || row.Classification.EffectiveHumanReviewTier > 3 {
-		return fmt.Errorf("WIP %s has invalid effective Human Review tier %d", row.StableID, row.Classification.EffectiveHumanReviewTier)
-	}
-	if row.Classification.DeclaredPacketProfile != "" {
-		if _, ok := profileRank[row.Classification.DeclaredPacketProfile]; !ok {
-			return fmt.Errorf("WIP %s has unknown declared packet profile %q", row.StableID, row.Classification.DeclaredPacketProfile)
-		}
-	}
-	if row.Classification.DeclaredHumanReviewTier != nil && (*row.Classification.DeclaredHumanReviewTier < 0 || *row.Classification.DeclaredHumanReviewTier > 3) {
-		return fmt.Errorf("WIP %s has invalid declared Human Review tier %d", row.StableID, *row.Classification.DeclaredHumanReviewTier)
-	}
-	if missionMarkState(row.TLCStage.Mark) != "unavailable" {
-		stage, ok := row.TLCStage.Value.(string)
-		index, known := missionTLCStageIndexes[stage]
-		if !ok || !known {
-			return fmt.Errorf("WIP %s has unknown TLC stage %v", row.StableID, row.TLCStage.Value)
-		}
-		if missionMarkState(row.TLCStageIndex.Mark) != "unavailable" {
-			stageIndex, ok := missionIntegralValue(row.TLCStageIndex.Value)
-			if !ok || stageIndex != index {
-				return fmt.Errorf("WIP %s has mismatched TLC stage index %v for %q", row.StableID, row.TLCStageIndex.Value, stage)
-			}
-		}
 	}
 	if missionMarkState(row.LifecycleStatus.Mark) != "unavailable" {
 		status, ok := row.LifecycleStatus.Value.(string)
-		if !ok || !missionLifecycleStatusAllowed(row.Kind, status) {
+		if !ok || !missionKnownWorkStatuses[status] {
 			return fmt.Errorf("WIP %s has unknown lifecycle status %v", row.StableID, row.LifecycleStatus.Value)
 		}
 	}
 	return nil
-}
-
-func missionLifecycleStatusAllowed(kind, status string) bool {
-	if kind == "independent_work_task" {
-		return missionKnownWorkStatuses[status]
-	}
-	factoryStatus, workStatus, joined := strings.Cut(status, " / work:")
-	switch factoryStatus {
-	case "accepted", "progressing", "blocked", "human_required", "human_review":
-	default:
-		return false
-	}
-	return !joined || missionKnownWorkStatuses[workStatus] || workStatus == "unavailable"
-}
-
-func missionIntegralValue(value any) (int, bool) {
-	switch typed := value.(type) {
-	case int:
-		return typed, true
-	case float64:
-		if typed == float64(int(typed)) {
-			return int(typed), true
-		}
-	}
-	return 0, false
 }
 
 func missionValidateRawMark(mark MissionEvidenceMark, now time.Time) error {
@@ -767,9 +658,6 @@ func missionNormalizeProjection(projection *MissionControlProjection, now time.T
 	if projection.Roles == nil {
 		projection.Roles = []MissionRoleAgentRow{}
 	}
-	if projection.WorkerPool.Assignments == nil {
-		projection.WorkerPool.Assignments = []MissionRuntimeAssignment{}
-	}
 	if projection.HumanActions == nil {
 		projection.HumanActions = []MissionHumanAction{}
 	}
@@ -808,20 +696,15 @@ func missionNormalizeProjection(projection *MissionControlProjection, now time.T
 	for i := range projection.Handoffs {
 		projection.Handoffs[i].Mark = missionNormalizeMark(projection.Handoffs[i].Mark, now)
 	}
-	projection.WorkerPool.Mark = missionNormalizeMark(projection.WorkerPool.Mark, now)
-	for _, value := range []*MissionMarkedValue{&projection.WorkerPool.ConfiguredWorkers, &projection.WorkerPool.ActiveWorkers, &projection.WorkerPool.AvailableWorkers, &projection.WorkerPool.QueuedOrders, &projection.WorkerPool.SchedulableOrders, &projection.WorkerPool.UtilizationPercent} {
-		value.Mark = missionNormalizeMark(value.Mark, now)
-	}
 	sort.Slice(projection.WIP, func(i, j int) bool { return projection.WIP[i].StableID < projection.WIP[j].StableID })
 	sort.Slice(projection.Roles, func(i, j int) bool { return projection.Roles[i].StableID < projection.Roles[j].StableID })
 }
 
 func missionNormalizeWIP(row *MissionWIPItem, now time.Time) {
-	for _, value := range []*MissionMarkedValue{&row.TargetRepository, &row.Assignment, &row.LifecycleStatus, &row.EngineProtocol, &row.TLCStage, &row.TLCStageIndex, &row.ItemStartedAt, &row.LastEffectAt, &row.ElapsedMS, &row.NextHandoff, &row.Completeness} {
+	for _, value := range []*MissionMarkedValue{&row.TargetRepository, &row.Assignment, &row.LifecycleStatus, &row.EngineProtocol, &row.ItemStartedAt, &row.LastEffectAt, &row.ElapsedMS, &row.NextHandoff, &row.Completeness} {
 		value.Mark = missionNormalizeMark(value.Mark, now)
 	}
 	row.Mark = missionNormalizeMark(row.Mark, now)
-	row.Classification.Mark = missionNormalizeMark(row.Classification.Mark, now)
 	row.EvidenceRollup.Mark = missionNormalizeMark(row.EvidenceRollup.Mark, now)
 	if row.EvidenceRollup.FieldMarks == nil {
 		row.EvidenceRollup.FieldMarks = map[string]MissionEvidenceMark{}
@@ -848,8 +731,7 @@ func missionNormalizeWIP(row *MissionWIPItem, now time.Time) {
 }
 
 var missionEvidenceFieldNames = []string{
-	"factory_order_ref", "design_blob_sha", "human_design_review_ref", "pr_repository", "pr_number",
-	"pr_state", "pr_head_sha", "reviewed_head_sha", "ready_head_matches", "pending_tier_3_human_review",
+	"pr_repository", "pr_number", "pr_state", "pr_head_sha", "reviewed_head_sha", "ready_head_matches",
 }
 
 func missionEvidenceFieldNameAllowed(candidate string) bool {
@@ -960,7 +842,7 @@ func missionValue(value MissionMarkedValue) string {
 func missionHumanActionLink(value string) string {
 	link := strings.TrimSpace(value)
 	switch link {
-	case "/console/health", "/console/factory-v1", "/console/kanban", "/console/intake", "/console/config":
+	case "/console/health", "/console/kanban", "/console/intake", "/console/config":
 		return link
 	default:
 		return ""

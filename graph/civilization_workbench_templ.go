@@ -164,7 +164,7 @@ func CivilizationWorkbenchFragment(data CivilizationWorkbench) templ.Component {
 				}
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><footer class=\"flex flex-wrap gap-3 text-xs text-warm-faint border-t border-edge pt-4\"><span>Production: clean EventGraph</span> <span>·</span> <a class=\"hover:text-warm underline\" href=\"/console/factory-v1\">Historical Factory evidence (read-only)</a></footer></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div><footer class=\"flex flex-wrap gap-3 text-xs text-warm-faint border-t border-edge pt-4\"><span>Production: clean EventGraph</span> <span>·</span> <span>Historical Factory evidence remains recoverable from Git history.</span></footer></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

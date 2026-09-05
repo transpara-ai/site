@@ -4,8 +4,8 @@ import "testing"
 
 func unblockCard(runID, blockerType string, labels []string) OpsCivilizationIssueScanKanbanCard {
 	return OpsCivilizationIssueScanKanbanCard{
-		RunID: runID,
-		Blockers: []OpsCivilizationIssueScanBlockerProjected{{BlockerType: blockerType, RequiredAction: "projected action"}},
+		RunID:       runID,
+		Blockers:    []OpsCivilizationIssueScanBlockerProjected{{BlockerType: blockerType, RequiredAction: "projected action"}},
 		TargetIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/docs", Number: 226, Labels: labels},
 	}
 }
@@ -29,10 +29,10 @@ func TestConsoleUnblockPlanDomain(t *testing.T) {
 		wantRescan    string
 	}{
 		{
-			name:      "needs_human_scope with scope deny labels only",
-			card:      unblockCard("run-1", "needs_human_scope", []string{"cc:needs-human-scope", "cc:pr-deferred", "cc:intake"}),
-			wantOK:    true,
-			wantScope: "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:pr-deferred --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+			name:       "needs_human_scope with scope deny labels only",
+			card:       unblockCard("run-1", "needs_human_scope", []string{"cc:needs-human-scope", "cc:pr-deferred", "cc:intake"}),
+			wantOK:     true,
+			wantScope:  "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:pr-deferred --remove-label cc:needs-human-scope --add-label cc:pr-ready",
 			wantRescan: "hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
 		},
 		{
@@ -66,17 +66,17 @@ func TestConsoleUnblockPlanDomain(t *testing.T) {
 			wantRescan:    "hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
 		},
 		{
-			name:      "not_pr_ready with no labels renders add-only scope command",
-			card:      unblockCard("run-5", "not_pr_ready", nil),
-			wantOK:    true,
-			wantScope: "gh issue edit 226 --repo transpara-ai/docs --add-label cc:pr-ready",
+			name:       "not_pr_ready with no labels renders add-only scope command",
+			card:       unblockCard("run-5", "not_pr_ready", nil),
+			wantOK:     true,
+			wantScope:  "gh issue edit 226 --repo transpara-ai/docs --add-label cc:pr-ready",
 			wantRescan: "hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
 		},
 		{
-			name:      "label normalization matches hive (case + whitespace)",
-			card:      unblockCard("run-6", "needs_human_scope", []string{"  CC:Needs-Human-Scope  "}),
-			wantOK:    true,
-			wantScope: "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
+			name:       "label normalization matches hive (case + whitespace)",
+			card:       unblockCard("run-6", "needs_human_scope", []string{"  CC:Needs-Human-Scope  "}),
+			wantOK:     true,
+			wantScope:  "gh issue edit 226 --repo transpara-ai/docs --remove-label cc:needs-human-scope --add-label cc:pr-ready",
 			wantRescan: "hive factory scan-issues --human YOUR_NAME --repo transpara-ai/docs",
 		},
 		// ---- everything below MUST fail closed ----
@@ -99,11 +99,31 @@ func TestConsoleUnblockPlanDomain(t *testing.T) {
 		{name: "needs_human_scope without corroborating deny label (mismatch)", card: unblockCard("run-12", "needs_human_scope", []string{"cc:intake"})},
 		{name: "protected_action without cc:protected-action label (mismatch)", card: unblockCard("run-13", "protected_action", []string{"cc:pr-deferred"})},
 		{name: "not_pr_ready but cc:pr-ready already present (mismatch)", card: unblockCard("run-14", "not_pr_ready", []string{"cc:pr-ready"})},
-		{name: "invalid repo missing slash", card: func() OpsCivilizationIssueScanKanbanCard { c := unblockCard("run-15", "not_pr_ready", nil); c.TargetIssue.Repo = "docs"; return c }()},
-		{name: "hostile repo with shell metacharacters", card: func() OpsCivilizationIssueScanKanbanCard { c := unblockCard("run-16", "not_pr_ready", nil); c.TargetIssue.Repo = "transpara-ai/docs; rm -rf /"; return c }()},
-		{name: "hostile repo with html", card: func() OpsCivilizationIssueScanKanbanCard { c := unblockCard("run-17", "not_pr_ready", nil); c.TargetIssue.Repo = "transpara-ai/docs\" onmouseover=\"x"; return c }()},
-		{name: "zero issue number", card: func() OpsCivilizationIssueScanKanbanCard { c := unblockCard("run-18", "not_pr_ready", nil); c.TargetIssue.Number = 0; return c }()},
-		{name: "negative issue number", card: func() OpsCivilizationIssueScanKanbanCard { c := unblockCard("run-19", "not_pr_ready", nil); c.TargetIssue.Number = -4; return c }()},
+		{name: "invalid repo missing slash", card: func() OpsCivilizationIssueScanKanbanCard {
+			c := unblockCard("run-15", "not_pr_ready", nil)
+			c.TargetIssue.Repo = "docs"
+			return c
+		}()},
+		{name: "hostile repo with shell metacharacters", card: func() OpsCivilizationIssueScanKanbanCard {
+			c := unblockCard("run-16", "not_pr_ready", nil)
+			c.TargetIssue.Repo = "transpara-ai/docs; rm -rf /"
+			return c
+		}()},
+		{name: "hostile repo with html", card: func() OpsCivilizationIssueScanKanbanCard {
+			c := unblockCard("run-17", "not_pr_ready", nil)
+			c.TargetIssue.Repo = "transpara-ai/docs\" onmouseover=\"x"
+			return c
+		}()},
+		{name: "zero issue number", card: func() OpsCivilizationIssueScanKanbanCard {
+			c := unblockCard("run-18", "not_pr_ready", nil)
+			c.TargetIssue.Number = 0
+			return c
+		}()},
+		{name: "negative issue number", card: func() OpsCivilizationIssueScanKanbanCard {
+			c := unblockCard("run-19", "not_pr_ready", nil)
+			c.TargetIssue.Number = -4
+			return c
+		}()},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,8 +155,8 @@ func TestConsoleUnblockPlanDomain(t *testing.T) {
 // fallback — never mixed.
 func TestConsoleUnblockPlanUsesSelectedRefWhenTargetEmpty(t *testing.T) {
 	card := OpsCivilizationIssueScanKanbanCard{
-		RunID:    "run-20",
-		Blockers: []OpsCivilizationIssueScanBlockerProjected{{BlockerType: "not_pr_ready"}},
+		RunID:         "run-20",
+		Blockers:      []OpsCivilizationIssueScanBlockerProjected{{BlockerType: "not_pr_ready"}},
 		SelectedIssue: OpsCivilizationIssueRef{Repo: "transpara-ai/work", Number: 55},
 	}
 	plan, ok := consoleIssueScanUnblockPlan(card, consoleIssueScanRunBlockerTypes(boardWith(card)))
