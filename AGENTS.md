@@ -13,6 +13,7 @@ Transpara AI site and operator-facing product surface. It presents embedded cont
 - Dev server: `make dev`
 
 ## Rules
+- Use the installed canonical `transpara-tlc` skill for software changes; do not copy its policy or implementation into this repository.
 - Run `templ generate` after editing `.templ` files; never edit generated `*_templ.go` files directly.
 - Preserve embedded content behavior and route registration patterns.
 - UI changes should keep the operational graph legible and efficient, not just visually changed.
