@@ -39,8 +39,8 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
 	body := response.Body.String()
 	for _, wanted := range []string{
 		`data-console-surface="civilization-workbench"`, "What should Civilization accomplish?", "A clear operator experience",
-		"Start work", "records the intake immediately", "Implementation result", "all packages passed", "No unresolved findings",
-		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.2", "Historical Factory evidence remains recoverable from Git history.",
+		"Prepare brief", "records the intake immediately", "Implementation result", "all packages passed", "No unresolved findings",
+		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.2", "Execution host", "Model (optional)", "Current owner:",
 	} {
 		if !strings.Contains(body, wanted) {
 			t.Fatalf("body missing %q:\n%s", wanted, body)
@@ -55,7 +55,7 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
 }
 
 func TestCivilizationWorkbenchIntakeUsesServerSideCredential(t *testing.T) {
-	var got map[string]string
+	var got map[string]any
 	upstream := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.Method == http.MethodPost {
 			if request.Header.Get("Authorization") != "Bearer "+strings.Repeat("k", 32) {
@@ -82,7 +82,7 @@ func TestCivilizationWorkbenchIntakeUsesServerSideCredential(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
 	}
-	if got["text"] != "Make it clear" || got["repository"] != "transpara-ai/hive" || got["source_kind"] != "human" || !strings.HasPrefix(got["source_identity"], "human::intake-test") {
+	if got["text"] != "Make it clear" || got["repository"] != "transpara-ai/hive" || got["source_kind"] != "human" || got["source_identity"] != "human::intake-test" {
 		t.Fatalf("intake = %#v", got)
 	}
 	if strings.Contains(response.Body.String(), strings.Repeat("k", 32)) {
