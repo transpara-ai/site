@@ -23,7 +23,7 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
   "work_id":"work-aaaaaaaaaaaaaaaaaaaaaaaa",
   "source":{"kind":"human","identity":"human:test","repository":"transpara-ai/hive"},
   "intake_text":"Improve the experience <script>alert(1)</script>",
-  "bound":{"idempotency_key":"tlc-envelope-v1-test","envelope":{"schema_version":"tlc-envelope/v1","workflow":{"name":"transpara-tlc","version":"0.1.1"},"route":"Routine","brief":{"outcome":"A clear operator experience","scope":[],"non_goals":[],"assumptions":[],"constraints":[],"tests":[],"next_action":"Implement"}},"future_transport_field":true},
+  "bound":{"idempotency_key":"tlc-envelope-v1-test","envelope":{"schema_version":"tlc-envelope/v1","workflow":{"name":"transpara-tlc","version":"0.1.2"},"route":"Routine","brief":{"outcome":"A clear operator experience","scope":[],"non_goals":[],"assumptions":[],"constraints":[],"tests":[],"next_action":"Implement"}},"future_transport_field":true},
   "state":"reviewing","summary":"Review complete","next_action":"Continue","provider_runs":[
     {"operation":"implement","attempt_id":"attempt-1","result":{"status":"passed","summary":"Implemented the clearer experience","changed_files":["graph/console.templ"],"checks":[{"name":"go test ./...","status":"passed","summary":"all packages passed"}]}},
     {"operation":"review","attempt_id":"attempt-2","result":{"status":"passed","summary":"review complete","changed_files":[],"checks":[],"review":{"status":"passed","summary":"No unresolved findings","findings":[]}}}
@@ -40,7 +40,7 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
 	for _, wanted := range []string{
 		`data-console-surface="civilization-workbench"`, "What should Civilization accomplish?", "A clear operator experience",
 		"Start work", "records the intake immediately", "Implementation result", "all packages passed", "No unresolved findings",
-		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.1", "Historical Factory evidence remains recoverable from Git history.",
+		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.2", "Historical Factory evidence remains recoverable from Git history.",
 	} {
 		if !strings.Contains(body, wanted) {
 			t.Fatalf("body missing %q:\n%s", wanted, body)
