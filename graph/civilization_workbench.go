@@ -20,10 +20,13 @@ import (
 
 const (
 	civilizationMaxResponseBytes = 4 * 1024 * 1024
-	civilizationMaxIntakeBytes   = 24 * 1024
+	civilizationMaxIntakeBytes   = 256 * 1024
 )
 
 type CivilizationWorkbench struct {
+	FormText       string
+	FormRepository string
+	FormSelection  CivilizationSelection
 	Available      bool
 	Notice         string
 	Items          []CivilizationWork
@@ -33,6 +36,8 @@ type CivilizationWorkbench struct {
 }
 
 type CivilizationWork struct {
+	Selection     CivilizationSelection      `json:"selection"`
+	LatestEventID string                     `json:"latest_event_id"`
 	WorkID        string                     `json:"work_id"`
 	Source        CivilizationSource         `json:"source"`
 	IntakeText    string                     `json:"intake_text"`
@@ -80,6 +85,11 @@ type CivilizationProviderRun struct {
 	Operation string `json:"operation"`
 	AttemptID string `json:"attempt_id"`
 	Result    struct {
+		Execution *struct {
+			Requested   CivilizationSelection `json:"requested"`
+			Effective   CivilizationSelection `json:"effective"`
+			ModelSource string                `json:"model_source"`
+		} `json:"execution"`
 		Status       string   `json:"status"`
 		Summary      string   `json:"summary"`
 		ChangedFiles []string `json:"changed_files"`
@@ -94,6 +104,12 @@ type CivilizationProviderRun struct {
 			Findings []string `json:"findings"`
 		} `json:"review"`
 	} `json:"result"`
+}
+
+type CivilizationSelection struct {
+	Provider        string `json:"provider,omitempty"`
+	Model           string `json:"model,omitempty"`
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
 }
 
 type CivilizationPullRequest struct {
@@ -251,6 +267,10 @@ func (h *Handlers) handleCivilizationWorkbenchFragment(response http.ResponseWri
 	CivilizationWorkbenchFragment(loadCivilizationWorkbench(request.Context())).Render(request.Context(), response)
 }
 
+func (h *Handlers) handleCivilizationWorkList(response http.ResponseWriter, request *http.Request) {
+	CivilizationWorkList(loadCivilizationWorkbench(request.Context())).Render(request.Context(), response)
+}
+
 func (h *Handlers) handleCivilizationIntake(response http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(response, request.Body, civilizationMaxIntakeBytes)
 	if err := request.ParseForm(); err != nil {
@@ -273,11 +293,13 @@ func (h *Handlers) handleCivilizationIntake(response http.ResponseWriter, reques
 	}
 	viewer := h.viewUser(request)
 	identity = "human:" + viewer.ID + ":" + identity
-	client, err := newCivilizationClient(35 * time.Minute)
+	selection := CivilizationSelection{Provider: strings.TrimSpace(request.FormValue("provider")), Model: strings.TrimSpace(request.FormValue("model")), ReasoningEffort: strings.TrimSpace(request.FormValue("reasoning_effort"))}
+	client, err := newCivilizationClient(15 * time.Second)
 	if err == nil {
 		var ignored CivilizationWork
-		err = client.request(request.Context(), http.MethodPost, "/api/civilization/v1/intake", map[string]string{
+		err = client.request(request.Context(), http.MethodPost, "/api/civilization/v1/intake", map[string]any{
 			"source_kind": "human", "source_identity": identity, "repository": repository, "text": text,
+			"selection": selection,
 		}, &ignored)
 	}
 	if err != nil {
@@ -285,6 +307,45 @@ func (h *Handlers) handleCivilizationIntake(response http.ResponseWriter, reques
 		return
 	}
 	h.renderCivilizationAfterMutation(response, request)
+}
+
+func (h *Handlers) handleCivilizationConfirm(response http.ResponseWriter, request *http.Request) {
+	request.Body = http.MaxBytesReader(response, request.Body, civilizationMaxIntakeBytes)
+	if err := request.ParseForm(); err != nil {
+		h.renderCivilizationMutationError(response, request, "Reload the brief before confirming.")
+		return
+	}
+	client, err := newCivilizationClient(15 * time.Second)
+	if err == nil {
+		err = client.request(request.Context(), http.MethodPost, "/api/civilization/v1/work/"+url.PathEscape(request.PathValue("workID"))+"/confirm", map[string]string{"brief_id": request.FormValue("brief_id")}, nil)
+	}
+	if err != nil {
+		h.renderCivilizationMutationError(response, request, err.Error())
+		return
+	}
+	h.renderCivilizationAfterMutation(response, request)
+}
+
+func (h *Handlers) handleCivilizationArtifact(response http.ResponseWriter, request *http.Request) {
+	client, err := newCivilizationClient(15 * time.Second)
+	var artifact struct {
+		Repository, Branch string
+		BaseSHA            string `json:"base_sha"`
+		WorkspaceDigest    string `json:"workspace_digest"`
+		Patch              string
+	}
+	if err == nil {
+		err = client.request(request.Context(), http.MethodGet, "/api/civilization/v1/work/"+url.PathEscape(request.PathValue("workID"))+"/artifact", nil, &artifact)
+	}
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	response.Header().Set("Cache-Control", "no-store")
+	response.Header().Set("X-Content-Type-Options", "nosniff")
+	if err != nil {
+		response.WriteHeader(http.StatusConflict)
+		fmt.Fprintln(response, err.Error())
+		return
+	}
+	fmt.Fprintf(response, "Repository: %s\nBranch: %s\nBase: %s\nReviewed digest: %s\n\n%s", artifact.Repository, artifact.Branch, artifact.BaseSHA, artifact.WorkspaceDigest, artifact.Patch)
 }
 
 func (h *Handlers) handleCivilizationRun(response http.ResponseWriter, request *http.Request) {
@@ -328,9 +389,21 @@ func (h *Handlers) renderCivilizationAfterMutation(response http.ResponseWriter,
 }
 
 func (h *Handlers) renderCivilizationMutationError(response http.ResponseWriter, request *http.Request, message string) {
-	response.WriteHeader(http.StatusUnprocessableEntity)
 	data := loadCivilizationWorkbench(request.Context())
 	data.Notice = message
+	data.FormText = request.FormValue("text")
+	data.FormRepository = request.FormValue("repository")
+	data.FormSelection = CivilizationSelection{Provider: request.FormValue("provider"), Model: request.FormValue("model"), ReasoningEffort: request.FormValue("reasoning_effort")}
+	if identity := request.FormValue("source_identity"); identity != "" {
+		data.IntakeIdentity = identity
+	}
+	// HTMX does not swap 4xx responses by default. Return the rendered error
+	// state and preserved intake; plain HTML clients get the complete page.
+	if request.Header.Get("HX-Request") != "true" {
+		response.WriteHeader(http.StatusUnprocessableEntity)
+		ConsolePage(ConsolePageData{Title: "Workbench", Active: "workbench", Workbench: &data}, h.viewUser(request), profile.FromContext(request.Context())).Render(request.Context(), response)
+		return
+	}
 	CivilizationWorkbenchFragment(data).Render(request.Context(), response)
 }
 
@@ -392,11 +465,73 @@ func civilizationChangedFiles(work CivilizationWork) []string {
 
 func civilizationStateClass(state string) string {
 	switch state {
-	case "ready", "completed", "merge_queued":
+	case "ready", "completed", "prepared":
 		return "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
 	case "blocked", "human_required":
 		return "border-amber-400/30 bg-amber-400/10 text-amber-300"
 	default:
 		return "border-brand/30 bg-brand/10 text-brand"
 	}
+}
+
+func civilizationWorkOwner(work CivilizationWork) string {
+	switch work.State {
+	case "awaiting_confirmation", "blocked", "human_required":
+		return "You"
+	case "routing", "implementing", "reviewing":
+		return civilizationExecutionLabel(work)
+	case "prepared":
+		return "You — inspect the result"
+	case "ready":
+		return "Human reviewer"
+	case "completed":
+		return "Complete"
+	default:
+		return "Hive"
+	}
+}
+
+func civilizationExecutionLabel(work CivilizationWork) string {
+	selection := work.Selection
+	for i := len(work.ProviderRuns) - 1; i >= 0; i-- {
+		if evidence := work.ProviderRuns[i].Result.Execution; evidence != nil {
+			selection = evidence.Effective
+			break
+		}
+	}
+	provider := selection.Provider
+	if provider == "" {
+		provider = "Configured host"
+	}
+	model := selection.Model
+	if model == "" {
+		model = "provider default (not reported)"
+	}
+	label := provider + " / " + model
+	if selection.ReasoningEffort != "" {
+		label += " · effort " + selection.ReasoningEffort
+	}
+	return label
+}
+
+func civilizationCheckLabel(status string) string {
+	switch status {
+	case "passed":
+		return "Passed"
+	case "failed":
+		return "Failed"
+	case "blocked":
+		return "Blocked"
+	case "skipped":
+		return "Skipped"
+	default:
+		return "Unverified"
+	}
+}
+
+func civilizationCheckClass(status string) string {
+	if status == "passed" {
+		return "text-emerald-300"
+	}
+	return "text-amber-200"
 }

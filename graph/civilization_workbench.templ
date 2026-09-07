@@ -11,11 +11,11 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 			<div class="flex flex-wrap items-center justify-between gap-3">
 				<div>
 					<h2 class="text-xl text-warm font-display">What should Civilization accomplish?</h2>
-					<p class="text-sm text-warm-muted">Describe the outcome. TLC routes it; Civilization handles the operational work.</p>
+					<p class="text-sm text-warm-muted">Describe a repository improvement. Review the brief before implementation starts.</p>
 				</div>
 				<div class="flex items-center gap-3">
 					<span class="text-[11px] text-warm-faint">{ data.GeneratedAt.Format("15:04:05 UTC") }</span>
-					<button type="button" hx-get="/console/workbench/fragment" hx-target="#civilization-workbench" hx-swap="outerHTML" class="text-xs text-brand hover:underline">Refresh</button>
+					<button type="button" hx-get="/console/workbench/work-fragment" hx-target="#civilization-work-list" hx-swap="outerHTML" class="text-sm text-brand hover:underline">Refresh progress</button>
 				</div>
 			</div>
 			if data.Notice != "" {
@@ -28,30 +28,43 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 				<input type="hidden" name="source_identity" value={ data.IntakeIdentity }/>
 				<label class="block space-y-2">
 					<span class="text-sm font-medium text-warm">Outcome</span>
-					<textarea name="text" required maxlength="20000" rows="4" placeholder="For example: Make the deployment status understandable at a glance, and let me answer blockers without opening GitHub." class="w-full rounded-lg border border-edge bg-elevated px-3 py-3 text-sm text-warm placeholder:text-warm-faint focus:border-brand focus:outline-none"></textarea>
+					<textarea name="text" required maxlength="20000" rows="4" placeholder="For example: Add a troubleshooting section for failed verification to the operator guide." class="w-full rounded-lg border border-edge bg-elevated px-3 py-3 text-base text-warm placeholder:text-warm-faint focus:border-brand focus:outline-none">{ data.FormText }</textarea>
 				</label>
 				<div class="flex flex-col sm:flex-row gap-3 sm:items-end">
 					<label class="space-y-2 flex-1">
 						<span class="text-sm font-medium text-warm">Repository</span>
 						<select name="repository" required class="w-full rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-warm">
 							for _, repository := range data.Repositories {
-								<option value={ repository }>{ repository }</option>
+								<option value={ repository } selected?={ repository == data.FormRepository }>{ repository }</option>
 							}
 						</select>
 					</label>
-					<button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-void hover:opacity-90">Start work</button>
 				</div>
-				<p class="text-xs text-warm-faint">This records the intake immediately. Background work uses the installed TLC workflow, then implements and verifies the brief. It does not itself authorize publication or merge.</p>
+				<div class="grid gap-3 md:grid-cols-3">
+					<label class="space-y-2"><span class="text-sm text-warm">Execution host</span><select name="provider" class="w-full rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-warm"><option value="">Configured host</option><option value="codex" selected?={ data.FormSelection.Provider == "codex" }>Codex</option><option value="claude" selected?={ data.FormSelection.Provider == "claude" }>Claude</option></select></label>
+					<label class="space-y-2"><span class="text-sm text-warm">Model (optional)</span><input name="model" maxlength="200" value={ data.FormSelection.Model } placeholder="Selected host's default" class="w-full rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-warm"/></label>
+					<label class="space-y-2"><span class="text-sm text-warm">Reasoning effort (optional)</span><select name="reasoning_effort" class="w-full rounded-lg border border-edge bg-elevated px-3 py-2.5 text-sm text-warm"><option value="">Host default</option>
+						for _, effort := range []string{"low", "medium", "high", "xhigh", "max"} {
+							<option value={ effort } selected?={ data.FormSelection.ReasoningEffort == effort }>{ effort }</option>
+						}
+					</select></label>
+				</div>
+				<p class="text-sm text-warm-muted">This records the intake immediately and uses the selected host to prepare a brief. You confirm before implementation. Publication and merge require separate authority.</p>
+				<button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-void hover:opacity-90">Prepare brief</button>
 			</form>
 		}
+		@CivilizationWorkList(data)
+	</section>
+}
 
-		<div class="space-y-3">
+templ CivilizationWorkList(data CivilizationWorkbench) {
+		<div id="civilization-work-list" class="space-y-3" hx-get="/console/workbench/work-fragment" hx-trigger="every 5s[!document.querySelector('#civilization-work-list form:focus-within')]" hx-swap="outerHTML" aria-live="polite">
 			<div class="flex items-center justify-between gap-3">
 				<h2 class="text-sm uppercase tracking-widest text-warm-muted">Current work</h2>
 				<span class="text-xs text-warm-faint">{ fmt.Sprintf("%d items", len(data.Items)) }</span>
 			</div>
 			if !data.Available {
-				<div class="rounded-lg border border-edge bg-surface p-6 text-sm text-warm-muted">Workbench data is unavailable. Existing historical evidence remains unchanged.</div>
+				<div role="status" class="rounded-lg border border-edge bg-surface p-6 text-sm text-warm-muted">Progress is temporarily unavailable. Your request may already be recorded. Refresh progress before submitting again. { data.Notice }</div>
 			} else if len(data.Items) == 0 {
 				<div class="rounded-lg border border-edge bg-surface p-6 text-sm text-warm-muted">No production work yet. Start with the outcome above.</div>
 			} else {
@@ -60,16 +73,10 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 				}
 			}
 		</div>
-		<footer class="flex flex-wrap gap-3 text-xs text-warm-faint border-t border-edge pt-4">
-			<span>Production: clean EventGraph</span>
-			<span>·</span>
-			<span>Historical Factory evidence remains recoverable from Git history.</span>
-		</footer>
-	</section>
 }
 
 templ civilizationWorkCard(work CivilizationWork) {
-	<article class="rounded-xl border border-edge bg-surface p-4 md:p-5 space-y-4" data-work-id={ work.WorkID }>
+	<article class="min-w-0 break-words rounded-xl border border-edge bg-surface p-4 md:p-5 space-y-4" data-work-id={ work.WorkID }>
 		<div class="flex flex-wrap items-start justify-between gap-3">
 			<div class="space-y-1 max-w-3xl">
 				<h3 class="text-base font-medium text-warm">{ civilizationWorkOutcome(work) }</h3>
@@ -80,6 +87,27 @@ templ civilizationWorkCard(work CivilizationWork) {
 				<span class="rounded-full border border-edge bg-elevated px-2.5 py-1 text-xs text-warm-muted">{ civilizationWorkRoute(work) }</span>
 			</div>
 		</div>
+		<p class="text-sm text-warm-muted">Current owner: <span class="text-warm">{ civilizationWorkOwner(work) }</span> · { work.UpdatedAt.Format("15:04:05 UTC") }</p>
+		if work.State == "awaiting_confirmation" && work.Bound != nil {
+			<section class="rounded-lg border border-brand/30 p-4 space-y-3" aria-label="Brief to confirm">
+				<h4 class="text-base text-warm">Review the brief</h4>
+				@civilizationBriefList("Scope", work.Bound.Envelope.Brief.Scope)
+				@civilizationBriefList("Outside this change", work.Bound.Envelope.Brief.NonGoals)
+				@civilizationBriefList("Assumptions", work.Bound.Envelope.Brief.Assumptions)
+				@civilizationBriefList("Constraints", work.Bound.Envelope.Brief.Constraints)
+				@civilizationBriefList("Verification", work.Bound.Envelope.Brief.Tests)
+				<p class="text-sm text-warm-muted">Execution: { civilizationExecutionLabel(work) }</p>
+				<form method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/confirm") } hx-post={ "/console/workbench/work/"+work.WorkID+"/confirm" } hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button">
+					<input type="hidden" name="brief_id" value={ work.Bound.IdempotencyKey }/>
+					<button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm text-void">Confirm implementation</button>
+				</form>
+				<p class="text-sm text-warm-muted">Confirmation permits work in an isolated repository worktree. Publication and merge remain separate controls.</p>
+			</section>
+		}
+		if work.State == "prepared" {
+			<p role="status" class="text-base text-emerald-300">Change prepared successfully. Independent verification and ordinary review passed. Publication has not occurred.</p>
+			<a href={ templ.URL("/console/workbench/work/"+work.WorkID+"/artifact") } class="inline-block rounded-lg border border-brand px-4 py-2 text-sm text-brand">Inspect prepared diff</a>
+		}
 
 		if work.Blocker != "" {
 			<div class="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 space-y-1">
@@ -98,7 +126,7 @@ templ civilizationWorkCard(work CivilizationWork) {
 				if len(implementation.Result.Checks) > 0 {
 					<ul class="space-y-1 text-sm text-warm-muted" aria-label="Test results">
 						for _, check := range implementation.Result.Checks {
-							<li><span class="text-emerald-300">Passed</span> · { check.Name } — { check.Summary }</li>
+							<li><span class={ civilizationCheckClass(check.Status) }>{ civilizationCheckLabel(check.Status) }</span> · { check.Name } — { check.Summary }</li>
 						}
 					</ul>
 				}
@@ -110,12 +138,12 @@ templ civilizationWorkCard(work CivilizationWork) {
 
 		for _, intervention := range work.Interventions {
 			if intervention.Status == "open" {
-				<form method="post" action={ templ.SafeURL("/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve") } hx-post={ "/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve" } hx-target="#civilization-workbench" hx-swap="outerHTML" class="rounded-lg border border-brand/30 bg-brand/5 p-4 space-y-3">
+				<form id={ "resolve-"+intervention.ID } hx-preserve="true" method="post" action={ templ.SafeURL("/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve") } hx-post={ "/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve" } hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button" class="rounded-lg border border-brand/30 bg-brand/5 p-4 space-y-3">
 					<label class="block space-y-2">
 						<span class="text-sm font-medium text-warm">{ intervention.Prompt }</span>
 						<textarea name="resolution" required maxlength="12000" rows="3" placeholder="Answer in plain language…" class="w-full rounded-lg border border-edge bg-elevated px-3 py-2 text-sm text-warm placeholder:text-warm-faint"></textarea>
 					</label>
-					<button type="submit" class="rounded-lg border border-brand px-4 py-2 text-sm text-brand hover:bg-brand/10">Record answer</button>
+					<button type="submit" class="rounded-lg border border-brand px-4 py-2 text-sm text-brand hover:bg-brand/10">Record answer and retry</button>
 					<p class="text-xs text-warm-faint">An answer resumes work. It is not repository-effect approval.</p>
 				</form>
 			}
@@ -136,6 +164,8 @@ templ civilizationWorkCard(work CivilizationWork) {
 				<div class="space-y-1">
 					<p><span class="text-warm-faint">Work ID</span> <span class="font-mono break-all">{ work.WorkID }</span></p>
 					<p><span class="text-warm-faint">Repository</span> { work.Source.Repository }</p>
+					<p><span class="text-warm-faint">Latest evidence event</span> <span class="font-mono break-all">{ work.LatestEventID }</span></p>
+					<p><span class="text-warm-faint">Execution</span> { civilizationExecutionLabel(work) }</p>
 					if work.Bound != nil {
 						<p><span class="text-warm-faint">Workflow</span> { work.Bound.Envelope.Workflow.Name } { work.Bound.Envelope.Workflow.Version }</p>
 						<p><span class="text-warm-faint">Transport</span> { work.Bound.Envelope.SchemaVersion }</p>
@@ -149,6 +179,13 @@ templ civilizationWorkCard(work CivilizationWork) {
 					</div>
 				}
 			</div>
+			<ul class="mt-3 space-y-2 break-all" aria-label="Execution evidence">
+				for _, run := range work.ProviderRuns {
+					if execution := run.Result.Execution; execution != nil {
+						<li>{ fmt.Sprintf("%s: requested %s / %s; effective %s / %s; selection %s; effort %s. Attempt %s", run.Operation, execution.Requested.Provider, execution.Requested.Model, execution.Effective.Provider, execution.Effective.Model, execution.ModelSource, execution.Effective.ReasoningEffort, run.AttemptID) }</li>
+					}
+				}
+			</ul>
 			if files := civilizationChangedFiles(work); len(files) > 0 {
 				<p class="mt-3 text-warm-faint">Changed files</p>
 				<ul class="mt-1 list-disc list-inside font-mono">
@@ -167,4 +204,17 @@ templ civilizationWorkCard(work CivilizationWork) {
 			}
 		</details>
 	</article>
+}
+
+templ civilizationBriefList(label string, values []string) {
+	if len(values) > 0 {
+		<div class="text-sm text-warm-muted">
+			<p class="font-medium text-warm">{ label }</p>
+			<ul class="list-disc list-inside">
+				for _, value := range values {
+					<li>{ value }</li>
+				}
+			</ul>
+		</div>
+	}
 }
