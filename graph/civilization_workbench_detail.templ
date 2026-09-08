@@ -7,7 +7,7 @@ templ civilizationWorkCard(work CivilizationWork) {
 }
 
 templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) {
-	<article id="workbench-detail" class="wb-detail" data-work-id={ work.WorkID } data-work-state={ work.State } data-work-owner={ civilizationWorkOwner(work) }>
+	<article id="workbench-detail" class="wb-detail" data-work-id={ work.WorkID } data-work-state={ work.State } data-work-owner={ data.WorkOwner(work) }>
 		<header class="wb-detail-header">
 			<div class="wb-eyebrow"><span>{ civilizationRepositoryLabel(work.Source.Repository) }
 				if work.Bound != nil {
@@ -25,7 +25,25 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 			</ol>
 		</header>
 		<div class="wb-detail-body">
-			<div class="wb-owner"><span class="wb-owner-mark" aria-hidden="true">{ civilizationOwnerInitial(work) }</span><div><span class="wb-label">Current owner:</span> <strong>{ civilizationWorkOwner(work) }</strong><small>Updated <time datetime={ work.UpdatedAt.Format("2006-01-02T15:04:05Z") }>{ work.UpdatedAt.Format("15:04 UTC") }</time></small></div></div>
+			<div class="wb-owner"><span class="wb-owner-mark" aria-hidden="true">{ civilizationOwnerInitial(work) }</span><div><span class="wb-label">Current owner:</span> <strong>{ data.WorkOwner(work) }</strong><small>Updated <time datetime={ work.UpdatedAt.Format("2006-01-02T15:04:05Z") }>{ work.UpdatedAt.Format("15:04 UTC") }</time></small></div></div>
+			<div class="wb-work-people"><span>Requested by <strong>{ data.Requester(work) }</strong></span>
+				if civilizationHumanStep(work) != "" || work.HumanOwnerID != "" {
+					<span>Responsible person <strong>{ data.HumanOwner(work) }</strong></span>
+				}
+			</div>
+			<details id={ "human-owner-"+work.WorkID } class="wb-assignment" data-workbench-details><summary>Assign human responsibility</summary>
+				<form id={ "human-owner-form-"+work.WorkID } data-workbench-draft-form method="post" action={ templ.URL("/console/workbench/work/"+work.WorkID+"/human-owner") } hx-post={ "/console/workbench/work/"+work.WorkID+"/human-owner" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-assignment-form">
+					@civilizationViewFields(data)
+					<input type="hidden" name="previous_assignment_id" value={ work.HumanOwnerAssignmentID }/>
+					<label>Responsible person<select id={ "human-owner-select-"+work.WorkID } name="owner_id"><option value="">Unassigned — shared queue</option>
+						for _, operator := range data.OwnerCandidates() {
+							<option value={ operator.ID } selected?={ operator.ID == work.HumanOwnerID }>{ operator.Name }</option>
+						}
+					</select></label>
+					<button type="submit" class="wb-button">Save responsibility</button>
+				</form>
+				<p class="wb-muted">Routes current and future human steps for this workstream. Approval permissions are unchanged.</p>
+			</details>
 			if work.State == "awaiting_confirmation" && work.Bound != nil {
 				<section class="wb-section" aria-label="Brief to confirm">
 					<h3>Review the brief</h3>
@@ -37,7 +55,8 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 						@civilizationBriefList("Constraints", work.Bound.Envelope.Brief.Constraints)
 						<p class="wb-muted">Execution: { civilizationExecutionLabel(work) }</p>
 					</div></details>
-					<form method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/confirm") } hx-post={ "/console/workbench/work/"+work.WorkID+"/confirm" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-confirm">
+					<form id={ "confirm-form-"+work.WorkID } method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/confirm") } hx-post={ "/console/workbench/work/"+work.WorkID+"/confirm" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-confirm">
+						@civilizationViewFields(data)
 						<input type="hidden" name="brief_id" value={ work.Bound.IdempotencyKey }/>
 						<p class="wb-muted">Confirmation starts implementation in an isolated worktree.</p>
 						<button id={ "confirm-"+work.WorkID } type="submit" class="wb-button wb-primary">Confirm implementation <span aria-hidden="true">→</span></button>
@@ -53,6 +72,7 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 			for _, intervention := range work.Interventions {
 				if intervention.Status == "open" {
 					<form id={ "resolve-"+intervention.ID } hx-preserve="true" method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve") } hx-post={ "/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-resolution">
+						@civilizationViewFields(data)
 						<label>{ intervention.Prompt }<textarea id={ "resolution-"+intervention.ID } name="resolution" data-workbench-draft={ intervention.ID } required maxlength="12000" rows="3" placeholder="Answer in plain language…">{ civilizationResolutionText(data, intervention.ID) }</textarea></label>
 						<button type="submit" class="wb-button wb-primary">Record answer and retry</button>
 					</form>

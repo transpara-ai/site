@@ -24,6 +24,13 @@ const (
 )
 
 type CivilizationWorkbench struct {
+	ActionError    bool
+	View           string
+	Repository     string
+	Operator       string
+	Responsible    string
+	ViewerID       string
+	OperatorNames  map[string]string
 	SelectedWorkID string
 	ResolutionID   string
 	ResolutionText string
@@ -39,22 +46,25 @@ type CivilizationWorkbench struct {
 }
 
 type CivilizationWork struct {
-	Selection     CivilizationSelection      `json:"selection"`
-	LatestEventID string                     `json:"latest_event_id"`
-	WorkID        string                     `json:"work_id"`
-	Source        CivilizationSource         `json:"source"`
-	IntakeText    string                     `json:"intake_text"`
-	Bound         *CivilizationBound         `json:"bound"`
-	State         string                     `json:"state"`
-	ResumeState   string                     `json:"resume_state"`
-	Summary       string                     `json:"summary"`
-	Blocker       string                     `json:"blocker"`
-	NextAction    string                     `json:"next_action"`
-	ProviderRuns  []CivilizationProviderRun  `json:"provider_runs"`
-	PullRequest   *CivilizationPullRequest   `json:"pull_request"`
-	Interventions []CivilizationIntervention `json:"interventions"`
-	MergeDecision *CivilizationMergeDecision `json:"merge_decision"`
-	UpdatedAt     time.Time                  `json:"updated_at"`
+	HumanOwnerID           string                     `json:"human_owner_id"`
+	HumanOwnerAssignedBy   string                     `json:"human_owner_assigned_by"`
+	HumanOwnerAssignmentID string                     `json:"human_owner_assignment_id"`
+	Selection              CivilizationSelection      `json:"selection"`
+	LatestEventID          string                     `json:"latest_event_id"`
+	WorkID                 string                     `json:"work_id"`
+	Source                 CivilizationSource         `json:"source"`
+	IntakeText             string                     `json:"intake_text"`
+	Bound                  *CivilizationBound         `json:"bound"`
+	State                  string                     `json:"state"`
+	ResumeState            string                     `json:"resume_state"`
+	Summary                string                     `json:"summary"`
+	Blocker                string                     `json:"blocker"`
+	NextAction             string                     `json:"next_action"`
+	ProviderRuns           []CivilizationProviderRun  `json:"provider_runs"`
+	PullRequest            *CivilizationPullRequest   `json:"pull_request"`
+	Interventions          []CivilizationIntervention `json:"interventions"`
+	MergeDecision          *CivilizationMergeDecision `json:"merge_decision"`
+	UpdatedAt              time.Time                  `json:"updated_at"`
 }
 
 type CivilizationSource struct {
@@ -262,20 +272,21 @@ func newCivilizationIntakeIdentity() string {
 }
 
 func (h *Handlers) handleCivilizationWorkbench(response http.ResponseWriter, request *http.Request) {
-	data := loadCivilizationWorkbench(request.Context())
-	data.SelectedWorkID = request.URL.Query().Get("work")
+	data := h.workbenchForRequest(request)
 	ConsolePage(ConsolePageData{Title: "Workbench", Active: "workbench", Workbench: &data}, h.viewUser(request), profile.FromContext(request.Context())).Render(request.Context(), response)
 }
 
 func (h *Handlers) handleCivilizationWorkbenchFragment(response http.ResponseWriter, request *http.Request) {
-	data := loadCivilizationWorkbench(request.Context())
-	data.SelectedWorkID = request.URL.Query().Get("work")
+	data := h.workbenchForRequest(request)
 	CivilizationWorkbenchFragment(data).Render(request.Context(), response)
 }
 
 func (h *Handlers) handleCivilizationWorkList(response http.ResponseWriter, request *http.Request) {
-	data := loadCivilizationWorkbench(request.Context())
-	data.SelectedWorkID = request.URL.Query().Get("work")
+	data := h.workbenchForRequest(request)
+	response.Header().Set("Cache-Control", "no-store")
+	if request.Header.Get("HX-Trigger") != "civilization-work-list" && request.Header.Get("HX-Request") == "true" {
+		response.Header().Set("HX-Push-Url", data.PageURL(data.View, data.SelectedWorkID))
+	}
 	CivilizationWorkList(data).Render(request.Context(), response)
 }
 
@@ -402,10 +413,10 @@ func (h *Handlers) renderCivilizationAfterMutation(response http.ResponseWriter,
 		selected = request.URL.Query().Get("work")
 	}
 	if request.Header.Get("HX-Request") == "true" {
-		data := loadCivilizationWorkbench(request.Context())
+		data := h.workbenchForRequest(request)
 		data.SelectedWorkID = selected
 		if selected != "" {
-			response.Header().Set("HX-Push-Url", civilizationWorkURL(selected))
+			response.Header().Set("HX-Push-Url", data.PageURL(data.View, selected))
 		}
 		if request.Header.Get("HX-Target") == "civilization-work-list" {
 			CivilizationWorkList(data).Render(request.Context(), response)
@@ -418,8 +429,9 @@ func (h *Handlers) renderCivilizationAfterMutation(response http.ResponseWriter,
 }
 
 func (h *Handlers) renderCivilizationMutationError(response http.ResponseWriter, request *http.Request, message string) {
-	data := loadCivilizationWorkbench(request.Context())
+	data := h.workbenchForRequest(request)
 	data.Notice = message
+	data.ActionError = true
 	data.SelectedWorkID = request.PathValue("workID")
 	if data.SelectedWorkID == "" {
 		data.SelectedWorkID = request.URL.Query().Get("work")
@@ -518,11 +530,11 @@ func civilizationStateClass(state string) string {
 func civilizationWorkOwner(work CivilizationWork) string {
 	switch work.State {
 	case "awaiting_confirmation", "blocked", "human_required":
-		return "You"
+		return "Human step · unassigned"
 	case "routing", "implementing", "reviewing":
 		return civilizationExecutionLabel(work)
 	case "prepared":
-		return "You — inspect the result"
+		return "Human inspection"
 	case "ready":
 		return "Human reviewer"
 	case "completed":

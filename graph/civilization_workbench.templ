@@ -2,7 +2,6 @@ package graph
 
 import (
 	"fmt"
-	"net/url"
 )
 
 templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
@@ -11,9 +10,10 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 		if len(data.Repositories) > 0 {
 			<details id="workbench-composer" class="wb-composer" open?={ len(data.Items) == 0 || data.FormText != "" }>
 				<summary class="wb-button wb-primary"><span class="wb-when-closed">+ New work</span><span class="wb-when-open">Close composer</span></summary>
-				<form method="post" action="/console/workbench/intake" hx-post="/console/workbench/intake" hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-compose-form" aria-label="New work">
+				<form id="workbench-intake-form" method="post" action="/console/workbench/intake" hx-post="/console/workbench/intake" hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-compose-form" aria-label="New work">
 					<input type="hidden" name="source_identity" value={ data.IntakeIdentity }/>
 					<input type="hidden" name="selected_work" value={ data.SelectedWorkID }/>
+					@civilizationViewFields(data)
 					<div><h2>What should Civilization accomplish?</h2><p class="wb-muted">Describe a repository improvement. You review the brief before implementation.</p></div>
 					<label>Outcome<textarea id="workbench-outcome" name="text" required maxlength="20000" rows="3" placeholder="For example: Add a troubleshooting section for failed verification to the operator guide.">{ data.FormText }</textarea></label>
 					<div class="wb-fields">
@@ -36,20 +36,28 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 				</form>
 			</details>
 		}
+		<div id="workbench-connection" role="status" aria-live="polite"></div>
 		@CivilizationWorkList(data)
 	</section>
 }
 
 templ CivilizationWorkList(data CivilizationWorkbench) {
-	<div id="civilization-work-list" hx-get={ data.PollURL() } hx-trigger="every 5s[!document.querySelector('#civilization-work-list :focus, .wb-workbench form.htmx-request, #civilization-work-list [role=alert]')]" hx-swap="outerHTML" hx-sync="this:drop" data-selected-work={ data.SelectedWorkID }>
-		if data.Notice != "" {
-			<div class="wb-notice" role="alert">{ data.Notice }</div>
-		}
-		<div class="wb-list-heading"><h2>Current work <span>{ fmt.Sprintf("%d", len(data.Items)) }</span></h2><div class="wb-freshness"><time datetime={ data.GeneratedAt.Format("2006-01-02T15:04:05Z") }>{ data.GeneratedAt.Format("15:04:05 UTC") }</time><button id="workbench-refresh" type="button" hx-get={ data.PollURL() } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" class="wb-text-button">Refresh progress</button></div></div>
+	<div id="civilization-work-list" hx-get={ data.PollURL() } hx-trigger="every 3s" hx-swap="outerHTML" hx-sync="this:drop" data-selected-work={ data.SelectedWorkID } data-view={ data.View } data-available={ fmt.Sprint(data.Available) }>
+		<div id="workbench-action-notice" data-action-error={ fmt.Sprint(data.ActionError) }>
+			if data.Notice != "" {
+				<div class="wb-notice" role="alert">{ data.Notice }</div>
+			}
+		</div>
+		@civilizationWorkbenchToolbar(data)
+		<div class="wb-list-heading"><h2>Current work <span>{ fmt.Sprintf("%d", len(data.VisibleItems())) }</span></h2><div class="wb-freshness"><span class="wb-live">Updates automatically</span><time datetime={ data.GeneratedAt.Format("2006-01-02T15:04:05Z") }>Checked { data.GeneratedAt.Format("15:04:05 UTC") }</time></div></div>
 		if !data.Available {
-			<div class="wb-empty" role="status"><h2>Progress is temporarily unavailable</h2><p>Your request may already be recorded. Refresh progress before submitting again.</p></div>
+			<div class="wb-empty" role="status"><h2>Progress is temporarily unavailable</h2><p>Reconnecting automatically. Your request may already be recorded.</p></div>
 		} else if len(data.Items) == 0 {
 			<div class="wb-empty"><span class="wb-empty-mark" aria-hidden="true">◇</span><h2>Your next improvement starts here</h2><p>Describe an outcome above. Civilization will prepare a brief for you to review.</p></div>
+		} else if data.View == "team" {
+			@civilizationTeamBoard(data)
+		} else if len(data.VisibleItems()) == 0 {
+			<div class="wb-empty"><h2>No work matches these filters</h2><p>Choose another repository or requester to see their work.</p></div>
 		} else {
 			<div class="wb-board">
 				<details id="workbench-picker" class="wb-index" open><summary>Select work · { fmt.Sprint(len(data.Items)) } items</summary><nav aria-label="Current work">
@@ -57,7 +65,7 @@ templ CivilizationWorkList(data CivilizationWorkbench) {
 						if len(group.Items) > 0 {
 							<section class="wb-work-group"><h3>{ group.Label } <span>{ fmt.Sprint(len(group.Items)) }</span></h3>
 								for _, work := range group.Items {
-									<a href={ templ.URL(civilizationWorkURL(work.WorkID)) } hx-get={ "/console/workbench/work-fragment?work=" + url.QueryEscape(work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-push-url={ civilizationWorkURL(work.WorkID) } hx-sync="#civilization-work-list:replace" class="wb-work-link" data-work-select={ work.WorkID } aria-current={ civilizationSelectedCurrent(data, work.WorkID) }>
+									<a id={ "work-select-"+work.WorkID } href={ templ.URL(data.PageURL("focus", work.WorkID)) } hx-get={ data.FragmentURL("focus", work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-push-url={ data.PageURL("focus", work.WorkID) } hx-sync="#civilization-work-list:replace" class="wb-work-link" data-work-select={ work.WorkID } aria-current={ civilizationSelectedCurrent(data, work.WorkID) }>
 										<span class="wb-work-meta">{ civilizationRepositoryLabel(work.Source.Repository) }</span><span class="wb-work-title">{ civilizationWorkOutcome(work) }</span><span class="wb-work-state" data-state={ work.State }>{ civilizationStateLabel(work.State) }</span>
 									</a>
 								}

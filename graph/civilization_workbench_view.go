@@ -29,8 +29,8 @@ func civilizationWorkGroupIndex(state string) int {
 }
 
 func (data CivilizationWorkbench) Groups() []civilizationWorkGroup {
-	groups := []civilizationWorkGroup{{Label: "Needs you"}, {Label: "In progress"}, {Label: "Prepared"}, {Label: "Ready for review"}, {Label: "Completed"}, {Label: "Other work"}}
-	for _, item := range data.Items {
+	groups := []civilizationWorkGroup{{Label: "Needs a human"}, {Label: "In progress"}, {Label: "Prepared"}, {Label: "Ready for review"}, {Label: "Completed"}, {Label: "Other work"}}
+	for _, item := range data.VisibleItems() {
 		index := civilizationWorkGroupIndex(item.State)
 		groups[index].Items = append(groups[index].Items, item)
 	}
@@ -42,9 +42,10 @@ func (data CivilizationWorkbench) Groups() []civilizationWorkGroup {
 
 func (data CivilizationWorkbench) Selected() *CivilizationWork {
 	if data.SelectedWorkID != "" {
-		for i := range data.Items {
-			if data.Items[i].WorkID == data.SelectedWorkID {
-				return &data.Items[i]
+		items := data.VisibleItems()
+		for i := range items {
+			if items[i].WorkID == data.SelectedWorkID {
+				return &items[i]
 			}
 		}
 		return nil
@@ -66,7 +67,7 @@ func (data CivilizationWorkbench) PollURL() string {
 	if item := data.Selected(); item != nil {
 		selected = item.WorkID
 	}
-	return "/console/workbench/work-fragment?work=" + url.QueryEscape(selected)
+	return strings.Replace(data.PageURL(data.View, selected), "/console/workbench?", "/console/workbench/work-fragment?", 1)
 }
 
 func civilizationRepositoryLabel(repository string) string {
@@ -74,7 +75,7 @@ func civilizationRepositoryLabel(repository string) string {
 }
 
 func civilizationStateLabel(state string) string {
-	labels := map[string]string{"awaiting_confirmation": "Brief ready", "routing": "Preparing brief", "queued": "Queued", "implementing": "Implementing", "validating": "Checking implementation", "reviewing": "In review", "publishing": "Publishing", "merge_queued": "Merge queued", "blocked": "Blocked", "human_required": "Needs your answer", "prepared": "Prepared", "ready": "Ready for review", "completed": "Completed"}
+	labels := map[string]string{"awaiting_confirmation": "Brief ready", "routing": "Preparing brief", "queued": "Queued", "implementing": "Implementing", "validating": "Checking implementation", "reviewing": "In review", "publishing": "Publishing", "merge_queued": "Merge queued", "blocked": "Blocked", "human_required": "Needs an answer", "prepared": "Prepared", "ready": "Ready for review", "completed": "Completed"}
 	if label := labels[state]; label != "" {
 		return label
 	}
