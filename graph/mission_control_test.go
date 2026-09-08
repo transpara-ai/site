@@ -500,3 +500,27 @@ func TestMissionOptionalDaemonObservationRemainsIndependent(t *testing.T) {
 		t.Fatalf("daemon failure hidden: %s", status)
 	}
 }
+
+func TestMissionCurrentAgentsIncludeStoppedAndKeepHistory(t *testing.T) {
+	now := time.Now().UTC()
+	mark := missionTestMark(now, "projected_only")
+	mark.SourceID = "hive_runtime"
+	rows := []MissionRoleAgentRow{
+		{StableID: "old", ActorID: "actor_old", Role: "guardian", Status: MissionMarkedValue{Value: "not in this runtime", Mark: mark}},
+		{StableID: "live", ActorID: "actor_live", Role: "guardian", Status: MissionMarkedValue{Value: "idle", Mark: mark}},
+		{StableID: "stopped", ActorID: "actor_stopped", Role: "implementer", Status: MissionMarkedValue{Value: "stopped", Mark: mark}},
+		{StableID: "config", Role: "guardian"},
+	}
+	if current := missionRoleGroups(rows, false); len(current) != 2 || current[0].StableID != "live" || current[1].StableID != "stopped" {
+		t.Fatalf("current agents = %+v", current)
+	}
+	if previous := missionRoleGroups(rows, true); len(previous) != 2 {
+		t.Fatalf("history lost: %+v", previous)
+	}
+	for i := range rows {
+		rows[i].Status.Mark.SourceID = "eventgraph_roster"
+	}
+	if current := missionRoleGroups(rows, false); len(current) != len(rows) {
+		t.Fatal("unobserved rows hidden")
+	}
+}

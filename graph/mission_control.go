@@ -896,3 +896,25 @@ func (h *Handlers) handleMissionControlFragment(w http.ResponseWriter, r *http.R
 	view := defaultMissionControlAcquirer.acquire(r.Context())
 	missionControlFragment(view).Render(r.Context(), w)
 }
+
+// Current daemon actors are shown first, including stopped loops. Configuration
+// and prior incarnations remain inspectable; unavailable telemetry hides nothing.
+func missionRoleGroups(rows []MissionRoleAgentRow, other bool) []MissionRoleAgentRow {
+	var current, previous []MissionRoleAgentRow
+	for _, row := range rows {
+		if row.ActorID != "" && row.Status.Mark.SourceID == "hive_runtime" && row.Status.Value != "not in this runtime" {
+			current = append(current, row)
+		} else {
+			previous = append(previous, row)
+		}
+	}
+	if len(current) == 0 {
+		current, previous = previous, nil
+	}
+	result := current
+	if other {
+		result = previous
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].Role < result[j].Role })
+	return result
+}
