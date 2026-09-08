@@ -24,6 +24,9 @@ const (
 )
 
 type CivilizationWorkbench struct {
+	SelectedWorkID string
+	ResolutionID   string
+	ResolutionText string
 	FormText       string
 	FormRepository string
 	FormSelection  CivilizationSelection
@@ -260,15 +263,20 @@ func newCivilizationIntakeIdentity() string {
 
 func (h *Handlers) handleCivilizationWorkbench(response http.ResponseWriter, request *http.Request) {
 	data := loadCivilizationWorkbench(request.Context())
+	data.SelectedWorkID = request.URL.Query().Get("work")
 	ConsolePage(ConsolePageData{Title: "Workbench", Active: "workbench", Workbench: &data}, h.viewUser(request), profile.FromContext(request.Context())).Render(request.Context(), response)
 }
 
 func (h *Handlers) handleCivilizationWorkbenchFragment(response http.ResponseWriter, request *http.Request) {
-	CivilizationWorkbenchFragment(loadCivilizationWorkbench(request.Context())).Render(request.Context(), response)
+	data := loadCivilizationWorkbench(request.Context())
+	data.SelectedWorkID = request.URL.Query().Get("work")
+	CivilizationWorkbenchFragment(data).Render(request.Context(), response)
 }
 
 func (h *Handlers) handleCivilizationWorkList(response http.ResponseWriter, request *http.Request) {
-	CivilizationWorkList(loadCivilizationWorkbench(request.Context())).Render(request.Context(), response)
+	data := loadCivilizationWorkbench(request.Context())
+	data.SelectedWorkID = request.URL.Query().Get("work")
+	CivilizationWorkList(data).Render(request.Context(), response)
 }
 
 func (h *Handlers) handleCivilizationIntake(response http.ResponseWriter, request *http.Request) {
@@ -296,11 +304,16 @@ func (h *Handlers) handleCivilizationIntake(response http.ResponseWriter, reques
 	selection := CivilizationSelection{Provider: strings.TrimSpace(request.FormValue("provider")), Model: strings.TrimSpace(request.FormValue("model")), ReasoningEffort: strings.TrimSpace(request.FormValue("reasoning_effort"))}
 	client, err := newCivilizationClient(15 * time.Second)
 	if err == nil {
-		var ignored CivilizationWork
+		var accepted CivilizationWork
 		err = client.request(request.Context(), http.MethodPost, "/api/civilization/v1/intake", map[string]any{
 			"source_kind": "human", "source_identity": identity, "repository": repository, "text": text,
 			"selection": selection,
-		}, &ignored)
+		}, &accepted)
+		if err == nil {
+			query := request.URL.Query()
+			query.Set("work", accepted.WorkID)
+			request.URL.RawQuery = query.Encode()
+		}
 	}
 	if err != nil {
 		h.renderCivilizationMutationError(response, request, err.Error())
@@ -328,18 +341,21 @@ func (h *Handlers) handleCivilizationConfirm(response http.ResponseWriter, reque
 
 func (h *Handlers) handleCivilizationArtifact(response http.ResponseWriter, request *http.Request) {
 	client, err := newCivilizationClient(15 * time.Second)
-	var artifact struct {
-		Repository, Branch string
-		BaseSHA            string `json:"base_sha"`
-		WorkspaceDigest    string `json:"workspace_digest"`
-		Patch              string
-	}
+	var artifact civilizationArtifact
 	if err == nil {
 		err = client.request(request.Context(), http.MethodGet, "/api/civilization/v1/work/"+url.PathEscape(request.PathValue("workID"))+"/artifact", nil, &artifact)
 	}
-	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	response.Header().Set("Cache-Control", "no-store")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
+	if request.Header.Get("HX-Request") == "true" {
+		message := ""
+		if err != nil {
+			message = err.Error()
+		}
+		CivilizationArtifactView(request.PathValue("workID"), artifact, message).Render(request.Context(), response)
+		return
+	}
+	response.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	if err != nil {
 		response.WriteHeader(http.StatusConflict)
 		fmt.Fprintln(response, err.Error())
@@ -381,16 +397,37 @@ func (h *Handlers) handleCivilizationResolve(response http.ResponseWriter, reque
 }
 
 func (h *Handlers) renderCivilizationAfterMutation(response http.ResponseWriter, request *http.Request) {
+	selected := request.PathValue("workID")
+	if selected == "" {
+		selected = request.URL.Query().Get("work")
+	}
 	if request.Header.Get("HX-Request") == "true" {
-		h.handleCivilizationWorkbenchFragment(response, request)
+		data := loadCivilizationWorkbench(request.Context())
+		data.SelectedWorkID = selected
+		if selected != "" {
+			response.Header().Set("HX-Push-Url", civilizationWorkURL(selected))
+		}
+		if request.Header.Get("HX-Target") == "civilization-work-list" {
+			CivilizationWorkList(data).Render(request.Context(), response)
+		} else {
+			CivilizationWorkbenchFragment(data).Render(request.Context(), response)
+		}
 		return
 	}
-	http.Redirect(response, request, "/console/workbench", http.StatusSeeOther)
+	http.Redirect(response, request, civilizationWorkURL(selected), http.StatusSeeOther)
 }
 
 func (h *Handlers) renderCivilizationMutationError(response http.ResponseWriter, request *http.Request, message string) {
 	data := loadCivilizationWorkbench(request.Context())
 	data.Notice = message
+	data.SelectedWorkID = request.PathValue("workID")
+	if data.SelectedWorkID == "" {
+		data.SelectedWorkID = request.URL.Query().Get("work")
+	}
+	if data.SelectedWorkID == "" {
+		data.SelectedWorkID = request.FormValue("selected_work")
+	}
+	data.ResolutionID, data.ResolutionText = request.PathValue("interventionID"), request.FormValue("resolution")
 	data.FormText = request.FormValue("text")
 	data.FormRepository = request.FormValue("repository")
 	data.FormSelection = CivilizationSelection{Provider: request.FormValue("provider"), Model: request.FormValue("model"), ReasoningEffort: request.FormValue("reasoning_effort")}
@@ -404,7 +441,11 @@ func (h *Handlers) renderCivilizationMutationError(response http.ResponseWriter,
 		ConsolePage(ConsolePageData{Title: "Workbench", Active: "workbench", Workbench: &data}, h.viewUser(request), profile.FromContext(request.Context())).Render(request.Context(), response)
 		return
 	}
-	CivilizationWorkbenchFragment(data).Render(request.Context(), response)
+	if request.Header.Get("HX-Target") == "civilization-work-list" {
+		CivilizationWorkList(data).Render(request.Context(), response)
+	} else {
+		CivilizationWorkbenchFragment(data).Render(request.Context(), response)
+	}
 }
 
 func containsString(values []string, wanted string) bool {

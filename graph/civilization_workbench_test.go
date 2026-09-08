@@ -39,7 +39,7 @@ func TestCivilizationWorkbenchIsNaturalLanguageFirstAndTechnicalDetailsCollapsed
 	body := response.Body.String()
 	for _, wanted := range []string{
 		`data-console-surface="civilization-workbench"`, "What should Civilization accomplish?", "A clear operator experience",
-		"Prepare brief", "records the intake immediately", "Implementation result", "all packages passed", "No unresolved findings",
+		"Prepare brief", "records your request", "Implementation result", "all packages passed", "No unresolved findings",
 		"Technical details", "graph/console.templ", "transpara-tlc", "0.1.2", "Execution host", "Model (optional)", "Current owner:",
 	} {
 		if !strings.Contains(body, wanted) {

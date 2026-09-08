@@ -12,6 +12,9 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 	<!DOCTYPE html>
 	<html lang="en">
 		@consoleHead(data.Title)
+		if data.Workbench != nil {
+			@civilizationWorkbenchShell(*data.Workbench)
+		} else {
 		<body class="bg-void text-warm-secondary min-h-screen flex flex-col">
 			<main class="flex-1 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10 w-full space-y-6">
 				<header class="flex items-center justify-between gap-3">
@@ -45,11 +48,9 @@ templ ConsolePage(data ConsolePageData, user ViewUser, p *profile.Profile) {
 				if data.Config != nil {
 					@consoleConfigFragment(*data.Config)
 				}
-				if data.Workbench != nil {
-					@CivilizationWorkbenchFragment(*data.Workbench)
-				}
 			</main>
 		</body>
+		}
 	</html>
 }
 

@@ -1,0 +1,141 @@
+package graph
+
+import "fmt"
+
+templ civilizationWorkCard(work CivilizationWork) {
+	@civilizationWorkDetail(work, CivilizationWorkbench{})
+}
+
+templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) {
+	<article id="workbench-detail" class="wb-detail" data-work-id={ work.WorkID } data-work-state={ work.State } data-work-owner={ civilizationWorkOwner(work) }>
+		<header class="wb-detail-header">
+			<div class="wb-eyebrow"><span>{ civilizationRepositoryLabel(work.Source.Repository) }
+				if work.Bound != nil {
+					<span> / { civilizationWorkRoute(work) }</span>
+				}
+			</span><span class="wb-badge" data-state={ work.State }>{ civilizationStateLabel(work.State) }</span></div>
+			<h2 id="workbench-detail-title" tabindex="-1">{ civilizationWorkOutcome(work) }</h2>
+			if work.Summary != "" && work.Summary != civilizationWorkOutcome(work) {
+				<p class="wb-muted">{ work.Summary }</p>
+			}
+			<ol class="wb-stages" aria-label="Work stages">
+				for index, label := range []string{"Brief", "Implementation", "Checks & review", "Result"} {
+					<li data-stage={ civilizationStageStatus(work, index) }><span class="wb-step" aria-hidden="true">{ fmt.Sprint(index+1) }</span><span>{ label }</span><span class="wb-sr-only">{ civilizationStageStatus(work, index) }</span></li>
+				}
+			</ol>
+		</header>
+		<div class="wb-detail-body">
+			<div class="wb-owner"><span class="wb-owner-mark" aria-hidden="true">{ civilizationOwnerInitial(work) }</span><div><span class="wb-label">Current owner:</span> <strong>{ civilizationWorkOwner(work) }</strong><small>Updated <time datetime={ work.UpdatedAt.Format("2006-01-02T15:04:05Z") }>{ work.UpdatedAt.Format("15:04 UTC") }</time></small></div></div>
+			if work.State == "awaiting_confirmation" && work.Bound != nil {
+				<section class="wb-section" aria-label="Brief to confirm">
+					<h3>Review the brief</h3>
+					@civilizationBriefList("What will change", work.Bound.Envelope.Brief.Scope)
+					@civilizationBriefList("How we’ll verify it", work.Bound.Envelope.Brief.Tests)
+					<details id={ "brief-details-"+work.WorkID } data-workbench-details><summary>Scope, assumptions and execution settings</summary><div class="wb-section wb-options">
+						@civilizationBriefList("Outside this change", work.Bound.Envelope.Brief.NonGoals)
+						@civilizationBriefList("Assumptions", work.Bound.Envelope.Brief.Assumptions)
+						@civilizationBriefList("Constraints", work.Bound.Envelope.Brief.Constraints)
+						<p class="wb-muted">Execution: { civilizationExecutionLabel(work) }</p>
+					</div></details>
+					<form method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/confirm") } hx-post={ "/console/workbench/work/"+work.WorkID+"/confirm" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-confirm">
+						<input type="hidden" name="brief_id" value={ work.Bound.IdempotencyKey }/>
+						<p class="wb-muted">Confirmation starts implementation in an isolated worktree.</p>
+						<button id={ "confirm-"+work.WorkID } type="submit" class="wb-button wb-primary">Confirm implementation <span aria-hidden="true">→</span></button>
+					</form>
+				</section>
+			}
+			if work.State == "prepared" {
+				<p class="wb-success">Change prepared successfully. Independent verification and ordinary review passed. Publication has not occurred.</p>
+			}
+			if work.Blocker != "" {
+				<section class="wb-notice"><h3>Needs attention</h3><p>{ work.Blocker }</p></section>
+			}
+			for _, intervention := range work.Interventions {
+				if intervention.Status == "open" {
+					<form id={ "resolve-"+intervention.ID } hx-preserve="true" method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve") } hx-post={ "/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-resolution">
+						<label>{ intervention.Prompt }<textarea id={ "resolution-"+intervention.ID } name="resolution" data-workbench-draft={ intervention.ID } required maxlength="12000" rows="3" placeholder="Answer in plain language…">{ civilizationResolutionText(data, intervention.ID) }</textarea></label>
+						<button type="submit" class="wb-button wb-primary">Record answer and retry</button>
+					</form>
+				}
+			}
+			if implementation := civilizationLatestProviderRun(work, "implement"); implementation != nil {
+				<section class="wb-section" aria-label="Implementation result"><h3>Implementation result</h3><p class="wb-muted">{ implementation.Result.Summary }</p>
+					if len(implementation.Result.Checks) > 0 {
+						<ul class="wb-checks" aria-label="Test results">
+							for _, check := range implementation.Result.Checks {
+								<li><span class="wb-check-status" data-status={ check.Status }>{ civilizationCheckLabel(check.Status) }</span><div><span>{ check.Name }</span><p class="wb-muted">{ check.Summary }</p></div></li>
+							}
+						</ul>
+					}
+					if review := civilizationLatestProviderRun(work, "review"); review != nil && review.Result.Review != nil {
+						<div class="wb-review"><h3>Review</h3><p class="wb-muted">{ review.Result.Review.Summary }</p></div>
+					}
+				</section>
+			}
+			if work.State == "prepared" {
+				<div id={ "artifact-"+work.WorkID } hx-preserve="true"><a href={ templ.URL("/console/workbench/work/"+work.WorkID+"/artifact") } hx-get={ "/console/workbench/work/"+work.WorkID+"/artifact" } hx-target={ "#artifact-"+work.WorkID } hx-swap="outerHTML" class="wb-button wb-primary">Inspect prepared diff <span aria-hidden="true">↗</span></a></div>
+			}
+			if work.PullRequest != nil && work.PullRequest.URL != "" {
+				<a href={ templ.URL(work.PullRequest.URL) } rel="noreferrer" class="wb-button">Open pull request #{ fmt.Sprint(work.PullRequest.Number) } <span aria-hidden="true">↗</span></a>
+			}
+			if work.NextAction != "" && work.State != "prepared" && work.State != "awaiting_confirmation" {
+				<section class="wb-section"><h3>Next</h3><p class="wb-muted">{ work.NextAction }</p></section>
+			}
+			@civilizationWorkEvidence(work)
+		</div>
+	</article>
+}
+
+templ civilizationWorkEvidence(work CivilizationWork) {
+	<details id={ "evidence-"+work.WorkID } class="wb-evidence" data-workbench-details><summary>Technical details</summary><div class="wb-section wb-options">
+		<dl class="wb-metadata"><div><dt>Work ID</dt><dd>{ work.WorkID }</dd></div><div><dt>Repository</dt><dd>{ work.Source.Repository }</dd></div><div><dt>Latest evidence event</dt><dd>{ work.LatestEventID }</dd></div><div><dt>Execution</dt><dd>{ civilizationExecutionLabel(work) }</dd></div>
+			if work.Bound != nil {
+				<div><dt>Workflow</dt><dd>{ work.Bound.Envelope.Workflow.Name } { work.Bound.Envelope.Workflow.Version }</dd></div><div><dt>Transport</dt><dd>{ work.Bound.Envelope.SchemaVersion }</dd></div>
+			}
+			if work.PullRequest != nil {
+				<div><dt>Head</dt><dd>{ work.PullRequest.HeadSHA }</dd></div><div><dt>Reviewed head</dt><dd>{ work.PullRequest.ReviewedHeadSHA }</dd></div><div><dt>Validated head</dt><dd>{ work.PullRequest.ValidatedHeadSHA }</dd></div>
+			}
+		</dl>
+		<ul class="wb-evidence-runs" aria-label="Execution evidence">
+			for _, run := range work.ProviderRuns {
+				if execution := run.Result.Execution; execution != nil {
+					<li>{ fmt.Sprintf("%s: requested %s / %s; effective %s / %s; selection %s; effort %s. Attempt %s", run.Operation, execution.Requested.Provider, execution.Requested.Model, execution.Effective.Provider, execution.Effective.Model, execution.ModelSource, execution.Effective.ReasoningEffort, run.AttemptID) }</li>
+				}
+			}
+		</ul>
+		@civilizationBriefList("Changed files", civilizationChangedFiles(work))
+		if work.MergeDecision != nil {
+			@civilizationBriefList("Why automatic merge is not eligible", work.MergeDecision.Reasons)
+		}
+	</div></details>
+}
+
+templ civilizationBriefList(label string, values []string) {
+	if len(values) > 0 {
+		<div class="wb-brief-list"><h3>{ label }</h3><ul>
+			for _, value := range values {
+				<li>{ value }</li>
+			}
+		</ul></div>
+	}
+}
+
+templ CivilizationArtifactView(workID string, artifact civilizationArtifact, message string) {
+	<div id={ "artifact-"+workID } class="wb-artifact">
+		if message != "" {
+			<p class="wb-notice" role="alert">{ message }</p><a class="wb-button" href={ templ.URL("/console/workbench/work/"+workID+"/artifact") } hx-get={ "/console/workbench/work/"+workID+"/artifact" } hx-target={ "#artifact-"+workID } hx-swap="outerHTML">Retry artifact</a>
+		} else {
+			<div class="wb-artifact-heading"><h3>Prepared diff</h3><a href={ templ.URL("/console/workbench/work/"+workID+"/artifact") } class="wb-text-button" download="prepared-diff.txt">Download full diff</a></div>
+			{{ lines, truncated := civilizationDiffPreview(artifact.Patch) }}
+			if truncated {
+				<p class="wb-muted">Preview shortened for readability. Download the full diff to inspect every change.</p>
+			}
+			<pre class="wb-diff" aria-label="Prepared diff">
+				for _, line := range lines {
+					<span data-diff={ line.Kind }>{ line.Text }<br/></span>
+				}
+			</pre>
+			<details data-workbench-details id={ "artifact-evidence-"+workID }><summary>Artifact identity</summary><dl class="wb-metadata wb-options"><div><dt>Repository</dt><dd>{ artifact.Repository }</dd></div><div><dt>Branch</dt><dd>{ artifact.Branch }</dd></div><div><dt>Base</dt><dd>{ artifact.BaseSHA }</dd></div><div><dt>Reviewed digest</dt><dd>{ artifact.WorkspaceDigest }</dd></div></dl></details>
+		}
+	</div>
+}

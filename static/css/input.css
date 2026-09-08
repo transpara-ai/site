@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./civilization-workbench.css";
 
 /* ─── Content sources ────────────────────────────────────────────────
    Tailwind v4 scans the paths in @source directives for utility-class
