@@ -66,6 +66,7 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 			if work.State == "prepared" {
 				<p class="wb-success">Change prepared successfully. Independent verification and ordinary review passed. Publication has not occurred.</p>
 			}
+			@civilizationResultReviewPanel(work,data)
 			if work.Blocker != "" {
 				<section class="wb-notice"><h3>Needs attention</h3><p>{ work.Blocker }</p></section>
 			}
@@ -92,7 +93,7 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 					}
 				</section>
 			}
-			if work.State == "prepared" {
+			if civilizationResultAvailable(work) {
 				<div id={ "artifact-"+work.WorkID } hx-preserve="true"><a href={ templ.URL("/console/workbench/work/"+work.WorkID+"/artifact") } hx-get={ "/console/workbench/work/"+work.WorkID+"/artifact" } hx-target={ "#artifact-"+work.WorkID } hx-swap="outerHTML" class="wb-button wb-primary">Inspect prepared diff <span aria-hidden="true">↗</span></a></div>
 			}
 			if work.PullRequest != nil && work.PullRequest.URL != "" {

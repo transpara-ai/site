@@ -1,0 +1,39 @@
+package graph
+
+
+templ civilizationResultReviewPanel(work CivilizationWork, data CivilizationWorkbench) {
+ if work.State == "prepared" && work.PreparedResultID != "" && work.PreparedResultDigest != "" {
+  <section class="wb-section wb-result-review" aria-label="Review delivered work">
+   <h3>Review delivered work</h3>
+   <p class="wb-muted">Inspect the diff and checks, then choose what happens next. Approval records your acceptance; it does not publish or merge the change.</p>
+   <form id={ "result-review-"+work.PreparedResultID } data-workbench-draft-form method="post" action={ templ.URL("/console/workbench/work/"+work.WorkID+"/result-review") } hx-post={ "/console/workbench/work/"+work.WorkID+"/result-review" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-resolution">
+    @civilizationViewFields(data)
+    <input type="hidden" name="result_id" value={ work.PreparedResultID }/>
+    <input type="hidden" name="workspace_digest" value={ work.PreparedResultDigest }/>
+    <label>Feedback or requested enhancements<textarea id={ "result-feedback-"+work.PreparedResultID } name="feedback" data-workbench-draft={ "result-feedback-"+work.PreparedResultID } maxlength="12000" rows="3" placeholder="Describe what should improve, or why you’re rejecting the result…">{ data.ResultFeedback }</textarea></label>
+    <p class="wb-muted">Feedback is required for rejection or changes. Requested changes create a linked revision; you’ll confirm its brief before implementation begins.</p>
+    <div class="wb-result-actions">
+     <button type="submit" name="decision" value="approve" class="wb-button wb-primary">Approve result</button>
+     <button type="submit" name="decision" value="request_changes" class="wb-button">Request changes / enhance</button>
+     <button type="submit" name="decision" value="reject" class="wb-button">Reject result</button>
+    </div>
+   </form>
+  </section>
+ }
+ if work.ResultReview != nil {
+  <section class="wb-section" aria-label="Your result review">
+   <h3>{ civilizationResultDecisionLabel(work.ResultReview.Decision) }</h3>
+   <p class="wb-muted">Recorded by { work.ResultReview.ReviewedBy } · { work.ResultReview.RecordedAt.Format("2006-01-02 15:04 UTC") }</p>
+   if work.ResultReview.Feedback != "" {
+ <p>{ work.ResultReview.Feedback }</p>
+ }
+   <p class="wb-muted">The reviewed result and its checks remain available below. This decision has not published or merged the change.</p>
+   if work.ResultReview.RevisionWorkID != "" {
+    <a href={ templ.URL(civilizationWorkURL(work.ResultReview.RevisionWorkID)) } class="wb-button wb-primary">Open requested revision <span aria-hidden="true">→</span></a>
+   }
+  </section>
+ }
+ if work.RevisionOf != nil {
+  <p class="wb-muted">Revision of <a href={ templ.URL(civilizationWorkURL(work.RevisionOf.WorkID)) } class="wb-text-button">the previously delivered result</a>. The original review and diff are preserved.</p>
+ }
+}

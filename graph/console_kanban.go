@@ -222,7 +222,7 @@ var civilizationStatusRank = map[string]int{
 	"awaiting_confirmation": 0, "human_required": 1, "blocked": 2,
 	"routing": 3, "queued": 4, "implementing": 5, "validating": 6,
 	"reviewing": 7, "prepared": 8, "publishing": 9, "ready": 10,
-	"merge_queued": 11, "completed": 12,
+	"merge_queued": 11, "completed": 12, "approved": 13, "rejected": 14, "changes_requested": 15,
 }
 
 func humanizeAge(now time.Time, createdAt string) string {
