@@ -768,12 +768,16 @@ templ consoleConfig(c ConsoleConfig) {
 			</div>
 			<div class="border border-edge bg-surface rounded-lg overflow-hidden">
 				<div class="px-4 py-2 border-b border-edge text-sm font-medium text-warm">Model catalog</div>
+				<p class="px-4 py-2 text-xs text-warm-muted">Known model choices. Execution requires access through the selected provider. Existing role assignments keep their selected models.</p>
 				if len(c.Selection.Models) == 0 {
 					<div class="px-4 py-3 text-sm text-warm-muted">No catalog models projected. The catalog is hive-owned (<span class="font-mono text-[11px]">HIVE_OPS_CATALOG</span>) and hot-reloaded.</div>
 				} else {
 					for _, m := range c.Selection.Models {
 						<div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 border-b border-edge last:border-0">
 							<span class="text-sm text-warm font-mono break-all">{ orFallback(m.ID, "id not projected") }</span>
+							if m.Metadata["verified_at"] != "" {
+								<span class="text-xs text-emerald-300">verified { m.Metadata["verified_at"] }</span>
+							}
 							<span class="text-xs text-warm-muted">{ orFallback(m.Provider, "provider not projected") }</span>
 							<span class="text-xs text-warm-muted">{ orFallback(m.AuthMode, "auth not projected") }</span>
 							<span class="text-xs text-warm-muted">{ orFallback(m.Tier, "tier not projected") }</span>

@@ -24,6 +24,7 @@ const (
 )
 
 type CivilizationWorkbench struct {
+	ModelOptions   []OpsHiveModelCatalogEntry
 	ActionError    bool
 	View           string
 	Repository     string

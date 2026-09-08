@@ -444,3 +444,59 @@ func TestSITEMCT6AdditiveCurrentDecodeAndFutureSchema(t *testing.T) {
 		t.Fatalf("future schema accepted: %v %+v", err, projection)
 	}
 }
+
+func TestMissionWorkHealthUsesDeployedCivilizationAPI(t *testing.T) {
+	now := time.Now().UTC()
+	status := "ready"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/readyz" || r.Header.Get("Authorization") != "" {
+			t.Errorf("wrong health request: %s, credentials attached=%v", r.URL.Path, r.Header.Get("Authorization") != "")
+		}
+		json.NewEncoder(w).Encode(map[string]string{"status": status})
+	}))
+	defer server.Close()
+	t.Setenv("WORK_API_BASE_URL", "")
+	t.Setenv("WORK_UI_BASE_URL", "")
+	t.Setenv("WORK_API_KEY", "must-not-leak-to-civilization")
+	t.Setenv("CIVILIZATION_API_BASE_URL", server.URL)
+	a := &missionControlAcquirer{client: server.Client()}
+	service, err := a.acquireWork(context.Background(), now)
+	if err != nil || service.OperationalStatus != "healthy" || service.Label != "Civilization work API" {
+		t.Fatalf("readiness not observed: %+v %v", service, err)
+	}
+	status = "unready"
+	service, err = a.acquireWork(context.Background(), now.Add(time.Second))
+	if err == nil || service.OperationalStatus != "degraded" || missionMarkState(service.Mark) != "stale" {
+		t.Fatalf("failed readiness did not invalidate current health: %+v %v", service, err)
+	}
+	// An explicitly configured legacy Work server still owns its own health.
+	legacy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" || r.Header.Get("Authorization") != "Bearer must-not-leak-to-civilization" {
+			t.Error("legacy Work contract lost")
+		}
+		w.Write([]byte(`{"status":"ok"}`))
+	}))
+	defer legacy.Close()
+	t.Setenv("WORK_API_BASE_URL", legacy.URL)
+	service, err = a.acquireWork(context.Background(), now.Add(2*time.Second))
+	if err != nil || service.Label != "Work HTTP" {
+		t.Fatalf("explicit Work target lost: %+v %v", service, err)
+	}
+}
+
+func TestMissionOptionalDaemonObservationRemainsIndependent(t *testing.T) {
+	now := time.Now().UTC()
+	projection := missionTestProjection(now)
+	projection.Services = append(projection.Services, MissionServiceHealth{ServiceID: "hive_runtime", Label: "Hive daemon", OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")})
+	if err := missionValidateProjection(projection, now); err != nil {
+		t.Fatal(err)
+	}
+	view := MissionControlView{Projection: &projection, HiveAcquisition: missionTestMark(now, "exact"), WorkHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}, SiteHealth: MissionObservedService{OperationalStatus: "healthy", Mark: missionTestMark(now, "projected_only")}}
+	if status := missionOverallStatus(view); status != "healthy" {
+		t.Fatalf("live daemon rejected: %s", status)
+	}
+	projection.Services[len(projection.Services)-1].OperationalStatus = "unavailable"
+	if status := missionOverallStatus(view); status != "unavailable" {
+		t.Fatalf("daemon failure hidden: %s", status)
+	}
+}

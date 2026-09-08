@@ -10,6 +10,15 @@ import (
 
 func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
 	data := loadCivilizationWorkbench(r.Context())
+	if r.Header.Get("HX-Target") != "civilization-work-list" {
+		if projection, err := fetchHiveOperatorProjection(r); err == nil && projection != nil {
+			for _, model := range projection.ModelSelection.Models {
+				if !model.Deprecated && (model.Provider == "codex-cli" || model.Provider == "claude-cli") {
+					data.ModelOptions = append(data.ModelOptions, model)
+				}
+			}
+		}
+	}
 	data.SelectedWorkID = r.FormValue("work")
 	data.View, data.Repository, data.Operator = r.FormValue("view"), r.FormValue("filter_repository"), r.FormValue("operator")
 	data.Responsible = r.FormValue("responsible")
