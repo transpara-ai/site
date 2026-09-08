@@ -292,6 +292,8 @@ func (h *Handlers) handleCivilizationWorkList(response http.ResponseWriter, requ
 	response.Header().Set("Cache-Control", "no-store")
 	if request.Header.Get("HX-Trigger") != "civilization-work-list" && request.Header.Get("HX-Request") == "true" {
 		response.Header().Set("HX-Push-Url", data.PageURL(data.View, data.SelectedWorkID))
+	} else if request.Header.Get("HX-Request") == "true" && request.FormValue("work") != data.SelectedWorkID {
+		response.Header().Set("HX-Replace-Url", data.PageURL(data.View, data.SelectedWorkID))
 	}
 	CivilizationWorkList(data).Render(request.Context(), response)
 }
@@ -421,6 +423,13 @@ func (h *Handlers) renderCivilizationAfterMutation(response http.ResponseWriter,
 	if request.Header.Get("HX-Request") == "true" {
 		data := h.workbenchForRequest(request)
 		data.SelectedWorkID = selected
+		if data.View == "history" {
+			for _, work := range data.Items {
+				if work.WorkID == selected && !civilizationWorkInHistory(work) {
+					data.View = "focus"
+				}
+			}
+		}
 		if selected != "" {
 			response.Header().Set("HX-Push-Url", data.PageURL(data.View, selected))
 		}

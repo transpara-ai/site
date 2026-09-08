@@ -13,7 +13,8 @@ templ civilizationWorkbenchToolbar(data CivilizationWorkbench) {
 	<div class="wb-toolbar">
 		<nav class="wb-view-tabs" aria-label="Workbench view">
 			<a id="workbench-team-view" href={ templ.URL(data.PageURL("team", data.SelectedWorkID)) } hx-get={ data.FragmentURL("team", data.SelectedWorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View == "team") }>Team board</a>
-			<a id="workbench-focus-view" href={ templ.URL(data.PageURL("focus", data.SelectedWorkID)) } hx-get={ data.FragmentURL("focus", data.SelectedWorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View != "team") }>Focused work</a>
+			<a id="workbench-focus-view" href={ templ.URL(data.PageURL("focus", data.SelectedWorkID)) } hx-get={ data.FragmentURL("focus", data.SelectedWorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View != "team" && data.View != "history") }>Focused work</a>
+			<a id="workbench-history-view" href={ templ.URL(data.PageURL("history", "")) } hx-get={ data.FragmentURL("history", "") } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View == "history") }>History</a>
 		</nav>
 		<form id="workbench-filters" method="get" action="/console/workbench" hx-get="/console/workbench/work-fragment" hx-target="#civilization-work-list" hx-swap="outerHTML" hx-trigger="change, submit" hx-sync="#civilization-work-list:replace" class="wb-filters" aria-label="Filter work">
 			<input type="hidden" name="view" value={ data.View }/>
@@ -71,7 +72,7 @@ templ civilizationTeamBoard(data CivilizationWorkbench) {
 			}
 		</div>
 		if len(data.VisibleItems()) == 0 {
-			<div class="wb-empty"><h2>No work matches these filters</h2><p>Choose another repository or requester.</p></div>
+			@civilizationWorkEmpty(data)
 		}
 		<div class="wb-team-footer">
 			<section class="wb-team-note"><h2>Human handoffs</h2><p>Open a workstream to assign its responsible person. Confirmations, questions and reviews stay in the shared queue until someone is assigned. Assignment routes the next human step; approval permissions are unchanged.</p></section>

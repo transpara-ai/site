@@ -668,7 +668,7 @@ templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
 				<dt class="text-warm-muted">Blocker</dt><dd>{ orFallback(card.Blocker, "None reported") }</dd>
 				<dt class="text-warm-muted">Last updated</dt><dd>{ orFallback(card.UpdatedAt, "Not reported") }</dd>
 			</dl>
-			<a href={ templ.URL(civilizationWorkURL(card.ID)) } class="inline-block text-sm text-brand hover:underline">Open work and actions →</a>
+			<a href={ templ.URL(civilizationWorkInspectURL(card.ID, card.Status)) } class="inline-block text-sm text-brand hover:underline">Open work and actions →</a>
 		} else {
 			<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-xs">
 				<dt class="text-warm-muted">Title</dt>

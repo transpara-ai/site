@@ -152,12 +152,12 @@
       const detail = document.getElementById('workbench-detail');
       document.getElementById('workbench-announcement').textContent = detail
         ? `${detail.querySelector('h2').textContent}. ${detail.querySelector('.wb-badge').textContent}. Current owner: ${detail.dataset.workOwner}.`
-        : 'Team workstreams updated.';
+        : document.querySelector('#workbench-list-title')?.textContent.trim() + '. Workbench updated.';
       previousState = currentState;
     }
     if (isPoll) { connection(''); restoreFocus(focusBeforeSwap.get(event.detail.xhr)); }
     else if (selection || submission) {
-      const target = document.querySelector('#workbench-action-notice [role="alert"]') || document.getElementById('workbench-detail-title');
+      const target = document.querySelector('#workbench-action-notice [role="alert"]') || document.getElementById('workbench-detail-title') || document.getElementById('workbench-list-title');
       if (target) { target.tabIndex = -1; target.focus({ preventScroll: !mobile.matches }); }
     }
   }, listeners);

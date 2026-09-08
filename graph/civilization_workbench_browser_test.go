@@ -33,6 +33,14 @@ func TestWorkbenchBrowserFixture(t *testing.T) {
 		items[index].Source.Kind = "human"
 		items[index].Source.Identity = "human:" + owner + ":intake-" + items[index].WorkID
 	}
+	items[3].PreparedResultID, items[3].PreparedResultDigest = "result-prepared", "fixture-reviewed-digest"
+	if os.Getenv("WORKBENCH_BROWSER_HISTORY") == "true" {
+		for _, id := range []string{"reject", "enhance"} {
+			work := items[3]
+			work.WorkID, work.PreparedResultID = id, "result-"+id
+			items = append(items, work)
+		}
+	}
 	var mu sync.Mutex
 	var outage bool
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +59,25 @@ func TestWorkbenchBrowserFixture(t *testing.T) {
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]any{"items": items})
+		case strings.HasSuffix(r.URL.Path, "/result-review"):
+			var payload map[string]string
+			json.NewDecoder(r.Body).Decode(&payload)
+			for index := range items {
+				if !strings.Contains(r.URL.Path, "/"+items[index].WorkID+"/") {
+					continue
+				}
+				items[index].State = map[string]string{"approve": "approved", "reject": "rejected", "request_changes": "changes_requested"}[payload["decision"]]
+				items[index].ResultReview = &CivilizationResultReview{Decision: payload["decision"], Feedback: payload["feedback"], ReviewedBy: payload["reviewed_by"], RecordedAt: time.Now().UTC()}
+				if payload["decision"] == "request_changes" {
+					items[index].ResultReview.RevisionWorkID = "revision"
+					child := items[0]
+					child.WorkID, child.State = "revision", "awaiting_confirmation"
+					child.RevisionOf = &CivilizationResultReference{WorkID: items[index].WorkID}
+					items = append(items, child)
+				}
+				json.NewEncoder(w).Encode(items[index])
+				return
+			}
 		case strings.HasSuffix(r.URL.Path, "/human-owner"):
 			var payload map[string]string
 			json.NewDecoder(r.Body).Decode(&payload)
