@@ -100,3 +100,32 @@ func configureCivilizationTestClient(t *testing.T, base string) {
 	t.Setenv("CIVILIZATION_API_KEY_FILE", keyPath)
 	t.Setenv("CIVILIZATION_REPOSITORIES", "transpara-ai/hive,transpara-ai/site")
 }
+
+func TestWorkbenchModelSuggestionsComeFromHiveCatalog(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, `{"items":[]}`) }))
+	defer upstream.Close()
+	configureCivilizationTestClient(t, upstream.URL)
+	catalog := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"model_selection":{"models":[{"id":"gpt-5.6-sol","provider":"codex-cli"},{"id":"claude-opus-5","provider":"claude-cli"},{"id":"api-claude-opus-5","provider":"anthropic"},{"id":"retired","provider":"codex-cli","deprecated":true}]}}`)
+	}))
+	defer catalog.Close()
+	t.Setenv("HIVE_OPS_API_BASE_URL", catalog.URL)
+	h := &Handlers{}
+	request := httptest.NewRequest(http.MethodGet, "/console/workbench", nil)
+	data := h.workbenchForRequest(request)
+	if len(data.ModelOptions) != 2 {
+		t.Fatalf("CLI suggestions = %+v", data.ModelOptions)
+	}
+	response := httptest.NewRecorder()
+	if err := CivilizationWorkbenchFragment(data).Render(request.Context(), response); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{`list="workbench-model-catalog"`, `value="gpt-5.6-sol"`, `value="claude-opus-5"`} {
+		if !strings.Contains(response.Body.String(), expected) {
+			t.Fatalf("missing suggestion %s", expected)
+		}
+	}
+	if strings.Contains(response.Body.String(), `value="api-claude-opus-5"`) {
+		t.Fatal("API-only model offered for CLI execution")
+	}
+}

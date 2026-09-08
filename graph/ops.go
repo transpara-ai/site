@@ -741,15 +741,16 @@ type OpsHiveModelSelection struct {
 }
 
 type OpsHiveModelCatalogEntry struct {
-	ID              string   `json:"id"`
-	Aliases         []string `json:"aliases"`
-	Provider        string   `json:"provider"`
-	AuthMode        string   `json:"auth_mode"`
-	Tier            string   `json:"tier"`
-	Capabilities    []string `json:"capabilities"`
-	ContextWindow   int      `json:"context_window"`
-	MaxOutputTokens int      `json:"max_output_tokens"`
-	Deprecated      bool     `json:"deprecated"`
+	Metadata        map[string]string `json:"metadata"`
+	ID              string            `json:"id"`
+	Aliases         []string          `json:"aliases"`
+	Provider        string            `json:"provider"`
+	AuthMode        string            `json:"auth_mode"`
+	Tier            string            `json:"tier"`
+	Capabilities    []string          `json:"capabilities"`
+	ContextWindow   int               `json:"context_window"`
+	MaxOutputTokens int               `json:"max_output_tokens"`
+	Deprecated      bool              `json:"deprecated"`
 }
 
 type OpsHiveModelRoleAssignment struct {

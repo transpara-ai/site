@@ -342,29 +342,37 @@ func (a *missionControlAcquirer) fetchHive(ctx context.Context, endpoint string,
 
 func (a *missionControlAcquirer) acquireWork(ctx context.Context, now time.Time) (MissionObservedService, error) {
 	endpoint := strings.TrimRight(serverWorkAPIBaseURL(), "/") + "/health"
-	err := a.fetchWork(ctx, endpoint)
+	label, detail := "Work HTTP", "GET /health returned the exact supported ok payload; this proves HTTP liveness only."
+	civilization := strings.TrimSpace(os.Getenv("CIVILIZATION_API_BASE_URL")) != "" && strings.TrimSpace(os.Getenv("WORK_API_BASE_URL")) == "" && strings.TrimSpace(os.Getenv("WORK_UI_BASE_URL")) == ""
+	if civilization {
+		endpoint = strings.TrimRight(strings.TrimSpace(os.Getenv("CIVILIZATION_API_BASE_URL")), "/") + "/readyz"
+		label, detail = "Civilization work API", "The deployed work API reports ready, including its database connection."
+	}
+	err := a.fetchWork(ctx, endpoint, civilization)
 	if err == nil {
 		a.mu.Lock()
 		a.work = missionWorkHealthCache{observedAt: now, endpoint: endpoint, valid: true}
 		a.mu.Unlock()
-		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "healthy", Detail: "GET /health returned the exact supported ok payload; this proves HTTP liveness only.", Mark: missionSiteMark("current", "projected_only", "site_work_health", now, now, []string{"work:http_health"}, "HTTP liveness does not prove EventGraph completeness")}, nil
+		return MissionObservedService{ServiceID: "work_http", Label: label, OperationalStatus: "healthy", Detail: detail, Mark: missionSiteMark("current", "projected_only", "site_work_health", now, now, []string{"work:http_health"}, "HTTP liveness does not prove EventGraph completeness")}, nil
 	}
 	a.mu.Lock()
 	cached := a.work
 	a.mu.Unlock()
 	reason := "Work health acquisition failed; upstream details are withheld."
 	if cached.valid && cached.endpoint == endpoint && !now.Before(cached.observedAt) && now.Sub(cached.observedAt) <= missionControlRetention {
-		return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "degraded", Detail: reason + "; retaining last healthy observation", Mark: missionSiteMark("stale", "projected_only", "site_work_health", cached.observedAt, now, []string{"work:http_health"}, reason)}, errors.New(reason)
+		return MissionObservedService{ServiceID: "work_http", Label: label, OperationalStatus: "degraded", Detail: reason + "; retaining last healthy observation", Mark: missionSiteMark("stale", "projected_only", "site_work_health", cached.observedAt, now, []string{"work:http_health"}, reason)}, errors.New(reason)
 	}
-	return MissionObservedService{ServiceID: "work_http", Label: "Work HTTP", OperationalStatus: "unavailable", Detail: reason, Mark: missionSiteMark("unavailable", "unavailable", "site_work_health", time.Time{}, now, nil, reason)}, errors.New(reason)
+	return MissionObservedService{ServiceID: "work_http", Label: label, OperationalStatus: "unavailable", Detail: reason, Mark: missionSiteMark("unavailable", "unavailable", "site_work_health", time.Time{}, now, nil, reason)}, errors.New(reason)
 }
 
-func (a *missionControlAcquirer) fetchWork(ctx context.Context, endpoint string) error {
+func (a *missionControlAcquirer) fetchWork(ctx context.Context, endpoint string, civilization bool) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return err
 	}
-	setWorkAuth(req)
+	if !civilization {
+		setWorkAuth(req)
+	}
 	resp, err := a.client.Do(req)
 	if err != nil {
 		return err
@@ -391,7 +399,11 @@ func (a *missionControlAcquirer) fetchWork(ctx context.Context, endpoint string)
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return errors.New("Work health response has trailing data")
 	}
-	if payload.Status != "ok" {
+	expected := "ok"
+	if civilization {
+		expected = "ready"
+	}
+	if payload.Status != expected {
 		return fmt.Errorf("unsupported Work health status %q", payload.Status)
 	}
 	return nil
@@ -456,12 +468,17 @@ func missionHasRequiredIdentities(sources []MissionSourceEnvelope, services []Mi
 	}
 	seenServices := map[string]bool{}
 	for _, service := range services {
-		if !missionRequiredServiceIDs[service.ServiceID] || seenServices[service.ServiceID] {
+		if (!missionRequiredServiceIDs[service.ServiceID] && service.ServiceID != "hive_runtime") || seenServices[service.ServiceID] {
 			return false
 		}
 		seenServices[service.ServiceID] = true
 	}
-	return len(seenSources) == len(missionRequiredSourceIDs) && len(seenServices) == len(missionRequiredServiceIDs)
+	for id := range missionRequiredServiceIDs {
+		if !seenServices[id] {
+			return false
+		}
+	}
+	return len(seenSources) == len(missionRequiredSourceIDs)
 }
 
 func missionValidateProjection(projection MissionControlProjection, now time.Time) error {
@@ -491,7 +508,7 @@ func missionValidateProjection(projection MissionControlProjection, now time.Tim
 	}
 	seenServices := map[string]bool{}
 	for _, service := range projection.Services {
-		if !missionRequiredServiceIDs[service.ServiceID] {
+		if !missionRequiredServiceIDs[service.ServiceID] && service.ServiceID != "hive_runtime" {
 			return fmt.Errorf("unknown Mission Control service identity %q", service.ServiceID)
 		}
 		if seenServices[service.ServiceID] {

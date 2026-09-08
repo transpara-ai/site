@@ -25,7 +25,12 @@ templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 						<label>Execution host<select name="provider"><option value="">Configured host</option><option value="codex" selected?={ data.FormSelection.Provider == "codex" }>Codex</option><option value="claude" selected?={ data.FormSelection.Provider == "claude" }>Claude</option></select></label>
 					</div>
 					<details id="workbench-model-options" open?={ data.FormSelection.Model != "" || data.FormSelection.ReasoningEffort != "" }><summary>Model and reasoning options</summary><div class="wb-fields wb-options">
-						<label>Model (optional)<input name="model" maxlength="200" value={ data.FormSelection.Model } placeholder="Selected host’s default"/></label>
+						<label>Model (optional)<input name="model" list="workbench-model-catalog" maxlength="200" value={ data.FormSelection.Model } placeholder="Selected host’s default"/></label>
+						<datalist id="workbench-model-catalog">
+							for _, model := range data.ModelOptions {
+								<option value={ model.ID }>{ model.Provider }</option>
+							}
+						</datalist>
 						<label>Reasoning effort (optional)<select name="reasoning_effort"><option value="">Host default</option>
 							for _, effort := range []string{"low", "medium", "high", "xhigh", "max"} {
 								<option value={ effort } selected?={ data.FormSelection.ReasoningEffort == effort }>{ effort }</option>
