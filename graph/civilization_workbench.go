@@ -24,6 +24,7 @@ const (
 )
 
 type CivilizationWorkbench struct {
+	ResultFeedback string
 	ModelOptions   []OpsHiveModelCatalogEntry
 	ActionError    bool
 	View           string
@@ -47,25 +48,29 @@ type CivilizationWorkbench struct {
 }
 
 type CivilizationWork struct {
-	HumanOwnerID           string                     `json:"human_owner_id"`
-	HumanOwnerAssignedBy   string                     `json:"human_owner_assigned_by"`
-	HumanOwnerAssignmentID string                     `json:"human_owner_assignment_id"`
-	Selection              CivilizationSelection      `json:"selection"`
-	LatestEventID          string                     `json:"latest_event_id"`
-	WorkID                 string                     `json:"work_id"`
-	Source                 CivilizationSource         `json:"source"`
-	IntakeText             string                     `json:"intake_text"`
-	Bound                  *CivilizationBound         `json:"bound"`
-	State                  string                     `json:"state"`
-	ResumeState            string                     `json:"resume_state"`
-	Summary                string                     `json:"summary"`
-	Blocker                string                     `json:"blocker"`
-	NextAction             string                     `json:"next_action"`
-	ProviderRuns           []CivilizationProviderRun  `json:"provider_runs"`
-	PullRequest            *CivilizationPullRequest   `json:"pull_request"`
-	Interventions          []CivilizationIntervention `json:"interventions"`
-	MergeDecision          *CivilizationMergeDecision `json:"merge_decision"`
-	UpdatedAt              time.Time                  `json:"updated_at"`
+	PreparedResultID       string                       `json:"prepared_result_id"`
+	PreparedResultDigest   string                       `json:"prepared_result_digest"`
+	ResultReview           *CivilizationResultReview    `json:"result_review"`
+	RevisionOf             *CivilizationResultReference `json:"revision_of"`
+	HumanOwnerID           string                       `json:"human_owner_id"`
+	HumanOwnerAssignedBy   string                       `json:"human_owner_assigned_by"`
+	HumanOwnerAssignmentID string                       `json:"human_owner_assignment_id"`
+	Selection              CivilizationSelection        `json:"selection"`
+	LatestEventID          string                       `json:"latest_event_id"`
+	WorkID                 string                       `json:"work_id"`
+	Source                 CivilizationSource           `json:"source"`
+	IntakeText             string                       `json:"intake_text"`
+	Bound                  *CivilizationBound           `json:"bound"`
+	State                  string                       `json:"state"`
+	ResumeState            string                       `json:"resume_state"`
+	Summary                string                       `json:"summary"`
+	Blocker                string                       `json:"blocker"`
+	NextAction             string                       `json:"next_action"`
+	ProviderRuns           []CivilizationProviderRun    `json:"provider_runs"`
+	PullRequest            *CivilizationPullRequest     `json:"pull_request"`
+	Interventions          []CivilizationIntervention   `json:"interventions"`
+	MergeDecision          *CivilizationMergeDecision   `json:"merge_decision"`
+	UpdatedAt              time.Time                    `json:"updated_at"`
 }
 
 type CivilizationSource struct {
@@ -440,6 +445,7 @@ func (h *Handlers) renderCivilizationMutationError(response http.ResponseWriter,
 	if data.SelectedWorkID == "" {
 		data.SelectedWorkID = request.FormValue("selected_work")
 	}
+	data.ResultFeedback = request.FormValue("feedback")
 	data.ResolutionID, data.ResolutionText = request.PathValue("interventionID"), request.FormValue("resolution")
 	data.FormText = request.FormValue("text")
 	data.FormRepository = request.FormValue("repository")
@@ -535,7 +541,9 @@ func civilizationWorkOwner(work CivilizationWork) string {
 	case "routing", "implementing", "reviewing":
 		return civilizationExecutionLabel(work)
 	case "prepared":
-		return "Human inspection"
+		return "Human review"
+	case "approved", "rejected", "changes_requested":
+		return "Human decision recorded"
 	case "ready":
 		return "Human reviewer"
 	case "completed":

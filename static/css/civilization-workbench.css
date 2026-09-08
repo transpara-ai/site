@@ -233,3 +233,5 @@
   .wb-button, .wb-text-button { min-height: 44px; }
   .wb-eyebrow { flex-wrap: wrap; }
 }
+
+.civilization-shell .wb-result-actions { display: flex; flex-wrap: wrap; gap: .65rem; }

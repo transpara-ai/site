@@ -19,6 +19,8 @@ func civilizationWorkGroupIndex(state string) int {
 		return 1
 	case "prepared":
 		return 2
+	case "approved", "rejected", "changes_requested":
+		return 6
 	case "ready":
 		return 3
 	case "completed":
@@ -29,7 +31,7 @@ func civilizationWorkGroupIndex(state string) int {
 }
 
 func (data CivilizationWorkbench) Groups() []civilizationWorkGroup {
-	groups := []civilizationWorkGroup{{Label: "Needs a human"}, {Label: "In progress"}, {Label: "Prepared"}, {Label: "Ready for review"}, {Label: "Completed"}, {Label: "Other work"}}
+	groups := []civilizationWorkGroup{{Label: "Needs a human"}, {Label: "In progress"}, {Label: "Prepared"}, {Label: "Ready for review"}, {Label: "Completed"}, {Label: "Other work"}, {Label: "Reviewed results"}}
 	for _, item := range data.VisibleItems() {
 		index := civilizationWorkGroupIndex(item.State)
 		groups[index].Items = append(groups[index].Items, item)
@@ -75,7 +77,7 @@ func civilizationRepositoryLabel(repository string) string {
 }
 
 func civilizationStateLabel(state string) string {
-	labels := map[string]string{"awaiting_confirmation": "Brief ready", "routing": "Preparing brief", "queued": "Queued", "implementing": "Implementing", "validating": "Checking implementation", "reviewing": "In review", "publishing": "Publishing", "merge_queued": "Merge queued", "blocked": "Blocked", "human_required": "Needs an answer", "prepared": "Prepared", "ready": "Ready for review", "completed": "Completed"}
+	labels := map[string]string{"awaiting_confirmation": "Brief ready", "routing": "Preparing brief", "queued": "Queued", "implementing": "Implementing", "validating": "Checking implementation", "reviewing": "In review", "publishing": "Publishing", "merge_queued": "Merge queued", "blocked": "Blocked", "human_required": "Needs an answer", "prepared": "Awaiting your review", "approved": "Approved", "rejected": "Rejected", "changes_requested": "Changes requested", "ready": "Ready for review", "completed": "Completed"}
 	if label := labels[state]; label != "" {
 		return label
 	}
@@ -99,7 +101,7 @@ func civilizationWorkStage(work CivilizationWork) int {
 		return 1
 	case "validating", "reviewing":
 		return 2
-	case "publishing", "prepared", "ready", "merge_queued", "completed":
+	case "publishing", "prepared", "ready", "merge_queued", "completed", "approved", "rejected", "changes_requested":
 		return 3
 	default:
 		return -1

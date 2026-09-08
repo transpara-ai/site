@@ -238,6 +238,9 @@ func (data CivilizationWorkbench) FragmentURL(view, workID string) string {
 }
 
 func civilizationHumanStep(work CivilizationWork) string {
+	if work.State == "prepared" {
+		return "Review delivered result"
+	}
 	if work.State == "awaiting_confirmation" {
 		return "Confirm brief"
 	}

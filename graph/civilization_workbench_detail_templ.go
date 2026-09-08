@@ -622,6 +622,10 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				return templ_7745c5c3_Err
 			}
 		}
+		templ_7745c5c3_Err = civilizationResultReviewPanel(work, data).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
 		if work.Blocker != "" {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<section class=\"wb-notice\"><h3>Needs attention</h3><p>")
 			if templ_7745c5c3_Err != nil {
@@ -630,7 +634,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(work.Blocker)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 70, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 71, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -650,7 +654,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var38 string
 				templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue("resolve-" + intervention.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 74, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 75, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
 				if templ_7745c5c3_Err != nil {
@@ -663,7 +667,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var39 templ.SafeURL
 				templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL("/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 74, Col: 185}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 75, Col: 185}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 				if templ_7745c5c3_Err != nil {
@@ -676,7 +680,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var40 string
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.ResolveAttributeValue("/console/workbench/work/" + work.WorkID + "/interventions/" + intervention.ID + "/resolve")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 74, Col: 281}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 75, Col: 281}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 				if templ_7745c5c3_Err != nil {
@@ -697,7 +701,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var41 string
 				templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(intervention.Prompt)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 76, Col: 34}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 77, Col: 34}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 				if templ_7745c5c3_Err != nil {
@@ -710,7 +714,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var42 string
 				templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue("resolution-" + intervention.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 76, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 77, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 				if templ_7745c5c3_Err != nil {
@@ -723,7 +727,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var43 string
 				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(intervention.ID)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 76, Col: 139}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 77, Col: 139}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 				if templ_7745c5c3_Err != nil {
@@ -736,7 +740,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(civilizationResolutionText(data, intervention.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 76, Col: 271}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 77, Col: 271}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -756,7 +760,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(implementation.Result.Summary)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 82, Col: 148}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 83, Col: 148}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -779,7 +783,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 					var templ_7745c5c3_Var46 string
 					templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.ResolveAttributeValue(check.Status)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 86, Col: 68}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 87, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
 					if templ_7745c5c3_Err != nil {
@@ -792,7 +796,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 					var templ_7745c5c3_Var47 string
 					templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(civilizationCheckLabel(check.Status))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 86, Col: 109}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 87, Col: 109}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 					if templ_7745c5c3_Err != nil {
@@ -805,7 +809,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 					var templ_7745c5c3_Var48 string
 					templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(check.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 86, Col: 141}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 87, Col: 141}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 					if templ_7745c5c3_Err != nil {
@@ -818,7 +822,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 					var templ_7745c5c3_Var49 string
 					templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(check.Summary)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 86, Col: 185}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 87, Col: 185}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 					if templ_7745c5c3_Err != nil {
@@ -842,7 +846,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				var templ_7745c5c3_Var50 string
 				templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(review.Result.Review.Summary)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 91, Col: 94}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 92, Col: 94}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 				if templ_7745c5c3_Err != nil {
@@ -858,7 +862,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 				return templ_7745c5c3_Err
 			}
 		}
-		if work.State == "prepared" {
+		if civilizationResultAvailable(work) {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "<div id=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -866,7 +870,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var51 string
 			templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.ResolveAttributeValue("artifact-" + work.WorkID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 96, Col: 37}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 97, Col: 37}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 			if templ_7745c5c3_Err != nil {
@@ -879,7 +883,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var52 templ.SafeURL
 			templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/console/workbench/work/" + work.WorkID + "/artifact"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 96, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 97, Col: 130}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 			if templ_7745c5c3_Err != nil {
@@ -892,7 +896,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var53 string
 			templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.ResolveAttributeValue("/console/workbench/work/" + work.WorkID + "/artifact")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 96, Col: 192}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 97, Col: 192}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 			if templ_7745c5c3_Err != nil {
@@ -905,7 +909,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var54 string
 			templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.ResolveAttributeValue("#artifact-" + work.WorkID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 96, Col: 231}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 97, Col: 231}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 			if templ_7745c5c3_Err != nil {
@@ -924,7 +928,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var55 templ.SafeURL
 			templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(work.PullRequest.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 99, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 100, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 			if templ_7745c5c3_Err != nil {
@@ -937,7 +941,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var56 string
 			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprint(work.PullRequest.Number))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 99, Col: 139}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 100, Col: 139}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 			if templ_7745c5c3_Err != nil {
@@ -956,7 +960,7 @@ func civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) t
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(work.NextAction)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 102, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 103, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 			if templ_7745c5c3_Err != nil {
@@ -1007,7 +1011,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 		var templ_7745c5c3_Var59 string
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.ResolveAttributeValue("evidence-" + work.WorkID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 110, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 111, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var59)
 		if templ_7745c5c3_Err != nil {
@@ -1020,7 +1024,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 		var templ_7745c5c3_Var60 string
 		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(work.WorkID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 111, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 112, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 		if templ_7745c5c3_Err != nil {
@@ -1033,7 +1037,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.JoinStringErrs(work.Source.Repository)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 111, Col: 129}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 112, Col: 129}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var61))
 		if templ_7745c5c3_Err != nil {
@@ -1046,7 +1050,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.JoinStringErrs(work.LatestEventID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 111, Col: 201}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 112, Col: 201}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var62))
 		if templ_7745c5c3_Err != nil {
@@ -1059,7 +1063,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(civilizationExecutionLabel(work))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 111, Col: 275}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 112, Col: 275}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {
@@ -1077,7 +1081,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(work.Bound.Envelope.Workflow.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 113, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 114, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1090,7 +1094,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var65 string
 			templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.JoinStringErrs(work.Bound.Envelope.Workflow.Version)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 113, Col: 106}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 114, Col: 106}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var65))
 			if templ_7745c5c3_Err != nil {
@@ -1103,7 +1107,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var66 string
 			templ_7745c5c3_Var66, templ_7745c5c3_Err = templ.JoinStringErrs(work.Bound.Envelope.SchemaVersion)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 113, Col: 181}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 114, Col: 181}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var66))
 			if templ_7745c5c3_Err != nil {
@@ -1122,7 +1126,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var67 string
 			templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(work.PullRequest.HeadSHA)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 116, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 117, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 			if templ_7745c5c3_Err != nil {
@@ -1135,7 +1139,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var68 string
 			templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(work.PullRequest.ReviewedHeadSHA)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 116, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 117, Col: 130}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 			if templ_7745c5c3_Err != nil {
@@ -1148,7 +1152,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 			var templ_7745c5c3_Var69 string
 			templ_7745c5c3_Var69, templ_7745c5c3_Err = templ.JoinStringErrs(work.PullRequest.ValidatedHeadSHA)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 116, Col: 210}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 117, Col: 210}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var69))
 			if templ_7745c5c3_Err != nil {
@@ -1172,7 +1176,7 @@ func civilizationWorkEvidence(work CivilizationWork) templ.Component {
 				var templ_7745c5c3_Var70 string
 				templ_7745c5c3_Var70, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s: requested %s / %s; effective %s / %s; selection %s; effort %s. Attempt %s", run.Operation, execution.Requested.Provider, execution.Requested.Model, execution.Effective.Provider, execution.Effective.Model, execution.ModelSource, execution.Effective.ReasoningEffort, run.AttemptID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 122, Col: 307}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 123, Col: 307}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var70))
 				if templ_7745c5c3_Err != nil {
@@ -1235,7 +1239,7 @@ func civilizationBriefList(label string, values []string) templ.Component {
 			var templ_7745c5c3_Var72 string
 			templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 135, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 136, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 			if templ_7745c5c3_Err != nil {
@@ -1253,7 +1257,7 @@ func civilizationBriefList(label string, values []string) templ.Component {
 				var templ_7745c5c3_Var73 string
 				templ_7745c5c3_Var73, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 137, Col: 15}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 138, Col: 15}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var73))
 				if templ_7745c5c3_Err != nil {
@@ -1301,7 +1305,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 		var templ_7745c5c3_Var75 string
 		templ_7745c5c3_Var75, templ_7745c5c3_Err = templ.ResolveAttributeValue("artifact-" + workID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 144, Col: 29}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 145, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var75)
 		if templ_7745c5c3_Err != nil {
@@ -1319,7 +1323,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var76 string
 			templ_7745c5c3_Var76, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 146, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 147, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var76))
 			if templ_7745c5c3_Err != nil {
@@ -1332,7 +1336,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var77 templ.SafeURL
 			templ_7745c5c3_Var77, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/console/workbench/work/" + workID + "/artifact"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 146, Col: 136}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 147, Col: 136}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var77))
 			if templ_7745c5c3_Err != nil {
@@ -1345,7 +1349,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var78 string
 			templ_7745c5c3_Var78, templ_7745c5c3_Err = templ.ResolveAttributeValue("/console/workbench/work/" + workID + "/artifact")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 146, Col: 193}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 147, Col: 193}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var78)
 			if templ_7745c5c3_Err != nil {
@@ -1358,7 +1362,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var79 string
 			templ_7745c5c3_Var79, templ_7745c5c3_Err = templ.ResolveAttributeValue("#artifact-" + workID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 146, Col: 227}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 147, Col: 227}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var79)
 			if templ_7745c5c3_Err != nil {
@@ -1376,7 +1380,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var80 templ.SafeURL
 			templ_7745c5c3_Var80, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL("/console/workbench/work/" + workID + "/artifact"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 148, Col: 124}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 149, Col: 124}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var80))
 			if templ_7745c5c3_Err != nil {
@@ -1405,7 +1409,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 				var templ_7745c5c3_Var81 string
 				templ_7745c5c3_Var81, templ_7745c5c3_Err = templ.ResolveAttributeValue(line.Kind)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 155, Col: 32}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 156, Col: 32}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var81)
 				if templ_7745c5c3_Err != nil {
@@ -1418,7 +1422,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 				var templ_7745c5c3_Var82 string
 				templ_7745c5c3_Var82, templ_7745c5c3_Err = templ.JoinStringErrs(line.Text)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 155, Col: 46}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 156, Col: 46}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var82))
 				if templ_7745c5c3_Err != nil {
@@ -1436,7 +1440,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var83 string
 			templ_7745c5c3_Var83, templ_7745c5c3_Err = templ.ResolveAttributeValue("artifact-evidence-" + workID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 158, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 159, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var83)
 			if templ_7745c5c3_Err != nil {
@@ -1449,7 +1453,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var84 string
 			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.Repository)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 158, Col: 190}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 159, Col: 190}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
@@ -1462,7 +1466,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var85 string
 			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.Branch)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 158, Col: 244}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 159, Col: 244}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 			if templ_7745c5c3_Err != nil {
@@ -1475,7 +1479,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var86 string
 			templ_7745c5c3_Var86, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.BaseSHA)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 158, Col: 297}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 159, Col: 297}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var86))
 			if templ_7745c5c3_Err != nil {
@@ -1488,7 +1492,7 @@ func CivilizationArtifactView(workID string, artifact civilizationArtifact, mess
 			var templ_7745c5c3_Var87 string
 			templ_7745c5c3_Var87, templ_7745c5c3_Err = templ.JoinStringErrs(artifact.WorkspaceDigest)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 158, Col: 369}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_detail.templ`, Line: 159, Col: 369}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var87))
 			if templ_7745c5c3_Err != nil {

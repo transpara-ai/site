@@ -394,6 +394,7 @@ func (h *Handlers) Register(mux *http.ServeMux) {
 	mux.Handle("GET /console/workbench/runtime", h.writeWrap(h.handleCivilizationRuntime))
 	mux.Handle("POST /console/workbench/work/{workID}/human-owner", h.writeWrap(h.handleCivilizationHumanOwner))
 	mux.Handle("POST /console/workbench/work/{workID}/confirm", h.writeWrap(h.handleCivilizationConfirm))
+	mux.Handle("POST /console/workbench/work/{workID}/result-review", h.writeWrap(h.handleCivilizationResultReview))
 	mux.Handle("GET /console/workbench/work/{workID}/artifact", h.writeWrap(h.handleCivilizationArtifact))
 	mux.Handle("POST /console/workbench/intake", h.writeWrap(h.handleCivilizationIntake))
 	mux.Handle("POST /console/workbench/work/{workID}/run", h.writeWrap(h.handleCivilizationRun))
