@@ -89,29 +89,52 @@ templ consoleFreshnessBadge(f ConsoleFreshness, generatedAt string) {
 }
 
 templ consoleKanbanFragment(k ConsoleKanban) {
-	<div id="console-kanban" hx-get={ "/console/kanban/fragment?lens=" + string(k.Lens) } hx-trigger="every 10s" hx-swap="outerHTML">
+	<div id="console-kanban" hx-get={ "/console/kanban/fragment?lens=" + string(k.Lens) } hx-trigger="every 5s" hx-swap="outerHTML">
 		@consoleKanban(k)
 	</div>
 }
 
 templ consoleKanban(k ConsoleKanban) {
 	<div class="space-y-4">
-		<div class="flex items-center justify-between gap-3">
+		<div class="flex flex-wrap items-center justify-between gap-3">
 			@consoleKanbanLensNav(k.Lens)
 			@consoleFreshnessBadge(k.Freshness, k.GeneratedAt)
 		</div>
+		if k.Civilization {
+			<div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+				<p class="text-warm-muted">Civilization work
+					if k.Freshness != FreshnessUnavailable {
+						if k.TotalCards == 1 {
+							· 1 item
+						} else {
+							· { strconv.Itoa(k.TotalCards) } items
+						}
+					}
+				</p>
+				<a href="/console/workbench?view=team" class="text-brand hover:underline">Open Workbench team board →</a>
+			</div>
+			if k.Lens == LensAgent || k.Lens == LensRisk {
+				<p class="text-xs text-warm-muted">Agent assignments and risk classes are not reported by this work feed. Cards show the execution host and time since the last update where available.</p>
+			}
+		}
 		if k.Freshness == FreshnessUnavailable {
 			<p class="text-sm text-warm-muted">unavailable — { noticeText(k.Notices) }</p>
 		} else if k.TotalCards == 0 {
 			<div class="border border-edge bg-surface rounded-lg p-6 space-y-2" data-state="empty">
-				<p class="text-sm font-medium text-warm">No factory orders yet.</p>
-				<p class="text-sm text-warm-muted">Work enters the factory at Intake: issues labeled <span class="font-mono text-[11px]">cc:pr-ready</span> are admitted by the issue scanner and become orders tracked here.</p>
-				<a href="/console/intake" class="inline-block text-sm text-brand hover:underline">Go to Intake →</a>
+				if k.Civilization {
+					<p class="text-sm font-medium text-warm">No work yet.</p>
+					<p class="text-sm text-warm-muted">Describe an outcome in Workbench to prepare a brief. Its progress will appear here.</p>
+					<a href="/console/workbench" class="inline-block text-sm text-brand hover:underline">Create work →</a>
+				} else {
+					<p class="text-sm font-medium text-warm">No factory orders yet.</p>
+					<p class="text-sm text-warm-muted">Work enters the factory at Intake: issues labeled <span class="font-mono text-[11px]">cc:pr-ready</span> are admitted by the issue scanner and become orders tracked here.</p>
+					<a href="/console/intake" class="inline-block text-sm text-brand hover:underline">Go to Intake →</a>
+				}
 			</div>
 		} else {
 			<div class="flex gap-4 overflow-x-auto pb-2">
 				for _, col := range k.Columns {
-					<section class="min-w-[16rem] flex-shrink-0 space-y-2">
+					<section class="w-80 max-w-full flex-shrink-0 space-y-2 break-words">
 						<h2 class="flex items-center gap-2 text-xs uppercase tracking-wide text-warm-muted">{ col.Label } <span class="rounded-full bg-elevated px-2 py-0.5 text-[10px] font-mono text-warm-secondary">{ columnCount(col) }</span></h2>
 						for _, card := range col.Cards {
 							@consoleOrderCard(card)
@@ -584,19 +607,22 @@ templ consoleOrderCard(card ConsoleOrderCard) {
 	// hx-get uses a plain string (not templ.SafeURL): hx-* is an HTML attribute, so templ's attribute-escaping (ResolveAttributeValue->EscapeString) is the right protection; SafeURL is for href URL sinks.
 	<button
 		type="button"
-		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-1 hover:border-brand transition-colors"
-		hx-get={ "/console/kanban/order/" + card.ID }
+		class="w-full text-left rounded border border-edge bg-surface/40 p-3 space-y-2 hover:border-brand transition-colors"
+		data-work-id={ card.ID }
+		hx-get={ card.DrawerURL() }
 		hx-target="#console-kanban-drawer"
 		hx-swap="innerHTML"
 	>
-		<div class="flex items-center justify-between gap-2">
+		<div class="flex flex-wrap items-center justify-between gap-2">
 			<span class="text-sm text-warm font-medium">{ cardTitle(card) }</span>
-			<span class="text-[10px] text-warm-muted font-mono">{ cardTag(card) }</span>
+			<span class="text-[10px] text-warm-muted font-mono break-all">{ cardTag(card) }</span>
 		</div>
 		<div class="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-warm-muted">
 			<span>by { orFallback(card.Submitter, "unknown") }</span>
 			<span>{ orFallback(card.Status, "unknown") }</span>
-			<span>{ orFallback(card.Agent, "unassigned") }</span>
+			if !card.Civilization {
+				<span>{ orFallback(card.Agent, "unassigned") }</span>
+			}
 			if card.Risk != "" {
 				<span>risk: { card.Risk }</span>
 			}
@@ -604,17 +630,45 @@ templ consoleOrderCard(card ConsoleOrderCard) {
 				<span>{ card.AgeLabel }</span>
 			}
 		</div>
+		if card.Civilization {
+			<p class="text-xs text-warm-muted">{ card.Repository }</p>
+			<p class="text-xs text-warm-secondary">Host: { card.Provider }</p>
+			if card.HumanStep != "" {
+				<p class="text-xs text-amber-300">{ card.HumanStep } · Responsible: { card.HumanOwner }</p>
+			}
+			if card.Blocker != "" {
+				<p class="text-xs text-amber-300">{ card.Blocker }</p>
+			}
+			if card.UpdatedLabel != "" {
+				<p class="text-xs text-warm-muted">Updated { card.UpdatedLabel } ago</p>
+			}
+		}
 	</button>
 }
 
 templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
-	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3" role="dialog" aria-label="Order details">
+	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3 break-words" role="dialog" aria-label="Order details" hx-get={ card.DrawerURL() } hx-trigger="every 5s" hx-swap="outerHTML">
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="text-sm font-medium text-warm">Order details</h3>
 			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-kanban-drawer').innerHTML='';return false;">close</button>
 		</div>
 		if !found {
 			<p class="text-sm text-warm-muted">Order { card.ID } is unavailable (not found).</p>
+		} else if card.Civilization {
+			<dl class="grid grid-cols-[8rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs [&_dd]:min-w-0 [&_dd]:break-words">
+				<dt class="text-warm-muted">Title</dt><dd>{ cardTitle(card) }</dd>
+				<dt class="text-warm-muted">Work</dt><dd class="break-all">{ card.ID }</dd>
+				<dt class="text-warm-muted">Repository</dt><dd>{ card.Repository }</dd>
+				<dt class="text-warm-muted">Requester</dt><dd>{ card.Submitter }</dd>
+				<dt class="text-warm-muted">Status</dt><dd>{ civilizationStateLabel(card.Status) }</dd>
+				<dt class="text-warm-muted">Execution host</dt><dd>{ card.Provider }</dd>
+				<dt class="text-warm-muted">Agent</dt><dd>Not linked by this work feed</dd>
+				<dt class="text-warm-muted">Responsible person</dt><dd>{ card.HumanOwner }</dd>
+				<dt class="text-warm-muted">Human step</dt><dd>{ orFallback(card.HumanStep, "None pending") }</dd>
+				<dt class="text-warm-muted">Blocker</dt><dd>{ orFallback(card.Blocker, "None reported") }</dd>
+				<dt class="text-warm-muted">Last updated</dt><dd>{ orFallback(card.UpdatedAt, "Not reported") }</dd>
+			</dl>
+			<a href={ templ.URL(civilizationWorkURL(card.ID)) } class="inline-block text-sm text-brand hover:underline">Open work and actions →</a>
 		} else {
 			<dl class="grid grid-cols-[8rem,1fr] gap-y-1 text-xs">
 				<dt class="text-warm-muted">Title</dt>

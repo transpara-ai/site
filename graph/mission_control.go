@@ -343,7 +343,7 @@ func (a *missionControlAcquirer) fetchHive(ctx context.Context, endpoint string,
 func (a *missionControlAcquirer) acquireWork(ctx context.Context, now time.Time) (MissionObservedService, error) {
 	endpoint := strings.TrimRight(serverWorkAPIBaseURL(), "/") + "/health"
 	label, detail := "Work HTTP", "GET /health returned the exact supported ok payload; this proves HTTP liveness only."
-	civilization := strings.TrimSpace(os.Getenv("CIVILIZATION_API_BASE_URL")) != "" && strings.TrimSpace(os.Getenv("WORK_API_BASE_URL")) == "" && strings.TrimSpace(os.Getenv("WORK_UI_BASE_URL")) == ""
+	civilization := consoleUsesCivilizationWork()
 	if civilization {
 		endpoint = strings.TrimRight(strings.TrimSpace(os.Getenv("CIVILIZATION_API_BASE_URL")), "/") + "/readyz"
 		label, detail = "Civilization work API", "The deployed work API reports ready, including its database connection."

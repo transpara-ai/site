@@ -322,16 +322,16 @@ func (h *Handlers) handleConsoleHealthFragment(w http.ResponseWriter, r *http.Re
 }
 
 func (h *Handlers) handleConsoleKanban(w http.ResponseWriter, r *http.Request) {
-	lens := parseLens(r.URL.Query().Get("lens"))
+	lens := consoleRequestLens(r)
 	res := fetchConsoleWork(r)
-	k := buildConsoleKanban(res.Tasks, res.Err, lens, time.Now().UTC())
+	k := res.board(lens, time.Now().UTC())
 	h.renderConsole(w, r, ConsolePageData{Title: "Kanban", Active: "kanban", Kanban: &k})
 }
 
 func (h *Handlers) handleConsoleKanbanFragment(w http.ResponseWriter, r *http.Request) {
-	lens := parseLens(r.URL.Query().Get("lens"))
+	lens := consoleRequestLens(r)
 	res := fetchConsoleWork(r)
-	k := buildConsoleKanban(res.Tasks, res.Err, lens, time.Now().UTC())
+	k := res.board(lens, time.Now().UTC())
 	consoleKanbanFragment(k).Render(r.Context(), w)
 }
 
@@ -478,6 +478,12 @@ func (h *Handlers) handleConsoleKanbanOrder(w http.ResponseWriter, r *http.Reque
 	res := fetchConsoleWork(r)
 	now := time.Now().UTC()
 	if res.Err == nil {
+		for _, card := range res.Cards {
+			if card.ID == id {
+				consoleOrderDrawer(card, true).Render(r.Context(), w)
+				return
+			}
+		}
 		for _, t := range res.Tasks {
 			if t.ID == id {
 				consoleOrderDrawer(cardForTask(t, now), true).Render(r.Context(), w)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -11,15 +12,20 @@ import (
 
 // consoleWorkResult is the focused work-tasks fetch the Kanban consumes. Unlike
 // fetchOpsWork (which caps to a 10-task /ops summary), this returns the full
-// task set so the Kanban can group every order. /tasks is a live query, so a
-// successful fetch IS current as of GeneratedAt; an error yields zero tasks.
+// task set from the configured legacy Work or Civilization API. A successful
+// live query is current as of GeneratedAt; an error yields zero cards.
 type consoleWorkResult struct {
-	GeneratedAt string
-	Tasks       []OpsWorkTask
-	Err         error
+	GeneratedAt  string
+	Tasks        []OpsWorkTask
+	Cards        []ConsoleOrderCard
+	Civilization bool
+	Err          error
 }
 
 func fetchConsoleWork(r *http.Request) consoleWorkResult {
+	if consoleUsesCivilizationWork() {
+		return fetchConsoleCivilizationWork(r)
+	}
 	base := serverWorkAPIBaseURL()
 	tasksURL := legacyWorkURL(base, "/tasks")
 	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, tasksURL, nil)
@@ -43,6 +49,67 @@ func fetchConsoleWork(r *http.Request) consoleWorkResult {
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 		Tasks:       payload.Tasks,
 	}
+}
+
+func fetchConsoleCivilizationWork(r *http.Request) consoleWorkResult {
+	result := consoleWorkResult{Civilization: true}
+	client, err := newCivilizationClient(8 * time.Second)
+	if err != nil {
+		result.Err = err
+		return result
+	}
+	// Require the work-list envelope: a successful response with the wrong
+	// schema must not masquerade as an empty board.
+	var payload struct {
+		Items json.RawMessage `json:"items"`
+	}
+	if err := client.request(r.Context(), http.MethodGet, "/api/civilization/v1/work", nil, &payload); err != nil {
+		result.Err = err
+		return result
+	}
+	var items []CivilizationWork
+	if json.Unmarshal(payload.Items, &items) != nil || items == nil {
+		result.Err = fmt.Errorf("Civilization work list is invalid")
+		return result
+	}
+	seen := map[string]bool{}
+	for _, item := range items {
+		if strings.TrimSpace(item.WorkID) == "" || strings.TrimSpace(item.State) == "" || seen[item.WorkID] {
+			result.Err = fmt.Errorf("Civilization work list is invalid")
+			return result
+		}
+		seen[item.WorkID] = true
+	}
+	now := time.Now().UTC()
+	for _, item := range items {
+		result.Cards = append(result.Cards, cardForCivilizationWork(item, now))
+	}
+	result.GeneratedAt = now.Format(time.RFC3339)
+	return result
+}
+
+func (r consoleWorkResult) board(lens ConsoleKanbanLens, now time.Time) ConsoleKanban {
+	if !r.Civilization {
+		return buildConsoleKanban(r.Tasks, r.Err, lens, now)
+	}
+	k := buildConsoleKanbanCards(r.Cards, r.Err, lens, now)
+	k.Civilization = true
+	if lens == LensStatus {
+		sort.SliceStable(k.Columns, func(i, j int) bool {
+			return rankLess(k.Columns[i].Key, k.Columns[j].Key, civilizationStatusRank, "unknown")
+		})
+		for i := range k.Columns {
+			k.Columns[i].Label = civilizationStateLabel(k.Columns[i].Key)
+		}
+	}
+	return k
+}
+
+func consoleRequestLens(r *http.Request) ConsoleKanbanLens {
+	if strings.TrimSpace(r.URL.Query().Get("lens")) == "" && consoleUsesCivilizationWork() {
+		return LensStatus
+	}
+	return parseLens(r.URL.Query().Get("lens"))
 }
 
 type ConsoleKanbanLens string
@@ -80,6 +147,46 @@ type ConsoleOrderCard struct {
 	Cell           string
 	CreatedAt      string
 	AgeLabel       string
+	Civilization   bool
+	Repository     string
+	Provider       string
+	HumanOwner     string
+	HumanStep      string
+	Blocker        string
+	UpdatedAt      string
+	UpdatedLabel   string
+}
+
+func (c ConsoleOrderCard) DrawerURL() string {
+	return "/console/kanban/order/" + url.PathEscape(c.ID)
+}
+
+func (c ConsoleOrderCard) sortTime() string {
+	if c.Civilization {
+		return c.UpdatedAt
+	}
+	return c.CreatedAt
+}
+
+func cardForCivilizationWork(work CivilizationWork, now time.Time) ConsoleOrderCard {
+	title := work.IntakeText
+	if work.Bound != nil && strings.TrimSpace(work.Bound.Envelope.Brief.Outcome) != "" {
+		title = work.Bound.Envelope.Brief.Outcome
+	}
+	data := CivilizationWorkbench{}
+	card := ConsoleOrderCard{
+		Civilization: true, ID: work.WorkID, Title: title, Status: work.State,
+		Submitter: data.Requester(work), Repository: work.Source.Repository,
+		Provider: civilizationExecutionLabel(work), HumanOwner: data.HumanOwner(work),
+		HumanStep: civilizationHumanStep(work), Blocker: work.Blocker,
+	}
+	// This feed has no actor assignment, risk class, or creation time. Keep
+	// those absent; a provider is not an agent and update age is not total age.
+	if !work.UpdatedAt.IsZero() {
+		card.UpdatedAt = work.UpdatedAt.Format(time.RFC3339)
+		card.UpdatedLabel = humanizeAge(now, card.UpdatedAt)
+	}
+	return card
 }
 
 type ConsoleKanbanColumn struct {
@@ -89,12 +196,13 @@ type ConsoleKanbanColumn struct {
 }
 
 type ConsoleKanban struct {
-	Freshness   ConsoleFreshness
-	GeneratedAt string
-	Lens        ConsoleKanbanLens
-	Columns     []ConsoleKanbanColumn
-	TotalCards  int
-	Notices     []string
+	Civilization bool
+	Freshness    ConsoleFreshness
+	GeneratedAt  string
+	Lens         ConsoleKanbanLens
+	Columns      []ConsoleKanbanColumn
+	TotalCards   int
+	Notices      []string
 }
 
 // riskRank orders the known risk classes by severity (highest first). Unknown
@@ -108,6 +216,13 @@ var statusRank = map[string]int{
 	"repair_required": 5, "repair_running": 6, "repaired": 7,
 	"verification_running": 8, "verified": 9, "certified": 10,
 	"rejected": 11, "superseded": 12, "policy_blocked": 13,
+}
+
+var civilizationStatusRank = map[string]int{
+	"awaiting_confirmation": 0, "human_required": 1, "blocked": 2,
+	"routing": 3, "queued": 4, "implementing": 5, "validating": 6,
+	"reviewing": 7, "prepared": 8, "publishing": 9, "ready": 10,
+	"merge_queued": 11, "completed": 12,
 }
 
 func humanizeAge(now time.Time, createdAt string) string {
@@ -249,6 +364,14 @@ func noticeText(notices []string) string {
 }
 
 func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanLens, now time.Time) ConsoleKanban {
+	cards := make([]ConsoleOrderCard, 0, len(tasks))
+	for _, task := range tasks {
+		cards = append(cards, cardForTask(task, now))
+	}
+	return buildConsoleKanbanCards(cards, fetchErr, lens, now)
+}
+
+func buildConsoleKanbanCards(cards []ConsoleOrderCard, fetchErr error, lens ConsoleKanbanLens, now time.Time) ConsoleKanban {
 	freshness := deriveFreshness(now.Format(time.RFC3339), fetchErr, false, now, consoleStaleWindow)
 	k := ConsoleKanban{
 		Freshness:   freshness,
@@ -262,8 +385,7 @@ func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanL
 
 	byKey := map[string]*ConsoleKanbanColumn{}
 	var order []string
-	for _, t := range tasks {
-		card := cardForTask(t, now)
+	for _, card := range cards {
 		key, label := lensKey(card, lens)
 		col, ok := byKey[key]
 		if !ok {
@@ -278,8 +400,8 @@ func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanL
 		col := byKey[key]
 		// Within a column, oldest-first surfaces the most-aging order at the top.
 		sort.SliceStable(col.Cards, func(i, j int) bool {
-			ti, oki := parseCardTime(col.Cards[i].CreatedAt)
-			tj, okj := parseCardTime(col.Cards[j].CreatedAt)
+			ti, oki := parseCardTime(col.Cards[i].sortTime())
+			tj, okj := parseCardTime(col.Cards[j].sortTime())
 			if oki && okj {
 				return ti.Before(tj) // oldest-first among dated cards
 			}
@@ -290,7 +412,7 @@ func buildConsoleKanban(tasks []OpsWorkTask, fetchErr error, lens ConsoleKanbanL
 		})
 		k.Columns = append(k.Columns, *col)
 	}
-	k.TotalCards = len(tasks)
+	k.TotalCards = len(cards)
 	return k
 }
 

@@ -4622,6 +4622,13 @@ func serverWorkAPIBaseURL() string {
 	return "http://localhost:8080"
 }
 
+// Explicit legacy configuration takes precedence on deployments that run Work.
+func consoleUsesCivilizationWork() bool {
+	return strings.TrimSpace(os.Getenv("CIVILIZATION_API_BASE_URL")) != "" &&
+		strings.TrimSpace(os.Getenv("WORK_API_BASE_URL")) == "" &&
+		strings.TrimSpace(os.Getenv("WORK_UI_BASE_URL")) == ""
+}
+
 func takeWorkTasks(tasks []OpsWorkTask, limit int) []OpsWorkTask {
 	if len(tasks) <= limit {
 		return tasks
