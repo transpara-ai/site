@@ -1,0 +1,101 @@
+package graph
+
+import "fmt"
+
+templ civilizationViewFields(data CivilizationWorkbench) {
+	<input type="hidden" name="view" value={ data.View }/>
+	<input type="hidden" name="filter_repository" value={ data.Repository }/>
+	<input type="hidden" name="operator" value={ data.Operator }/>
+	<input type="hidden" name="responsible" value={ data.Responsible }/>
+}
+
+templ civilizationWorkbenchToolbar(data CivilizationWorkbench) {
+	<div class="wb-toolbar">
+		<nav class="wb-view-tabs" aria-label="Workbench view">
+			<a id="workbench-team-view" href={ templ.URL(data.PageURL("team", data.SelectedWorkID)) } hx-get={ data.FragmentURL("team", data.SelectedWorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View == "team") }>Team board</a>
+			<a id="workbench-focus-view" href={ templ.URL(data.PageURL("focus", data.SelectedWorkID)) } hx-get={ data.FragmentURL("focus", data.SelectedWorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" aria-current={ fmt.Sprint(data.View != "team") }>Focused work</a>
+		</nav>
+		<form id="workbench-filters" method="get" action="/console/workbench" hx-get="/console/workbench/work-fragment" hx-target="#civilization-work-list" hx-swap="outerHTML" hx-trigger="change, submit" hx-sync="#civilization-work-list:replace" class="wb-filters" aria-label="Filter work">
+			<input type="hidden" name="view" value={ data.View }/>
+			<label>Repository<select id="workbench-repository-filter" name="filter_repository"><option value="">All repositories</option>
+				for _, repository := range data.Repositories {
+					<option value={ repository } selected?={ repository == data.Repository }>{ civilizationRepositoryLabel(repository) }</option>
+				}
+			</select></label>
+			<label>Requester<select id="workbench-operator-filter" name="operator"><option value="">Everyone</option>
+				for _, operator := range data.Operators() {
+					<option value={ operator.ID } selected?={ operator.ID == data.Operator }>{ operator.Name }</option>
+				}
+			</select></label>
+			<noscript><button type="submit" class="wb-button">Apply filters</button></noscript>
+			<label>Responsible person<select id="workbench-responsible-filter" name="responsible"><option value="">Anyone</option><option value="unassigned" selected?={ data.Responsible == "unassigned" }>Unassigned</option>
+				for _, operator := range data.OwnerCandidates() {
+					<option value={ "person:"+operator.ID } selected?={ data.Responsible == "person:"+operator.ID }>{ operator.Name }</option>
+				}
+			</select></label>
+		</form>
+	</div>
+}
+
+templ civilizationTeamBoard(data CivilizationWorkbench) {
+	<section aria-label="Team workstreams" class="wb-team">
+		<div class="wb-rollup" aria-label="Workstream totals">
+			<div><span>In progress</span><strong>{ fmt.Sprint(data.TeamCount("progress")) }</strong></div>
+			<div><span>Human steps</span><strong>{ fmt.Sprint(data.TeamCount("human")) }</strong></div>
+			<div><span>Surfaced errors</span><strong>{ fmt.Sprint(data.TeamCount("errors")) }</strong></div>
+			<div><span>Requesters</span><strong>{ fmt.Sprint(data.TeamCount("people")) }</strong></div>
+		</div>
+		<div class="wb-team-columns">
+			for _, group := range data.Groups() {
+				if len(group.Items) > 0 {
+					<section class="wb-team-column" aria-label={ group.Label }><h2>{ group.Label } <span>{ fmt.Sprint(len(group.Items)) }</span></h2>
+						for _, work := range group.Items {
+							<article class="wb-team-card" data-team-work={ work.WorkID }>
+								<div class="wb-eyebrow"><span>{ civilizationRepositoryLabel(work.Source.Repository) }</span><span class="wb-badge" data-state={ work.State }>{ civilizationStateLabel(work.State) }</span></div>
+								<h3><a id={ "team-work-"+work.WorkID } href={ templ.URL(data.PageURL("focus", work.WorkID)) } hx-get={ data.FragmentURL("focus", work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" data-work-select={ work.WorkID }>{ civilizationWorkOutcome(work) }</a></h3>
+								<dl><div><dt>Requester</dt><dd>{ data.Requester(work) }</dd></div><div><dt>Stage</dt><dd>{ civilizationWorkRole(work) }</dd></div><div><dt>Host</dt><dd>{ civilizationHostName(work) }</dd></div></dl>
+								if work.HumanOwnerID != "" && civilizationHumanStep(work) == "" {
+									<p class="wb-muted">Human owner: { data.HumanOwner(work) }</p>
+								}
+								if step := civilizationHumanStep(work); step != "" {
+									<div class="wb-human-step"><span>{ step }</span><strong>Responsible person: { data.HumanOwner(work) }</strong></div>
+								}
+								if work.Blocker != "" {
+									<p class="wb-card-error">{ work.Blocker }</p>
+								}
+								<time datetime={ work.UpdatedAt.Format("2006-01-02T15:04:05Z") }>Updated { work.UpdatedAt.Format("15:04 UTC") }</time>
+							</article>
+							}
+					</section>
+				}
+			}
+		</div>
+		if len(data.VisibleItems()) == 0 {
+			<div class="wb-empty"><h2>No work matches these filters</h2><p>Choose another repository or requester.</p></div>
+		}
+		<div class="wb-team-footer">
+			<section class="wb-team-note"><h2>Human handoffs</h2><p>Open a workstream to assign its responsible person. Confirmations, questions and reviews stay in the shared queue until someone is assigned. Assignment routes the next human step; approval permissions are unchanged.</p></section>
+			<div id="workbench-runtime" hx-get="/console/workbench/runtime" hx-trigger="load, every 10s" hx-swap="outerHTML"><p class="wb-muted">Connecting to the runtime roster…</p></div>
+		</div>
+	</section>
+}
+
+templ civilizationRuntimeRoster(wall ConsoleHealthWall) {
+	<section id="workbench-runtime" class="wb-runtime" hx-get="/console/workbench/runtime" hx-trigger="every 10s" hx-swap="outerHTML" aria-label="Runtime agents">
+		<div class="wb-artifact-heading"><h2>Runtime agents</h2><a href="/console/health" class="wb-text-button">Health wall</a></div>
+		if wall.Freshness == FreshnessUnavailable {
+			<p class="wb-muted">Runtime roster unavailable. Reconnecting automatically.</p>
+		} else {
+			<p class="wb-muted">{ fmt.Sprint(wall.ActiveAgents) } observed active · { string(wall.Freshness) }</p>
+			<ul>
+				for _, agent := range wall.Agents {
+					<li><strong>{ agent.Name }</strong><span>{ agent.Role } · { agent.Model }</span></li>
+				}
+			</ul>
+			if wall.PendingApprovals > 0 {
+				<p class="wb-muted">{ fmt.Sprint(wall.PendingApprovals) } runtime approval requests on the health wall.</p>
+			}
+			<p class="wb-muted">Hive reports this roster separately; links to individual workstreams are not yet recorded.</p>
+		}
+	</section>
+}
