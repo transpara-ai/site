@@ -54,7 +54,7 @@ func TestConsoleKanbanCivilizationRoutesAndLiveUpdates(t *testing.T) {
 	r := httptest.NewRequest("GET", "/console/kanban/order/work-real", nil)
 	r.SetPathValue("id", "work-real")
 	h.handleConsoleKanbanOrder(w, r)
-	for _, want := range []string{"Responsible person", "bob", "Not linked by this work feed", `href="/console/workbench?work=work-real"`} {
+	for _, want := range []string{"Responsible person", "bob", "Not linked by this work feed", `href="/console/workbench?work=work-real"`, `hx-get="/console/kanban/order/work-real" hx-trigger="every 5s"`} {
 		if !strings.Contains(w.Body.String(), want) {
 			t.Errorf("drawer missing %q", want)
 		}

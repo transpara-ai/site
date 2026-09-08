@@ -104,7 +104,11 @@ templ consoleKanban(k ConsoleKanban) {
 			<div class="flex flex-wrap items-center justify-between gap-2 text-sm">
 				<p class="text-warm-muted">Civilization work
 					if k.Freshness != FreshnessUnavailable {
-						· { strconv.Itoa(k.TotalCards) } items
+						if k.TotalCards == 1 {
+							· 1 item
+						} else {
+							· { strconv.Itoa(k.TotalCards) } items
+						}
 					}
 				</p>
 				<a href="/console/workbench?view=team" class="text-brand hover:underline">Open Workbench team board →</a>
@@ -643,7 +647,7 @@ templ consoleOrderCard(card ConsoleOrderCard) {
 }
 
 templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
-	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3 break-words" role="dialog" aria-label="Order details">
+	<aside class="rounded border border-edge bg-surface/60 p-4 space-y-3 break-words" role="dialog" aria-label="Order details" hx-get={ card.DrawerURL() } hx-trigger="every 5s" hx-swap="outerHTML">
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="text-sm font-medium text-warm">Order details</h3>
 			<button type="button" class="text-xs text-warm-muted hover:text-warm" onclick="document.getElementById('console-kanban-drawer').innerHTML='';return false;">close</button>
@@ -651,7 +655,7 @@ templ consoleOrderDrawer(card ConsoleOrderCard, found bool) {
 		if !found {
 			<p class="text-sm text-warm-muted">Order { card.ID } is unavailable (not found).</p>
 		} else if card.Civilization {
-			<dl class="grid grid-cols-[8rem,1fr] gap-y-2 text-xs [&_dd]:min-w-0 [&_dd]:break-words">
+			<dl class="grid grid-cols-[8rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs [&_dd]:min-w-0 [&_dd]:break-words">
 				<dt class="text-warm-muted">Title</dt><dd>{ cardTitle(card) }</dd>
 				<dt class="text-warm-muted">Work</dt><dd class="break-all">{ card.ID }</dd>
 				<dt class="text-warm-muted">Repository</dt><dd>{ card.Repository }</dd>
