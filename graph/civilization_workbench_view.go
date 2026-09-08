@@ -31,6 +31,9 @@ func civilizationWorkGroupIndex(state string) int {
 }
 
 func (data CivilizationWorkbench) Groups() []civilizationWorkGroup {
+	if data.View == "history" {
+		return []civilizationWorkGroup{{Label: "Reviewed and completed", Items: data.HistoryItems()}}
+	}
 	groups := []civilizationWorkGroup{{Label: "Needs a human"}, {Label: "In progress"}, {Label: "Prepared"}, {Label: "Ready for review"}, {Label: "Completed"}, {Label: "Other work"}, {Label: "Reviewed results"}}
 	for _, item := range data.VisibleItems() {
 		index := civilizationWorkGroupIndex(item.State)
@@ -50,7 +53,15 @@ func (data CivilizationWorkbench) Selected() *CivilizationWork {
 				return &items[i]
 			}
 		}
-		return nil
+		// Old bookmarks and a live selection can refer to work just reviewed.
+		// Only explicit History navigation keeps its full detail in focus.
+		inHistory := false
+		for _, work := range data.HistoryItems() {
+			inHistory = inHistory || work.WorkID == data.SelectedWorkID
+		}
+		if data.View == "history" || !inHistory {
+			return nil
+		}
 	}
 	for _, group := range data.Groups() {
 		if len(group.Items) > 0 {
@@ -62,6 +73,13 @@ func (data CivilizationWorkbench) Selected() *CivilizationWork {
 
 func civilizationWorkURL(workID string) string {
 	return "/console/workbench?work=" + url.QueryEscape(workID)
+}
+
+func civilizationWorkInspectURL(workID, state string) string {
+	if civilizationWorkInHistory(CivilizationWork{State: state}) {
+		return civilizationWorkURL(workID) + "&view=history"
+	}
+	return civilizationWorkURL(workID)
 }
 
 func (data CivilizationWorkbench) PollURL() string {

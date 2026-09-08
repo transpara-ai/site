@@ -63,7 +63,7 @@ func TestResultReviewForwardsExactResultAndAuthenticatedReviewer(t *testing.T) {
 	if payload["reviewed_by"] != "alice" || payload["result_id"] != "result-exact" || payload["workspace_digest"] != "digest-exact" || payload["feedback"] != "Looks good" {
 		t.Fatalf("payload=%v", payload)
 	}
-	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/console/workbench?work=smoke" {
+	if w.Code != http.StatusSeeOther || w.Header().Get("Location") != "/console/workbench?work=" {
 		t.Fatalf("response=%d %v", w.Code, w.Header())
 	}
 }

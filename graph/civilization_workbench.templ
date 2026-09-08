@@ -54,7 +54,14 @@ templ CivilizationWorkList(data CivilizationWorkbench) {
 			}
 		</div>
 		@civilizationWorkbenchToolbar(data)
-		<div class="wb-list-heading"><h2>Current work <span>{ fmt.Sprintf("%d", len(data.VisibleItems())) }</span></h2><div class="wb-freshness"><span class="wb-live">Updates automatically</span><time datetime={ data.GeneratedAt.Format("2006-01-02T15:04:05Z") }>Checked { data.GeneratedAt.Format("15:04:05 UTC") }</time></div></div>
+		<div class="wb-list-heading"><h2 id="workbench-list-title">
+			if data.View == "history" {
+				History
+			} else {
+				Current work
+			}
+			<span>{ fmt.Sprint(len(data.VisibleItems())) }</span>
+		</h2><div class="wb-freshness"><span class="wb-live">Updates automatically</span><time datetime={ data.GeneratedAt.Format("2006-01-02T15:04:05Z") }>Checked { data.GeneratedAt.Format("15:04:05 UTC") }</time></div></div>
 		if !data.Available {
 			<div class="wb-empty" role="status"><h2>Progress is temporarily unavailable</h2><p>Reconnecting automatically. Your request may already be recorded.</p></div>
 		} else if len(data.Items) == 0 {
@@ -62,15 +69,15 @@ templ CivilizationWorkList(data CivilizationWorkbench) {
 		} else if data.View == "team" {
 			@civilizationTeamBoard(data)
 		} else if len(data.VisibleItems()) == 0 {
-			<div class="wb-empty"><h2>No work matches these filters</h2><p>Choose another repository or requester to see their work.</p></div>
+			@civilizationWorkEmpty(data)
 		} else {
 			<div class="wb-board">
-				<details id="workbench-picker" class="wb-index" open><summary>Select work · { fmt.Sprint(len(data.Items)) } items</summary><nav aria-label="Current work">
+				<details id="workbench-picker" class="wb-index" open><summary>Select work · { fmt.Sprint(len(data.VisibleItems())) } items</summary><nav aria-label="Select work">
 					for _, group := range data.Groups() {
 						if len(group.Items) > 0 {
 							<section class="wb-work-group"><h3>{ group.Label } <span>{ fmt.Sprint(len(group.Items)) }</span></h3>
 								for _, work := range group.Items {
-									<a id={ "work-select-"+work.WorkID } href={ templ.URL(data.PageURL("focus", work.WorkID)) } hx-get={ data.FragmentURL("focus", work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-push-url={ data.PageURL("focus", work.WorkID) } hx-sync="#civilization-work-list:replace" class="wb-work-link" data-work-select={ work.WorkID } aria-current={ civilizationSelectedCurrent(data, work.WorkID) }>
+									<a id={ "work-select-"+work.WorkID } href={ templ.URL(data.PageURL(data.View, work.WorkID)) } hx-get={ data.FragmentURL(data.View, work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-push-url={ data.PageURL(data.View, work.WorkID) } hx-sync="#civilization-work-list:replace" class="wb-work-link" data-work-select={ work.WorkID } aria-current={ civilizationSelectedCurrent(data, work.WorkID) }>
 										<span class="wb-work-meta">{ civilizationRepositoryLabel(work.Source.Repository) }</span><span class="wb-work-title">{ civilizationWorkOutcome(work) }</span><span class="wb-work-state" data-state={ work.State }>{ civilizationStateLabel(work.State) }</span>
 									</a>
 								}
@@ -84,6 +91,32 @@ templ CivilizationWorkList(data CivilizationWorkbench) {
 					<div class="wb-empty" role="status"><h2>This work is no longer available</h2><p>Select another item to view its progress.</p></div>
 				}
 			</div>
+		}
+		if data.Available && data.View != "history" && len(data.HistoryItems()) > 0 {
+			<details id="workbench-history" class="wb-history" data-workbench-details>
+				<summary>History <span>{ fmt.Sprint(len(data.HistoryItems())) }</span><small>Reviewed and completed work</small></summary>
+				<nav aria-label="Work history">
+					for _, work := range data.HistoryItems() {
+						<a id={ "history-work-"+work.WorkID } class="wb-history-row" href={ templ.URL(data.PageURL("history", work.WorkID)) } hx-get={ data.FragmentURL("history", work.WorkID) } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-sync="#civilization-work-list:replace" data-work-select={ work.WorkID }>
+							<span><span class="wb-work-meta">{ civilizationRepositoryLabel(work.Source.Repository) }</span><strong>{ civilizationWorkOutcome(work) }</strong></span>
+							<span class="wb-history-status">{ civilizationStateLabel(work.State) }</span>
+							<time datetime={ work.UpdatedAt.Format("2006-01-02T15:04:05Z") }>{ work.UpdatedAt.Format("02 Jan · 15:04 UTC") }</time>
+						</a>
+					}
+				</nav>
+			</details>
+		}
+	</div>
+}
+
+templ civilizationWorkEmpty(data CivilizationWorkbench) {
+	<div class="wb-empty" role="status">
+		if data.Repository != "" || data.Operator != "" || data.Responsible != "" {
+			<h2>No work matches these filters</h2><p>Choose another repository or person to see their work.</p>
+		} else if data.View == "history" {
+			<h2>No reviewed or completed work yet</h2><p>Results will appear here after you review them.</p>
+		} else {
+			<h2>You're all caught up</h2><p>Reviewed and completed work is saved in History. Start new work whenever you're ready.</p>
 		}
 	</div>
 }

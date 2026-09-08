@@ -74,5 +74,32 @@ func (h *Handlers) handleCivilizationResultReview(w http.ResponseWriter, r *http
 		h.renderCivilizationMutationError(w, r, err.Error())
 		return
 	}
-	h.renderCivilizationAfterMutation(w, r)
+	data := h.workbenchForRequest(r)
+	if data.View == "history" {
+		data.View = "focus"
+	}
+	data.SelectedWorkID = ""
+	// Enhancement starts a new workstream. Prefer it when it matches the
+	// operator's filters; the reviewed original stays in History.
+	if reviewed.ResultReview != nil && reviewed.ResultReview.RevisionWorkID != "" {
+		for _, work := range data.VisibleItems() {
+			if work.WorkID == reviewed.ResultReview.RevisionWorkID {
+				data.SelectedWorkID = work.WorkID
+			}
+		}
+	}
+	if next := data.Selected(); next != nil {
+		data.SelectedWorkID = next.WorkID
+	}
+	data.Notice = civilizationResultDecisionLabel(decision) + ". Saved in History."
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Push-Url", data.PageURL(data.View, data.SelectedWorkID))
+		if r.Header.Get("HX-Target") == "civilization-work-list" {
+			CivilizationWorkList(data).Render(r.Context(), w)
+		} else {
+			CivilizationWorkbenchFragment(data).Render(r.Context(), w)
+		}
+		return
+	}
+	http.Redirect(w, r, data.PageURL(data.View, data.SelectedWorkID), http.StatusSeeOther)
 }

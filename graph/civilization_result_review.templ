@@ -34,6 +34,6 @@ templ civilizationResultReviewPanel(work CivilizationWork, data CivilizationWork
   </section>
  }
  if work.RevisionOf != nil {
-  <p class="wb-muted">Revision of <a href={ templ.URL(civilizationWorkURL(work.RevisionOf.WorkID)) } class="wb-text-button">the previously delivered result</a>. The original review and diff are preserved.</p>
+  <p class="wb-muted">Revision of <a href={ templ.URL(data.PageURL("history", work.RevisionOf.WorkID)) } class="wb-text-button">the previously delivered result</a>. The original review and diff are preserved.</p>
  }
 }

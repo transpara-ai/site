@@ -22,7 +22,7 @@ func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
 	data.SelectedWorkID = r.FormValue("work")
 	data.View, data.Repository, data.Operator = r.FormValue("view"), r.FormValue("filter_repository"), r.FormValue("operator")
 	data.Responsible = r.FormValue("responsible")
-	if data.View != "team" {
+	if data.View != "team" && data.View != "history" {
 		data.View = "focus"
 	}
 	viewer := h.viewUser(r)
@@ -42,6 +42,15 @@ func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
 	}
 	if viewer.ID != "" {
 		data.OperatorNames[viewer.ID] = viewer.Name
+	}
+	// A result reviewed in another session should recede on the next poll too.
+	if data.View != "history" {
+		for _, work := range data.HistoryItems() {
+			if work.WorkID == data.SelectedWorkID {
+				data.SelectedWorkID = ""
+				break
+			}
+		}
 	}
 	return data
 }
@@ -195,7 +204,7 @@ func (h *Handlers) handleCivilizationHumanOwner(w http.ResponseWriter, r *http.R
 	h.renderCivilizationAfterMutation(w, r)
 }
 
-func (data CivilizationWorkbench) VisibleItems() []CivilizationWork {
+func (data CivilizationWorkbench) filteredItems() []CivilizationWork {
 	var result []CivilizationWork
 	for _, work := range data.Items {
 		if data.Repository != "" && work.Source.Repository != data.Repository {
@@ -215,11 +224,40 @@ func (data CivilizationWorkbench) VisibleItems() []CivilizationWork {
 	return result
 }
 
+func civilizationWorkInHistory(work CivilizationWork) bool {
+	switch work.State {
+	case "approved", "rejected", "changes_requested", "completed":
+		return true
+	}
+	return false
+}
+
+func (data CivilizationWorkbench) VisibleItems() []CivilizationWork {
+	var result []CivilizationWork
+	for _, work := range data.filteredItems() {
+		if civilizationWorkInHistory(work) == (data.View == "history") {
+			result = append(result, work)
+		}
+	}
+	return result
+}
+
+func (data CivilizationWorkbench) HistoryItems() []CivilizationWork {
+	var result []CivilizationWork
+	for _, work := range data.filteredItems() {
+		if civilizationWorkInHistory(work) {
+			result = append(result, work)
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].UpdatedAt.After(result[j].UpdatedAt) })
+	return result
+}
+
 func (data CivilizationWorkbench) PageURL(view, workID string) string {
 	query := url.Values{}
 	query.Set("work", workID)
-	if view == "team" {
-		query.Set("view", "team")
+	if view == "team" || view == "history" {
+		query.Set("view", view)
 	}
 	if data.Repository != "" {
 		query.Set("filter_repository", data.Repository)

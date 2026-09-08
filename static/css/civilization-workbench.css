@@ -121,6 +121,20 @@
 .wb-board { display: grid; grid-template-columns: minmax(210px, 260px) minmax(0, 1fr); gap: 24px; align-items: start; }
 .wb-index { min-width: 0; }
 .wb-index > summary { display: none; }
+.wb-history { margin-top: 24px; border-top: 1px solid var(--wb-border); }
+.wb-history > summary { padding: 16px 4px; }
+.wb-history > summary span { margin-left: 8px; font-variant-numeric: tabular-nums; }
+.wb-history > summary small { margin-left: 16px; font-size: 12px; }
+.wb-history nav { max-height: 360px; overflow: auto; }
+.wb-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px 24px; padding: 12px; border-top: 1px solid var(--wb-border); color: var(--wb-muted); font-size: 12px; }
+.wb-history-row:hover { background: var(--wb-panel); }
+.wb-history-row strong { display: block; color: var(--wb-text); font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.wb-history-row time { font-size: 11px; }
+@media (max-width: 760px) {
+  .wb-history-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .wb-history-row time { grid-column: 1 / -1; }
+  .wb-history > summary small { display: none; }
+}
 .wb-work-group + .wb-work-group { margin-top: 22px; }
 .wb-work-group h3 { display: flex; justify-content: space-between; padding: 0 10px 8px; color: var(--wb-muted); font-size: 11px; letter-spacing: .045em; font-weight: 600; }
 .wb-work-group h3 span { font-weight: 400; }

@@ -3125,9 +3125,9 @@ func consoleOrderDrawer(card ConsoleOrderCard, found bool) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var150 templ.SafeURL
-			templ_7745c5c3_Var150, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(civilizationWorkURL(card.ID)))
+			templ_7745c5c3_Var150, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(civilizationWorkInspectURL(card.ID, card.Status)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 671, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/console.templ`, Line: 671, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var150))
 			if templ_7745c5c3_Err != nil {
