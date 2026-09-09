@@ -11,6 +11,13 @@ type civilizationWorkGroup struct {
 	Items []CivilizationWork
 }
 
+func (data CivilizationWorkbench) CanOperate() bool {
+	return data.ViewerRole == "" || data.ViewerRole == "operator" || data.ViewerRole == "reviewer"
+}
+func (data CivilizationWorkbench) CanReview() bool {
+	return data.ViewerRole == "" || data.ViewerRole == "reviewer"
+}
+
 func civilizationWorkGroupIndex(state string) int {
 	switch state {
 	case "awaiting_confirmation", "blocked", "human_required":

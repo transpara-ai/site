@@ -29,7 +29,48 @@ func civilizationWorkbenchShell(data CivilizationWorkbench) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<body class=\"civilization-shell\"><a class=\"wb-skip\" href=\"#workbench-main\">Skip to workbench</a><div class=\"wb-shell\"><aside class=\"wb-sidebar\"><a href=\"/console/workbench\" class=\"wb-brand\"><span class=\"wb-mark\" aria-hidden=\"true\">◇</span><span>Civilization<small>Mission control</small></span></a><nav aria-label=\"Mission control\" class=\"wb-navigation\"><a href=\"/console/workbench\" aria-current=\"page\">Workbench</a><a href=\"/console\">Overview</a><a href=\"/console/health\">Health wall</a><a href=\"/console/kanban\">Kanban</a><a href=\"/console/intake\">Intake</a><a href=\"/console/config\">Config</a></nav><div class=\"wb-sidebar-footer\"><span>transpara-ai</span><small>Internal workspace</small></div></aside><main id=\"workbench-main\" class=\"wb-main\"><div class=\"wb-topline\"><span>Mission control / Workbench</span><div class=\"wb-theme-controls\" role=\"group\" aria-label=\"Appearance\"><button type=\"button\" data-workbench-theme=\"light\" aria-label=\"Light theme\" title=\"Light theme\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><path d=\"M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"></path></svg></button> <button type=\"button\" data-workbench-theme=\"dark\" aria-label=\"Dark theme\" title=\"Dark theme\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20.4 14a8.5 8.5 0 0 1-10.4-10.4A8.5 8.5 0 1 0 20.4 14Z\"></path></svg></button> <button type=\"button\" data-workbench-theme=\"system\" aria-label=\"Use system theme\" title=\"Use system theme\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"></rect><path d=\"M8 21h8m-4-4v4\"></path></svg></button></div></div><div id=\"workbench-announcement\" class=\"wb-sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<body class=\"civilization-shell\"><a class=\"wb-skip\" href=\"#workbench-main\">Skip to workbench</a><div class=\"wb-shell\"><aside class=\"wb-sidebar\"><a href=\"/console/workbench\" class=\"wb-brand\"><span class=\"wb-mark\" aria-hidden=\"true\">◇</span><span>Civilization<small>Mission control</small></span></a><nav aria-label=\"Mission control\" class=\"wb-navigation\"><a href=\"/console/workbench\" aria-current=\"page\">Workbench</a><a href=\"/console\">Overview</a><a href=\"/console/health\">Health wall</a><a href=\"/console/kanban\">Kanban</a><a href=\"/console/intake\">Intake</a><a href=\"/console/config\">Config</a></nav><div class=\"wb-sidebar-footer\"><span>transpara-ai</span> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if data.ViewerRole != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var2 string
+			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(data.ViewerName)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_shell.templ`, Line: 12, Col: 29}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</span><small>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(data.ViewerRole)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `graph/civilization_workbench_shell.templ`, Line: 12, Col: 62}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</small><form method=\"post\" action=\"/auth/logout\"><button class=\"wb-button\" type=\"submit\">Sign out</button></form>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<small>Internal workspace</small>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div></aside><main id=\"workbench-main\" class=\"wb-main\"><div class=\"wb-topline\"><span>Mission control / Workbench</span><div class=\"wb-theme-controls\" role=\"group\" aria-label=\"Appearance\"><button type=\"button\" data-workbench-theme=\"light\" aria-label=\"Light theme\" title=\"Light theme\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><path d=\"M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"></path></svg></button> <button type=\"button\" data-workbench-theme=\"dark\" aria-label=\"Dark theme\" title=\"Dark theme\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20.4 14a8.5 8.5 0 0 1-10.4-10.4A8.5 8.5 0 1 0 20.4 14Z\"></path></svg></button> <button type=\"button\" data-workbench-theme=\"system\" aria-label=\"Use system theme\" title=\"Use system theme\" aria-pressed=\"true\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"13\" rx=\"2\"></rect><path d=\"M8 21h8m-4-4v4\"></path></svg></button></div></div><div id=\"workbench-announcement\" class=\"wb-sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\"></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -37,7 +78,7 @@ func civilizationWorkbenchShell(data CivilizationWorkbench) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</main></div><script src=\"/static/js/civilization-workbench.js\" defer></script></body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</main></div><script src=\"/static/js/civilization-workbench.js\" defer></script></body>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

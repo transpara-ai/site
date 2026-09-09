@@ -29,6 +29,7 @@ const anonUserID = "anonymous"
 // ViewUser holds user info for templates.
 type ViewUser struct {
 	ID          string
+	Role        string
 	Name        string
 	Picture     string
 	UnreadCount int
@@ -466,11 +467,11 @@ func (h *Handlers) viewUser(r *http.Request) ViewUser {
 		return ViewUser{Name: "Anonymous"}
 	}
 	if h == nil || h.store == nil {
-		return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture}
+		return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture, Role: u.Role}
 	}
 	uid := h.userID(r)
 	unread := h.store.UnreadCount(r.Context(), uid)
-	return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture, UnreadCount: unread}
+	return ViewUser{ID: u.ID, Name: u.Name, Picture: u.Picture, UnreadCount: unread, Role: u.Role}
 }
 
 func (h *Handlers) userID(r *http.Request) string {

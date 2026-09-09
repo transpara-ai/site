@@ -7,7 +7,7 @@ import (
 templ CivilizationWorkbenchFragment(data CivilizationWorkbench) {
 	<section id="civilization-workbench" class="wb-workbench" data-console-surface="civilization-workbench" hx-history="false">
 		<header class="wb-heading"><h1>Workbench</h1><p>Briefs, progress and results in one place.</p></header>
-		if len(data.Repositories) > 0 {
+		if len(data.Repositories) > 0 && data.CanOperate() {
 			<details id="workbench-composer" class="wb-composer" open?={ len(data.Items) == 0 || data.FormText != "" }>
 				<summary class="wb-button wb-primary"><span class="wb-when-closed">+ New work</span><span class="wb-when-open">Close composer</span></summary>
 				<form id="workbench-intake-form" method="post" action="/console/workbench/intake" hx-post="/console/workbench/intake" hx-target="#civilization-workbench" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-compose-form" aria-label="New work">

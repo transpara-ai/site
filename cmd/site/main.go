@@ -92,6 +92,7 @@ func main() {
 	// Forward-declare DB-dependent vars so closures can capture them.
 	// They're set later in the DB init block.
 	var graphStore *graph.Store
+	var privateAccess *auth.PrivateAccess
 	_ = graphStore // used in vision handler closures
 
 	// Vision.
@@ -301,6 +302,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if os.Getenv("SITE_PRIVATE_OPERATORS_FILE") != "" && dsn == "" {
+		log.Fatal("private operator mode requires DATABASE_URL")
+	}
 	if dsn != "" {
 		db, err := sql.Open("postgres", dsn)
 		if err != nil {
@@ -319,11 +323,26 @@ func main() {
 		if secretErr != nil {
 			log.Fatal(secretErr)
 		}
-		if err := validateProductionAuthConfig(os.Getenv); err != nil {
-			log.Fatal(err)
+		privateFile := strings.TrimSpace(os.Getenv("SITE_PRIVATE_OPERATORS_FILE"))
+		if privateFile == "" {
+			if err := validateProductionAuthConfig(os.Getenv); err != nil {
+				log.Fatal(err)
+			}
 		}
 
-		if clientID != "" && clientSecret != "" {
+		if privateFile != "" {
+			ip := net.ParseIP(strings.TrimSpace(os.Getenv("SITE_BIND_HOST")))
+			if ip == nil || !ip.IsLoopback() {
+				log.Fatal("private operator mode requires a loopback SITE_BIND_HOST")
+			}
+			privateAccess, err = auth.NewPrivateAccess(db, privateFile)
+			if err != nil {
+				log.Fatalf("private access: %v", err)
+			}
+			privateAccess.Register(mux)
+			writeWrap, readWrap = privateAccess.RequireAuth, privateAccess.RequireAuth
+			log.Println("auth enabled (named private operators)")
+		} else if clientID != "" && clientSecret != "" {
 			redirectURL := os.Getenv("AUTH_REDIRECT_URL")
 			if redirectURL == "" {
 				log.Fatal("AUTH_REDIRECT_URL must be set when Google OAuth is configured (no public-domain default)")
@@ -940,6 +959,9 @@ func main() {
 		profile.DefaultResolver{},
 	}
 	handler := noCache(profile.Middleware(profileChain)(mux))
+	if privateAccess != nil {
+		handler = privateAccess.Gate(handler)
+	}
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}

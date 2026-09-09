@@ -40,7 +40,7 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 							<option value={ operator.ID } selected?={ operator.ID == work.HumanOwnerID }>{ operator.Name }</option>
 						}
 					</select></label>
-					<button type="submit" class="wb-button">Save responsibility</button>
+					<button disabled?={ !data.CanOperate() } type="submit" class="wb-button">Save responsibility</button>
 				</form>
 				<p class="wb-muted">Routes current and future human steps for this workstream. Approval permissions are unchanged.</p>
 			</details>
@@ -59,7 +59,10 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 						@civilizationViewFields(data)
 						<input type="hidden" name="brief_id" value={ work.Bound.IdempotencyKey }/>
 						<p class="wb-muted">Confirmation starts implementation in an isolated worktree.</p>
-						<button id={ "confirm-"+work.WorkID } type="submit" class="wb-button wb-primary">Confirm implementation <span aria-hidden="true">→</span></button>
+						if !data.CanReview() {
+       <p class="wb-muted">A reviewer must confirm implementation.</p>
+      }
+						<button disabled?={ !data.CanReview() } id={ "confirm-"+work.WorkID } type="submit" class="wb-button wb-primary">Confirm implementation <span aria-hidden="true">→</span></button>
 					</form>
 				</section>
 			}
@@ -75,7 +78,7 @@ templ civilizationWorkDetail(work CivilizationWork, data CivilizationWorkbench) 
 					<form id={ "resolve-"+intervention.ID } hx-preserve="true" method="post" action={ templ.SafeURL("/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve") } hx-post={ "/console/workbench/work/"+work.WorkID+"/interventions/"+intervention.ID+"/resolve" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-resolution">
 						@civilizationViewFields(data)
 						<label>{ intervention.Prompt }<textarea id={ "resolution-"+intervention.ID } name="resolution" data-workbench-draft={ intervention.ID } required maxlength="12000" rows="3" placeholder="Answer in plain language…">{ civilizationResolutionText(data, intervention.ID) }</textarea></label>
-						<button type="submit" class="wb-button wb-primary">Record answer and retry</button>
+						<button disabled?={ !data.CanOperate() } type="submit" class="wb-button wb-primary">Record answer and retry</button>
 					</form>
 				}
 			}

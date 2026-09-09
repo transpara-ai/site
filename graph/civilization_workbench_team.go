@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/transpara-ai/site/auth"
 )
 
 func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
@@ -27,6 +29,7 @@ func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
 	}
 	viewer := h.viewUser(r)
 	data.ViewerID = viewer.ID
+	data.ViewerRole, data.ViewerName = viewer.Role, viewer.Name
 	data.OperatorNames = map[string]string{}
 	var ids []string
 	for _, work := range data.Items {
@@ -42,6 +45,12 @@ func (h *Handlers) workbenchForRequest(r *http.Request) CivilizationWorkbench {
 	}
 	if viewer.ID != "" {
 		data.OperatorNames[viewer.ID] = viewer.Name
+	}
+	for _, operator := range auth.PrivateOperators(r.Context()) {
+		data.OperatorNames[operator.ID] = operator.Name
+		if operator.Role == "operator" || operator.Role == "reviewer" {
+			data.AssignableOperators = append(data.AssignableOperators, operator.ID)
+		}
 	}
 	// A result reviewed in another session should recede on the next poll too.
 	if data.View != "history" {
@@ -104,6 +113,9 @@ func (data CivilizationWorkbench) Operators() []civilizationOperatorOption {
 
 func (data CivilizationWorkbench) OwnerCandidates() []civilizationOperatorOption {
 	ids := map[string]bool{}
+	for _, id := range data.AssignableOperators {
+		ids[id] = true
+	}
 	for _, operator := range data.Operators() {
 		ids[operator.ID] = true
 	}
@@ -117,6 +129,9 @@ func (data CivilizationWorkbench) OwnerCandidates() []civilizationOperatorOption
 	}
 	var result []civilizationOperatorOption
 	for id := range ids {
+		if data.ViewerRole != "" && !containsString(data.AssignableOperators, id) {
+			continue
+		}
 		name := data.OperatorNames[id]
 		if name == "" {
 			name = id
