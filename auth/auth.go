@@ -34,6 +34,7 @@ type APIKey struct {
 // User represents an authenticated user (human or agent).
 type User struct {
 	ID      string
+	Role    string // Set only by the configured private operator directory.
 	Email   string
 	Name    string
 	Picture string

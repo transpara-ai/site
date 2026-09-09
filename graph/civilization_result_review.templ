@@ -6,6 +6,9 @@ templ civilizationResultReviewPanel(work CivilizationWork, data CivilizationWork
   <section class="wb-section wb-result-review" aria-label="Review delivered work">
    <h3>Review delivered work</h3>
    <p class="wb-muted">Inspect the diff and checks, then choose what happens next. Approval records your acceptance; it does not publish or merge the change.</p>
+   if !data.CanReview() {
+    <p class="wb-muted">A reviewer must accept or request changes to this result.</p>
+   }
    <form id={ "result-review-"+work.PreparedResultID } data-workbench-draft-form method="post" action={ templ.URL("/console/workbench/work/"+work.WorkID+"/result-review") } hx-post={ "/console/workbench/work/"+work.WorkID+"/result-review" } hx-target="#civilization-work-list" hx-swap="outerHTML" hx-disabled-elt="button" class="wb-resolution">
     @civilizationViewFields(data)
     <input type="hidden" name="result_id" value={ work.PreparedResultID }/>
@@ -13,9 +16,9 @@ templ civilizationResultReviewPanel(work CivilizationWork, data CivilizationWork
     <label>Feedback or requested enhancements<textarea id={ "result-feedback-"+work.PreparedResultID } name="feedback" data-workbench-draft={ "result-feedback-"+work.PreparedResultID } maxlength="12000" rows="3" placeholder="Describe what should improve, or why you’re rejecting the result…">{ data.ResultFeedback }</textarea></label>
     <p class="wb-muted">Feedback is required for rejection or changes. Requested changes create a linked revision; you’ll confirm its brief before implementation begins.</p>
     <div class="wb-result-actions">
-     <button type="submit" name="decision" value="approve" class="wb-button wb-primary">Approve result</button>
-     <button type="submit" name="decision" value="request_changes" class="wb-button">Request changes / enhance</button>
-     <button type="submit" name="decision" value="reject" class="wb-button">Reject result</button>
+     <button disabled?={ !data.CanReview() } type="submit" name="decision" value="approve" class="wb-button wb-primary">Approve result</button>
+     <button disabled?={ !data.CanReview() } type="submit" name="decision" value="request_changes" class="wb-button">Request changes / enhance</button>
+     <button disabled?={ !data.CanReview() } type="submit" name="decision" value="reject" class="wb-button">Reject result</button>
     </div>
    </form>
   </section>

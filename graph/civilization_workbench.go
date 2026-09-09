@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/transpara-ai/site/auth"
 	"github.com/transpara-ai/site/profile"
 )
 
@@ -24,30 +25,36 @@ const (
 )
 
 type CivilizationWorkbench struct {
-	ResultFeedback string
-	ModelOptions   []OpsHiveModelCatalogEntry
-	ActionError    bool
-	View           string
-	Repository     string
-	Operator       string
-	Responsible    string
-	ViewerID       string
-	OperatorNames  map[string]string
-	SelectedWorkID string
-	ResolutionID   string
-	ResolutionText string
-	FormText       string
-	FormRepository string
-	FormSelection  CivilizationSelection
-	Available      bool
-	Notice         string
-	Items          []CivilizationWork
-	Repositories   []string
-	IntakeIdentity string
-	GeneratedAt    time.Time
+	ViewerRole          string
+	ViewerName          string
+	AssignableOperators []string
+	ResultFeedback      string
+	ModelOptions        []OpsHiveModelCatalogEntry
+	ActionError         bool
+	View                string
+	Repository          string
+	Operator            string
+	Responsible         string
+	ViewerID            string
+	OperatorNames       map[string]string
+	SelectedWorkID      string
+	ResolutionID        string
+	ResolutionText      string
+	FormText            string
+	FormRepository      string
+	FormSelection       CivilizationSelection
+	Available           bool
+	Notice              string
+	Items               []CivilizationWork
+	Repositories        []string
+	IntakeIdentity      string
+	GeneratedAt         time.Time
 }
 
 type CivilizationWork struct {
+	RequestedBy            string                       `json:"requested_by,omitempty"`
+	ConfirmedBy            string                       `json:"confirmed_by,omitempty"`
+	ConfirmedAt            time.Time                    `json:"confirmed_at,omitempty"`
 	PreparedResultID       string                       `json:"prepared_result_id"`
 	PreparedResultDigest   string                       `json:"prepared_result_digest"`
 	ResultReview           *CivilizationResultReview    `json:"result_review"`
@@ -202,6 +209,10 @@ func (c *civilizationClient) request(ctx context.Context, method, path string, i
 		return err
 	}
 	request.Header.Set("Authorization", "Bearer "+c.key)
+	if viewer := auth.UserFromContext(ctx); viewer != nil && viewer.Role != "" {
+		request.Header.Set("X-Civilization-Actor", viewer.ID)
+		request.Header.Set("X-Civilization-Role", viewer.Role)
+	}
 	if input != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}

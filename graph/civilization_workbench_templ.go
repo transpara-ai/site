@@ -37,7 +37,7 @@ func CivilizationWorkbenchFragment(data CivilizationWorkbench) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if len(data.Repositories) > 0 {
+		if len(data.Repositories) > 0 && data.CanOperate() {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<details id=\"workbench-composer\" class=\"wb-composer\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
